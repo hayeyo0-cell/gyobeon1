@@ -2,11 +2,19 @@
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
-  font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
-  background: #dfe1e6;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  background: #dfe3ea;
   color: #111827;
+}
+
+body {
+  overscroll-behavior: none;
 }
 
 button,
@@ -15,50 +23,56 @@ select {
   font: inherit;
 }
 
+/* 상단 바 */
 .topbar {
-  background: #2c53cf;
+  height: 56px;
+  background: #2f61dc;
   color: white;
-  padding: 12px 18px;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 14px;
   font-size: 28px;
   font-weight: 700;
 }
 
+/* 메인 컨테이너 */
 .container {
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 14px;
-  padding-bottom: 96px;
+  width: 100%;
+  height: calc(100vh - 56px - 64px);
+  padding: 8px;
+  overflow: hidden;
 }
 
+/* 카드 */
 .card {
   background: #ececef;
-  border-radius: 20px;
-  padding: 16px;
-  margin-bottom: 14px;
+  border-radius: 18px;
+  padding: 12px;
+  margin-bottom: 8px;
 }
 
 .card-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .help-text {
   color: #6b7280;
-  font-size: 14px;
-  line-height: 1.6;
-  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 6px;
 }
 
-.row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.col {
-  flex: 1 1 200px;
+.notice-box {
+  background: #eef4ff;
+  border: 1px solid #bdd2ff;
+  color: #1f3f95;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  font-size: 13px;
 }
 
 .label {
@@ -72,110 +86,155 @@ select {
 .input,
 .select {
   width: 100%;
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 11px 12px;
+  border-radius: 12px;
   border: 1px solid #cbd5e1;
   background: white;
 }
 
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.col {
+  flex: 1 1 160px;
+}
+
+/* 설정 버튼 영역 */
+.settings-row {
+  height: 54px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.settings-btn,
+.install-btn {
+  border: 0;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.settings-btn {
+  background: #2f61dc;
+}
+
+.install-btn {
+  background: #1f7a3e;
+  margin-right: 8px;
+}
+
+/* 날짜 3칸 */
 .date-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 8px;
+  margin-bottom: 8px;
+  height: 172px;
 }
 
 .date-box {
-  background: #d1d5db;
-  text-align: center;
+  background: #d4d7dd;
+  display: grid;
+  grid-template-rows: 48px 1fr 48px;
+  overflow: hidden;
 }
 
 .date-btn {
   width: 100%;
-  height: 60px;
+  height: 48px;
   border: 0;
-  background: #d1d5db;
-  font-size: 38px;
+  background: #d4d7dd;
+  font-size: 30px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .date-value {
-  padding: 14px 8px;
-  font-size: 26px;
   background: #ececef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 24px;
+  line-height: 1.15;
+  padding: 4px;
+  white-space: nowrap;
+  word-break: keep-all;
 }
 
+/* 첫 화면 큰 카드 */
 .main-panel {
-  min-height: 320px;
+  height: calc(100vh - 56px - 64px - 54px - 172px - 22px);
+  min-height: 220px;
   background: #ececef;
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0;
 }
 
 .center-view {
   text-align: center;
-  padding-top: 70px;
+  padding: 0;
+  width: 100%;
 }
 
 .main-code {
-  font-size: 56px;
-  font-weight: 700;
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #0f172a;
 }
 
 .main-time {
-  margin-top: 22px;
-  font-size: 52px;
+  margin-top: 14px;
+  font-size: 34px;
+  line-height: 1.2;
+  color: #0f172a;
 }
 
 .red-text {
-  color: #dc2626;
+  color: #dc2626 !important;
 }
 
 .blue-text {
-  color: #2563eb;
+  color: #2563eb !important;
 }
 
-.settings-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 10px;
-}
-
-.settings-btn {
-  border: 0;
-  background: #2c53cf;
-  color: white;
-  padding: 8px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 700;
-}
-
+/* 하단 탭 */
 .bottom-tabs {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
+  height: 64px;
   display: grid;
   grid-template-columns: 1fr;
-  background: #2c53cf;
-  color: white;
-  border-top: 1px solid #1e3a8a;
+  background: #2f61dc;
+  border-top: 1px solid #1d4ab5;
+  z-index: 50;
 }
 
 .bottom-tab {
-  height: 72px;
+  height: 64px;
   border: 0;
   background: transparent;
   color: white;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
   cursor: pointer;
 }
 
-.bottom-tab.active {
-  font-weight: 900;
-}
-
+/* 모달 */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -198,13 +257,13 @@ select {
 }
 
 .modal-title {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 800;
   margin-bottom: 14px;
 }
 
 .modal-sub {
-  font-size: 20px;
+  font-size: 18px;
   margin-bottom: 16px;
 }
 
@@ -216,11 +275,12 @@ select {
 }
 
 .modal-btn {
-  min-width: 92px;
+  min-width: 88px;
   height: 42px;
   border: 1px solid #cbd5e1;
   background: white;
   cursor: pointer;
+  border-radius: 10px;
 }
 
 .modal-btn.primary {
@@ -237,130 +297,146 @@ select {
 }
 
 /* ===== 전체화면 ===== */
-
 .fullscreen-viewer {
   position: fixed;
   inset: 0;
-  background: #1f3f95;
+  background: #2f61dc;
   z-index: 2000;
-  overflow: auto;
+  overflow: hidden;
 }
 
+.close-all-btn {
+  display: none;
+}
+
+/* 전체화면 상단 헤더 */
 .all-header {
+  height: 78px;
   display: grid;
-  grid-template-columns: 80px 1fr 80px;
-  align-items: stretch;
-  background: #7393ea;
+  grid-template-columns: 52px 1fr 52px;
+  background: #7ea0f0;
   color: black;
-  font-weight: 700;
-  position: sticky;
-  top: 0;
-  z-index: 5;
+  border-bottom: 1px solid #5d7fd5;
 }
 
 .all-header-btn {
-  border: 1px solid #5576d6;
-  background: #7393ea;
+  border: 1px solid #5d7fd5;
+  background: #7ea0f0;
   font-size: 28px;
   font-weight: 700;
   cursor: pointer;
-  height: 72px;
+  height: 78px;
 }
 
 .all-header-title {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-top: 1px solid #5576d6;
-  border-bottom: 1px solid #5576d6;
-  font-size: 24px;
+  text-align: center;
+  padding: 0 6px;
+  font-size: 20px;
+  line-height: 1.2;
   font-weight: 700;
+  word-break: keep-all;
+  white-space: normal;
 }
 
-.close-all-btn {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  z-index: 10;
-  border: 0;
-  background: #2c53cf;
-  color: white;
-  padding: 8px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 700;
-}
-
+/* 전체표 영역 */
 .all-grid-wrap {
-  background: #1f3f95;
-  padding-bottom: 90px;
+  height: calc(100vh - 78px - 64px);
+  overflow: hidden;
+  background: #2f61dc;
 }
 
+/* 핵심: 6칸을 화면에 맞춤 */
 .all-grid-real {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 0;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  width: 100vw;
+  height: 100%;
   border-left: 1px solid #4a67c7;
   border-top: 1px solid #4a67c7;
+  background: white;
 }
 
 .all-cell-real {
-  min-height: 95px;
+  min-width: 0;
+  min-height: 0;
   border-right: 1px solid #4a67c7;
   border-bottom: 1px solid #4a67c7;
   background: white;
-  padding: 6px 4px;
+  padding: 4px 2px;
   text-align: center;
   cursor: pointer;
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
 }
 
 .all-code {
-  font-size: 26px;
-  line-height: 1.1;
-  font-weight: 500;
+  font-size: 17px;
+  line-height: 1.05;
+  font-weight: 700;
   color: black;
+  white-space: nowrap;
 }
 
 .all-name {
-  margin-top: 8px;
-  font-size: 22px;
+  margin-top: 5px;
+  font-size: 11px;
   line-height: 1.15;
-  font-weight: 500;
+  font-weight: 700;
   color: black;
   word-break: keep-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
 .cell-my {
-  outline: 3px solid #00bcd4;
+  outline: 3px solid #00c4d6;
   outline-offset: -3px;
 }
 
+/* 하단 소속탭 */
 .bottom-team-tabs {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
+  height: 64px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  background: #4d76e3;
+  background: #5a82eb;
   border-top: 1px solid #2a4db0;
   z-index: 6;
 }
 
 .bottom-team-tab {
-  height: 72px;
+  height: 64px;
   border: 0;
   background: transparent;
   color: black;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .bottom-team-tab.active {
-  background: #5a82eb;
+  background: #6b90f0;
 }
 
+/* 행로표 */
 .viewer-page {
   position: fixed;
   inset: 0;
@@ -408,36 +484,102 @@ select {
   text-align: center;
 }
 
-@media (max-width: 900px) {
+/* 작은 화면 최적화 */
+@media (max-width: 420px) {
+  .topbar {
+    font-size: 24px;
+    height: 52px;
+  }
+
+  .container {
+    height: calc(100vh - 52px - 60px);
+    padding: 6px;
+  }
+
+  .date-grid {
+    gap: 6px;
+    height: 158px;
+    margin-bottom: 6px;
+  }
+
+  .date-box {
+    grid-template-rows: 44px 1fr 44px;
+  }
+
+  .date-btn {
+    height: 44px;
+    font-size: 24px;
+  }
+
+  .date-value {
+    font-size: 20px;
+  }
+
+  .settings-row {
+    height: 48px;
+    margin-bottom: 4px;
+  }
+
+  .settings-btn,
+  .install-btn {
+    padding: 8px 14px;
+    font-size: 15px;
+  }
+
+  .main-panel {
+    height: calc(100vh - 52px - 60px - 48px - 158px - 18px);
+    min-height: 200px;
+  }
+
   .main-code {
-    font-size: 42px;
+    font-size: 38px;
   }
 
   .main-time {
-    font-size: 40px;
+    font-size: 28px;
   }
 
-  .all-grid-real {
-    grid-template-columns: repeat(6, 1fr);
-  }
-
-  .all-code {
-    font-size: 22px;
-  }
-
-  .all-name {
-    font-size: 18px;
-  }
-
-  .all-header-title {
-    font-size: 20px;
+  .bottom-tabs {
+    height: 60px;
   }
 
   .bottom-tab {
+    height: 60px;
     font-size: 20px;
   }
 
+  .all-header {
+    height: 72px;
+    grid-template-columns: 48px 1fr 48px;
+  }
+
+  .all-header-btn {
+    height: 72px;
+    font-size: 24px;
+  }
+
+  .all-header-title {
+    font-size: 17px;
+  }
+
+  .all-grid-wrap {
+    height: calc(100vh - 72px - 60px);
+  }
+
+  .all-code {
+    font-size: 15px;
+  }
+
+  .all-name {
+    font-size: 10px;
+  }
+
+  .bottom-team-tabs {
+    height: 60px;
+  }
+
   .bottom-team-tab {
-    font-size: 18px;
+    height: 60px;
+    font-size: 16px;
   }
 }
