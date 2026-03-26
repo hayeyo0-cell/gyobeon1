@@ -136,6 +136,116 @@ select {
   white-space: nowrap;
 }
 
+.date-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+  height: 172px;
+}
+
+.date-box {
+  background: #d4d7dd;
+  display: grid;
+  grid-template-rows: 48px 1fr 48px;
+  overflow: hidden;
+}
+
+.date-btn {
+  width: 100%;
+  height: 48px;
+  border: 0;
+  background: #d4d7dd;
+  font-size: 30px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.date-value {
+  background: #ececef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 24px;
+  line-height: 1.15;
+  padding: 4px;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+.main-panel {
+  min-height: 220px;
+  background: #ececef;
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0;
+}
+
+.center-view {
+  text-align: center;
+  padding: 0;
+  width: 100%;
+}
+
+.main-code {
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #0f172a;
+}
+
+.main-time {
+  margin-top: 14px;
+  font-size: 34px;
+  line-height: 1.2;
+  color: #0f172a;
+}
+
+.red-text {
+  color: #dc2626 !important;
+}
+
+.blue-text {
+  color: #2563eb !important;
+}
+
+.tab-page {
+  min-height: 100%;
+}
+
+.bottom-tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 64px;
+  display: grid;
+  background: #2f61dc;
+  border-top: 1px solid #1d4ab5;
+  z-index: 50;
+}
+
+.bottom-tabs.tabs-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.bottom-tab {
+  height: 64px;
+  border: 0;
+  background: transparent;
+  color: white;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.bottom-tab.active {
+  background: #416fe0;
+}
+
 .month-header-bar,
 .group-topbar {
   display: grid;
@@ -236,78 +346,6 @@ select {
   color: #2563eb !important;
 }
 
-.main-panel {
-  min-height: 180px;
-  background: #ececef;
-  border-radius: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 0;
-}
-
-.compact-panel {
-  min-height: 140px;
-}
-
-.center-view {
-  text-align: center;
-  padding: 0;
-  width: 100%;
-}
-
-.main-code {
-  font-size: 42px;
-  font-weight: 800;
-  line-height: 1.2;
-  color: #0f172a;
-}
-
-.main-time {
-  margin-top: 14px;
-  font-size: 30px;
-  line-height: 1.2;
-  color: #0f172a;
-}
-
-.red-text {
-  color: #dc2626 !important;
-}
-
-.blue-text {
-  color: #2563eb !important;
-}
-
-.bottom-tabs {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 64px;
-  display: grid;
-  background: #2f61dc;
-  border-top: 1px solid #1d4ab5;
-  z-index: 50;
-}
-
-.bottom-tabs.tabs-3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.bottom-tab {
-  height: 64px;
-  border: 0;
-  background: transparent;
-  color: white;
-  font-size: 20px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.bottom-tab.active {
-  background: #416fe0;
-}
-
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -370,12 +408,8 @@ select {
   background: white;
 }
 
-.fullscreen-viewer {
-  position: fixed;
-  inset: 0;
-  background: #2f61dc;
-  z-index: 2000;
-  overflow: hidden;
+.all-tab-header {
+  margin-bottom: 8px;
 }
 
 .all-header {
@@ -385,6 +419,8 @@ select {
   background: #7ea0f0;
   color: black;
   border-bottom: 1px solid #5d7fd5;
+  border-radius: 14px;
+  overflow: hidden;
 }
 
 .all-header-btn {
@@ -423,8 +459,15 @@ select {
   color: white;
 }
 
+.all-tab-grid-wrap {
+  height: calc(100vh - 56px - 64px - 78px - 80px);
+  min-height: 320px;
+  overflow: hidden;
+  background: #2f61dc;
+  border-radius: 14px;
+}
+
 .all-grid-wrap {
-  height: calc(100vh - 78px - 64px);
   overflow: hidden;
   background: #2f61dc;
 }
@@ -433,7 +476,7 @@ select {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   grid-auto-rows: minmax(0, 1fr);
-  width: 100vw;
+  width: 100%;
   height: 100%;
   border-left: 1px solid #4a67c7;
   border-top: 1px solid #4a67c7;
@@ -486,40 +529,26 @@ select {
   outline-offset: -3px;
 }
 
-.bottom-team-tabs {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 64px;
+.all-team-tabs {
   display: grid;
-  background: #5a82eb;
-  border-top: 1px solid #2a4db0;
-  z-index: 6;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 8px;
 }
 
-.bottom-team-tabs.home-5tabs {
-  grid-template-columns: repeat(5, 1fr);
-}
-
-.bottom-team-tab {
-  height: 64px;
+.all-team-tab {
   border: 0;
-  background: transparent;
+  background: #5a82eb;
   color: black;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
+  padding: 12px 0;
+  border-radius: 12px;
   cursor: pointer;
 }
 
-.bottom-team-tab.active {
+.all-team-tab.active {
   background: #6b90f0;
-}
-
-.home-tab {
-  background: #2f61dc;
-  color: white;
-  font-weight: 800;
 }
 
 .viewer-page {
@@ -631,6 +660,58 @@ select {
     padding: 6px;
   }
 
+  .date-grid {
+    gap: 6px;
+    height: 158px;
+    margin-bottom: 6px;
+  }
+
+  .date-box {
+    grid-template-rows: 44px 1fr 44px;
+  }
+
+  .date-btn {
+    height: 44px;
+    font-size: 24px;
+  }
+
+  .date-value {
+    font-size: 20px;
+  }
+
+  .settings-row {
+    height: 48px;
+    margin-bottom: 4px;
+  }
+
+  .settings-btn,
+  .install-btn,
+  .group-add-btn {
+    padding: 8px 14px;
+    font-size: 15px;
+  }
+
+  .main-panel {
+    min-height: 200px;
+  }
+
+  .main-code {
+    font-size: 38px;
+  }
+
+  .main-time {
+    font-size: 28px;
+  }
+
+  .bottom-tabs {
+    height: 60px;
+  }
+
+  .bottom-tab {
+    height: 60px;
+    font-size: 16px;
+  }
+
   .month-header-title {
     font-size: 22px;
   }
@@ -657,23 +738,6 @@ select {
     font-size: 10px;
   }
 
-  .main-code {
-    font-size: 34px;
-  }
-
-  .main-time {
-    font-size: 26px;
-  }
-
-  .bottom-tabs {
-    height: 60px;
-  }
-
-  .bottom-tab {
-    height: 60px;
-    font-size: 17px;
-  }
-
   .all-header {
     height: 72px;
     grid-template-columns: 48px 1fr 72px 48px;
@@ -693,8 +757,8 @@ select {
     font-size: 14px;
   }
 
-  .all-grid-wrap {
-    height: calc(100vh - 72px - 60px);
+  .all-tab-grid-wrap {
+    height: calc(100vh - 52px - 60px - 72px - 72px);
   }
 
   .all-code {
@@ -705,13 +769,9 @@ select {
     font-size: 10px;
   }
 
-  .bottom-team-tabs {
-    height: 60px;
-  }
-
-  .bottom-team-tab {
-    height: 60px;
-    font-size: 15px;
+  .all-team-tab {
+    font-size: 14px;
+    padding: 10px 0;
   }
 
   .group-topbar {
@@ -735,4 +795,4 @@ select {
   .modal-sub {
     font-size: 16px;
   }
-}
+  }
