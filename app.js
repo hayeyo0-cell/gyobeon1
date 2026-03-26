@@ -9,6 +9,13 @@ const TEAM_LABELS = {
 
 const TEAM_ORDER = ["ks", "my", "wb", "as"];
 
+const NIGHT_RANGE_BY_TEAM = {
+  ks: { start: 21, end: 29 },
+  my: { start: 24, end: 34 },
+  wb: { start: 25, end: 37 },
+  as: { start: 25, end: 37 },
+};
+
 const COLOR_OPTIONS = [
   { value: "", label: "기본" },
   { value: "#dbeafe", label: "하늘" },
@@ -26,9 +33,6 @@ const DEFAULT_GYOBUN = [
   "대4","대4~","휴10","휴11","7d","18d","29d","29~","휴12","8d","12d","26d",
   "26~","휴13","휴14","6d","19d","21d","21~","휴15"
 ];
-
-const NIGHT_START_MIN = 22;
-const NIGHT_START_MAX = 29;
 
 function formatDate(date) {
   const y = date.getFullYear();
@@ -115,7 +119,7 @@ function normalizeCodeKey(code) {
   return String(code || "").trim().toLowerCase().replace(/\s+/g, "");
 }
 
-function parseNightCode(code) {
+function parseShiftCode(code) {
   const s = normalizeCodeKey(code);
   const match = s.match(/^(\d+)(d|~)$/);
   if (!match) return null;
@@ -125,19 +129,29 @@ function parseNightCode(code) {
   };
 }
 
-function isNightStartCode(code) {
-  const parsed = parseNightCode(code);
-  return !!parsed && parsed.suffix === "d" && parsed.num >= NIGHT_START_MIN && parsed.num <= NIGHT_START_MAX;
+function getNightRange(teamKey) {
+  return NIGHT_RANGE_BY_TEAM[teamKey] || { start: 22, end: 29 };
 }
 
-function isNightEndCode(code) {
-  const parsed = parseNightCode(code);
-  return !!parsed && parsed.suffix === "~" && parsed.num >= NIGHT_START_MIN && parsed.num <= NIGHT_START_MAX;
+function isNightStartCode(teamKey, code) {
+  const parsed = parseShiftCode(code);
+  if (!parsed || parsed.suffix !== "d") return false;
+  const range = getNightRange(teamKey);
+  return parsed.num >= range.start && parsed.num <= range.end;
 }
 
-function isDayShiftCode(code) {
-  const s = normalizeCodeKey(code);
-  return /^(1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20)d$/.test(s);
+function isNightEndCode(teamKey, code) {
+  const parsed = parseShiftCode(code);
+  if (!parsed || parsed.suffix !== "~") return false;
+  const range = getNightRange(teamKey);
+  return parsed.num >= range.start && parsed.num <= range.end;
+}
+
+function isDayShiftCode(teamKey, code) {
+  const parsed = parseShiftCode(code);
+  if (!parsed || parsed.suffix !== "d") return false;
+  const range = getNightRange(teamKey);
+  return parsed.num >= 1 && parsed.num < range.start;
 }
 
 function pickWorktime(team, code, dateStr) {
@@ -147,34 +161,30 @@ function pickWorktime(team, code, dateStr) {
   return source[key] || "----";
 }
 
-function getPathFolder(dateStr, code) {
+function getPathFolder(teamKey, dateStr, code) {
   const day = new Date(dateStr).getDay();
   // 0:일 1:월 2:화 3:수 4:목 5:금 6:토
 
-  // 야간 시작: 22d ~ 29d
-  if (isNightStartCode(code)) {
+  if (isNightStartCode(teamKey, code)) {
     if (day >= 1 && day <= 4) return "nor";
     if (day === 5) return "nor_sat";
     if (day === 6) return "sat_hol";
     if (day === 0) return "hol_nor";
   }
 
-  // 야간 종료: 22~ ~ 29~
-  if (isNightEndCode(code)) {
+  if (isNightEndCode(teamKey, code)) {
     if (day >= 2 && day <= 5) return "nor";
     if (day === 6) return "nor_sat";
     if (day === 0) return "sat_hol";
     if (day === 1) return "hol_nor";
   }
 
-  // 주간
-  if (isDayShiftCode(code)) {
+  if (isDayShiftCode(teamKey, code)) {
     if (day >= 1 && day <= 5) return "nor";
     if (day === 6) return "sat";
     if (day === 0) return "hol";
   }
 
-  // 그 외 기본
   if (day >= 1 && day <= 5) return "nor";
   if (day === 6) return "sat";
   return "hol";
@@ -183,7 +193,7 @@ function getPathFolder(dateStr, code) {
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
 
-  const folder = getPathFolder(dateStr, code);
+  const folder = getPathFolder(team.key, dateStr, code);
   const raw = normalizeCodeKey(code);
 
   const strippedD = raw.replace(/d$/, "");
