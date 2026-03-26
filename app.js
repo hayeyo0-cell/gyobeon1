@@ -27,6 +27,9 @@ const DEFAULT_GYOBUN = [
   "26~","휴13","휴14","6d","19d","21d","21~","휴15"
 ];
 
+const NIGHT_START_MIN = 22;
+const NIGHT_START_MAX = 29;
+
 function formatDate(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -112,26 +115,36 @@ function normalizeCodeKey(code) {
   return String(code || "").trim().toLowerCase().replace(/\s+/g, "");
 }
 
-function pickWorktime(team, code, dateStr) {
-  const kind = guessDayType(dateStr);
-  const key = normalizeCodeKey(code);
-  const source = team?.worktimes?.[kind] || {};
-  return source[key] || "----";
+function parseNightCode(code) {
+  const s = normalizeCodeKey(code);
+  const match = s.match(/^(\d+)(d|~)$/);
+  if (!match) return null;
+  return {
+    num: Number(match[1]),
+    suffix: match[2],
+  };
 }
 
 function isNightStartCode(code) {
-  const s = normalizeCodeKey(code);
-  return /^(22|23|24|25|26|27|28|29)d$/.test(s);
+  const parsed = parseNightCode(code);
+  return !!parsed && parsed.suffix === "d" && parsed.num >= NIGHT_START_MIN && parsed.num <= NIGHT_START_MAX;
 }
 
 function isNightEndCode(code) {
-  const s = normalizeCodeKey(code);
-  return /^(22|23|24|25|26|27|28|29)~$/.test(s);
+  const parsed = parseNightCode(code);
+  return !!parsed && parsed.suffix === "~" && parsed.num >= NIGHT_START_MIN && parsed.num <= NIGHT_START_MAX;
 }
 
 function isDayShiftCode(code) {
   const s = normalizeCodeKey(code);
   return /^(1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20)d$/.test(s);
+}
+
+function pickWorktime(team, code, dateStr) {
+  const kind = guessDayType(dateStr);
+  const key = normalizeCodeKey(code);
+  const source = team?.worktimes?.[kind] || {};
+  return source[key] || "----";
 }
 
 function getPathFolder(dateStr, code) {
@@ -161,6 +174,7 @@ function getPathFolder(dateStr, code) {
     if (day === 0) return "hol";
   }
 
+  // 그 외 기본
   if (day >= 1 && day <= 5) return "nor";
   if (day === 6) return "sat";
   return "hol";
@@ -182,11 +196,21 @@ function findPathImage(team, dateStr, code) {
     strippedTilde,
     strippedAll,
     `제${strippedAll}`,
-    `${raw}.png`, `${raw}.jpg`, `${raw}.jpeg`,
-    `${strippedD}.png`, `${strippedD}.jpg`, `${strippedD}.jpeg`,
-    `${strippedTilde}.png`, `${strippedTilde}.jpg`, `${strippedTilde}.jpeg`,
-    `${strippedAll}.png`, `${strippedAll}.jpg`, `${strippedAll}.jpeg`,
-    `제${strippedAll}.png`, `제${strippedAll}.jpg`, `제${strippedAll}.jpeg`,
+    `${raw}.png`,
+    `${raw}.jpg`,
+    `${raw}.jpeg`,
+    `${strippedD}.png`,
+    `${strippedD}.jpg`,
+    `${strippedD}.jpeg`,
+    `${strippedTilde}.png`,
+    `${strippedTilde}.jpg`,
+    `${strippedTilde}.jpeg`,
+    `${strippedAll}.png`,
+    `${strippedAll}.jpg`,
+    `${strippedAll}.jpeg`,
+    `제${strippedAll}.png`,
+    `제${strippedAll}.jpg`,
+    `제${strippedAll}.jpeg`,
   ];
 
   const bucket = team?.paths?.[folder];
