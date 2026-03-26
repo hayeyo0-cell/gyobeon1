@@ -23,7 +23,6 @@ select {
   font: inherit;
 }
 
-/* 상단 바 */
 .topbar {
   height: 56px;
   background: #2f61dc;
@@ -36,7 +35,6 @@ select {
   font-weight: 700;
 }
 
-/* 메인 컨테이너 */
 .container {
   width: 100%;
   height: calc(100vh - 56px - 64px);
@@ -44,7 +42,6 @@ select {
   overflow: hidden;
 }
 
-/* 카드 */
 .card {
   background: #ececef;
   border-radius: 18px;
@@ -92,17 +89,6 @@ select {
   background: white;
 }
 
-.row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.col {
-  flex: 1 1 160px;
-}
-
-/* 설정 버튼 영역 */
 .settings-row {
   height: 54px;
   display: flex;
@@ -131,7 +117,6 @@ select {
   margin-right: 8px;
 }
 
-/* 날짜 3칸 */
 .date-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -170,7 +155,6 @@ select {
   word-break: keep-all;
 }
 
-/* 첫 화면 큰 카드 */
 .main-panel {
   height: calc(100vh - 56px - 64px - 54px - 172px - 22px);
   min-height: 220px;
@@ -210,7 +194,6 @@ select {
   color: #2563eb !important;
 }
 
-/* 하단 탭 */
 .bottom-tabs {
   position: fixed;
   left: 0;
@@ -234,7 +217,6 @@ select {
   cursor: pointer;
 }
 
-/* 모달 */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -296,7 +278,6 @@ select {
   margin-top: 8px;
 }
 
-/* ===== 전체화면 ===== */
 .fullscreen-viewer {
   position: fixed;
   inset: 0;
@@ -309,7 +290,6 @@ select {
   display: none;
 }
 
-/* 전체화면 상단 헤더 */
 .all-header {
   height: 78px;
   display: grid;
@@ -341,14 +321,12 @@ select {
   white-space: normal;
 }
 
-/* 전체표 영역 */
 .all-grid-wrap {
   height: calc(100vh - 78px - 64px);
   overflow: hidden;
   background: #2f61dc;
 }
 
-/* 핵심: 6칸을 화면에 맞춤 */
 .all-grid-real {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -408,7 +386,6 @@ select {
   outline-offset: -3px;
 }
 
-/* 하단 소속탭 */
 .bottom-team-tabs {
   position: fixed;
   left: 0;
@@ -436,7 +413,6 @@ select {
   background: #6b90f0;
 }
 
-/* 행로표 */
 .viewer-page {
   position: fixed;
   inset: 0;
@@ -484,7 +460,6 @@ select {
   text-align: center;
 }
 
-/* 작은 화면 최적화 */
 @media (max-width: 420px) {
   .topbar {
     font-size: 24px;
