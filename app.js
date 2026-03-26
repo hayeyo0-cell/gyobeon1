@@ -108,15 +108,6 @@ function parseWorktime(text, gyobunOrder = []) {
   return map;
 }
 
-function inferShiftLabel(code) {
-  if (!code) return "미정";
-  if (code.startsWith("휴")) return "휴무";
-  if (code.startsWith("대")) return "대기";
-  if (code.endsWith("~")) return "야간종료";
-  if (code.endsWith("d")) return "근무";
-  return "근무";
-}
-
 function normalizeCodeKey(code) {
   return String(code || "").trim().toLowerCase().replace(/\s+/g, "");
 }
@@ -130,12 +121,12 @@ function pickWorktime(team, code, dateStr) {
 
 function isNightStartCode(code) {
   const s = normalizeCodeKey(code);
-  return /^(23|24|25|26|27|28|29)d$/.test(s);
+  return /^(22|23|24|25|26|27|28|29)d$/.test(s);
 }
 
 function isNightEndCode(code) {
   const s = normalizeCodeKey(code);
-  return /^(23|24|25|26|27|28|29)~$/.test(s);
+  return /^(22|23|24|25|26|27|28|29)~$/.test(s);
 }
 
 function isDayShiftCode(code) {
@@ -145,7 +136,9 @@ function isDayShiftCode(code) {
 
 function getPathFolder(dateStr, code) {
   const day = new Date(dateStr).getDay();
+  // 0:일 1:월 2:화 3:수 4:목 5:금 6:토
 
+  // 야간 시작: 22d ~ 29d
   if (isNightStartCode(code)) {
     if (day >= 1 && day <= 4) return "nor";
     if (day === 5) return "nor_sat";
@@ -153,6 +146,7 @@ function getPathFolder(dateStr, code) {
     if (day === 0) return "hol_nor";
   }
 
+  // 야간 종료: 22~ ~ 29~
   if (isNightEndCode(code)) {
     if (day >= 2 && day <= 5) return "nor";
     if (day === 6) return "nor_sat";
@@ -160,6 +154,7 @@ function getPathFolder(dateStr, code) {
     if (day === 1) return "hol_nor";
   }
 
+  // 주간
   if (isDayShiftCode(code)) {
     if (day >= 1 && day <= 5) return "nor";
     if (day === 6) return "sat";
@@ -182,7 +177,10 @@ function findPathImage(team, dateStr, code) {
   const strippedAll = raw.replace(/d$/, "").replace(/~$/, "");
 
   const candidates = [
-    raw, strippedD, strippedTilde, strippedAll,
+    raw,
+    strippedD,
+    strippedTilde,
+    strippedAll,
     `제${strippedAll}`,
     `${raw}.png`, `${raw}.jpg`, `${raw}.jpeg`,
     `${strippedD}.png`, `${strippedD}.jpg`, `${strippedD}.jpeg`,
@@ -198,6 +196,7 @@ function findPathImage(team, dateStr, code) {
     if (bucket[key]) return bucket[key];
     if (bucket[key.toLowerCase()]) return bucket[key.toLowerCase()];
   }
+
   return null;
 }
 
@@ -281,6 +280,7 @@ function parseZipToData(parsedFiles) {
         const originalName = fileName;
         const lowerName = fileName.toLowerCase();
         const baseName = lowerName.replace(/\.(png|jpg|jpeg)$/i, "");
+
         team.paths[kind][originalName] = content;
         team.paths[kind][lowerName] = content;
         team.paths[kind][baseName] = content;
@@ -349,6 +349,7 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
     );
     const person = people[personIndex];
     const override = overrides[getOverrideKey(team.key, person.idx)] || {};
+
     return {
       idx: person.idx,
       name: person.name,
@@ -363,6 +364,7 @@ function buildTeamAnchorForDate(team) {
   const baseName = team.info?.baseName || team.people?.[0]?.name || "";
   const baseCode = team.info?.baseCode || getGyobunOrder(team)[0] || "";
   const baseDate = team.info?.baseDate || formatDate(new Date());
+
   return {
     name: baseName,
     code: baseCode,
@@ -674,8 +676,14 @@ function App() {
 
       if (!keepSavedSelection) {
         const defaultTeam = selectedTeam || "ks";
-        const defaultName = nextData[defaultTeam]?.info?.baseName || nextData[defaultTeam]?.people?.[0]?.name || "";
-        const defaultCode = nextData[defaultTeam]?.info?.baseCode || getGyobunOrder(nextData[defaultTeam])[0] || "";
+        const defaultName =
+          nextData[defaultTeam]?.info?.baseName ||
+          nextData[defaultTeam]?.people?.[0]?.name ||
+          "";
+        const defaultCode =
+          nextData[defaultTeam]?.info?.baseCode ||
+          getGyobunOrder(nextData[defaultTeam])[0] ||
+          "";
 
         const autoAnchors = buildAllTeamsAutoAnchors(
           nextData,
@@ -791,14 +799,6 @@ function App() {
     setShowAll(true);
   }
 
-  function closeAllView() {
-    if (showAllRef.current) {
-      window.history.back();
-    } else {
-      setShowAll(false);
-    }
-  }
-
   function resetOverrides() {
     setOverrides({});
     saveOverrides({});
@@ -837,31 +837,51 @@ function App() {
 
             <div className="date-grid">
               <div className="date-box">
-                <button className="date-btn" onClick={() => {
-                  const d = new Date(selectedDate);
-                  d.setFullYear(d.getFullYear() + 1);
-                  setSelectedDate(formatDate(d));
-                }}>+</button>
+                <button
+                  className="date-btn"
+                  onClick={() => {
+                    const d = new Date(selectedDate);
+                    d.setFullYear(d.getFullYear() + 1);
+                    setSelectedDate(formatDate(d));
+                  }}
+                >
+                  +
+                </button>
                 <div className="date-value">{new Date(selectedDate).getFullYear()}년</div>
-                <button className="date-btn" onClick={() => {
-                  const d = new Date(selectedDate);
-                  d.setFullYear(d.getFullYear() - 1);
-                  setSelectedDate(formatDate(d));
-                }}>-</button>
+                <button
+                  className="date-btn"
+                  onClick={() => {
+                    const d = new Date(selectedDate);
+                    d.setFullYear(d.getFullYear() - 1);
+                    setSelectedDate(formatDate(d));
+                  }}
+                >
+                  -
+                </button>
               </div>
 
               <div className="date-box">
-                <button className="date-btn" onClick={() => {
-                  const d = new Date(selectedDate);
-                  d.setMonth(d.getMonth() + 1);
-                  setSelectedDate(formatDate(d));
-                }}>+</button>
+                <button
+                  className="date-btn"
+                  onClick={() => {
+                    const d = new Date(selectedDate);
+                    d.setMonth(d.getMonth() + 1);
+                    setSelectedDate(formatDate(d));
+                  }}
+                >
+                  +
+                </button>
                 <div className="date-value">{new Date(selectedDate).getMonth() + 1}월</div>
-                <button className="date-btn" onClick={() => {
-                  const d = new Date(selectedDate);
-                  d.setMonth(d.getMonth() - 1);
-                  setSelectedDate(formatDate(d));
-                }}>-</button>
+                <button
+                  className="date-btn"
+                  onClick={() => {
+                    const d = new Date(selectedDate);
+                    d.setMonth(d.getMonth() - 1);
+                    setSelectedDate(formatDate(d));
+                  }}
+                >
+                  -
+                </button>
               </div>
 
               <div className="date-box">
@@ -873,14 +893,16 @@ function App() {
 
             <div className="card main-panel">
               <div className="center-view">
-                <div className={
-                  "main-code " +
-                  (isSpecialS(myInfo?.time)
-                    ? "red-text"
-                    : myInfo?.code?.startsWith("휴")
-                    ? "blue-text"
-                    : "")
-                }>
+                <div
+                  className={
+                    "main-code " +
+                    (isSpecialS(myInfo?.time)
+                      ? "red-text"
+                      : myInfo?.code?.startsWith("휴")
+                      ? "blue-text"
+                      : "")
+                  }
+                >
                   {myInfo?.code || "-"} {weekdayName(selectedDate)}
                 </div>
 
@@ -1030,9 +1052,15 @@ function App() {
             <input className="input" value={editName} onChange={(e) => setEditName(e.target.value)} />
 
             <label className="label" style={{ marginTop: 12 }}>색상</label>
-            <select className="select" value={editColor || "default"} onChange={(e) => setEditColor(e.target.value)}>
+            <select
+              className="select"
+              value={editColor || "default"}
+              onChange={(e) => setEditColor(e.target.value)}
+            >
               {COLOR_OPTIONS.map((item) => (
-                <option key={item.label} value={item.value || "default"}>{item.label}</option>
+                <option key={item.label} value={item.value || "default"}>
+                  {item.label}
+                </option>
               ))}
             </select>
 
@@ -1043,7 +1071,10 @@ function App() {
 
             <div className="modal-actions">
               <button className="modal-btn" onClick={closeEditDialog}>아니요</button>
-              <button className="modal-btn primary" onClick={() => commitEdit(editColor === "default" ? "" : editColor)}>
+              <button
+                className="modal-btn primary"
+                onClick={() => commitEdit(editColor === "default" ? "" : editColor)}
+              >
                 변경
               </button>
             </div>
