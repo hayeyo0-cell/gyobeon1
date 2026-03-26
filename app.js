@@ -914,8 +914,6 @@ function App() {
 
       {showAll && (
         <div className="fullscreen-viewer">
-          <button className="close-all-btn" onClick={() => setShowAll(false)}>닫기</button>
-
           <div className="all-header">
             <button className="all-header-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>-</button>
             <div className="all-header-title">
@@ -941,14 +939,8 @@ function App() {
                     onMouseDown={() => startLongPress(item)}
                     onMouseUp={cancelLongPress}
                     onMouseLeave={cancelLongPress}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      startLongPress(item);
-                    }}
-                    onTouchEnd={(e) => {
-                      e.preventDefault();
-                      cancelLongPress();
-                    }}
+                    onTouchStart={() => startLongPress(item)}
+                    onTouchEnd={cancelLongPress}
                     onTouchCancel={cancelLongPress}
                   >
                     <div className="all-code">{item.code || "-"}</div>
