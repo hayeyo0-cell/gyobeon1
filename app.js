@@ -118,10 +118,7 @@ function inferShiftLabel(code) {
 }
 
 function normalizeCodeKey(code) {
-  return String(code || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "");
+  return String(code || "").trim().toLowerCase().replace(/\s+/g, "");
 }
 
 function pickWorktime(team, code, dateStr) {
@@ -268,9 +265,7 @@ function parseZipToData(parsedFiles) {
 
   TEAM_ORDER.forEach((teamKey) => {
     const team = result[teamKey];
-    if (!team.gyobun.length) {
-      team.gyobun = DEFAULT_GYOBUN.slice();
-    }
+    if (!team.gyobun.length) team.gyobun = DEFAULT_GYOBUN.slice();
 
     team.people = team.names.map((name, idx) => ({
       name,
@@ -328,7 +323,7 @@ function loadTeamAnchors() {
   try {
     return JSON.parse(localStorage.getItem("gyobeon_team_anchors") || "{}");
   } catch {
-    return {};
+    return null;
   }
 }
 
@@ -386,9 +381,7 @@ function openZipDB() {
     const request = indexedDB.open("gyobeon-app-db", 1);
     request.onupgradeneeded = function () {
       const db = request.result;
-      if (!db.objectStoreNames.contains("files")) {
-        db.createObjectStore("files");
-      }
+      if (!db.objectStoreNames.contains("files")) db.createObjectStore("files");
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -418,20 +411,42 @@ async function loadZipBlob() {
 }
 
 function App() {
+  const initialSavedAnchors = loadTeamAnchors();
+  const initialDate = formatDate(new Date());
+
   const [zipName, setZipName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
 
-  const [selectedTeam, setSelectedTeam] = useState("ks");
-  const [viewTeam, setViewTeam] = useState("ks");
-  const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
-  const [teamAnchors, setTeamAnchors] = useState({
-    ks: { name: "", code: "", anchorDate: formatDate(new Date()) },
-    my: { name: "", code: "", anchorDate: formatDate(new Date()) },
-    wb: { name: "", code: "", anchorDate: formatDate(new Date()) },
-    as: { name: "", code: "", anchorDate: formatDate(new Date()) },
+  const [selectedTeam, setSelectedTeam] = useState(() => {
+    if (initialSavedAnchors) {
+      const firstTeam = TEAM_ORDER.find((k) => initialSavedAnchors[k]?.name || initialSavedAnchors[k]?.code);
+      if (firstTeam) return firstTeam;
+    }
+    return "ks";
   });
+
+  const [viewTeam, setViewTeam] = useState(() => {
+    if (initialSavedAnchors) {
+      const firstTeam = TEAM_ORDER.find((k) => initialSavedAnchors[k]?.name || initialSavedAnchors[k]?.code);
+      if (firstTeam) return firstTeam;
+    }
+    return "ks";
+  });
+
+  const [selectedDate, setSelectedDate] = useState(initialDate);
+
+  const [teamAnchors, setTeamAnchors] = useState(() => {
+    if (initialSavedAnchors) return initialSavedAnchors;
+    return {
+      ks: { name: "", code: "", anchorDate: initialDate },
+      my: { name: "", code: "", anchorDate: initialDate },
+      wb: { name: "", code: "", anchorDate: initialDate },
+      as: { name: "", code: "", anchorDate: initialDate },
+    };
+  });
+
   const [overrides, setOverrides] = useState({});
   const [showAll, setShowAll] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -449,20 +464,21 @@ function App() {
 
   const longPressRef = useRef(null);
   const longPressTriggeredRef = useRef(false);
+  const movedRef = useRef(false);
+
+  const showAllRef = useRef(false);
+  const pathOpenRef = useRef(false);
+  const popHandlingRef = useRef(false);
 
   useEffect(() => {
     setOverrides(loadOverrides());
-    const savedAnchors = loadTeamAnchors();
-    if (savedAnchors && Object.keys(savedAnchors).length) {
-      setTeamAnchors((prev) => ({ ...prev, ...savedAnchors }));
-    }
 
     async function tryAutoLoad() {
       try {
         const saved = await loadZipBlob();
         if (saved?.blob) {
           setZipName(saved.name || "이전 ZIP");
-          await parseAndSetZip(saved.blob, false);
+          await parseAndSetZip(saved.blob, false, true);
         }
       } catch (e) {
         console.log("자동 ZIP 로드 실패", e);
@@ -484,6 +500,71 @@ function App() {
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
+
+  useEffect(() => {
+    showAllRef.current = showAll;
+  }, [showAll]);
+
+  useEffect(() => {
+    pathOpenRef.current = pathOpen;
+  }, [pathOpen]);
+
+  useEffect(() => {
+    // 루트 상태 보장
+    if (!window.history.state || !window.history.state.__gyobeon) {
+      window.history.replaceState({ __gyobeon: true, layer: "root" }, "");
+    }
+
+    function handlePopState() {
+      // 뒤로가기 처리 중 표시
+      popHandlingRef.current = true;
+
+      if (pathOpenRef.current) {
+        setPathOpen(false);
+        return;
+      }
+
+      if (showAllRef.current) {
+        setShowAll(false);
+        return;
+      }
+
+      // 루트에서도 빠져나가려는 경우 다시 루트 유지
+      window.history.pushState({ __gyobeon: true, layer: "root" }, "");
+      popHandlingRef.current = false;
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (!showAll) return;
+
+    if (popHandlingRef.current) {
+      popHandlingRef.current = false;
+      return;
+    }
+
+    const state = window.history.state;
+    if (!state || state.layer !== "all") {
+      window.history.pushState({ __gyobeon: true, layer: "all" }, "");
+    }
+  }, [showAll]);
+
+  useEffect(() => {
+    if (!pathOpen) return;
+
+    if (popHandlingRef.current) {
+      popHandlingRef.current = false;
+      return;
+    }
+
+    const state = window.history.state;
+    if (!state || state.layer !== "path") {
+      window.history.pushState({ __gyobeon: true, layer: "path" }, "");
+    }
+  }, [pathOpen]);
 
   const currentTeam = data?.[selectedTeam] || null;
   const currentViewTeam = data?.[viewTeam] || null;
@@ -511,11 +592,12 @@ function App() {
         const team = data[teamKey];
         if (!team) return;
         const prevAnchor = next[teamKey] || {};
+
         if (!prevAnchor.name || !prevAnchor.code) {
           next[teamKey] = {
             name: prevAnchor.name || team.info.baseName || team.people[0]?.name || "",
             code: prevAnchor.code || team.info.baseCode || getGyobunOrder(team)[0] || "",
-            anchorDate: prevAnchor.anchorDate || formatDate(new Date()),
+            anchorDate: prevAnchor.anchorDate || initialDate,
           };
           changed = true;
         }
@@ -523,7 +605,7 @@ function App() {
 
       return changed ? next : prev;
     });
-  }, [data]);
+  }, [data, initialDate]);
 
   const myInfo = useMemo(() => {
     if (!currentTeam || !currentAnchor.name || !currentAnchor.code) return null;
@@ -571,7 +653,7 @@ function App() {
     overrides,
   ]);
 
-  async function parseAndSetZip(fileOrBlob, saveToIdb = true) {
+  async function parseAndSetZip(fileOrBlob, saveToIdb = true, keepSavedAnchors = false) {
     setLoading(true);
     setError("");
 
@@ -610,34 +692,36 @@ function App() {
       const today = formatDate(new Date());
 
       setData(nextData);
-      setSelectedTeam("ks");
-      setViewTeam("ks");
       setSelectedDate(today);
 
-      const nextAnchors = {
-        ks: {
-          name: nextData.ks?.info?.baseName || nextData.ks?.people?.[0]?.name || "",
-          code: nextData.ks?.info?.baseCode || getGyobunOrder(nextData.ks)[0] || "",
-          anchorDate: today,
-        },
-        my: {
-          name: nextData.my?.info?.baseName || nextData.my?.people?.[0]?.name || "",
-          code: nextData.my?.info?.baseCode || getGyobunOrder(nextData.my)[0] || "",
-          anchorDate: today,
-        },
-        wb: {
-          name: nextData.wb?.info?.baseName || nextData.wb?.people?.[0]?.name || "",
-          code: nextData.wb?.info?.baseCode || getGyobunOrder(nextData.wb)[0] || "",
-          anchorDate: today,
-        },
-        as: {
-          name: nextData.as?.info?.baseName || nextData.as?.people?.[0]?.name || "",
-          code: nextData.as?.info?.baseCode || getGyobunOrder(nextData.as)[0] || "",
-          anchorDate: today,
-        },
-      };
+      if (!keepSavedAnchors) {
+        const nextAnchors = {
+          ks: {
+            name: nextData.ks?.info?.baseName || nextData.ks?.people?.[0]?.name || "",
+            code: nextData.ks?.info?.baseCode || getGyobunOrder(nextData.ks)[0] || "",
+            anchorDate: today,
+          },
+          my: {
+            name: nextData.my?.info?.baseName || nextData.my?.people?.[0]?.name || "",
+            code: nextData.my?.info?.baseCode || getGyobunOrder(nextData.my)[0] || "",
+            anchorDate: today,
+          },
+          wb: {
+            name: nextData.wb?.info?.baseName || nextData.wb?.people?.[0]?.name || "",
+            code: nextData.wb?.info?.baseCode || getGyobunOrder(nextData.wb)[0] || "",
+            anchorDate: today,
+          },
+          as: {
+            name: nextData.as?.info?.baseName || nextData.as?.people?.[0]?.name || "",
+            code: nextData.as?.info?.baseCode || getGyobunOrder(nextData.as)[0] || "",
+            anchorDate: today,
+          },
+        };
+        setTeamAnchors(nextAnchors);
+        setSelectedTeam("ks");
+        setViewTeam("ks");
+      }
 
-      setTeamAnchors(nextAnchors);
       setShowSettings(false);
     } catch (e) {
       console.error(e);
@@ -651,7 +735,7 @@ function App() {
     const file = event.target.files?.[0];
     if (!file) return;
     setZipName(file.name);
-    await parseAndSetZip(file, true);
+    await parseAndSetZip(file, true, false);
   }
 
   function updateCurrentTeamAnchor(field, value) {
@@ -701,21 +785,48 @@ function App() {
     setPathOpen(true);
   }
 
+  function closePathDialog() {
+    if (pathOpenRef.current) {
+      window.history.back();
+    } else {
+      setPathOpen(false);
+    }
+  }
+
+  function openAllView() {
+    setShowAll(true);
+  }
+
+  function closeAllView() {
+    if (showAllRef.current) {
+      window.history.back();
+    } else {
+      setShowAll(false);
+    }
+  }
+
   function startLongPress(item) {
     clearTimeout(longPressRef.current);
     longPressTriggeredRef.current = false;
+    movedRef.current = false;
 
     longPressRef.current = setTimeout(() => {
-      longPressTriggeredRef.current = true;
-      openEditDialog(item);
-    }, 600);
+      if (!movedRef.current) {
+        longPressTriggeredRef.current = true;
+        openEditDialog(item);
+      }
+    }, 650);
   }
 
   function cancelLongPress() {
     clearTimeout(longPressRef.current);
   }
 
-  function handleCellClick(item) {
+  function finishPress(item) {
+    clearTimeout(longPressRef.current);
+
+    if (movedRef.current) return;
+
     if (longPressTriggeredRef.current) {
       setTimeout(() => {
         longPressTriggeredRef.current = false;
@@ -724,6 +835,11 @@ function App() {
     }
 
     openPathDialog(item);
+  }
+
+  function moveCancelPress() {
+    movedRef.current = true;
+    clearTimeout(longPressRef.current);
   }
 
   function resetOverrides() {
@@ -844,7 +960,7 @@ function App() {
 
       {data && (
         <div className="bottom-tabs">
-          <button className="bottom-tab" onClick={() => setShowAll(true)}>전체</button>
+          <button className="bottom-tab" onClick={openAllView}>전체</button>
         </div>
       )}
 
@@ -914,6 +1030,8 @@ function App() {
 
       {showAll && (
         <div className="fullscreen-viewer">
+          <button className="close-all-btn" onClick={closeAllView}>닫기</button>
+
           <div className="all-header">
             <button className="all-header-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>-</button>
             <div className="all-header-title">
@@ -935,13 +1053,18 @@ function App() {
                     key={`${item.idx}-${item.displayName}`}
                     className={`all-cell-real ${isMine ? "cell-my" : ""}`}
                     style={{ backgroundColor: item.customColor || "#ffffff" }}
-                    onClick={() => handleCellClick(item)}
-                    onMouseDown={() => startLongPress(item)}
-                    onMouseUp={cancelLongPress}
-                    onMouseLeave={cancelLongPress}
-                    onTouchStart={() => startLongPress(item)}
-                    onTouchEnd={cancelLongPress}
-                    onTouchCancel={cancelLongPress}
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      startLongPress(item);
+                    }}
+                    onPointerUp={(e) => {
+                      e.preventDefault();
+                      finishPress(item);
+                    }}
+                    onPointerMove={moveCancelPress}
+                    onPointerLeave={moveCancelPress}
+                    onPointerCancel={moveCancelPress}
+                    onContextMenu={(e) => e.preventDefault()}
                   >
                     <div className="all-code">{item.code || "-"}</div>
                     <div className="all-name">{item.displayName || "-"}</div>
@@ -997,7 +1120,7 @@ function App() {
         <div className="viewer-page">
           <div className="viewer-header">
             <div className="viewer-title">행로표</div>
-            <button className="modal-btn primary" onClick={() => setPathOpen(false)}>닫기</button>
+            <button className="modal-btn primary" onClick={closePathDialog}>닫기</button>
           </div>
 
           <div className="viewer-body">
