@@ -44,7 +44,7 @@ select {
   width: 100%;
   height: calc(100vh - 56px - 64px);
   padding: 8px;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .card {
@@ -86,7 +86,8 @@ select {
 }
 
 .input,
-.select {
+.select,
+.group-select {
   width: 100%;
   padding: 11px 12px;
   border-radius: 12px;
@@ -96,7 +97,8 @@ select {
 }
 
 .input:focus,
-.select:focus {
+.select:focus,
+.group-select:focus {
   border-color: #2563eb;
 }
 
@@ -109,7 +111,8 @@ select {
 }
 
 .settings-btn,
-.install-btn {
+.install-btn,
+.group-add-btn {
   border: 0;
   color: white;
   padding: 10px 16px;
@@ -128,53 +131,123 @@ select {
   margin-right: 8px;
 }
 
-.date-grid {
+.group-add-btn {
+  background: #2f61dc;
+  white-space: nowrap;
+}
+
+.month-header-bar,
+.group-topbar {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 52px 1fr 52px;
   gap: 8px;
+  align-items: center;
   margin-bottom: 8px;
-  height: 172px;
 }
 
-.date-box {
-  background: #d4d7dd;
-  display: grid;
-  grid-template-rows: 48px 1fr 48px;
-  overflow: hidden;
+.group-topbar {
+  grid-template-columns: 52px 1fr 120px 52px;
 }
 
-.date-btn {
-  width: 100%;
-  height: 48px;
+.month-nav-btn,
+.group-nav-btn {
+  height: 52px;
   border: 0;
-  background: #d4d7dd;
-  font-size: 30px;
+  background: #2f61dc;
+  color: white;
+  border-radius: 14px;
+  font-size: 28px;
   font-weight: 700;
   cursor: pointer;
 }
 
-.date-value {
-  background: #ececef;
+.month-header-title {
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #ececef;
+  border-radius: 14px;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.month-calendar {
+  background: #ececef;
+  border-radius: 18px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.month-weekdays,
+.month-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.month-weekdays > div {
   text-align: center;
-  font-size: 24px;
-  line-height: 1.15;
+  font-size: 18px;
+  font-weight: 800;
+  padding: 8px 0;
+}
+
+.month-cell {
+  border: 1px solid #cfd4dd;
+  background: white;
+  min-height: 96px;
   padding: 4px;
-  white-space: nowrap;
-  word-break: keep-all;
+  text-align: left;
+  cursor: pointer;
+}
+
+.month-cell.selected {
+  outline: 3px solid #2f61dc;
+  outline-offset: -3px;
+}
+
+.month-cell.other-month {
+  opacity: 0.35;
+}
+
+.month-day {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.month-code {
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.month-time {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: pre-line;
+}
+
+.sun {
+  color: #dc2626 !important;
+}
+
+.sat {
+  color: #2563eb !important;
 }
 
 .main-panel {
-  height: calc(100vh - 56px - 64px - 54px - 172px - 22px);
-  min-height: 220px;
+  min-height: 180px;
   background: #ececef;
   border-radius: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 0;
+}
+
+.compact-panel {
+  min-height: 140px;
 }
 
 .center-view {
@@ -184,7 +257,7 @@ select {
 }
 
 .main-code {
-  font-size: 46px;
+  font-size: 42px;
   font-weight: 800;
   line-height: 1.2;
   color: #0f172a;
@@ -192,7 +265,7 @@ select {
 
 .main-time {
   margin-top: 14px;
-  font-size: 34px;
+  font-size: 30px;
   line-height: 1.2;
   color: #0f172a;
 }
@@ -212,10 +285,13 @@ select {
   bottom: 0;
   height: 64px;
   display: grid;
-  grid-template-columns: 1fr;
   background: #2f61dc;
   border-top: 1px solid #1d4ab5;
   z-index: 50;
+}
+
+.bottom-tabs.tabs-3 {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .bottom-tab {
@@ -223,9 +299,13 @@ select {
   border: 0;
   background: transparent;
   color: white;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   cursor: pointer;
+}
+
+.bottom-tab.active {
+  background: #416fe0;
 }
 
 .modal-backdrop {
@@ -413,10 +493,13 @@ select {
   bottom: 0;
   height: 64px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
   background: #5a82eb;
   border-top: 1px solid #2a4db0;
   z-index: 6;
+}
+
+.bottom-team-tabs.home-5tabs {
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .bottom-team-tab {
@@ -431,6 +514,12 @@ select {
 
 .bottom-team-tab.active {
   background: #6b90f0;
+}
+
+.home-tab {
+  background: #2f61dc;
+  color: white;
+  font-weight: 800;
 }
 
 .viewer-page {
@@ -480,6 +569,57 @@ select {
   text-align: center;
 }
 
+.group-page {
+  background: #ececef;
+  border-radius: 18px;
+  padding: 8px;
+}
+
+.group-table-wrap {
+  overflow: auto;
+}
+
+.group-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 14px;
+}
+
+.group-table th,
+.group-table td {
+  border: 1px solid #cbd5e1;
+  padding: 6px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.group-table th {
+  background: #f8fafc;
+  font-weight: 800;
+}
+
+.group-name-cell {
+  min-width: 92px;
+}
+
+.group-team-label {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.group-remove-btn {
+  margin-top: 6px;
+  border: 0;
+  background: #ef4444;
+  color: white;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
 @media (max-width: 420px) {
   .topbar {
     font-size: 24px;
@@ -491,47 +631,38 @@ select {
     padding: 6px;
   }
 
-  .date-grid {
-    gap: 6px;
-    height: 158px;
-    margin-bottom: 6px;
+  .month-header-title {
+    font-size: 22px;
   }
 
-  .date-box {
-    grid-template-rows: 44px 1fr 44px;
-  }
-
-  .date-btn {
-    height: 44px;
+  .month-nav-btn,
+  .group-nav-btn {
+    height: 46px;
     font-size: 24px;
   }
 
-  .date-value {
-    font-size: 20px;
+  .month-cell {
+    min-height: 80px;
   }
 
-  .settings-row {
-    height: 48px;
-    margin-bottom: 4px;
+  .month-day {
+    font-size: 13px;
   }
 
-  .settings-btn,
-  .install-btn {
-    padding: 8px 14px;
-    font-size: 15px;
+  .month-code {
+    font-size: 14px;
   }
 
-  .main-panel {
-    height: calc(100vh - 52px - 60px - 48px - 158px - 18px);
-    min-height: 200px;
+  .month-time {
+    font-size: 10px;
   }
 
   .main-code {
-    font-size: 38px;
+    font-size: 34px;
   }
 
   .main-time {
-    font-size: 28px;
+    font-size: 26px;
   }
 
   .bottom-tabs {
@@ -540,7 +671,7 @@ select {
 
   .bottom-tab {
     height: 60px;
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .all-header {
@@ -580,7 +711,16 @@ select {
 
   .bottom-team-tab {
     height: 60px;
-    font-size: 16px;
+    font-size: 15px;
+  }
+
+  .group-topbar {
+    grid-template-columns: 42px 1fr 92px 42px;
+    gap: 6px;
+  }
+
+  .group-table {
+    font-size: 12px;
   }
 
   .modal {
