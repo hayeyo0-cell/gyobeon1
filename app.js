@@ -19,7 +19,6 @@ const COLOR_OPTIONS = [
   { value: "#e5e7eb", label: "회색" },
 ];
 
-// fallback 교번 순서
 const DEFAULT_GYOBUN = [
   "2d","대3","16d","휴1","휴2","대2","14d","24d","24~","휴3","5d","17d",
   "27d","27~","휴4","3d","13d","23d","23~","휴5","휴6","대1","15d","22d","22~",
@@ -97,7 +96,6 @@ function normalizeWorktimeLine(line) {
   return line.replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-// worktime 파일은 gyobun.txt와 같은 줄 순서
 function parseWorktime(text, gyobunOrder = []) {
   const lines = parseLines(text).map(normalizeWorktimeLine);
   const map = {};
@@ -149,7 +147,7 @@ function isDayShiftCode(code) {
 }
 
 function getPathFolder(dateStr, code) {
-  const day = new Date(dateStr).getDay(); // 0=일 ~ 6=토
+  const day = new Date(dateStr).getDay();
 
   if (isNightStartCode(code)) {
     if (day >= 1 && day <= 4) return "nor";
@@ -230,7 +228,6 @@ function menuTimeClass(code, time) {
   return "";
 }
 
-// 모든 기준은 gyobun.txt
 function getGyobunOrder(team) {
   if (team?.gyobun?.length) return team.gyobun;
   return DEFAULT_GYOBUN;
@@ -343,7 +340,6 @@ function getOverrideKey(teamKey, index) {
   return `${teamKey}_${index}`;
 }
 
-// 전체화면: 교번칸 고정, 사람만 회전
 function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
   if (!team || !team.people?.length) return [];
 
@@ -385,7 +381,6 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
   });
 }
 
-// IndexedDB
 function openZipDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("gyobeon-app-db", 1);
@@ -530,7 +525,6 @@ function App() {
     });
   }, [data]);
 
-  // 핵심: 첫 화면도 전체화면 계산 결과에서 내 이름 칸을 찾아서 사용
   const myInfo = useMemo(() => {
     if (!currentTeam || !currentAnchor.name || !currentAnchor.code) return null;
 
@@ -710,10 +704,11 @@ function App() {
   function startLongPress(item) {
     clearTimeout(longPressRef.current);
     longPressTriggeredRef.current = false;
+
     longPressRef.current = setTimeout(() => {
       longPressTriggeredRef.current = true;
       openEditDialog(item);
-    }, 550);
+    }, 600);
   }
 
   function cancelLongPress() {
@@ -722,9 +717,12 @@ function App() {
 
   function handleCellClick(item) {
     if (longPressTriggeredRef.current) {
-      longPressTriggeredRef.current = false;
+      setTimeout(() => {
+        longPressTriggeredRef.current = false;
+      }, 50);
       return;
     }
+
     openPathDialog(item);
   }
 
@@ -935,7 +933,7 @@ function App() {
                 const isMine = item.name === viewAnchor.name;
 
                 return (
-                  <button
+                  <div
                     key={`${item.idx}-${item.displayName}`}
                     className={`all-cell-real ${isMine ? "cell-my" : ""}`}
                     style={{ backgroundColor: item.customColor || "#ffffff" }}
@@ -943,12 +941,19 @@ function App() {
                     onMouseDown={() => startLongPress(item)}
                     onMouseUp={cancelLongPress}
                     onMouseLeave={cancelLongPress}
-                    onTouchStart={() => startLongPress(item)}
-                    onTouchEnd={cancelLongPress}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      startLongPress(item);
+                    }}
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      cancelLongPress();
+                    }}
+                    onTouchCancel={cancelLongPress}
                   >
                     <div className="all-code">{item.code || "-"}</div>
                     <div className="all-name">{item.displayName || "-"}</div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
