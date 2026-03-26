@@ -265,9 +265,7 @@ function parseZipToData(parsedFiles) {
 
   TEAM_ORDER.forEach((teamKey) => {
     const team = result[teamKey];
-    if (!team.gyobun.length) {
-      team.gyobun = DEFAULT_GYOBUN.slice();
-    }
+    if (!team.gyobun.length) team.gyobun = DEFAULT_GYOBUN.slice();
 
     team.people = team.names.map((name, idx) => ({
       name,
@@ -485,6 +483,7 @@ function App() {
 
   const showAllRef = useRef(false);
   const pathOpenRef = useRef(false);
+  const editOpenRef = useRef(false);
 
   useEffect(() => {
     setOverrides(loadOverrides());
@@ -513,6 +512,10 @@ function App() {
   }, [pathOpen]);
 
   useEffect(() => {
+    editOpenRef.current = editOpen;
+  }, [editOpen]);
+
+  useEffect(() => {
     function handler(e) {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -527,6 +530,11 @@ function App() {
     }
 
     function handlePopState() {
+      if (editOpenRef.current) {
+        setEditOpen(false);
+        return;
+      }
+
       if (pathOpenRef.current) {
         setPathOpen(false);
         return;
@@ -559,6 +567,14 @@ function App() {
       }
     }
   }, [pathOpen]);
+
+  useEffect(() => {
+    if (editOpen) {
+      if (!window.history.state || window.history.state.layer !== "edit") {
+        window.history.pushState({ __gyobeon: true, layer: "edit" }, "");
+      }
+    }
+  }, [editOpen]);
 
   const currentTeam = data?.[selectedTeam] || null;
   const currentViewTeam = data?.[viewTeam] || null;
@@ -743,6 +759,14 @@ function App() {
     setEditOpen(true);
   }
 
+  function closeEditDialog() {
+    if (editOpenRef.current) {
+      window.history.back();
+    } else {
+      setEditOpen(false);
+    }
+  }
+
   function commitEdit(nextColorValue = editColor) {
     if (!editingCell) return;
 
@@ -760,7 +784,7 @@ function App() {
 
     setOverrides(next);
     saveOverrides(next);
-    setEditOpen(false);
+    closeEditDialog();
   }
 
   function openPathDialog(item) {
@@ -970,7 +994,7 @@ function App() {
             </select>
 
             <div className="help-text">
-              내 소속/이름/오늘 교번만 선택하면 다른 소속은 자동 계산됩니다.
+              내 소속/이름/오늘 내 교번만 선택하면 다른 소속은 자동 계산됩니다.
             </div>
 
             <div className="modal-actions">
@@ -1041,7 +1065,7 @@ function App() {
       )}
 
       {editOpen && (
-        <div className="modal-backdrop" onClick={() => setEditOpen(false)}>
+        <div className="modal-backdrop" onClick={closeEditDialog}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">이름변경 및 색상 수정</div>
             <div className="modal-sub">
@@ -1064,7 +1088,7 @@ function App() {
             />
 
             <div className="modal-actions">
-              <button className="modal-btn" onClick={() => setEditOpen(false)}>아니요</button>
+              <button className="modal-btn" onClick={closeEditDialog}>아니요</button>
               <button className="modal-btn primary" onClick={() => commitEdit(editColor === "default" ? "" : editColor)}>
                 변경
               </button>
