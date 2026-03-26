@@ -1,4 +1,4 @@
-const { useEffect, useMemo, useRef, useState } = React;
+const { useEffect, useMemo, useState } = React;
 
 const TEAM_LABELS = {
   ks: "경산",
@@ -318,16 +318,16 @@ function saveOverrides(value) {
   localStorage.setItem("gyobeon_overrides", JSON.stringify(value));
 }
 
-function loadTeamAnchors() {
+function loadMySelection() {
   try {
-    return JSON.parse(localStorage.getItem("gyobeon_team_anchors") || "{}");
+    return JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null");
   } catch {
     return null;
   }
 }
 
-function saveTeamAnchors(value) {
-  localStorage.setItem("gyobeon_team_anchors", JSON.stringify(value));
+function saveMySelection(value) {
+  localStorage.setItem("gyobeon_my_selection", JSON.stringify(value));
 }
 
 function getOverrideKey(teamKey, index) {
@@ -375,6 +375,40 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
   });
 }
 
+function buildTeamAnchorForDate(team, dateStr) {
+  const baseName = team.info?.baseName || team.people?.[0]?.name || "";
+  const baseCode = team.info?.baseCode || getGyobunOrder(team)[0] || "";
+  const baseDate = team.info?.baseDate || dateStr;
+
+  return {
+    name: baseName,
+    code: baseCode,
+    anchorDate: baseDate,
+  };
+}
+
+function buildAllTeamsAutoAnchors(data, selectedTeamKey, selectedName, selectedCode, selectedDate) {
+  const result = {};
+
+  TEAM_ORDER.forEach((teamKey) => {
+    const team = data?.[teamKey];
+    if (!team) return;
+
+    if (teamKey === selectedTeamKey) {
+      result[teamKey] = {
+        name: selectedName,
+        code: selectedCode,
+        anchorDate: selectedDate,
+      };
+      return;
+    }
+
+    result[teamKey] = buildTeamAnchorForDate(team, selectedDate);
+  });
+
+  return result;
+}
+
 function openZipDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("gyobeon-app-db", 1);
@@ -410,7 +444,7 @@ async function loadZipBlob() {
 }
 
 function App() {
-  const initialSavedAnchors = loadTeamAnchors();
+  const initialSelection = loadMySelection();
   const initialDate = formatDate(new Date());
 
   const [zipName, setZipName] = useState("");
@@ -418,37 +452,21 @@ function App() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
 
-  const [selectedTeam, setSelectedTeam] = useState(() => {
-    if (initialSavedAnchors) {
-      const firstTeam = TEAM_ORDER.find((k) => initialSavedAnchors[k]?.name || initialSavedAnchors[k]?.code);
-      if (firstTeam) return firstTeam;
-    }
-    return "ks";
-  });
-
-  const [viewTeam, setViewTeam] = useState(() => {
-    if (initialSavedAnchors) {
-      const firstTeam = TEAM_ORDER.find((k) => initialSavedAnchors[k]?.name || initialSavedAnchors[k]?.code);
-      if (firstTeam) return firstTeam;
-    }
-    return "ks";
-  });
-
+  const [selectedTeam, setSelectedTeam] = useState(initialSelection?.teamKey || "ks");
+  const [viewTeam, setViewTeam] = useState(initialSelection?.teamKey || "ks");
   const [selectedDate, setSelectedDate] = useState(initialDate);
 
-  const [teamAnchors, setTeamAnchors] = useState(() => {
-    if (initialSavedAnchors) return initialSavedAnchors;
-    return {
-      ks: { name: "", code: "", anchorDate: initialDate },
-      my: { name: "", code: "", anchorDate: initialDate },
-      wb: { name: "", code: "", anchorDate: initialDate },
-      as: { name: "", code: "", anchorDate: initialDate },
-    };
+  const [teamAnchors, setTeamAnchors] = useState({
+    ks: { name: "", code: "", anchorDate: initialDate },
+    my: { name: "", code: "", anchorDate: initialDate },
+    wb: { name: "", code: "", anchorDate: initialDate },
+    as: { name: "", code: "", anchorDate: initialDate },
   });
 
   const [overrides, setOverrides] = useState({});
   const [showAll, setShowAll] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editingCell, setEditingCell] = useState(null);
@@ -461,11 +479,8 @@ function App() {
 
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
-  const suppressClickRef = useRef(false);
-
-  const showAllRef = useRef(false);
-  const pathOpenRef = useRef(false);
-  const skipPopResetRef = useRef(false);
+  const showAllRef = React.useRef(false);
+  const pathOpenRef = React.useRef(false);
 
   useEffect(() => {
     setOverrides(loadOverrides());
@@ -486,8 +501,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    saveTeamAnchors(teamAnchors);
-  }, [teamAnchors]);
+    showAllRef.current = showAll;
+  }, [showAll]);
+
+  useEffect(() => {
+    pathOpenRef.current = pathOpen;
+  }, [pathOpen]);
 
   useEffect(() => {
     function handler(e) {
@@ -499,31 +518,19 @@ function App() {
   }, []);
 
   useEffect(() => {
-    showAllRef.current = showAll;
-  }, [showAll]);
-
-  useEffect(() => {
-    pathOpenRef.current = pathOpen;
-  }, [pathOpen]);
-
-  useEffect(() => {
     if (!window.history.state || !window.history.state.__gyobeon) {
       window.history.replaceState({ __gyobeon: true, layer: "root" }, "");
     }
 
     function handlePopState() {
       if (pathOpenRef.current) {
-        skipPopResetRef.current = true;
         setPathOpen(false);
         return;
       }
-
       if (showAllRef.current) {
-        skipPopResetRef.current = true;
         setShowAll(false);
         return;
       }
-
       window.history.pushState({ __gyobeon: true, layer: "root" }, "");
     }
 
@@ -532,24 +539,18 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!showAll) {
-      if (skipPopResetRef.current) skipPopResetRef.current = false;
-      return;
-    }
-
-    if (!window.history.state || window.history.state.layer !== "all") {
-      window.history.pushState({ __gyobeon: true, layer: "all" }, "");
+    if (showAll) {
+      if (!window.history.state || window.history.state.layer !== "all") {
+        window.history.pushState({ __gyobeon: true, layer: "all" }, "");
+      }
     }
   }, [showAll]);
 
   useEffect(() => {
-    if (!pathOpen) {
-      if (skipPopResetRef.current) skipPopResetRef.current = false;
-      return;
-    }
-
-    if (!window.history.state || window.history.state.layer !== "path") {
-      window.history.pushState({ __gyobeon: true, layer: "path" }, "");
+    if (pathOpen) {
+      if (!window.history.state || window.history.state.layer !== "path") {
+        window.history.pushState({ __gyobeon: true, layer: "path" }, "");
+      }
     }
   }, [pathOpen]);
 
@@ -571,28 +572,28 @@ function App() {
   useEffect(() => {
     if (!data) return;
 
-    setTeamAnchors((prev) => {
-      const next = { ...prev };
-      let changed = false;
+    const saved = loadMySelection();
 
-      TEAM_ORDER.forEach((teamKey) => {
-        const team = data[teamKey];
-        if (!team) return;
-        const prevAnchor = next[teamKey] || {};
+    if (saved?.teamKey && saved?.name && saved?.code) {
+      const autoAnchors = buildAllTeamsAutoAnchors(
+        data,
+        saved.teamKey,
+        saved.name,
+        saved.code,
+        selectedDate
+      );
+      setTeamAnchors(autoAnchors);
+      setSelectedTeam(saved.teamKey);
+      setViewTeam(saved.teamKey);
+      return;
+    }
 
-        if (!prevAnchor.name || !prevAnchor.code) {
-          next[teamKey] = {
-            name: prevAnchor.name || team.info.baseName || team.people[0]?.name || "",
-            code: prevAnchor.code || team.info.baseCode || getGyobunOrder(team)[0] || "",
-            anchorDate: prevAnchor.anchorDate || initialDate,
-          };
-          changed = true;
-        }
-      });
-
-      return changed ? next : prev;
+    const nextAnchors = {};
+    TEAM_ORDER.forEach((teamKey) => {
+      nextAnchors[teamKey] = buildTeamAnchorForDate(data[teamKey], selectedDate);
     });
-  }, [data, initialDate]);
+    setTeamAnchors(nextAnchors);
+  }, [data, selectedDate]);
 
   const myInfo = useMemo(() => {
     if (!currentTeam || !currentAnchor.name || !currentAnchor.code) return null;
@@ -640,7 +641,7 @@ function App() {
     overrides,
   ]);
 
-  async function parseAndSetZip(fileOrBlob, saveToIdb = true, keepSavedAnchors = false) {
+  async function parseAndSetZip(fileOrBlob, saveToIdb = true, keepSavedSelection = false) {
     setLoading(true);
     setError("");
 
@@ -676,37 +677,21 @@ function App() {
       await Promise.all(tasks);
 
       const nextData = parseZipToData(parsedFiles);
-      const today = formatDate(new Date());
-
       setData(nextData);
-      setSelectedDate(today);
 
-      if (!keepSavedAnchors) {
-        const nextAnchors = {
-          ks: {
-            name: nextData.ks?.info?.baseName || nextData.ks?.people?.[0]?.name || "",
-            code: nextData.ks?.info?.baseCode || getGyobunOrder(nextData.ks)[0] || "",
-            anchorDate: today,
-          },
-          my: {
-            name: nextData.my?.info?.baseName || nextData.my?.people?.[0]?.name || "",
-            code: nextData.my?.info?.baseCode || getGyobunOrder(nextData.my)[0] || "",
-            anchorDate: today,
-          },
-          wb: {
-            name: nextData.wb?.info?.baseName || nextData.wb?.people?.[0]?.name || "",
-            code: nextData.wb?.info?.baseCode || getGyobunOrder(nextData.wb)[0] || "",
-            anchorDate: today,
-          },
-          as: {
-            name: nextData.as?.info?.baseName || nextData.as?.people?.[0]?.name || "",
-            code: nextData.as?.info?.baseCode || getGyobunOrder(nextData.as)[0] || "",
-            anchorDate: today,
-          },
-        };
-        setTeamAnchors(nextAnchors);
-        setSelectedTeam("ks");
-        setViewTeam("ks");
+      if (!keepSavedSelection) {
+        const defaultTeam = selectedTeam || "ks";
+        const defaultName = nextData[defaultTeam]?.info?.baseName || nextData[defaultTeam]?.people?.[0]?.name || "";
+        const defaultCode = nextData[defaultTeam]?.info?.baseCode || getGyobunOrder(nextData[defaultTeam])[0] || "";
+
+        const autoAnchors = buildAllTeamsAutoAnchors(
+          nextData,
+          defaultTeam,
+          defaultName,
+          defaultCode,
+          selectedDate
+        );
+        setTeamAnchors(autoAnchors);
       }
 
       setShowSettings(false);
@@ -725,14 +710,26 @@ function App() {
     await parseAndSetZip(file, true, false);
   }
 
-  function updateCurrentTeamAnchor(field, value) {
-    setTeamAnchors((prev) => ({
-      ...prev,
-      [selectedTeam]: {
-        ...prev[selectedTeam],
-        [field]: value,
-      },
-    }));
+  function applyMySelection(name, code, teamKey = selectedTeam) {
+    if (!data) return;
+
+    const autoAnchors = buildAllTeamsAutoAnchors(
+      data,
+      teamKey,
+      name,
+      code,
+      selectedDate
+    );
+
+    setTeamAnchors(autoAnchors);
+    setSelectedTeam(teamKey);
+    setViewTeam(teamKey);
+
+    saveMySelection({
+      teamKey,
+      name,
+      code,
+    });
   }
 
   function openEditDialog(item) {
@@ -792,21 +789,6 @@ function App() {
     }
   }
 
-  function handleShortTap(item) {
-    if (suppressClickRef.current) {
-      suppressClickRef.current = false;
-      return;
-    }
-    openPathDialog(item);
-  }
-
-  function handleLongPressMenu(e, item) {
-    e.preventDefault();
-    e.stopPropagation();
-    suppressClickRef.current = true;
-    openEditDialog(item);
-  }
-
   function resetOverrides() {
     setOverrides({});
     saveOverrides({});
@@ -840,6 +822,15 @@ function App() {
           <>
             <div className="settings-row">
               {deferredPrompt && <button className="install-btn" onClick={handleInstall}>설치</button>}
+
+              <button
+                className="settings-btn"
+                style={{ background: editMode ? "#dc2626" : "#2f61dc", marginRight: "6px" }}
+                onClick={() => setEditMode(!editMode)}
+              >
+                {editMode ? "수정중" : "수정"}
+              </button>
+
               <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>
             </div>
 
@@ -937,13 +928,19 @@ function App() {
             <label className="label">데이터 ZIP 다시 불러오기</label>
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
 
-            <label className="label" style={{ marginTop: 12 }}>현재 메인 소속</label>
+            <label className="label" style={{ marginTop: 12 }}>내 소속</label>
             <select
               className="select"
               value={selectedTeam}
               onChange={(e) => {
-                setSelectedTeam(e.target.value);
-                setViewTeam(e.target.value);
+                const teamKey = e.target.value;
+                setSelectedTeam(teamKey);
+                setViewTeam(teamKey);
+
+                const anchor = teamAnchors[teamKey];
+                if (anchor?.name && anchor?.code) {
+                  applyMySelection(anchor.name, anchor.code, teamKey);
+                }
               }}
             >
               {TEAM_ORDER.map((key) => (
@@ -951,13 +948,12 @@ function App() {
               ))}
             </select>
 
-            <label className="label" style={{ marginTop: 12 }}>이 소속 기준 사람</label>
+            <label className="label" style={{ marginTop: 12 }}>내 이름</label>
             <select
               className="select"
               value={currentAnchor.name || ""}
               onChange={(e) => {
-                updateCurrentTeamAnchor("name", e.target.value);
-                updateCurrentTeamAnchor("anchorDate", selectedDate);
+                applyMySelection(e.target.value, currentAnchor.code || "", selectedTeam);
               }}
             >
               {(currentTeam?.people || []).map((person) => (
@@ -967,13 +963,12 @@ function App() {
               ))}
             </select>
 
-            <label className="label" style={{ marginTop: 12 }}>이 날짜의 해당 사람 교번</label>
+            <label className="label" style={{ marginTop: 12 }}>오늘 내 교번</label>
             <select
               className="select"
               value={currentAnchor.code || ""}
               onChange={(e) => {
-                updateCurrentTeamAnchor("code", e.target.value);
-                updateCurrentTeamAnchor("anchorDate", selectedDate);
+                applyMySelection(currentAnchor.name || "", e.target.value, selectedTeam);
               }}
             >
               {getGyobunOrder(currentTeam).map((code) => (
@@ -982,7 +977,7 @@ function App() {
             </select>
 
             <div className="help-text">
-              현재 보고 있는 날짜를 기준으로 이 소속의 기준 사람/교번을 저장합니다. 각 소속은 서로 독립적으로 유지됩니다.
+              내 소속/이름/오늘 교번만 선택하면 다른 소속은 자동 계산됩니다.
             </div>
 
             <div className="modal-actions">
@@ -1018,10 +1013,13 @@ function App() {
                     key={`${item.idx}-${item.displayName}`}
                     className={`all-cell-real ${isMine ? "cell-my" : ""}`}
                     style={{ backgroundColor: item.customColor || "#ffffff" }}
-                    onClick={() => handleShortTap(item)}
-                    onContextMenu={(e) => handleLongPressMenu(e, item)}
-                    onTouchStart={() => {}}
-                    onTouchEnd={() => {}}
+                    onClick={() => {
+                      if (editMode) {
+                        openEditDialog(item);
+                      } else {
+                        openPathDialog(item);
+                      }
+                    }}
                   >
                     <div className="all-code">{item.code || "-"}</div>
                     <div className="all-name">{item.displayName || "-"}</div>
