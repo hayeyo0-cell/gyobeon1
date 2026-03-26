@@ -47,6 +47,16 @@ function addDays(dateStr, days) {
   return formatDate(d);
 }
 
+function addMonths(dateStr, months) {
+  const d = new Date(dateStr);
+  const currentDate = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(currentDate, lastDay));
+  return formatDate(d);
+}
+
 function diffDays(a, b) {
   const da = new Date(a);
   const db = new Date(b);
@@ -59,6 +69,11 @@ function positiveMod(n, mod) {
 
 function weekdayName(dateStr) {
   const names = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+  return names[new Date(dateStr).getDay()];
+}
+
+function weekdayShort(dateStr) {
+  const names = ["일", "월", "화", "수", "목", "금", "토"];
   return names[new Date(dateStr).getDay()];
 }
 
@@ -163,7 +178,6 @@ function pickWorktime(team, code, dateStr) {
 
 function getPathFolder(teamKey, dateStr, code) {
   const day = new Date(dateStr).getDay();
-  // 0:일 1:월 2:화 3:수 4:목 5:금 6:토
 
   if (isNightStartCode(teamKey, code)) {
     if (day >= 1 && day <= 4) return "nor";
@@ -349,6 +363,18 @@ function saveMySelection(value) {
   localStorage.setItem("gyobeon_my_selection", JSON.stringify(value));
 }
 
+function loadGroups() {
+  try {
+    return JSON.parse(localStorage.getItem("gyobeon_groups") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveGroups(groups) {
+  localStorage.setItem("gyobeon_groups", JSON.stringify(groups));
+}
+
 function getOverrideKey(teamKey, index) {
   return `${teamKey}_${index}`;
 }
@@ -428,6 +454,73 @@ function buildAllTeamsAutoAnchors(data, selectedTeamKey, selectedName, selectedC
   return result;
 }
 
+function getMonthMatrix(dateStr) {
+  const d = new Date(dateStr);
+  const year = d.getFullYear();
+  const month = d.getMonth();
+
+  const first = new Date(year, month, 1);
+  const firstDay = first.getDay();
+  const start = new Date(year, month, 1 - firstDay);
+
+  const matrix = [];
+  for (let r = 0; r < 6; r++) {
+    const row = [];
+    for (let c = 0; c < 7; c++) {
+      const temp = new Date(start);
+      temp.setDate(start.getDate() + r * 7 + c);
+      row.push(formatDate(temp));
+    }
+    matrix.push(row);
+  }
+  return matrix;
+}
+
+function getWeekDates(baseDate) {
+  const d = new Date(baseDate);
+  const day = d.getDay();
+  const sunday = new Date(d);
+  sunday.setDate(d.getDate() - day);
+
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const temp = new Date(sunday);
+    temp.setDate(sunday.getDate() + i);
+    dates.push(formatDate(temp));
+  }
+  return dates;
+}
+
+function getPersonGyobunForDate(data, teamKey, name, dateStr, overrides = {}) {
+  const team = data?.[teamKey];
+  if (!team) return null;
+
+  const saved = loadMySelection();
+  let anchor;
+
+  if (saved?.teamKey === teamKey && saved?.name === name && saved?.code && saved?.anchorDate) {
+    anchor = {
+      name: saved.name,
+      code: saved.code,
+      anchorDate: saved.anchorDate,
+    };
+  } else {
+    anchor = buildTeamAnchorForDate(team);
+  }
+
+  const offset = diffDays(anchor.anchorDate, dateStr);
+
+  const grid = buildAssignedGrid(
+    team,
+    anchor.name,
+    anchor.code,
+    offset,
+    overrides
+  );
+
+  return grid.find((item) => item.name === name || item.displayName === name) || null;
+}
+
 function openZipDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("gyobeon-app-db", 1);
@@ -473,6 +566,7 @@ function App() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
 
+  const [activeTab, setActiveTab] = useState("month");
   const [selectedTeam, setSelectedTeam] = useState(initialSelection?.teamKey || "ks");
   const [viewTeam, setViewTeam] = useState(initialSelection?.teamKey || "ks");
   const [selectedDate, setSelectedDate] = useState(initialDate);
@@ -497,6 +591,14 @@ function App() {
   const [pathOpen, setPathOpen] = useState(false);
   const [pathTarget, setPathTarget] = useState(null);
   const [pathImage, setPathImage] = useState("");
+
+  const [groups, setGroups] = useState(loadGroups());
+  const [currentGroup, setCurrentGroup] = useState(Object.keys(loadGroups())[0] || "낚시");
+  const [groupBaseDate, setGroupBaseDate] = useState(selectedDate);
+  const [showGroupAdd, setShowGroupAdd] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [groupAddTeam, setGroupAddTeam] = useState("ks");
+  const [groupAddName, setGroupAddName] = useState("");
 
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
@@ -586,12 +688,14 @@ function App() {
     }
   }, [editOpen]);
 
+  useEffect(() => {
+    setGroupBaseDate(selectedDate);
+  }, [selectedDate]);
+
   const currentTeam = data?.[selectedTeam] || null;
   const currentViewTeam = data?.[viewTeam] || null;
-  const currentAnchor =
-    teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: selectedDate };
-  const currentViewAnchor =
-    teamAnchors[viewTeam] || { name: "", code: "", anchorDate: selectedDate };
+  const currentAnchor = teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: selectedDate };
+  const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: selectedDate };
 
   const currentDayOffset = useMemo(() => {
     return diffDays(currentAnchor.anchorDate || selectedDate, selectedDate);
@@ -644,14 +748,7 @@ function App() {
       code: me.code,
       time: pickWorktime(currentTeam, me.code, selectedDate),
     };
-  }, [
-    currentTeam,
-    currentAnchor.name,
-    currentAnchor.code,
-    currentDayOffset,
-    selectedDate,
-    overrides,
-  ]);
+  }, [currentTeam, currentAnchor.name, currentAnchor.code, currentDayOffset, selectedDate, overrides]);
 
   const grid = useMemo(() => {
     if (!currentViewTeam || !currentViewAnchor.name || !currentViewAnchor.code) return [];
@@ -662,13 +759,12 @@ function App() {
       currentViewDayOffset,
       overrides
     );
-  }, [
-    currentViewTeam,
-    currentViewAnchor.name,
-    currentViewAnchor.code,
-    currentViewDayOffset,
-    overrides,
-  ]);
+  }, [currentViewTeam, currentViewAnchor.name, currentViewAnchor.code, currentViewDayOffset, overrides]);
+
+  const monthMatrix = useMemo(() => getMonthMatrix(selectedDate), [selectedDate]);
+  const monthHeaderDate = new Date(selectedDate);
+  const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
+  const groupMembers = groups[currentGroup] || [];
 
   async function parseAndSetZip(fileOrBlob, saveToIdb = true, keepSavedSelection = false) {
     setLoading(true);
@@ -749,7 +845,6 @@ function App() {
     if (!data || !name || !code) return;
 
     const anchorDate = selectedDate;
-
     const autoAnchors = buildAllTeamsAutoAnchors(
       data,
       teamKey,
@@ -760,6 +855,7 @@ function App() {
 
     setTeamAnchors(autoAnchors);
     setSelectedTeam(teamKey);
+
     saveMySelection({
       teamKey,
       name,
@@ -838,6 +934,43 @@ function App() {
     saveOverrides({});
   }
 
+  function createGroup() {
+    const name = newGroupName.trim();
+    if (!name) return;
+    const next = { ...groups };
+    if (!next[name]) next[name] = [];
+    setGroups(next);
+    saveGroups(next);
+    setCurrentGroup(name);
+    setNewGroupName("");
+  }
+
+  function addToGroup() {
+    if (!currentGroup || !groupAddTeam || !groupAddName) return;
+
+    const next = { ...groups };
+    if (!next[currentGroup]) next[currentGroup] = [];
+
+    const exists = next[currentGroup].some(
+      (item) => item.team === groupAddTeam && item.name === groupAddName
+    );
+    if (!exists) {
+      next[currentGroup].push({ team: groupAddTeam, name: groupAddName });
+      setGroups(next);
+      saveGroups(next);
+    }
+    setShowGroupAdd(false);
+  }
+
+  function removeFromGroup(teamKey, name) {
+    const next = { ...groups };
+    next[currentGroup] = (next[currentGroup] || []).filter(
+      (item) => !(item.team === teamKey && item.name === name)
+    );
+    setGroups(next);
+    saveGroups(next);
+  }
+
   async function handleInstall() {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
@@ -869,89 +1002,162 @@ function App() {
               <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>
             </div>
 
-            <div className="date-grid">
-              <div className="date-box">
-                <button
-                  className="date-btn"
-                  onClick={() => {
-                    const d = new Date(selectedDate);
-                    d.setFullYear(d.getFullYear() + 1);
-                    setSelectedDate(formatDate(d));
-                  }}
-                >
-                  +
-                </button>
-                <div className="date-value">{new Date(selectedDate).getFullYear()}년</div>
-                <button
-                  className="date-btn"
-                  onClick={() => {
-                    const d = new Date(selectedDate);
-                    d.setFullYear(d.getFullYear() - 1);
-                    setSelectedDate(formatDate(d));
-                  }}
-                >
-                  -
-                </button>
-              </div>
-
-              <div className="date-box">
-                <button
-                  className="date-btn"
-                  onClick={() => {
-                    const d = new Date(selectedDate);
-                    d.setMonth(d.getMonth() + 1);
-                    setSelectedDate(formatDate(d));
-                  }}
-                >
-                  +
-                </button>
-                <div className="date-value">{new Date(selectedDate).getMonth() + 1}월</div>
-                <button
-                  className="date-btn"
-                  onClick={() => {
-                    const d = new Date(selectedDate);
-                    d.setMonth(d.getMonth() - 1);
-                    setSelectedDate(formatDate(d));
-                  }}
-                >
-                  -
-                </button>
-              </div>
-
-              <div className="date-box">
-                <button className="date-btn" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>+</button>
-                <div className="date-value">{new Date(selectedDate).getDate()}일</div>
-                <button className="date-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>-</button>
-              </div>
-            </div>
-
-            <div className="card main-panel">
-              <div className="center-view">
-                <div
-                  className={
-                    "main-code " +
-                    (isSpecialS(myInfo?.time)
-                      ? "red-text"
-                      : myInfo?.code?.startsWith("휴")
-                      ? "blue-text"
-                      : "")
-                  }
-                >
-                  {myInfo?.code || "-"} {weekdayName(selectedDate)}
+            {activeTab === "month" && (
+              <>
+                <div className="month-header-bar">
+                  <button className="month-nav-btn" onClick={() => setSelectedDate(addMonths(selectedDate, -1))}>-</button>
+                  <div className="month-header-title">
+                    {monthHeaderDate.getFullYear()}년 {monthHeaderDate.getMonth() + 1}월
+                  </div>
+                  <button className="month-nav-btn" onClick={() => setSelectedDate(addMonths(selectedDate, 1))}>+</button>
                 </div>
 
-                <div className={`main-time ${menuTimeClass(myInfo?.code, myInfo?.time)}`}>
-                  {myInfo?.time || "----"}
+                <div className="month-calendar">
+                  <div className="month-weekdays">
+                    <div className="sun">일</div>
+                    <div>월</div>
+                    <div>화</div>
+                    <div>수</div>
+                    <div>목</div>
+                    <div>금</div>
+                    <div className="sat">토</div>
+                  </div>
+
+                  {monthMatrix.map((row, rowIdx) => (
+                    <div className="month-row" key={rowIdx}>
+                      {row.map((date) => {
+                        const item = getPersonGyobunForDate(
+                          data,
+                          selectedTeam,
+                          currentAnchor.name,
+                          date,
+                          overrides
+                        );
+                        const sameMonth = new Date(date).getMonth() === monthHeaderDate.getMonth();
+                        const isTodaySelected = date === selectedDate;
+
+                        return (
+                          <button
+                            key={date}
+                            className={`month-cell ${sameMonth ? "" : "other-month"} ${isTodaySelected ? "selected" : ""}`}
+                            onClick={() => setSelectedDate(date)}
+                          >
+                            <div className={`month-day ${isSunday(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>
+                              {new Date(date).getDate()}
+                            </div>
+                            <div className="month-code">{item?.code || "-"}</div>
+                            <div className={`month-time ${menuTimeClass(item?.code, pickWorktime(data[selectedTeam], item?.code, date))}`}>
+                              {item?.code ? pickWorktime(data[selectedTeam], item.code, date) : ""}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {activeTab === "group" && (
+              <div className="group-page">
+                <div className="group-topbar">
+                  <button className="group-nav-btn" onClick={() => setGroupBaseDate(addDays(groupBaseDate, -7))}>-</button>
+
+                  <select
+                    className="group-select"
+                    value={currentGroup}
+                    onChange={(e) => setCurrentGroup(e.target.value)}
+                  >
+                    {Object.keys(groups).length === 0 ? (
+                      <option value="">그룹 없음</option>
+                    ) : (
+                      Object.keys(groups).map((g) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))
+                    )}
+                  </select>
+
+                  <button className="group-add-btn" onClick={() => setShowGroupAdd(true)}>추가하기</button>
+                  <button className="group-nav-btn" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>+</button>
+                </div>
+
+                <div className="group-table-wrap">
+                  <table className="group-table">
+                    <thead>
+                      <tr>
+                        <th>이름</th>
+                        {weekDates.map((date) => (
+                          <th key={date}>
+                            <div className={`${isSunday(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>
+                              {weekdayShort(date)}
+                            </div>
+                            <div>{new Date(date).getDate()}</div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groupMembers.length === 0 ? (
+                        <tr>
+                          <td colSpan={8}>그룹 인원이 없습니다.</td>
+                        </tr>
+                      ) : (
+                        groupMembers.map((member, idx) => (
+                          <tr key={`${member.team}-${member.name}-${idx}`}>
+                            <td className="group-name-cell">
+                              <div>{member.name}</div>
+                              <div className="group-team-label">{TEAM_LABELS[member.team]}</div>
+                              <button
+                                className="group-remove-btn"
+                                onClick={() => removeFromGroup(member.team, member.name)}
+                              >
+                                삭제
+                              </button>
+                            </td>
+                            {weekDates.map((date) => {
+                              const item = getPersonGyobunForDate(data, member.team, member.name, date, overrides);
+                              return <td key={date}>{item?.code || "-"}</td>;
+                            })}
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            </div>
+            )}
+
+            {activeTab === "month" && (
+              <div className="card main-panel compact-panel">
+                <div className="center-view">
+                  <div
+                    className={
+                      "main-code " +
+                      (isSpecialS(myInfo?.time)
+                        ? "red-text"
+                        : myInfo?.code?.startsWith("휴")
+                        ? "blue-text"
+                        : "")
+                    }
+                  >
+                    {myInfo?.code || "-"} {weekdayName(selectedDate)}
+                  </div>
+
+                  <div className={`main-time ${menuTimeClass(myInfo?.code, myInfo?.time)}`}>
+                    {myInfo?.time || "----"}
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
 
       {data && (
-        <div className="bottom-tabs">
+        <div className="bottom-tabs tabs-3">
+          <button className={`bottom-tab ${activeTab === "month" ? "active" : ""}`} onClick={() => setActiveTab("month")}>월교번</button>
           <button className="bottom-tab" onClick={openAllView}>전체</button>
+          <button className={`bottom-tab ${activeTab === "group" ? "active" : ""}`} onClick={() => setActiveTab("group")}>그룹</button>
         </div>
       )}
 
@@ -1023,6 +1229,52 @@ function App() {
         </div>
       )}
 
+      {showGroupAdd && (
+        <div className="modal-backdrop" onClick={() => setShowGroupAdd(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">그룹 추가</div>
+
+            <label className="label">새 그룹 이름</label>
+            <input
+              className="input"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              placeholder="예: 낚시"
+            />
+            <button className="modal-btn primary" style={{ marginTop: 10 }} onClick={createGroup}>그룹 생성</button>
+
+            <label className="label" style={{ marginTop: 16 }}>현재 그룹</label>
+            <select className="select" value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
+              {Object.keys(groups).map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+
+            <label className="label" style={{ marginTop: 12 }}>소속</label>
+            <select className="select" value={groupAddTeam} onChange={(e) => setGroupAddTeam(e.target.value)}>
+              {TEAM_ORDER.map((key) => (
+                <option key={key} value={key}>{TEAM_LABELS[key]}</option>
+              ))}
+            </select>
+
+            <label className="label" style={{ marginTop: 12 }}>이름</label>
+            <select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}>
+              <option value="">선택</option>
+              {(data?.[groupAddTeam]?.people || []).map((person) => (
+                <option key={`${groupAddTeam}-${person.name}`} value={person.name}>
+                  {person.name}
+                </option>
+              ))}
+            </select>
+
+            <div className="modal-actions">
+              <button className="modal-btn" onClick={() => setShowGroupAdd(false)}>취소</button>
+              <button className="modal-btn primary" onClick={addToGroup}>추가</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAll && (
         <div className="fullscreen-viewer">
           <div className="all-header">
@@ -1065,9 +1317,10 @@ function App() {
             </div>
           </div>
 
-          <div className="bottom-team-tabs">
+          <div className="bottom-team-tabs home-5tabs">
             <button className={`bottom-team-tab ${viewTeam === "ks" ? "active" : ""}`} onClick={() => setViewTeam("ks")}>경산</button>
             <button className={`bottom-team-tab ${viewTeam === "my" ? "active" : ""}`} onClick={() => setViewTeam("my")}>문양</button>
+            <button className="bottom-team-tab home-tab" onClick={() => setShowAll(false)}>홈</button>
             <button className={`bottom-team-tab ${viewTeam === "wb" ? "active" : ""}`} onClick={() => setViewTeam("wb")}>월배</button>
             <button className={`bottom-team-tab ${viewTeam === "as" ? "active" : ""}`} onClick={() => setViewTeam("as")}>안심</button>
           </div>
