@@ -283,7 +283,6 @@ function parseZipToData(parsedFiles) {
     const team = result[teamKey];
     const fileName = parts[parts.length - 1];
     const parent = parts[parts.length - 2];
-
     const gyobunOrder = team.gyobun.length ? team.gyobun : DEFAULT_GYOBUN;
 
     if (fileName === "nor_worktime.txt") team.worktimes.nor = parseWorktime(content, gyobunOrder);
@@ -462,9 +461,7 @@ function App() {
 
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
-  const longPressRef = useRef(null);
-  const longPressTriggeredRef = useRef(false);
-  const movedRef = useRef(false);
+  const suppressClickRef = useRef(false);
 
   const showAllRef = useRef(false);
   const pathOpenRef = useRef(false);
@@ -527,7 +524,6 @@ function App() {
         return;
       }
 
-      // 루트에서 빠져나가지 않도록 다시 루트 유지
       window.history.pushState({ __gyobeon: true, layer: "root" }, "");
     }
 
@@ -537,9 +533,7 @@ function App() {
 
   useEffect(() => {
     if (!showAll) {
-      if (skipPopResetRef.current) {
-        skipPopResetRef.current = false;
-      }
+      if (skipPopResetRef.current) skipPopResetRef.current = false;
       return;
     }
 
@@ -550,9 +544,7 @@ function App() {
 
   useEffect(() => {
     if (!pathOpen) {
-      if (skipPopResetRef.current) {
-        skipPopResetRef.current = false;
-      }
+      if (skipPopResetRef.current) skipPopResetRef.current = false;
       return;
     }
 
@@ -800,42 +792,19 @@ function App() {
     }
   }
 
-  function startLongPress(item) {
-    clearTimeout(longPressRef.current);
-    longPressTriggeredRef.current = false;
-    movedRef.current = false;
-
-    longPressRef.current = setTimeout(() => {
-      longPressTriggeredRef.current = true;
-      openEditDialog(item);
-    }, 700);
-  }
-
-  function cancelLongPress() {
-    clearTimeout(longPressRef.current);
-  }
-
-  function finishPress(item) {
-    clearTimeout(longPressRef.current);
-
-    if (movedRef.current) {
-      movedRef.current = false;
+  function handleShortTap(item) {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
       return;
     }
-
-    if (longPressTriggeredRef.current) {
-      setTimeout(() => {
-        longPressTriggeredRef.current = false;
-      }, 50);
-      return;
-    }
-
     openPathDialog(item);
   }
 
-  function moveCancelPress() {
-    movedRef.current = true;
-    clearTimeout(longPressRef.current);
+  function handleLongPressMenu(e, item) {
+    e.preventDefault();
+    e.stopPropagation();
+    suppressClickRef.current = true;
+    openEditDialog(item);
   }
 
   function resetOverrides() {
@@ -1049,17 +1018,10 @@ function App() {
                     key={`${item.idx}-${item.displayName}`}
                     className={`all-cell-real ${isMine ? "cell-my" : ""}`}
                     style={{ backgroundColor: item.customColor || "#ffffff" }}
-
-                    onTouchStart={() => startLongPress(item)}
-                    onTouchEnd={() => finishPress(item)}
-                    onTouchMove={moveCancelPress}
-                    onTouchCancel={cancelLongPress}
-
-                    onMouseDown={() => startLongPress(item)}
-                    onMouseUp={() => finishPress(item)}
-                    onMouseLeave={cancelLongPress}
-
-                    onContextMenu={(e) => e.preventDefault()}
+                    onClick={() => handleShortTap(item)}
+                    onContextMenu={(e) => handleLongPressMenu(e, item)}
+                    onTouchStart={() => {}}
+                    onTouchEnd={() => {}}
                   >
                     <div className="all-code">{item.code || "-"}</div>
                     <div className="all-name">{item.displayName || "-"}</div>
