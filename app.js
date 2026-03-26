@@ -468,7 +468,7 @@ function App() {
 
   const showAllRef = useRef(false);
   const pathOpenRef = useRef(false);
-  const popHandlingRef = useRef(false);
+  const skipPopResetRef = useRef(false);
 
   useEffect(() => {
     setOverrides(loadOverrides());
@@ -510,28 +510,25 @@ function App() {
   }, [pathOpen]);
 
   useEffect(() => {
-    // 루트 상태 보장
     if (!window.history.state || !window.history.state.__gyobeon) {
       window.history.replaceState({ __gyobeon: true, layer: "root" }, "");
     }
 
     function handlePopState() {
-      // 뒤로가기 처리 중 표시
-      popHandlingRef.current = true;
-
       if (pathOpenRef.current) {
+        skipPopResetRef.current = true;
         setPathOpen(false);
         return;
       }
 
       if (showAllRef.current) {
+        skipPopResetRef.current = true;
         setShowAll(false);
         return;
       }
 
-      // 루트에서도 빠져나가려는 경우 다시 루트 유지
+      // 루트에서 빠져나가지 않도록 다시 루트 유지
       window.history.pushState({ __gyobeon: true, layer: "root" }, "");
-      popHandlingRef.current = false;
     }
 
     window.addEventListener("popstate", handlePopState);
@@ -539,29 +536,27 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!showAll) return;
-
-    if (popHandlingRef.current) {
-      popHandlingRef.current = false;
+    if (!showAll) {
+      if (skipPopResetRef.current) {
+        skipPopResetRef.current = false;
+      }
       return;
     }
 
-    const state = window.history.state;
-    if (!state || state.layer !== "all") {
+    if (!window.history.state || window.history.state.layer !== "all") {
       window.history.pushState({ __gyobeon: true, layer: "all" }, "");
     }
   }, [showAll]);
 
   useEffect(() => {
-    if (!pathOpen) return;
-
-    if (popHandlingRef.current) {
-      popHandlingRef.current = false;
+    if (!pathOpen) {
+      if (skipPopResetRef.current) {
+        skipPopResetRef.current = false;
+      }
       return;
     }
 
-    const state = window.history.state;
-    if (!state || state.layer !== "path") {
+    if (!window.history.state || window.history.state.layer !== "path") {
       window.history.pushState({ __gyobeon: true, layer: "path" }, "");
     }
   }, [pathOpen]);
@@ -811,11 +806,9 @@ function App() {
     movedRef.current = false;
 
     longPressRef.current = setTimeout(() => {
-      if (!movedRef.current) {
-        longPressTriggeredRef.current = true;
-        openEditDialog(item);
-      }
-    }, 650);
+      longPressTriggeredRef.current = true;
+      openEditDialog(item);
+    }, 700);
   }
 
   function cancelLongPress() {
@@ -825,7 +818,10 @@ function App() {
   function finishPress(item) {
     clearTimeout(longPressRef.current);
 
-    if (movedRef.current) return;
+    if (movedRef.current) {
+      movedRef.current = false;
+      return;
+    }
 
     if (longPressTriggeredRef.current) {
       setTimeout(() => {
@@ -1053,17 +1049,16 @@ function App() {
                     key={`${item.idx}-${item.displayName}`}
                     className={`all-cell-real ${isMine ? "cell-my" : ""}`}
                     style={{ backgroundColor: item.customColor || "#ffffff" }}
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      startLongPress(item);
-                    }}
-                    onPointerUp={(e) => {
-                      e.preventDefault();
-                      finishPress(item);
-                    }}
-                    onPointerMove={moveCancelPress}
-                    onPointerLeave={moveCancelPress}
-                    onPointerCancel={moveCancelPress}
+
+                    onTouchStart={() => startLongPress(item)}
+                    onTouchEnd={() => finishPress(item)}
+                    onTouchMove={moveCancelPress}
+                    onTouchCancel={cancelLongPress}
+
+                    onMouseDown={() => startLongPress(item)}
+                    onMouseUp={() => finishPress(item)}
+                    onMouseLeave={cancelLongPress}
+
                     onContextMenu={(e) => e.preventDefault()}
                   >
                     <div className="all-code">{item.code || "-"}</div>
