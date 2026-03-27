@@ -42,7 +42,7 @@ select {
 
 .container {
   width: 100%;
-  height: calc(100vh - 56px - 64px);
+  height: calc(100vh - 56px - 52px);
   padding: 8px;
   overflow: auto;
 }
@@ -221,7 +221,7 @@ select {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 64px;
+  height: 52px;
   display: grid;
   background: #2f61dc;
   border-top: 1px solid #1d4ab5;
@@ -233,13 +233,14 @@ select {
 }
 
 .bottom-tab {
-  height: 64px;
+  height: 52px;
   border: 0;
   background: transparent;
   color: white;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 800;
   cursor: pointer;
+  line-height: 1;
 }
 
 .bottom-tab.active {
@@ -460,8 +461,8 @@ select {
 }
 
 .all-tab-grid-wrap {
-  height: calc(100vh - 56px - 64px - 78px - 64px - 24px);
-  min-height: 260px;
+  height: calc(100vh - 56px - 52px - 78px - 48px - 18px);
+  min-height: 240px;
   overflow: hidden;
   background: #2f61dc;
   border-radius: 14px;
@@ -499,17 +500,17 @@ select {
 }
 
 .all-code {
-  font-size: 17px;
-  line-height: 1.05;
+  font-size: 16px;
+  line-height: 1.02;
   font-weight: 700;
   color: black;
   white-space: nowrap;
 }
 
 .all-name {
-  margin-top: 5px;
-  font-size: 11px;
-  line-height: 1.15;
+  margin-top: 4px;
+  font-size: 10px;
+  line-height: 1.1;
   font-weight: 700;
   color: black;
   word-break: keep-all;
@@ -527,20 +528,21 @@ select {
 .all-team-tabs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin-top: 8px;
-  margin-bottom: 4px;
+  gap: 4px;
+  margin-top: 6px;
+  margin-bottom: 2px;
 }
 
 .all-team-tab {
   border: 0;
   background: #5a82eb;
   color: black;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
-  padding: 12px 0;
-  border-radius: 12px;
+  padding: 9px 0;
+  border-radius: 10px;
   cursor: pointer;
+  line-height: 1;
 }
 
 .all-team-tab.active {
@@ -652,7 +654,7 @@ select {
   }
 
   .container {
-    height: calc(100vh - 52px - 60px);
+    height: calc(100vh - 52px - 46px);
     padding: 6px;
   }
 
@@ -700,12 +702,13 @@ select {
   }
 
   .bottom-tabs {
-    height: 60px;
+    height: 46px;
   }
 
   .bottom-tab {
-    height: 60px;
-    font-size: 16px;
+    height: 46px;
+    font-size: 13px;
+    padding: 0;
   }
 
   .month-header-title {
@@ -754,26 +757,28 @@ select {
   }
 
   .all-tab-grid-wrap {
-    height: calc(100vh - 52px - 60px - 72px - 60px - 22px);
-    min-height: 220px;
+    height: calc(100vh - 52px - 46px - 72px - 42px - 14px);
+    min-height: 210px;
   }
 
   .all-code {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .all-name {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .all-team-tabs {
     gap: 4px;
-    margin-top: 6px;
+    margin-top: 4px;
+    margin-bottom: 2px;
   }
 
   .all-team-tab {
-    font-size: 14px;
-    padding: 10px 0;
+    font-size: 13px;
+    padding: 8px 0;
+    border-radius: 9px;
   }
 
   .group-topbar {
@@ -797,4 +802,4 @@ select {
   .modal-sub {
     font-size: 16px;
   }
-    }
+}
