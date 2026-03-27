@@ -997,29 +997,56 @@ function App() {
 
   function createGroup() {
     const name = newGroupName.trim();
-    if (!name) return;
+    if (!name) {
+      alert("그룹 이름을 입력해주세요.");
+      return;
+    }
+
     const next = { ...groups };
-    if (!next[name]) next[name] = [];
+    if (!next[name]) {
+      next[name] = [];
+    }
+
     setGroups(next);
     saveGroups(next);
     setCurrentGroup(name);
-    setNewGroupName("");
   }
 
   function addToGroup() {
-    if (!currentGroup || !groupAddTeam || !groupAddName) return;
+    const typedGroupName = newGroupName.trim();
+    const targetGroup = currentGroup || typedGroupName;
+
+    if (!targetGroup) {
+      alert("그룹 이름을 입력하거나 현재 그룹을 선택해주세요.");
+      return;
+    }
+
+    if (!groupAddTeam || !groupAddName) {
+      alert("소속과 이름을 선택해주세요.");
+      return;
+    }
 
     const next = { ...groups };
-    if (!next[currentGroup]) next[currentGroup] = [];
 
-    const exists = next[currentGroup].some(
+    if (!next[targetGroup]) {
+      next[targetGroup] = [];
+    }
+
+    const exists = next[targetGroup].some(
       (item) => item.team === groupAddTeam && item.name === groupAddName
     );
+
     if (!exists) {
-      next[currentGroup].push({ team: groupAddTeam, name: groupAddName });
-      setGroups(next);
-      saveGroups(next);
+      next[targetGroup].push({
+        team: groupAddTeam,
+        name: groupAddName,
+      });
     }
+
+    setGroups(next);
+    saveGroups(next);
+    setCurrentGroup(targetGroup);
+    setNewGroupName("");
     setShowGroupAdd(false);
   }
 
@@ -1454,6 +1481,11 @@ function App() {
               onChange={(e) => setNewGroupName(e.target.value)}
               placeholder="예: 낚시"
             />
+
+            <div className="help-text">
+              현재 그룹이 없으면 새 그룹 이름을 입력한 뒤 바로 추가할 수 있습니다.
+            </div>
+
             <button className="modal-btn primary" style={{ marginTop: 10 }} onClick={createGroup}>그룹 생성</button>
 
             <label className="label" style={{ marginTop: 16 }}>현재 그룹</label>
