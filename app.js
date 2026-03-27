@@ -26,6 +26,36 @@ const COLOR_OPTIONS = [
   { value: "#e5e7eb", label: "회색" },
 ];
 
+/**
+ * 공휴일 목록
+ * YYYY-MM-DD 형식으로 관리
+ * 필요 시 해마다 이 배열만 업데이트하면 됩니다.
+ *
+ * 아래는 2026년 예시입니다.
+ */
+const HOLIDAYS = [
+  "2026-01-01", // 신정
+  "2026-02-16", // 설 연휴
+  "2026-02-17", // 설날
+  "2026-02-18", // 설 연휴
+  "2026-03-01", // 삼일절
+  "2026-03-02", // 삼일절 대체휴일
+  "2026-05-05", // 어린이날
+  "2026-05-24", // 부처님오신날
+  "2026-05-25", // 부처님오신날 대체휴일
+  "2026-06-03", // 전국 동시지방선거
+  "2026-06-06", // 현충일
+  "2026-08-15", // 광복절
+  "2026-08-17", // 광복절 대체휴일
+  "2026-09-24", // 추석 연휴
+  "2026-09-25", // 추석
+  "2026-09-26", // 추석 연휴
+  "2026-10-03", // 개천절
+  "2026-10-05", // 개천절 대체휴일
+  "2026-10-09", // 한글날
+  "2026-12-25", // 성탄절
+];
+
 const DEFAULT_GYOBUN = [
   "2d","대3","16d","휴1","휴2","대2","14d","24d","24~","휴3","5d","17d",
   "27d","27~","휴4","3d","13d","23d","23~","휴5","휴6","대1","15d","22d","22~",
@@ -101,16 +131,26 @@ function isSunday(dateStr) {
   return new Date(dateStr).getDay() === 0;
 }
 
+function isHolidayDate(dateStr) {
+  return HOLIDAYS.includes(dateStr);
+}
+
 function guessDayType(dateStr) {
-  if (isSunday(dateStr)) return "hol";
+  if (isSunday(dateStr) || isHolidayDate(dateStr)) return "hol";
   if (isSaturday(dateStr)) return "sat";
   return "nor";
 }
 
 function getDateToneClass(dateStr) {
-  if (isSunday(dateStr)) return "tone-sun";
+  if (isSunday(dateStr) || isHolidayDate(dateStr)) return "tone-sun";
   if (isSaturday(dateStr)) return "tone-sat";
   return "tone-normal";
+}
+
+function getDateBasedColor(dateStr) {
+  if (isSunday(dateStr) || isHolidayDate(dateStr)) return "#ef4444";
+  if (isSaturday(dateStr)) return "#3b82f6";
+  return "#111827";
 }
 
 function parseLines(text) {
@@ -200,30 +240,32 @@ function pickWorktime(team, code, dateStr) {
 
 function getPathFolder(teamKey, dateStr, code) {
   const day = new Date(dateStr).getDay();
+  const isHol = isHolidayDate(dateStr);
 
   if (isNightStartCode(teamKey, code)) {
+    if (isHol || day === 0) return "hol_nor";
     if (day >= 1 && day <= 4) return "nor";
     if (day === 5) return "nor_sat";
     if (day === 6) return "sat_hol";
-    if (day === 0) return "hol_nor";
   }
 
   if (isNightEndCode(teamKey, code)) {
+    if (day === 1 && isHolidayDate(addDays(dateStr, -1))) return "hol_nor";
     if (day >= 2 && day <= 5) return "nor";
     if (day === 6) return "nor_sat";
-    if (day === 0) return "sat_hol";
+    if (day === 0 || isHol) return "sat_hol";
     if (day === 1) return "hol_nor";
   }
 
   if (isDayShiftCode(teamKey, code)) {
-    if (day >= 1 && day <= 5) return "nor";
+    if (isHol || day === 0) return "hol";
     if (day === 6) return "sat";
-    if (day === 0) return "hol";
+    if (day >= 1 && day <= 5) return "nor";
   }
 
-  if (day >= 1 && day <= 5) return "nor";
+  if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
-  return "hol";
+  return "nor";
 }
 
 function findPathImage(team, dateStr, code) {
@@ -272,12 +314,6 @@ function findPathImage(team, dateStr, code) {
 
 function isSpecialS(value) {
   return value === "s1" || value === "s2";
-}
-
-function menuTimeClass(code, time) {
-  if (isSpecialS(time)) return "red-text";
-  if (code?.startsWith("휴")) return "blue-text";
-  return "";
 }
 
 function getGyobunOrder(team) {
@@ -1092,7 +1128,7 @@ function App() {
               <>
                 <div className="settings-row">
                   {deferredPrompt && <button className="install-btn" onClick={handleInstall}>설치</button>}
-                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>
+                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>}
                 </div>
 
                 <div className="date-grid">
@@ -1154,19 +1190,16 @@ function App() {
                 <div className="card main-panel">
                   <div className="center-view">
                     <div
-                      className={
-                        "main-code " +
-                        (isSpecialS(myInfo?.time)
-                          ? "red-text"
-                          : myInfo?.code?.startsWith("휴")
-                          ? "blue-text"
-                          : "")
-                      }
+                      className="main-code"
+                      style={{ color: getDateBasedColor(selectedDate) }}
                     >
                       {myInfo?.code || "-"} {weekdayName(selectedDate)}
                     </div>
 
-                    <div className={`main-time ${menuTimeClass(myInfo?.code, myInfo?.time)}`}>
+                    <div
+                      className="main-time"
+                      style={{ color: getDateBasedColor(selectedDate) }}
+                    >
                       {myInfo?.time || "----"}
                     </div>
 
@@ -1353,7 +1386,7 @@ function App() {
                         <th>이름</th>
                         {weekDates.map((date) => (
                           <th key={date}>
-                            <div className={`${isSunday(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>
+                            <div className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>
                               {weekdayShort(date)}
                             </div>
                             <div>{new Date(date).getDate()}</div>
