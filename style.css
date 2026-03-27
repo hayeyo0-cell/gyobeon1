@@ -1,5 +1,6 @@
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -8,13 +9,16 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  background: #dfe3ea;
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+    "Segoe UI", sans-serif;
+  background: #eef1f6;
   color: #111827;
 }
 
 body {
   overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 button,
@@ -23,35 +27,45 @@ select {
   font: inherit;
 }
 
+button {
+  transition:
+    transform 0.14s ease,
+    opacity 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
 #root {
   width: 100%;
   height: 100%;
 }
 
-.topbar {
-  height: 56px;
-  background: #2f61dc;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 14px;
-  font-size: 28px;
-  font-weight: 700;
-}
+/* ================= 기본 컨테이너 ================= */
 
 .container {
   width: 100%;
-  height: calc(100vh - 56px - 52px);
-  padding: 8px;
+  height: calc(100vh - 52px);
+  padding: 10px 10px 8px;
   overflow: auto;
 }
 
+/* ================= 공통 카드 ================= */
+
 .card {
-  background: #ececef;
-  border-radius: 18px;
-  padding: 12px;
-  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 24px;
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.75);
 }
 
 .card-title {
@@ -68,13 +82,14 @@ select {
 }
 
 .notice-box {
-  background: #eef4ff;
-  border: 1px solid #bdd2ff;
-  color: #1f3f95;
-  border-radius: 12px;
+  background: rgba(233, 242, 255, 0.95);
+  border: 1px solid rgba(189, 210, 255, 0.95);
+  color: #2146a6;
+  border-radius: 16px;
   padding: 10px 12px;
   margin-top: 10px;
   font-size: 13px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
 }
 
 .label {
@@ -90,24 +105,32 @@ select {
 .group-select {
   width: 100%;
   padding: 11px 12px;
-  border-radius: 12px;
-  border: 1px solid #cbd5e1;
-  background: white;
+  border-radius: 16px;
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  background: rgba(255, 255, 255, 0.92);
   outline: none;
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.02);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.14s ease;
 }
 
 .input:focus,
 .select:focus,
 .group-select:focus {
-  border-color: #2563eb;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
 }
 
+/* ================= 홈 설정 버튼 줄 ================= */
+
 .settings-row {
-  height: 54px;
+  height: 52px;
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .settings-btn,
@@ -116,72 +139,88 @@ select {
   border: 0;
   color: white;
   padding: 10px 16px;
-  border-radius: 14px;
+  border-radius: 18px;
   cursor: pointer;
-  font-weight: 700;
-  font-size: 16px;
+  font-weight: 800;
+  font-size: 15px;
+  box-shadow:
+    0 8px 18px rgba(47, 97, 220, 0.24),
+    inset 0 1px 0 rgba(255,255,255,0.22);
 }
 
 .settings-btn {
-  background: #2f61dc;
+  background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%);
 }
 
 .install-btn {
-  background: #1f7a3e;
+  background: linear-gradient(180deg, #2aa55d 0%, #197a42 100%);
   margin-right: 8px;
 }
 
 .group-add-btn {
-  background: #2f61dc;
+  background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%);
   white-space: nowrap;
 }
+
+/* ================= 홈 날짜 선택 ================= */
 
 .date-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 8px;
-  height: 172px;
+  gap: 10px;
+  margin-bottom: 10px;
+  height: 168px;
 }
 
 .date-box {
-  background: #d4d7dd;
+  background: rgba(255, 255, 255, 0.7);
   display: grid;
-  grid-template-rows: 48px 1fr 48px;
+  grid-template-rows: 46px 1fr 46px;
   overflow: hidden;
+  border-radius: 22px;
+  box-shadow:
+    0 8px 20px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.78);
 }
 
 .date-btn {
   width: 100%;
-  height: 48px;
+  height: 46px;
   border: 0;
-  background: #d4d7dd;
-  font-size: 30px;
-  font-weight: 700;
+  background: rgba(215, 220, 230, 0.55);
+  font-size: 26px;
+  font-weight: 800;
   cursor: pointer;
 }
 
 .date-value {
-  background: #ececef;
+  background: rgba(255, 255, 255, 0.92);
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-size: 24px;
+  font-size: 23px;
   line-height: 1.15;
   padding: 4px;
   white-space: nowrap;
   word-break: keep-all;
 }
 
+/* ================= 홈 메인 카드 ================= */
+
 .main-panel {
-  min-height: 220px;
-  background: #ececef;
-  border-radius: 22px;
+  min-height: 210px;
+  background: rgba(255,255,255,0.82);
+  border-radius: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 0;
+  box-shadow:
+    0 14px 32px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255,255,255,0.72);
+  border: 1px solid rgba(255,255,255,0.78);
 }
 
 .center-view {
@@ -191,30 +230,46 @@ select {
 }
 
 .main-code {
-  font-size: 46px;
+  font-size: 44px;
   font-weight: 800;
-  line-height: 1.2;
+  line-height: 1.18;
   color: #0f172a;
+  letter-spacing: -0.02em;
 }
 
 .main-time {
   margin-top: 14px;
-  font-size: 34px;
-  line-height: 1.2;
-  color: #0f172a;
+  font-size: 32px;
+  line-height: 1.18;
+  color: #111827;
+  font-weight: 700;
 }
 
 .red-text {
-  color: #dc2626 !important;
+  color: #ef4444 !important;
 }
 
 .blue-text {
-  color: #2563eb !important;
+  color: #3b82f6 !important;
 }
 
 .tab-page {
   min-height: 100%;
+  animation: pageFadeIn 0.18s ease;
 }
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================= 하단 탭 ================= */
 
 .bottom-tabs {
   position: fixed;
@@ -223,8 +278,11 @@ select {
   bottom: 0;
   height: 52px;
   display: grid;
-  background: #2f61dc;
-  border-top: 1px solid #1d4ab5;
+  background: rgba(39, 82, 191, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255,255,255,0.16);
+  box-shadow: 0 -6px 22px rgba(15,23,42,0.12);
   z-index: 50;
 }
 
@@ -236,142 +294,216 @@ select {
   height: 52px;
   border: 0;
   background: transparent;
-  color: white;
-  font-size: 15px;
+  color: rgba(255,255,255,0.84);
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
   line-height: 1;
+  position: relative;
 }
 
 .bottom-tab.active {
-  background: #416fe0;
+  color: #ffffff;
+  background: rgba(255,255,255,0.08);
 }
+
+.bottom-tab.active::after {
+  content: "";
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 5px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.95);
+}
+
+/* ================= 월교번 상단 ================= */
 
 .month-header-bar,
 .group-topbar {
   display: grid;
-  grid-template-columns: 52px 1fr 52px;
+  grid-template-columns: 48px 1fr 48px;
   gap: 8px;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .group-topbar {
-  grid-template-columns: 52px 1fr 120px 52px;
+  grid-template-columns: 48px 1fr 112px 48px;
 }
 
 .month-nav-btn,
 .group-nav-btn {
-  height: 52px;
+  height: 48px;
   border: 0;
-  background: #2f61dc;
+  background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%);
   color: white;
-  border-radius: 14px;
-  font-size: 28px;
-  font-weight: 700;
+  border-radius: 18px;
+  font-size: 24px;
+  font-weight: 800;
   cursor: pointer;
+  box-shadow:
+    0 8px 18px rgba(47, 97, 220, 0.22),
+    inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
 .month-header-title {
-  height: 52px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ececef;
-  border-radius: 14px;
-  font-size: 28px;
+  background: rgba(255,255,255,0.8);
+  border-radius: 18px;
+  font-size: 24px;
   font-weight: 800;
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255,255,255,0.72);
+  border: 1px solid rgba(255,255,255,0.78);
 }
 
+/* ================= 월교번 달력 ================= */
+
 .month-calendar {
-  background: #ececef;
-  border-radius: 18px;
-  padding: 8px;
+  background: rgba(255,255,255,0.76);
+  border-radius: 26px;
+  padding: 10px;
   margin-bottom: 8px;
+  box-shadow:
+    0 12px 28px rgba(15,23,42,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.72);
+  border: 1px solid rgba(255,255,255,0.78);
 }
 
 .month-weekdays,
 .month-row {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.month-weekdays {
+  margin-bottom: 6px;
 }
 
 .month-weekdays > div {
   text-align: center;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
-  padding: 8px 0;
+  padding: 6px 0;
 }
 
 .month-cell {
-  border: 1px solid #cfd4dd;
-  background: white;
+  border: 1px solid rgba(201, 208, 220, 0.95);
+  background: rgba(255,255,255,0.92);
   min-height: 96px;
-  padding: 4px;
+  padding: 6px 6px 5px;
   text-align: left;
   cursor: pointer;
+  border-radius: 20px;
+  box-shadow:
+    0 4px 12px rgba(15,23,42,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.7);
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.month-cell:hover {
+  transform: translateY(-1px);
 }
 
 .month-cell.selected {
-  outline: 3px solid #2f61dc;
-  outline-offset: -3px;
+  border-color: #6aa4ff;
+  box-shadow:
+    0 0 0 3px rgba(79, 139, 255, 0.22),
+    0 6px 14px rgba(15,23,42,0.07);
 }
 
 .month-cell.other-month {
-  opacity: 0.35;
+  opacity: 0.34;
 }
 
 .month-day {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .month-code {
   margin-top: 6px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
 }
 
 .month-time {
   margin-top: 4px;
-  font-size: 12px;
-  line-height: 1.2;
+  font-size: 11px;
+  line-height: 1.18;
   white-space: pre-line;
 }
 
 .sun {
-  color: #dc2626 !important;
+  color: #ef4444 !important;
 }
 
 .sat {
-  color: #2563eb !important;
+  color: #3b82f6 !important;
 }
+
+/* ================= 모달 ================= */
 
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(17, 24, 39, 0.34);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 4000;
   padding: 16px;
+  animation: fadeIn 0.18s ease;
 }
 
 .modal {
   width: 100%;
   max-width: 520px;
-  background: white;
-  border-radius: 16px;
-  padding: 18px;
+  background: rgba(255,255,255,0.94);
+  border-radius: 24px;
+  padding: 20px;
   max-height: 90vh;
   overflow: auto;
+  box-shadow:
+    0 24px 50px rgba(15,23,42,0.16),
+    inset 0 1px 0 rgba(255,255,255,0.78);
+  border: 1px solid rgba(255,255,255,0.86);
+  animation: modalUp 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modal-title {
   font-size: 26px;
   font-weight: 800;
   margin-bottom: 14px;
+  letter-spacing: -0.02em;
 }
 
 .modal-sub {
@@ -389,48 +521,57 @@ select {
 .modal-btn {
   min-width: 88px;
   height: 42px;
-  border: 1px solid #cbd5e1;
-  background: white;
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  background: rgba(255,255,255,0.9);
   cursor: pointer;
-  border-radius: 10px;
+  border-radius: 14px;
+  font-weight: 700;
 }
 
 .modal-btn.primary {
-  background: #2563eb;
+  background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%);
   color: white;
-  border-color: #2563eb;
+  border-color: transparent;
+  box-shadow:
+    0 8px 16px rgba(47, 97, 220, 0.22),
+    inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
 .color-preview {
   height: 40px;
-  border-radius: 10px;
+  border-radius: 14px;
   border: 1px solid #cbd5e1;
   margin-top: 8px;
   background: white;
 }
+
+/* ================= 전체 탭 상단 ================= */
 
 .all-tab-header {
   margin-bottom: 8px;
 }
 
 .all-header {
-  height: 78px;
+  height: 60px;
   display: grid;
-  grid-template-columns: 52px 1fr 78px 52px;
-  background: #7ea0f0;
+  grid-template-columns: 44px 1fr 60px 44px;
+  background: linear-gradient(180deg, #8db0ff 0%, #7ea0f0 100%);
   color: black;
-  border-bottom: 1px solid #5d7fd5;
-  border-radius: 14px;
+  border-radius: 18px;
   overflow: hidden;
+  box-shadow:
+    0 10px 22px rgba(15,23,42,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.4);
+  border: 1px solid rgba(255,255,255,0.45);
 }
 
 .all-header-btn {
-  border: 1px solid #5d7fd5;
-  background: #7ea0f0;
-  font-size: 28px;
-  font-weight: 700;
+  border: 1px solid rgba(93,127,213,0.55);
+  background: transparent;
+  font-size: 22px;
+  font-weight: 800;
   cursor: pointer;
-  height: 78px;
+  height: 60px;
 }
 
 .all-header-title {
@@ -439,33 +580,39 @@ select {
   justify-content: center;
   text-align: center;
   padding: 0 6px;
-  font-size: 20px;
-  line-height: 1.2;
-  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.08;
+  font-weight: 800;
   word-break: keep-all;
   white-space: normal;
 }
 
 .all-edit-btn {
-  border: 1px solid #5d7fd5;
-  background: #7ea0f0;
-  font-size: 16px;
-  font-weight: 700;
+  border: 1px solid rgba(93,127,213,0.55);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 800;
   cursor: pointer;
-  height: 78px;
+  height: 60px;
 }
 
 .all-edit-btn.active {
-  background: #dc2626;
+  background: linear-gradient(180deg, #ff6b6b 0%, #e63d3d 100%);
   color: white;
 }
 
+/* ================= 전체 교번표 ================= */
+
 .all-tab-grid-wrap {
-  height: calc(100vh - 56px - 52px - 78px - 48px - 18px);
+  height: calc(100vh - 52px - 60px - 48px - 12px);
   min-height: 240px;
   overflow: hidden;
-  background: #2f61dc;
-  border-radius: 14px;
+  background: rgba(104, 141, 234, 0.3);
+  border-radius: 22px;
+  padding: 3px;
+  box-shadow:
+    0 12px 28px rgba(15,23,42,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.35);
 }
 
 .all-grid-real {
@@ -474,17 +621,14 @@ select {
   grid-auto-rows: minmax(0, 1fr);
   width: 100%;
   height: 100%;
-  border-left: 1px solid #4a67c7;
-  border-top: 1px solid #4a67c7;
-  background: white;
+  background: transparent;
+  gap: 2px;
 }
 
 .all-cell-real {
   min-width: 0;
   min-height: 0;
-  border-right: 1px solid #4a67c7;
-  border-bottom: 1px solid #4a67c7;
-  background: white;
+  background: rgba(255,255,255,0.94);
   padding: 4px 2px;
   text-align: center;
   cursor: pointer;
@@ -497,12 +641,23 @@ select {
   user-select: none;
   -webkit-touch-callout: none;
   touch-action: manipulation;
+  border-radius: 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.all-cell-real:active {
+  transform: scale(0.985);
+  background: rgba(245,248,255,0.96);
 }
 
 .all-code {
   font-size: 16px;
   line-height: 1.02;
-  font-weight: 700;
+  font-weight: 800;
   color: black;
   white-space: nowrap;
 }
@@ -521,9 +676,12 @@ select {
 }
 
 .cell-my {
-  outline: 3px solid #00c4d6;
-  outline-offset: -3px;
+  box-shadow:
+    inset 0 0 0 3px #1ecbe1,
+    inset 0 1px 0 rgba(255,255,255,0.65);
 }
+
+/* ================= 전체 탭 소속 선택 ================= */
 
 .all-team-tabs {
   display: grid;
@@ -535,19 +693,25 @@ select {
 
 .all-team-tab {
   border: 0;
-  background: #5a82eb;
-  color: black;
+  background: linear-gradient(180deg, #7ea7ff 0%, #5a82eb 100%);
+  color: #0f172a;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
   padding: 9px 0;
-  border-radius: 10px;
+  border-radius: 14px;
   cursor: pointer;
   line-height: 1;
+  box-shadow:
+    0 8px 16px rgba(90,130,235,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.25);
 }
 
 .all-team-tab.active {
-  background: #6b90f0;
+  background: linear-gradient(180deg, #96b8ff 0%, #6b90f0 100%);
+  color: #0b1324;
 }
+
+/* ================= 행로표 보기 ================= */
 
 .viewer-page {
   position: fixed;
@@ -560,7 +724,9 @@ select {
 .viewer-header {
   position: sticky;
   top: 0;
-  background: #f3f4f6;
+  background: rgba(243, 244, 246, 0.84);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   padding: 12px 16px;
   border-bottom: 1px solid #d1d5db;
   display: flex;
@@ -585,44 +751,56 @@ select {
   margin: 0 auto;
   background: white;
   border: 1px solid #cbd5e1;
+  border-radius: 18px;
+  box-shadow: 0 12px 24px rgba(15,23,42,0.08);
 }
 
 .empty-box {
   border: 1px dashed #94a3b8;
   padding: 40px 16px;
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   color: #64748b;
   text-align: center;
 }
 
+/* ================= 그룹 화면 ================= */
+
 .group-page {
-  background: #ececef;
-  border-radius: 18px;
-  padding: 8px;
+  background: rgba(255,255,255,0.76);
+  border-radius: 24px;
+  padding: 10px;
+  box-shadow:
+    0 12px 28px rgba(15,23,42,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.72);
+  border: 1px solid rgba(255,255,255,0.78);
 }
 
 .group-table-wrap {
   overflow: auto;
+  border-radius: 18px;
 }
 
 .group-table {
   width: 100%;
-  border-collapse: collapse;
-  background: white;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: rgba(255,255,255,0.94);
   font-size: 14px;
+  overflow: hidden;
+  border-radius: 18px;
 }
 
 .group-table th,
 .group-table td {
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(203, 213, 225, 0.9);
   padding: 6px;
   text-align: center;
   vertical-align: middle;
 }
 
 .group-table th {
-  background: #f8fafc;
+  background: rgba(248, 250, 252, 0.98);
   font-weight: 800;
 }
 
@@ -639,66 +817,70 @@ select {
 .group-remove-btn {
   margin-top: 6px;
   border: 0;
-  background: #ef4444;
+  background: linear-gradient(180deg, #ff6b6b 0%, #ef4444 100%);
   color: white;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 4px 8px;
   font-size: 11px;
   cursor: pointer;
+  font-weight: 700;
+  box-shadow:
+    0 8px 14px rgba(239,68,68,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.18);
 }
 
-@media (max-width: 420px) {
-  .topbar {
-    font-size: 24px;
-    height: 52px;
-  }
+/* ================= 모바일 ================= */
 
+@media (max-width: 420px) {
   .container {
-    height: calc(100vh - 52px - 46px);
+    height: calc(100vh - 46px);
     padding: 6px;
   }
 
   .date-grid {
     gap: 6px;
-    height: 158px;
+    height: 154px;
     margin-bottom: 6px;
   }
 
   .date-box {
-    grid-template-rows: 44px 1fr 44px;
+    grid-template-rows: 42px 1fr 42px;
+    border-radius: 18px;
   }
 
   .date-btn {
-    height: 44px;
-    font-size: 24px;
+    height: 42px;
+    font-size: 22px;
   }
 
   .date-value {
-    font-size: 20px;
+    font-size: 19px;
   }
 
   .settings-row {
-    height: 48px;
+    height: 46px;
     margin-bottom: 4px;
   }
 
   .settings-btn,
   .install-btn,
   .group-add-btn {
-    padding: 8px 14px;
-    font-size: 15px;
+    padding: 8px 13px;
+    font-size: 14px;
+    border-radius: 16px;
   }
 
   .main-panel {
-    min-height: 200px;
+    min-height: 188px;
+    border-radius: 24px;
   }
 
   .main-code {
-    font-size: 38px;
+    font-size: 36px;
   }
 
   .main-time {
-    font-size: 28px;
+    font-size: 27px;
   }
 
   .bottom-tabs {
@@ -712,17 +894,19 @@ select {
   }
 
   .month-header-title {
-    font-size: 22px;
+    font-size: 20px;
   }
 
   .month-nav-btn,
   .group-nav-btn {
-    height: 46px;
-    font-size: 24px;
+    height: 44px;
+    font-size: 22px;
+    border-radius: 16px;
   }
 
   .month-cell {
-    min-height: 80px;
+    min-height: 76px;
+    border-radius: 16px;
   }
 
   .month-day {
@@ -730,7 +914,7 @@ select {
   }
 
   .month-code {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .month-time {
@@ -738,27 +922,29 @@ select {
   }
 
   .all-header {
-    height: 72px;
-    grid-template-columns: 48px 1fr 72px 48px;
+    height: 52px;
+    grid-template-columns: 40px 1fr 52px 40px;
+    border-radius: 16px;
   }
 
   .all-header-btn {
-    height: 72px;
-    font-size: 24px;
-  }
-
-  .all-header-title {
-    font-size: 17px;
+    height: 52px;
+    font-size: 18px;
   }
 
   .all-edit-btn {
-    height: 72px;
+    height: 52px;
+    font-size: 12px;
+  }
+
+  .all-header-title {
     font-size: 14px;
   }
 
   .all-tab-grid-wrap {
-    height: calc(100vh - 52px - 46px - 72px - 42px - 14px);
+    height: calc(100vh - 46px - 52px - 42px - 10px);
     min-height: 210px;
+    border-radius: 18px;
   }
 
   .all-code {
@@ -778,7 +964,7 @@ select {
   .all-team-tab {
     font-size: 13px;
     padding: 8px 0;
-    border-radius: 9px;
+    border-radius: 11px;
   }
 
   .group-topbar {
@@ -792,7 +978,7 @@ select {
 
   .modal {
     padding: 16px;
-    border-radius: 14px;
+    border-radius: 20px;
   }
 
   .modal-title {
@@ -802,4 +988,4 @@ select {
   .modal-sub {
     font-size: 16px;
   }
-}
+  }
