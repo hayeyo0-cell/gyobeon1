@@ -460,16 +460,11 @@ select {
 }
 
 .all-tab-grid-wrap {
-  height: calc(100vh - 56px - 64px - 78px - 80px);
-  min-height: 320px;
+  height: calc(100vh - 56px - 64px - 78px - 64px - 24px);
+  min-height: 260px;
   overflow: hidden;
   background: #2f61dc;
   border-radius: 14px;
-}
-
-.all-grid-wrap {
-  overflow: hidden;
-  background: #2f61dc;
 }
 
 .all-grid-real {
@@ -534,6 +529,7 @@ select {
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
   margin-top: 8px;
+  margin-bottom: 4px;
 }
 
 .all-team-tab {
@@ -758,7 +754,8 @@ select {
   }
 
   .all-tab-grid-wrap {
-    height: calc(100vh - 52px - 60px - 72px - 72px);
+    height: calc(100vh - 52px - 60px - 72px - 60px - 22px);
+    min-height: 220px;
   }
 
   .all-code {
@@ -767,6 +764,11 @@ select {
 
   .all-name {
     font-size: 10px;
+  }
+
+  .all-team-tabs {
+    gap: 4px;
+    margin-top: 6px;
   }
 
   .all-team-tab {
@@ -795,4 +797,4 @@ select {
   .modal-sub {
     font-size: 16px;
   }
-  }
+    }
