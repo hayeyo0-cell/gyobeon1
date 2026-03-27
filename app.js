@@ -1098,6 +1098,18 @@ function App() {
                   </div>
                 </div>
 
+                <div className="all-team-tabs">
+                  {TEAM_ORDER.map((key) => (
+                    <button
+                      key={key}
+                      className={`all-team-tab ${viewTeam === key ? "active" : ""}`}
+                      onClick={() => setViewTeam(key)}
+                    >
+                      {TEAM_LABELS[key]}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="all-tab-grid-wrap">
                   <div className="all-grid-real">
                     {allGrid.map((item) => {
@@ -1117,18 +1129,6 @@ function App() {
                       );
                     })}
                   </div>
-                </div>
-
-                <div className="all-team-tabs">
-                  {TEAM_ORDER.map((key) => (
-                    <button
-                      key={key}
-                      className={`all-team-tab ${viewTeam === key ? "active" : ""}`}
-                      onClick={() => setViewTeam(key)}
-                    >
-                      {TEAM_LABELS[key]}
-                    </button>
-                  ))}
                 </div>
               </div>
             )}
