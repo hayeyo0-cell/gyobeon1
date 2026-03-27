@@ -107,6 +107,12 @@ function guessDayType(dateStr) {
   return "nor";
 }
 
+function getDateToneClass(dateStr) {
+  if (isSunday(dateStr)) return "tone-sun";
+  if (isSaturday(dateStr)) return "tone-sat";
+  return "tone-normal";
+}
+
 function parseLines(text) {
   return text
     .replace(/\r/g, "")
@@ -514,6 +520,27 @@ function getWeekDates(baseDate) {
     dates.push(formatDate(temp));
   }
   return dates;
+}
+
+function splitWorktime(worktime) {
+  const raw = String(worktime || "").trim();
+  if (!raw || raw === "----") {
+    return { startTime: "-", endTime: "-" };
+  }
+
+  const normalized = raw.replace(/\s+/g, "");
+  if (normalized.includes("-")) {
+    const [start, end] = normalized.split("-");
+    return {
+      startTime: start || "-",
+      endTime: end || "-",
+    };
+  }
+
+  return {
+    startTime: raw,
+    endTime: "",
+  };
 }
 
 function getPersonGyobunForDate(data, teamKey, name, dateStr, overrides = {}) {
@@ -1217,14 +1244,10 @@ function App() {
 
                         const sameMonth = new Date(date).getMonth() === monthHeaderDate.getMonth();
                         const isSelected = date === selectedDate;
+                        const toneClass = getDateToneClass(date);
 
                         const worktime = item?.code ? pickWorktime(data[selectedTeam], item.code, date) : "";
-                        const parts = String(worktime || "")
-                          .split("-")
-                          .map((v) => v.trim());
-
-                        const startTime = parts[0] || "-";
-                        const endTime = parts[1] || "-";
+                        const { startTime, endTime } = splitWorktime(worktime);
 
                         return (
                           <button
@@ -1232,20 +1255,24 @@ function App() {
                             className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`}
                             onClick={() => setSelectedDate(date)}
                           >
-                            <div className={`month-day ${isSunday(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>
-                              {new Date(date).getDate()}
-                            </div>
+                            <div className={`month-cell-inner ${toneClass}`}>
+                              <div className={`month-day ${toneClass}`}>
+                                {new Date(date).getDate()}
+                              </div>
 
-                            <div className="month-code">
-                              {item?.code || "-"}
-                            </div>
+                              <div className={`month-code-line ${toneClass}`}>
+                                {item?.code || "-"}
+                              </div>
 
-                            <div className="month-time-line">
-                              {startTime}
-                            </div>
+                              <div className="month-time-wrap">
+                                <div className={`month-time-line ${toneClass}`}>
+                                  {startTime || "-"}
+                                </div>
 
-                            <div className="month-time-line">
-                              {endTime}
+                                <div className={`month-time-line ${toneClass}`}>
+                                  {endTime || ""}
+                                </div>
+                              </div>
                             </div>
                           </button>
                         );
