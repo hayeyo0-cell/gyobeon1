@@ -178,7 +178,6 @@ function pickWorktime(team, code, dateStr) {
 
 function getPathFolder(teamKey, dateStr, code) {
   const day = new Date(dateStr).getDay();
-  // 0:일 1:월 2:화 3:수 4:목 5:금 6:토
 
   if (isNightStartCode(teamKey, code)) {
     if (day >= 1 && day <= 4) return "nor";
@@ -975,8 +974,6 @@ function App() {
 
   return (
     <>
-      <div className="topbar">GB_2601</div>
-
       <div className="container">
         {!data ? (
           <div className="card">
@@ -1079,24 +1076,26 @@ function App() {
             )}
 
             {activeTab === "all" && (
-              <div className="tab-page">
-                <div className="all-header all-tab-header">
-                  <button className="all-header-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>-</button>
+              <div className="tab-page all-page">
+                <div className="all-tab-header">
+                  <div className="all-header">
+                    <button className="all-header-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>-</button>
 
-                  <div className="all-header-title">
-                    {TEAM_LABELS[viewTeam]} {new Date(selectedDate).getFullYear()}.
-                    {new Date(selectedDate).getMonth() + 1}.
-                    {new Date(selectedDate).getDate()} {weekdayName(selectedDate)}
+                    <div className="all-header-title">
+                      {TEAM_LABELS[viewTeam]} {new Date(selectedDate).getFullYear()}.
+                      {new Date(selectedDate).getMonth() + 1}.
+                      {new Date(selectedDate).getDate()} {weekdayName(selectedDate)}
+                    </div>
+
+                    <button
+                      className={`all-edit-btn ${editMode ? "active" : ""}`}
+                      onClick={() => setEditMode(!editMode)}
+                    >
+                      {editMode ? "수정중" : "수정"}
+                    </button>
+
+                    <button className="all-header-btn" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>+</button>
                   </div>
-
-                  <button
-                    className={`all-edit-btn ${editMode ? "active" : ""}`}
-                    onClick={() => setEditMode(!editMode)}
-                  >
-                    {editMode ? "수정중" : "수정"}
-                  </button>
-
-                  <button className="all-header-btn" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>+</button>
                 </div>
 
                 <div className="all-tab-grid-wrap">
@@ -1109,7 +1108,7 @@ function App() {
                         <div
                           key={`${item.idx}-${item.displayName}`}
                           className={`all-cell-real ${isMine ? "cell-my" : ""}`}
-                          style={{ backgroundColor: item.customColor || "#ffffff" }}
+                          style={{ backgroundColor: item.customColor || "rgba(255,255,255,0.94)" }}
                           onClick={() => handleAllCellTap(item)}
                         >
                           <div className="all-code">{item.code || "-"}</div>
@@ -1191,7 +1190,7 @@ function App() {
             )}
 
             {activeTab === "group" && (
-              <div className="group-page">
+              <div className="group-page tab-page">
                 <div className="group-topbar">
                   <button className="group-nav-btn" onClick={() => setGroupBaseDate(addDays(groupBaseDate, -7))}>-</button>
 
