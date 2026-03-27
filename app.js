@@ -957,21 +957,26 @@ function App() {
   function commitEdit(nextColorValue = editColor) {
     if (!editingCell) return;
 
+    const cleanName = editName.trim();
+    const cleanColor = nextColorValue || "";
+
     const key = getOverrideKey(viewTeam, editingCell.idx);
     const next = { ...overrides };
 
-    if (!editName.trim() && !nextColorValue) {
+    if (!cleanName && !cleanColor) {
       delete next[key];
     } else {
       next[key] = {
-        name: editName.trim(),
-        color: nextColorValue,
+        name: cleanName,
+        color: cleanColor,
       };
     }
 
     setOverrides(next);
     saveOverrides(next);
-    closeEditDialog();
+
+    setEditOpen(false);
+    setEditingCell(null);
   }
 
   function openPathDialog(item) {
@@ -1224,7 +1229,14 @@ function App() {
                         <div
                           key={`${item.idx}-${item.displayName}`}
                           className={`all-cell-real ${isMine ? "cell-my" : ""}`}
-                          style={{ backgroundColor: item.customColor || "#ffffff" }}
+                          style={
+                            item.customColor
+                              ? {
+                                  background: item.customColor,
+                                  backgroundImage: "none",
+                                }
+                              : undefined
+                          }
                           onClick={() => handleAllCellTap(item)}
                         >
                           <div className="all-code">{item.code || "-"}</div>
