@@ -557,7 +557,6 @@ button:active {
   background: #ffffff;
 }
 
-/* 현재 App.js는 density-6/5/4만 사용 */
 .all-grid-real.density-6 .all-code {
   font-size: 14px;
 }
@@ -646,7 +645,7 @@ button:active {
   min-height: 114px;
   padding: 6px 6px 4px;
   display: grid;
-  grid-template-rows: 18px 30px 1fr;
+  grid-template-rows: 18px 28px 1fr;
   align-items: start;
   justify-items: stretch;
 }
@@ -664,9 +663,9 @@ button:active {
 .month-code-line {
   width: 100%;
   margin-top: 4px;
-  font-size: 18px;
+  font-size: 16.5px;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.05;
   color: #111827;
   display: flex;
   align-items: center;
@@ -837,7 +836,7 @@ button:active {
 .group-table th,
 .group-table td {
   border: 1px solid rgba(203, 213, 225, 0.9);
-  padding: 6px;
+  padding: 5px 4px;
   text-align: center;
   vertical-align: middle;
 }
@@ -847,24 +846,32 @@ button:active {
   font-weight: 800;
 }
 
+.group-table th:first-child,
+.group-table td:first-child {
+  width: 72px;
+  min-width: 72px;
+  max-width: 72px;
+}
+
 .group-name-cell {
-  min-width: 92px;
+  min-width: 72px;
+  width: 72px;
 }
 
 .group-team-label {
-  margin-top: 4px;
-  font-size: 11px;
+  margin-top: 3px;
+  font-size: 10px;
   color: #6b7280;
 }
 
 .group-remove-btn {
-  margin-top: 6px;
+  margin-top: 5px;
   border: 0;
   background: linear-gradient(180deg, #ff6b6b 0%, #ef4444 100%);
   color: white;
-  border-radius: 10px;
-  padding: 4px 8px;
-  font-size: 11px;
+  border-radius: 9px;
+  padding: 3px 7px;
+  font-size: 10px;
   cursor: pointer;
   font-weight: 700;
   box-shadow:
@@ -1029,7 +1036,7 @@ button:active {
   }
 
   .month-code-line {
-    font-size: 16px;
+    font-size: 15px;
     margin-top: 3px;
   }
 
@@ -1129,6 +1136,23 @@ button:active {
     font-size: 12px;
   }
 
+  .group-table th:first-child,
+  .group-table td:first-child,
+  .group-name-cell {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+  }
+
+  .group-team-label {
+    font-size: 9px;
+  }
+
+  .group-remove-btn {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+
   .modal {
     padding: 16px;
     border-radius: 20px;
@@ -1141,4 +1165,4 @@ button:active {
   .modal-sub {
     font-size: 16px;
   }
-  }
+}
