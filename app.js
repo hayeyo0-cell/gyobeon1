@@ -45,11 +45,9 @@ function shouldHideName(name) {
 }
 
 function getAllGridLayout(count) {
-  if (count >= 65) return { cols: 9, className: "density-10" };
-  if (count >= 57) return { cols: 8, className: "density-9" };
-  if (count >= 43) return { cols: 7, className: "density-8" };
-  if (count >= 31) return { cols: 6, className: "density-7" };
-  return { cols: 5, className: "density-6" };
+  if (count >= 49) return { cols: 6, className: "density-6" };
+  if (count >= 36) return { cols: 5, className: "density-5" };
+  return { cols: 4, className: "density-4" };
 }
 
 function formatDate(date) {
@@ -1035,7 +1033,7 @@ function App() {
               <>
                 <div className="settings-row">
                   {deferredPrompt && <button className="install-btn" onClick={handleInstall}>설치</button>}
-                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>}
+                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>
                 </div>
 
                 <div className="date-grid">
