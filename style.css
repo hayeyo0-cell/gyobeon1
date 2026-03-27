@@ -44,7 +44,9 @@ button:active {
   height: 100%;
 }
 
-/* ================= 기본 컨테이너 ================= */
+.topbar {
+  display: none !important;
+}
 
 .container {
   width: 100%;
@@ -52,8 +54,6 @@ button:active {
   padding: 10px 10px 8px;
   overflow: auto;
 }
-
-/* ================= 공통 카드 ================= */
 
 .card {
   background: rgba(255, 255, 255, 0.78);
@@ -123,8 +123,6 @@ button:active {
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
 }
 
-/* ================= 홈 설정 버튼 줄 ================= */
-
 .settings-row {
   height: 52px;
   display: flex;
@@ -161,8 +159,6 @@ button:active {
   background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%);
   white-space: nowrap;
 }
-
-/* ================= 홈 날짜 선택 ================= */
 
 .date-grid {
   display: grid;
@@ -206,8 +202,6 @@ button:active {
   white-space: nowrap;
   word-break: keep-all;
 }
-
-/* ================= 홈 메인 카드 ================= */
 
 .main-panel {
   min-height: 210px;
@@ -269,8 +263,6 @@ button:active {
   }
 }
 
-/* ================= 하단 탭 ================= */
-
 .bottom-tabs {
   position: fixed;
   left: 0;
@@ -318,8 +310,6 @@ button:active {
   background: rgba(255,255,255,0.95);
 }
 
-/* ================= 월교번 상단 ================= */
-
 .month-header-bar,
 .group-topbar {
   display: grid;
@@ -362,8 +352,6 @@ button:active {
     inset 0 1px 0 rgba(255,255,255,0.72);
   border: 1px solid rgba(255,255,255,0.78);
 }
-
-/* ================= 월교번 달력 ================= */
 
 .month-calendar {
   background: rgba(255,255,255,0.76);
@@ -451,8 +439,6 @@ button:active {
 .sat {
   color: #3b82f6 !important;
 }
-
-/* ================= 모달 ================= */
 
 .modal-backdrop {
   position: fixed;
@@ -545,7 +531,25 @@ button:active {
   background: white;
 }
 
-/* ================= 전체 탭 상단 ================= */
+.all-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 52px - 12px);
+  overflow: hidden;
+}
+
+.all-page .all-tab-header {
+  flex: 0 0 auto;
+}
+
+.all-page .all-tab-grid-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.all-page .all-team-tabs {
+  flex: 0 0 auto;
+}
 
 .all-tab-header {
   margin-bottom: 8px;
@@ -601,11 +605,7 @@ button:active {
   color: white;
 }
 
-/* ================= 전체 교번표 ================= */
-
 .all-tab-grid-wrap {
-  height: calc(100vh - 52px - 60px - 48px - 12px);
-  min-height: 240px;
   overflow: hidden;
   background: rgba(104, 141, 234, 0.3);
   border-radius: 22px;
@@ -617,7 +617,7 @@ button:active {
 
 .all-grid-real {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   grid-auto-rows: minmax(0, 1fr);
   width: 100%;
   height: 100%;
@@ -629,7 +629,7 @@ button:active {
   min-width: 0;
   min-height: 0;
   background: rgba(255,255,255,0.94);
-  padding: 4px 2px;
+  padding: 3px 1px;
   text-align: center;
   cursor: pointer;
   overflow: hidden;
@@ -655,17 +655,17 @@ button:active {
 }
 
 .all-code {
-  font-size: 16px;
-  line-height: 1.02;
+  font-size: 14px;
+  line-height: 1;
   font-weight: 800;
   color: black;
   white-space: nowrap;
 }
 
 .all-name {
-  margin-top: 4px;
-  font-size: 10px;
-  line-height: 1.1;
+  margin-top: 2px;
+  font-size: 8px;
+  line-height: 1;
   font-weight: 700;
   color: black;
   word-break: keep-all;
@@ -681,8 +681,6 @@ button:active {
     inset 0 1px 0 rgba(255,255,255,0.65);
 }
 
-/* ================= 전체 탭 소속 선택 ================= */
-
 .all-team-tabs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -697,8 +695,8 @@ button:active {
   color: #0f172a;
   font-size: 14px;
   font-weight: 800;
-  padding: 9px 0;
-  border-radius: 14px;
+  padding: 8px 0;
+  border-radius: 12px;
   cursor: pointer;
   line-height: 1;
   box-shadow:
@@ -710,8 +708,6 @@ button:active {
   background: linear-gradient(180deg, #96b8ff 0%, #6b90f0 100%);
   color: #0b1324;
 }
-
-/* ================= 행로표 보기 ================= */
 
 .viewer-page {
   position: fixed;
@@ -763,8 +759,6 @@ button:active {
   color: #64748b;
   text-align: center;
 }
-
-/* ================= 그룹 화면 ================= */
 
 .group-page {
   background: rgba(255,255,255,0.76);
@@ -828,8 +822,6 @@ button:active {
     0 8px 14px rgba(239,68,68,0.18),
     inset 0 1px 0 rgba(255,255,255,0.18);
 }
-
-/* ================= 모바일 ================= */
 
 @media (max-width: 420px) {
   .container {
@@ -921,6 +913,10 @@ button:active {
     font-size: 10px;
   }
 
+  .all-page {
+    height: calc(100vh - 46px - 8px);
+  }
+
   .all-header {
     height: 52px;
     grid-template-columns: 40px 1fr 52px 40px;
@@ -941,18 +937,12 @@ button:active {
     font-size: 14px;
   }
 
-  .all-tab-grid-wrap {
-    height: calc(100vh - 46px - 52px - 42px - 10px);
-    min-height: 210px;
-    border-radius: 18px;
-  }
-
   .all-code {
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .all-name {
-    font-size: 9px;
+    font-size: 7px;
   }
 
   .all-team-tabs {
@@ -962,9 +952,9 @@ button:active {
   }
 
   .all-team-tab {
-    font-size: 13px;
-    padding: 8px 0;
-    border-radius: 11px;
+    font-size: 12px;
+    padding: 7px 0;
+    border-radius: 10px;
   }
 
   .group-topbar {
