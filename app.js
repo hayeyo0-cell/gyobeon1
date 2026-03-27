@@ -45,11 +45,11 @@ function shouldHideName(name) {
 }
 
 function getAllGridLayout(count) {
-  if (count >= 65) return { cols: 10, className: "density-10" };
-  if (count >= 57) return { cols: 9, className: "density-9" };
-  if (count >= 43) return { cols: 8, className: "density-8" };
-  if (count >= 31) return { cols: 7, className: "density-7" };
-  return { cols: 6, className: "density-6" };
+  if (count >= 65) return { cols: 9, className: "density-10" };
+  if (count >= 57) return { cols: 8, className: "density-9" };
+  if (count >= 43) return { cols: 7, className: "density-8" };
+  if (count >= 31) return { cols: 6, className: "density-7" };
+  return { cols: 5, className: "density-6" };
 }
 
 function formatDate(date) {
@@ -412,9 +412,30 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
   const anchorCodeIndex = fixedCodes.indexOf(anchorCode);
 
   if (anchorPersonIndex < 0 || anchorCodeIndex < 0) {
-    return fixedCodes.map((slotCode, slotIndex) => {
-      const person = people[slotIndex] || { idx: slotIndex, name: "" };
+    return fixedCodes
+      .map((slotCode, slotIndex) => {
+        const person = people[slotIndex] || { idx: slotIndex, name: "" };
+        const override = overrides[getOverrideKey(team.key, person.idx)] || {};
+        return {
+          idx: person.idx,
+          name: person.name,
+          displayName: override.name || person.name,
+          code: slotCode,
+          customColor: override.color || "",
+        };
+      })
+      .filter((item) => item.name);
+  }
+
+  return fixedCodes
+    .map((slotCode, slotIndex) => {
+      const personIndex = positiveMod(
+        anchorPersonIndex + (slotIndex - anchorCodeIndex - dayOffset),
+        people.length
+      );
+      const person = people[personIndex];
       const override = overrides[getOverrideKey(team.key, person.idx)] || {};
+
       return {
         idx: person.idx,
         name: person.name,
@@ -422,25 +443,8 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
         code: slotCode,
         customColor: override.color || "",
       };
-    });
-  }
-
-  return fixedCodes.map((slotCode, slotIndex) => {
-    const personIndex = positiveMod(
-      anchorPersonIndex + (slotIndex - anchorCodeIndex - dayOffset),
-      people.length
-    );
-    const person = people[personIndex];
-    const override = overrides[getOverrideKey(team.key, person.idx)] || {};
-
-    return {
-      idx: person.idx,
-      name: person.name,
-      displayName: override.name || person.name,
-      code: slotCode,
-      customColor: override.color || "",
-    };
-  });
+    })
+    .filter((item) => item.name);
 }
 
 function buildTeamAnchorForDate(team) {
@@ -778,9 +782,17 @@ function App() {
     );
   }, [currentViewTeam, currentViewAnchor.name, currentViewAnchor.code, currentViewDayOffset, overrides]);
 
+  const visibleAllGrid = useMemo(() => {
+    return allGrid.filter((item) => item && item.name && !shouldHideName(item.name));
+  }, [allGrid]);
+
   const allGridLayout = useMemo(() => {
-    return getAllGridLayout(allGrid.length || 0);
-  }, [allGrid.length]);
+    return getAllGridLayout(visibleAllGrid.length || 0);
+  }, [visibleAllGrid.length]);
+
+  const allGridRows = useMemo(() => {
+    return Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols));
+  }, [visibleAllGrid.length, allGridLayout.cols]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(selectedDate), [selectedDate]);
   const monthHeaderDate = new Date(selectedDate);
@@ -1149,10 +1161,10 @@ function App() {
                     className={`all-grid-real ${allGridLayout.className}`}
                     style={{
                       gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`,
-                      gridTemplateRows: `repeat(${Math.ceil((allGrid.length || 1) / allGridLayout.cols)}, minmax(0, 1fr))`,
+                      gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))`,
                     }}
                   >
-                    {allGrid.map((item) => {
+                    {visibleAllGrid.map((item) => {
                       const viewAnchor = teamAnchors[viewTeam] || {};
                       const isMine = item.name === viewAnchor.name;
 
@@ -1160,12 +1172,11 @@ function App() {
                         <div
                           key={`${item.idx}-${item.displayName}`}
                           className={`all-cell-real ${isMine ? "cell-my" : ""}`}
-                          style={{ backgroundColor: item.customColor || "rgba(255,255,255,0.94)" }}
+                          style={{ backgroundColor: item.customColor || "#ffffff" }}
                           onClick={() => handleAllCellTap(item)}
                         >
                           <div className="all-code">{item.code || "-"}</div>
                           <div className="all-name">{item.displayName || "-"}</div>
-                          <div className="all-team-mini">{TEAM_LABELS[viewTeam]}</div>
                         </div>
                       );
                     })}
@@ -1217,10 +1228,22 @@ function App() {
                             <div className={`month-day ${isSunday(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>
                               {new Date(date).getDate()}
                             </div>
-                            <div className="month-code">{item?.code || "-"}</div>
-                            <div className={`month-time ${menuTimeClass(item?.code, item?.code ? pickWorktime(data[selectedTeam], item.code, date) : "")}`}>
-                              {item?.code ? pickWorktime(data[selectedTeam], item.code, date) : ""}
-                            </div>
+
+                            {(() => {
+                              const worktime = item?.code ? pickWorktime(data[selectedTeam], item.code, date) : "";
+                              const parts = String(worktime || "").split("-").map((v) => v.trim());
+                              const startTime = parts[0] || "-";
+                              const endTime = parts[1] || "-";
+                              const timeClass = menuTimeClass(item?.code, worktime);
+
+                              return (
+                                <>
+                                  <div className={`month-code ${timeClass}`}>{item?.code || "-"}</div>
+                                  <div className={`month-time-line ${timeClass}`}>{startTime}</div>
+                                  <div className={`month-time-line ${timeClass}`}>{endTime}</div>
+                                </>
+                              );
+                            })()}
                           </button>
                         );
                       })}
