@@ -1035,7 +1035,7 @@ function App() {
               <>
                 <div className="settings-row">
                   {deferredPrompt && <button className="install-btn" onClick={handleInstall}>설치</button>}
-                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>
+                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>}
                 </div>
 
                 <div className="date-grid">
@@ -1216,8 +1216,17 @@ function App() {
                           date,
                           overrides
                         );
+
                         const sameMonth = new Date(date).getMonth() === monthHeaderDate.getMonth();
                         const isSelected = date === selectedDate;
+
+                        const worktime = item?.code ? pickWorktime(data[selectedTeam], item.code, date) : "";
+                        const parts = String(worktime || "")
+                          .split("-")
+                          .map((v) => v.trim());
+
+                        const startTime = parts[0] || "-";
+                        const endTime = parts[1] || "-";
 
                         return (
                           <button
@@ -1229,21 +1238,17 @@ function App() {
                               {new Date(date).getDate()}
                             </div>
 
-                            {(() => {
-                              const worktime = item?.code ? pickWorktime(data[selectedTeam], item.code, date) : "";
-                              const parts = String(worktime || "").split("-").map((v) => v.trim());
-                              const startTime = parts[0] || "-";
-                              const endTime = parts[1] || "-";
-                              const timeClass = menuTimeClass(item?.code, worktime);
+                            <div className="month-code">
+                              {item?.code || "-"}
+                            </div>
 
-                              return (
-                                <>
-                                  <div className={`month-code ${timeClass}`}>{item?.code || "-"}</div>
-                                  <div className={`month-time-line ${timeClass}`}>{startTime}</div>
-                                  <div className={`month-time-line ${timeClass}`}>{endTime}</div>
-                                </>
-                              );
-                            })()}
+                            <div className="month-time-line">
+                              {startTime}
+                            </div>
+
+                            <div className="month-time-line">
+                              {endTime}
+                            </div>
                           </button>
                         );
                       })}
