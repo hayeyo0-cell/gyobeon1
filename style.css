@@ -367,23 +367,21 @@ button:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,0.8);
+  background: #ffffff;
   border-radius: 18px;
   font-size: 24px;
   font-weight: 800;
-  box-shadow:
-    0 8px 18px rgba(15, 23, 42, 0.06),
-    inset 0 1px 0 rgba(255,255,255,0.72);
-  border: 1px solid rgba(255,255,255,0.78);
+  box-shadow: none;
+  border: 1px solid #d7dce5;
 }
 
 .month-calendar {
-  background: rgba(255,255,255,0.76);
-  border-radius: 26px;
-  padding: 10px;
+  background: rgba(255,255,255,0.72);
+  border-radius: 30px;
+  padding: 16px;
   margin-bottom: 8px;
   box-shadow:
-    0 12px 28px rgba(15,23,42,0.08),
+    0 10px 26px rgba(15,23,42,0.06),
     inset 0 1px 0 rgba(255,255,255,0.72);
   border: 1px solid rgba(255,255,255,0.78);
 }
@@ -392,11 +390,11 @@ button:active {
 .month-row {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
+  gap: 8px;
 }
 
 .month-weekdays {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .month-weekdays > div {
@@ -407,21 +405,19 @@ button:active {
 }
 
 .month-cell {
-  border: 1px solid rgba(201, 208, 220, 0.95);
-  background: rgba(255,255,255,0.92);
-  min-height: 96px;
-  padding: 6px 6px 5px;
+  border: 1px solid #c7ced9;
+  background: #ffffff;
+  min-height: 118px;
+  padding: 8px 8px 6px;
   cursor: pointer;
-  border-radius: 20px;
-  box-shadow:
-    0 4px 12px rgba(15,23,42,0.05),
-    inset 0 1px 0 rgba(255,255,255,0.7);
+  border-radius: 24px;
+  box-shadow: none;
   transition:
     transform 0.14s ease,
     box-shadow 0.18s ease,
     border-color 0.18s ease;
   display: grid;
-  grid-template-rows: 16px 30px 36px;
+  grid-template-rows: 18px 30px 20px 20px;
   align-items: start;
   justify-items: start;
 }
@@ -431,21 +427,19 @@ button:active {
 }
 
 .month-cell.selected {
-  border-color: #6aa4ff;
-  box-shadow:
-    0 0 0 3px rgba(79, 139, 255, 0.22),
-    0 6px 14px rgba(15,23,42,0.07);
+  border-color: #8bb9ff;
+  box-shadow: 0 0 0 3px rgba(115, 169, 255, 0.2);
 }
 
 .month-cell.other-month {
-  opacity: 0.34;
+  opacity: 0.38;
+  border-style: dashed;
 }
 
 .month-day {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1;
-  height: 16px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -454,24 +448,35 @@ button:active {
 .month-code {
   width: 100%;
   margin-top: 2px;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 800;
-  line-height: 1.05;
-  min-height: auto;
+  line-height: 1;
+  color: #111827;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  letter-spacing: -0.02em;
 }
 
-.month-time {
+.month-time-line {
   width: 100%;
-  margin-top: 0;
-  font-size: 11px;
-  line-height: 1.18;
-  white-space: pre-line;
-  min-height: auto;
+  font-size: 13px;
+  line-height: 1;
+  color: #374151;
   display: flex;
-  align-items: flex-start;
-  word-break: keep-all;
+  align-items: center;
+  justify-content: flex-start;
+  white-space: nowrap;
+}
+
+.month-code.blue-text,
+.month-time-line.blue-text {
+  color: #3b82f6 !important;
+}
+
+.month-code.red-text,
+.month-time-line.red-text {
+  color: #ef4444 !important;
 }
 
 .sun {
@@ -580,10 +585,7 @@ button:active {
   overflow: hidden;
 }
 
-.all-page .all-tab-header {
-  flex: 0 0 auto;
-}
-
+.all-page .all-tab-header,
 .all-page .all-team-tabs {
   flex: 0 0 auto;
 }
@@ -601,18 +603,18 @@ button:active {
   height: 60px;
   display: grid;
   grid-template-columns: 44px 1fr 60px 44px;
-  background: linear-gradient(180deg, #8db0ff 0%, #7ea0f0 100%);
-  color: black;
-  border-radius: 18px;
+  background: linear-gradient(180deg, #8db0ff 0%, #6f97f5 100%);
+  color: #0f172a;
+  border-radius: 24px;
   overflow: hidden;
   box-shadow:
-    0 10px 22px rgba(15,23,42,0.08),
-    inset 0 1px 0 rgba(255,255,255,0.4);
-  border: 1px solid rgba(255,255,255,0.45);
+    0 8px 18px rgba(15,23,42,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.35);
+  border: 1px solid rgba(160, 185, 240, 0.9);
 }
 
 .all-header-btn {
-  border: 1px solid rgba(93,127,213,0.55);
+  border: 1px solid rgba(93,127,213,0.45);
   background: transparent;
   font-size: 22px;
   font-weight: 800;
@@ -630,11 +632,11 @@ button:active {
   line-height: 1.08;
   font-weight: 800;
   word-break: keep-all;
-  white-space: normal;
+  white-space: nowrap;
 }
 
 .all-edit-btn {
-  border: 1px solid rgba(93,127,213,0.55);
+  border: 1px solid rgba(93,127,213,0.45);
   background: transparent;
   font-size: 14px;
   font-weight: 800;
@@ -643,62 +645,62 @@ button:active {
 }
 
 .all-edit-btn.active {
-  background: linear-gradient(180deg, #ff6b6b 0%, #e63d3d 100%);
+  background: linear-gradient(180deg, #ff7373 0%, #ef4444 100%);
   color: white;
 }
 
 .all-team-tabs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  margin-top: 6px;
-  margin-bottom: 6px;
+  gap: 6px;
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 
 .all-team-tab {
   border: 0;
-  background: linear-gradient(180deg, #7ea7ff 0%, #5a82eb 100%);
+  background: linear-gradient(180deg, #78a3ff 0%, #5f87ea 100%);
   color: #0f172a;
   font-size: 14px;
   font-weight: 800;
-  padding: 8px 0;
-  border-radius: 12px;
+  padding: 10px 0;
+  border-radius: 18px;
   cursor: pointer;
   line-height: 1;
   box-shadow:
-    0 8px 16px rgba(90,130,235,0.18),
-    inset 0 1px 0 rgba(255,255,255,0.25);
+    0 6px 12px rgba(90,130,235,0.16),
+    inset 0 1px 0 rgba(255,255,255,0.22);
 }
 
 .all-team-tab.active {
-  background: linear-gradient(180deg, #96b8ff 0%, #6b90f0 100%);
+  background: linear-gradient(180deg, #8fb4ff 0%, #6e95f0 100%);
   color: #0b1324;
 }
 
 .all-tab-grid-wrap {
   overflow: hidden;
-  background: rgba(104, 141, 234, 0.3);
-  border-radius: 22px;
-  padding: 3px;
+  background: rgba(141, 174, 243, 0.28);
+  border-radius: 24px;
+  padding: 6px;
   box-shadow:
-    0 12px 28px rgba(15,23,42,0.08),
-    inset 0 1px 0 rgba(255,255,255,0.35);
+    0 10px 22px rgba(15,23,42,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.28);
 }
 
 .all-grid-real {
   display: grid;
-  grid-auto-rows: minmax(0, 1fr);
   width: 100%;
   height: 100%;
-  background: transparent;
-  gap: 2px;
+  gap: 4px;
+  align-items: stretch;
 }
 
 .all-cell-real {
   min-width: 0;
   min-height: 0;
-  background: rgba(255,255,255,0.94);
-  padding: 3px 1px;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 4px 2px;
   text-align: center;
   cursor: pointer;
   overflow: hidden;
@@ -710,32 +712,33 @@ button:active {
   user-select: none;
   -webkit-touch-callout: none;
   touch-action: manipulation;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+  box-shadow: none;
+  border: 1px solid #c7d2e5;
   transition:
     transform 0.12s ease,
-    box-shadow 0.18s ease,
-    background-color 0.18s ease;
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .all-cell-real:active {
   transform: scale(0.985);
-  background: rgba(245,248,255,0.96);
 }
 
 .all-code {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
   font-weight: 800;
-  color: black;
+  color: #111827;
   white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 
 .all-name {
-  margin-top: 2px;
+  margin-top: 4px;
   font-size: 8px;
-  line-height: 1;
+  line-height: 1.1;
   font-weight: 700;
-  color: black;
+  color: #374151;
   word-break: keep-all;
   white-space: nowrap;
   overflow: hidden;
@@ -743,63 +746,61 @@ button:active {
   width: 100%;
 }
 
-.all-team-mini {
-  margin-top: 2px;
-  font-size: 7px;
-  line-height: 1;
-  font-weight: 700;
-  color: #64748b;
-  white-space: nowrap;
+.cell-my {
+  border: 3px solid #25c7da;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45);
+}
+
+.all-grid-real.density-10 .all-cell-real {
+  border-radius: 14px;
+  padding: 3px 1px;
 }
 
 .all-grid-real.density-10 .all-code {
   font-size: 11px;
 }
+
 .all-grid-real.density-10 .all-name {
   font-size: 6px;
+  margin-top: 3px;
 }
-.all-grid-real.density-10 .all-team-mini {
-  font-size: 5px;
+
+.all-grid-real.density-9 .all-cell-real {
+  border-radius: 15px;
+  padding: 3px 1px;
 }
 
 .all-grid-real.density-9 .all-code {
   font-size: 12px;
 }
+
 .all-grid-real.density-9 .all-name {
   font-size: 7px;
-}
-.all-grid-real.density-9 .all-team-mini {
-  font-size: 6px;
+  margin-top: 3px;
 }
 
 .all-grid-real.density-8 .all-code {
-  font-size: 13px;
+  font-size: 12px;
 }
+
 .all-grid-real.density-8 .all-name {
   font-size: 7px;
 }
-.all-grid-real.density-8 .all-team-mini {
-  font-size: 6px;
-}
 
 .all-grid-real.density-7 .all-code {
-  font-size: 14px;
+  font-size: 13px;
 }
+
 .all-grid-real.density-7 .all-name {
   font-size: 8px;
 }
 
 .all-grid-real.density-6 .all-code {
-  font-size: 15px;
-}
-.all-grid-real.density-6 .all-name {
-  font-size: 9px;
+  font-size: 14px;
 }
 
-.cell-my {
-  box-shadow:
-    inset 0 0 0 3px #1ecbe1,
-    inset 0 1px 0 rgba(255,255,255,0.65);
+.all-grid-real.density-6 .all-name {
+  font-size: 9px;
 }
 
 .viewer-page {
@@ -994,24 +995,33 @@ button:active {
     border-radius: 16px;
   }
 
+  .month-calendar {
+    padding: 10px;
+    border-radius: 24px;
+  }
+
+  .month-weekdays,
+  .month-row {
+    gap: 6px;
+  }
+
   .month-cell {
-    min-height: 76px;
-    padding: 5px 5px 4px;
-    border-radius: 16px;
-    grid-template-rows: 14px 24px 28px;
+    min-height: 104px;
+    padding: 7px 7px 5px;
+    border-radius: 22px;
+    grid-template-rows: 16px 26px 18px 18px;
   }
 
   .month-day {
-    font-size: 13px;
-    height: 14px;
+    font-size: 14px;
   }
 
   .month-code {
-    font-size: 13px;
+    font-size: 16px;
   }
 
-  .month-time {
-    font-size: 10px;
+  .month-time-line {
+    font-size: 11px;
   }
 
   .all-page {
@@ -1021,7 +1031,7 @@ button:active {
   .all-header {
     height: 52px;
     grid-template-columns: 40px 1fr 52px 40px;
-    border-radius: 16px;
+    border-radius: 18px;
   }
 
   .all-header-btn {
@@ -1035,45 +1045,58 @@ button:active {
   }
 
   .all-header-title {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .all-team-tabs {
     gap: 4px;
-    margin-top: 4px;
-    margin-bottom: 4px;
+    margin-top: 6px;
+    margin-bottom: 6px;
   }
 
   .all-team-tab {
     font-size: 12px;
-    padding: 7px 0;
-    border-radius: 10px;
+    padding: 8px 0;
+    border-radius: 14px;
+  }
+
+  .all-tab-grid-wrap {
+    padding: 4px;
+    border-radius: 20px;
+  }
+
+  .all-grid-real {
+    gap: 3px;
+  }
+
+  .all-cell-real {
+    border-radius: 14px;
+    padding: 2px 1px;
   }
 
   .all-code {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .all-name {
-    font-size: 7px;
-  }
-
-  .all-team-mini {
-    font-size: 5px;
+    font-size: 6px;
+    margin-top: 2px;
   }
 
   .all-grid-real.density-10 .all-code {
-    font-size: 10px;
+    font-size: 9px;
   }
+
   .all-grid-real.density-10 .all-name {
     font-size: 5px;
   }
 
   .all-grid-real.density-9 .all-code {
-    font-size: 11px;
+    font-size: 10px;
   }
+
   .all-grid-real.density-9 .all-name {
-    font-size: 6px;
+    font-size: 5px;
   }
 
   .group-topbar {
