@@ -28,32 +28,31 @@ const COLOR_OPTIONS = [
 
 /**
  * 공휴일 목록
- * YYYY-MM-DD 형식으로 관리
- * 필요 시 해마다 이 배열만 업데이트하면 됩니다.
- *
- * 아래는 2026년 예시입니다.
+ * YYYY-MM-DD 형식
+ * 해가 바뀌면 이 배열만 수정하면 됩니다.
+ * 아래는 2026년 기준 예시입니다.
  */
 const HOLIDAYS = [
-  "2026-01-01", // 신정
-  "2026-02-16", // 설 연휴
-  "2026-02-17", // 설날
-  "2026-02-18", // 설 연휴
-  "2026-03-01", // 삼일절
-  "2026-03-02", // 삼일절 대체휴일
-  "2026-05-05", // 어린이날
-  "2026-05-24", // 부처님오신날
-  "2026-05-25", // 부처님오신날 대체휴일
-  "2026-06-03", // 전국 동시지방선거
-  "2026-06-06", // 현충일
-  "2026-08-15", // 광복절
-  "2026-08-17", // 광복절 대체휴일
-  "2026-09-24", // 추석 연휴
-  "2026-09-25", // 추석
-  "2026-09-26", // 추석 연휴
-  "2026-10-03", // 개천절
-  "2026-10-05", // 개천절 대체휴일
-  "2026-10-09", // 한글날
-  "2026-12-25", // 성탄절
+  "2026-01-01",
+  "2026-02-16",
+  "2026-02-17",
+  "2026-02-18",
+  "2026-03-01",
+  "2026-03-02",
+  "2026-05-05",
+  "2026-05-24",
+  "2026-05-25",
+  "2026-06-03",
+  "2026-06-06",
+  "2026-08-15",
+  "2026-08-17",
+  "2026-09-24",
+  "2026-09-25",
+  "2026-09-26",
+  "2026-10-03",
+  "2026-10-05",
+  "2026-10-09",
+  "2026-12-25",
 ];
 
 const DEFAULT_GYOBUN = [
@@ -310,10 +309,6 @@ function findPathImage(team, dateStr, code) {
   }
 
   return null;
-}
-
-function isSpecialS(value) {
-  return value === "s1" || value === "s2";
 }
 
 function getGyobunOrder(team) {
@@ -1127,8 +1122,14 @@ function App() {
             {activeTab === "home" && (
               <>
                 <div className="settings-row">
-                  {deferredPrompt && <button className="install-btn" onClick={handleInstall}>설치</button>}
-                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>}
+                  {deferredPrompt && (
+                    <button className="install-btn" onClick={handleInstall}>
+                      설치
+                    </button>
+                  )}
+                  <button className="settings-btn" onClick={() => setShowSettings(true)}>
+                    설정
+                  </button>
                 </div>
 
                 <div className="date-grid">
