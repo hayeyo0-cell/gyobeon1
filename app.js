@@ -510,7 +510,6 @@ function getPersonGyobunForDate(data, teamKey, name, dateStr, overrides = {}) {
   }
 
   const offset = diffDays(anchor.anchorDate, dateStr);
-
   const grid = buildAssignedGrid(team, anchor.name, anchor.code, offset, overrides);
   return grid.find((item) => item.name === name || item.displayName === name) || null;
 }
@@ -561,6 +560,8 @@ function App() {
   const [data, setData] = useState(null);
 
   const [activeTab, setActiveTab] = useState("home");
+  const activeTabRef = useRef("home");
+
   const [selectedTeam, setSelectedTeam] = useState(initialSelection?.teamKey || "ks");
   const [viewTeam, setViewTeam] = useState(initialSelection?.teamKey || "ks");
   const [selectedDate, setSelectedDate] = useState(initialDate);
@@ -598,6 +599,10 @@ function App() {
 
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
 
   useEffect(() => {
     setOverrides(loadOverrides());
@@ -644,10 +649,17 @@ function App() {
         setEditOpen(false);
         return;
       }
+
       if (pathOpenRef.current) {
         setPathOpen(false);
         return;
       }
+
+      if (activeTabRef.current !== "home") {
+        setActiveTab("home");
+        return;
+      }
+
       window.history.pushState({ __gyobeon: true, layer: "root" }, "");
     }
 
@@ -746,6 +758,18 @@ function App() {
   const monthHeaderDate = new Date(selectedDate);
   const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
   const groupMembers = groups[currentGroup] || [];
+
+  function switchTab(tabName) {
+    if (tabName === activeTabRef.current) return;
+
+    setActiveTab(tabName);
+
+    if (tabName === "home") {
+      window.history.pushState({ __gyobeon: true, layer: "root" }, "");
+    } else {
+      window.history.pushState({ __gyobeon: true, layer: `tab-${tabName}` }, "");
+    }
+  }
 
   async function parseAndSetZip(fileOrBlob, saveToIdb = true, keepSavedSelection = false) {
     setLoading(true);
@@ -1075,7 +1099,7 @@ function App() {
                   <button className="all-header-btn" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>+</button>
                 </div>
 
-                <div className="all-grid-wrap all-tab-grid-wrap">
+                <div className="all-tab-grid-wrap">
                   <div className="all-grid-real">
                     {allGrid.map((item) => {
                       const viewAnchor = teamAnchors[viewTeam] || {};
@@ -1240,10 +1264,10 @@ function App() {
 
       {data && (
         <div className="bottom-tabs tabs-4">
-          <button className={`bottom-tab ${activeTab === "home" ? "active" : ""}`} onClick={() => setActiveTab("home")}>홈</button>
-          <button className={`bottom-tab ${activeTab === "all" ? "active" : ""}`} onClick={() => setActiveTab("all")}>전체</button>
-          <button className={`bottom-tab ${activeTab === "month" ? "active" : ""}`} onClick={() => setActiveTab("month")}>월교번</button>
-          <button className={`bottom-tab ${activeTab === "group" ? "active" : ""}`} onClick={() => setActiveTab("group")}>그룹</button>
+          <button className={`bottom-tab ${activeTab === "home" ? "active" : ""}`} onClick={() => switchTab("home")}>홈</button>
+          <button className={`bottom-tab ${activeTab === "all" ? "active" : ""}`} onClick={() => switchTab("all")}>전체</button>
+          <button className={`bottom-tab ${activeTab === "month" ? "active" : ""}`} onClick={() => switchTab("month")}>월교번</button>
+          <button className={`bottom-tab ${activeTab === "group" ? "active" : ""}`} onClick={() => switchTab("group")}>그룹</button>
         </div>
       )}
 
