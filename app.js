@@ -34,6 +34,24 @@ const DEFAULT_GYOBUN = [
   "26~","휴13","휴14","6d","19d","21d","21~","휴15"
 ];
 
+const HIDDEN_NAME_KEYS = ["gb2601"];
+
+function normalizeNameKey(name) {
+  return String(name || "").trim().toLowerCase().replace(/\s+/g, "");
+}
+
+function shouldHideName(name) {
+  return HIDDEN_NAME_KEYS.includes(normalizeNameKey(name));
+}
+
+function getAllGridLayout(count) {
+  if (count >= 65) return { cols: 10, className: "density-10" };
+  if (count >= 57) return { cols: 9, className: "density-9" };
+  if (count >= 43) return { cols: 8, className: "density-8" };
+  if (count >= 31) return { cols: 7, className: "density-7" };
+  return { cols: 6, className: "density-6" };
+}
+
 function formatDate(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -300,11 +318,16 @@ function parseZipToData(parsedFiles) {
     const team = result[teamKey];
     if (!team.gyobun.length) team.gyobun = DEFAULT_GYOBUN.slice();
 
-    team.people = team.names.map((name, idx) => ({
-      name,
-      baseCode: team.gyobun[idx] || "",
-      idx,
-    }));
+    const filtered = team.names
+      .map((name, idx) => ({
+        name,
+        baseCode: team.gyobun[idx] || "",
+        idx,
+      }))
+      .filter((person) => !shouldHideName(person.name));
+
+    team.people = filtered;
+    team.names = filtered.map((p) => p.name);
   });
 
   Object.entries(parsedFiles).forEach(([path, content]) => {
@@ -551,6 +574,7 @@ async function loadZipBlob() {
 
 function App() {
   const initialSelection = loadMySelection();
+  const initialGroups = loadGroups();
   const initialDate = formatDate(new Date());
 
   const [zipName, setZipName] = useState("");
@@ -586,8 +610,8 @@ function App() {
 
   const [showSettings, setShowSettings] = useState(false);
 
-  const [groups, setGroups] = useState(loadGroups());
-  const [currentGroup, setCurrentGroup] = useState(Object.keys(loadGroups())[0] || "");
+  const [groups, setGroups] = useState(initialGroups);
+  const [currentGroup, setCurrentGroup] = useState(Object.keys(initialGroups)[0] || "");
   const [groupBaseDate, setGroupBaseDate] = useState(selectedDate);
   const [showGroupAdd, setShowGroupAdd] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
@@ -712,6 +736,7 @@ function App() {
       );
       setTeamAnchors(autoAnchors);
       setSelectedTeam(saved.teamKey);
+      setViewTeam(saved.teamKey);
       return;
     }
 
@@ -752,6 +777,10 @@ function App() {
       overrides
     );
   }, [currentViewTeam, currentViewAnchor.name, currentViewAnchor.code, currentViewDayOffset, overrides]);
+
+  const allGridLayout = useMemo(() => {
+    return getAllGridLayout(allGrid.length || 0);
+  }, [allGrid.length]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(selectedDate), [selectedDate]);
   const monthHeaderDate = new Date(selectedDate);
@@ -853,6 +882,7 @@ function App() {
 
     setTeamAnchors(autoAnchors);
     setSelectedTeam(teamKey);
+    setViewTeam(teamKey);
 
     saveMySelection({
       teamKey,
@@ -1070,6 +1100,10 @@ function App() {
                     <div className={`main-time ${menuTimeClass(myInfo?.code, myInfo?.time)}`}>
                       {myInfo?.time || "----"}
                     </div>
+
+                    <div className="main-subinfo">
+                      {TEAM_LABELS[selectedTeam]} / {currentAnchor.name || "-"}
+                    </div>
                   </div>
                 </div>
               </>
@@ -1111,7 +1145,13 @@ function App() {
                 </div>
 
                 <div className="all-tab-grid-wrap">
-                  <div className="all-grid-real">
+                  <div
+                    className={`all-grid-real ${allGridLayout.className}`}
+                    style={{
+                      gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`,
+                      gridTemplateRows: `repeat(${Math.ceil((allGrid.length || 1) / allGridLayout.cols)}, minmax(0, 1fr))`,
+                    }}
+                  >
                     {allGrid.map((item) => {
                       const viewAnchor = teamAnchors[viewTeam] || {};
                       const isMine = item.name === viewAnchor.name;
@@ -1125,6 +1165,7 @@ function App() {
                         >
                           <div className="all-code">{item.code || "-"}</div>
                           <div className="all-name">{item.displayName || "-"}</div>
+                          <div className="all-team-mini">{TEAM_LABELS[viewTeam]}</div>
                         </div>
                       );
                     })}
@@ -1262,7 +1303,17 @@ function App() {
       </div>
 
       {data && (
-        <div className="bottom-tabs tabs-4">
+        <div
+          className={`bottom-tabs tabs-4 ${
+            activeTab === "home"
+              ? "home-theme"
+              : activeTab === "all"
+              ? "all-theme"
+              : activeTab === "month"
+              ? "month-theme"
+              : "group-theme"
+          }`}
+        >
           <button className={`bottom-tab ${activeTab === "home" ? "active" : ""}`} onClick={() => switchTab("home")}>홈</button>
           <button className={`bottom-tab ${activeTab === "all" ? "active" : ""}`} onClick={() => switchTab("all")}>전체</button>
           <button className={`bottom-tab ${activeTab === "month" ? "active" : ""}`} onClick={() => switchTab("month")}>월교번</button>
@@ -1354,9 +1405,13 @@ function App() {
 
             <label className="label" style={{ marginTop: 16 }}>현재 그룹</label>
             <select className="select" value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
-              {Object.keys(groups).map((g) => (
-                <option key={g} value={g}>{g}</option>
-              ))}
+              {Object.keys(groups).length === 0 ? (
+                <option value="">그룹 없음</option>
+              ) : (
+                Object.keys(groups).map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))
+              )}
             </select>
 
             <label className="label" style={{ marginTop: 12 }}>소속</label>
@@ -1399,10 +1454,11 @@ function App() {
             <select
               className="select"
               value={editColor || "default"}
-              onChange={(e) => setEditColor(e.target.value)}
+              onChange={(e) => setEditColor(e.target.value === "default" ? "" : e.target.value)}
             >
-              {COLOR_OPTIONS.map((item) => (
-                <option key={item.label} value={item.value || "default"}>
+              <option value="default">기본</option>
+              {COLOR_OPTIONS.filter((item) => item.value).map((item) => (
+                <option key={item.label} value={item.value}>
                   {item.label}
                 </option>
               ))}
@@ -1410,15 +1466,12 @@ function App() {
 
             <div
               className="color-preview"
-              style={{ backgroundColor: editColor === "default" ? "#ffffff" : editColor || "#ffffff" }}
+              style={{ backgroundColor: editColor || "#ffffff" }}
             />
 
             <div className="modal-actions">
               <button className="modal-btn" onClick={closeEditDialog}>아니요</button>
-              <button
-                className="modal-btn primary"
-                onClick={() => commitEdit(editColor === "default" ? "" : editColor)}
-              >
+              <button className="modal-btn primary" onClick={() => commitEdit(editColor)}>
                 변경
               </button>
             </div>
