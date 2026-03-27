@@ -1222,8 +1222,9 @@ function App() {
                     }}
                   >
                     {visibleAllGrid.map((item) => {
-                      const viewAnchor = teamAnchors[viewTeam] || {};
-                      const isMine = item.name === viewAnchor.name;
+                      const isMine =
+                        viewTeam === selectedTeam &&
+                        item.name === currentAnchor.name;
 
                       return (
                         <div
