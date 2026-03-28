@@ -998,7 +998,32 @@ function App() {
   }, [currentTeam, currentAnchor.name, currentAnchor.code, currentDayOffset, selectedDate, overrides]);
 
   const allGrid = useMemo(() => {
-    if (!currentViewTeam || !currentViewAnchor.name || !currentViewAnchor.code) return [];
+    if (!currentViewTeam) return [];
+
+    const remoteRows = remoteRoster?.[viewTeam] || [];
+
+    if (remoteRows.length > 0) {
+      return getGyobunOrder(currentViewTeam)
+        .map((slotCode, idx) => {
+          const found = remoteRows.find(
+            (row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode)
+          );
+          if (!found) return null;
+
+          const override = overrides[getOverrideKey(viewTeam, idx)] || {};
+          return {
+            idx,
+            name: found.name,
+            displayName: override.name || found.name,
+            code: slotCode,
+            customColor: override.color || "",
+          };
+        })
+        .filter(Boolean);
+    }
+
+    if (!currentViewAnchor.name || !currentViewAnchor.code) return [];
+
     return buildAssignedGrid(
       currentViewTeam,
       currentViewAnchor.name,
@@ -1006,7 +1031,15 @@ function App() {
       currentViewDayOffset,
       overrides
     );
-  }, [currentViewTeam, currentViewAnchor.name, currentViewAnchor.code, currentViewDayOffset, overrides]);
+  }, [
+    currentViewTeam,
+    currentViewAnchor.name,
+    currentViewAnchor.code,
+    currentViewDayOffset,
+    overrides,
+    remoteRoster,
+    viewTeam,
+  ]);
 
   const visibleAllGrid = useMemo(() => {
     return allGrid.filter((item) => item && item.name && !shouldHideName(item.name));
@@ -1299,7 +1332,7 @@ function App() {
               <>
                 <div className="settings-row">
                   {deferredPrompt && <button className="install-btn" onClick={handleInstall}>설치</button>}
-                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>
+                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>}
                 </div>
 
                 <div className="date-grid">
@@ -1379,6 +1412,16 @@ function App() {
 
                     <div className="main-subinfo">
                       {TEAM_LABELS[selectedTeam]} / {currentAnchor.name || "-"}
+                    </div>
+
+                    <div style={{ marginTop: 8, fontSize: 12, color: "#2563eb" }}>
+                      DEBUG remote ks: {(remoteRoster.ks || []).length}
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 12, color: "#2563eb" }}>
+                      DEBUG 휴3: {(remoteRoster.ks || []).find(v => v.code === "휴3")?.name || "없음"}
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 12, color: "#2563eb" }}>
+                      DEBUG 13d: {(remoteRoster.ks || []).find(v => v.code === "13d")?.name || "없음"}
                     </div>
 
                     {remoteLoading && (
