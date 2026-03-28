@@ -999,7 +999,6 @@ function App() {
 
     if (isSameDateStr(selectedDate, todayStr)) {
       const remoteMe = findMyRemoteAssignment(selectedTeam, currentAnchor.name);
-
       if (remoteMe?.code) {
         return {
           code: remoteMe.code,
@@ -1507,11 +1506,11 @@ function App() {
                     return (
                       <button
                         key={key}
-                        className={`all-team-tab ${isActive ? "active" : ""}`}
+                        className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`}
                         onClick={() => setViewTeam(key)}
                       >
                         {TEAM_LABELS[key]}
-                        {isMyTeam && !isActive && <span className="my-dot" />}
+                        {isActive && <span className="view-dot" />}
                       </button>
                     );
                   })}
