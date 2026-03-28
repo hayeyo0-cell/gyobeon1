@@ -19,6 +19,8 @@ const NIGHT_RANGE_BY_TEAM = {
 const ADMIN_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbyuUPBooxDqRp2jHzjljRKNUFz3MeZTwLX-9WCGd2tQu44oBffXS3BYyxjBER5Gj5-N3g/exec";
 
+const REMOTE_BASE_DATE = "2026-03-28";
+
 const COLOR_OPTIONS = [
   { value: "", label: "기본" },
   { value: "#dbeafe", label: "하늘" },
@@ -261,7 +263,7 @@ function getPathFolder(teamKey, dateStr, code) {
   if (isDayShiftCode(teamKey, code)) {
     if (isHol || day === 0) return "hol";
     if (day === 6) return "sat";
-    if (day >= 1 && day <= 5) return "nor";
+    return "nor";
   }
 
   if (isHol || day === 0) return "hol";
@@ -531,7 +533,7 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
 function buildTeamAnchorForDate(team) {
   const baseName = team.info?.baseName || team.people?.[0]?.name || "";
   const baseCode = team.info?.baseCode || getGyobunOrder(team)[0] || "";
-  const baseDate = team.info?.baseDate || formatDate(new Date());
+  const baseDate = team.info?.baseDate || REMOTE_BASE_DATE;
 
   return {
     name: baseName,
@@ -625,19 +627,16 @@ function getPersonGyobunForDate(data, teamKey, name, dateStr, overrides = {}) {
   if (!team) return null;
 
   const saved = loadMySelection();
-  let anchor;
+  const anchor =
+    saved?.teamKey === teamKey && saved?.name === name && saved?.code && saved?.anchorDate
+      ? {
+          name: saved.name,
+          code: saved.code,
+          anchorDate: saved.anchorDate,
+        }
+      : buildTeamAnchorForDate(team);
 
-  if (saved?.teamKey === teamKey && saved?.name === name && saved?.code && saved?.anchorDate) {
-    anchor = {
-      name: saved.name,
-      code: saved.code,
-      anchorDate: saved.anchorDate,
-    };
-  } else {
-    anchor = buildTeamAnchorForDate(team);
-  }
-
-  const offset = diffDays(anchor.anchorDate, dateStr);
+  const offset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE, dateStr);
   const grid = buildAssignedGrid(team, anchor.name, anchor.code, offset, overrides);
   return grid.find((item) => item.name === name || item.displayName === name) || null;
 }
@@ -722,6 +721,7 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
         team.info?.baseCode && fixedOrder.includes(team.info.baseCode)
           ? team.info.baseCode
           : fixedOrder[0] || "",
+      baseDate: team.info?.baseDate || REMOTE_BASE_DATE,
     };
   });
 
@@ -737,9 +737,7 @@ function fetchRemoteRosterJsonp() {
       try {
         delete window[callbackName];
       } catch (_) {}
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
+      if (script.parentNode) script.parentNode.removeChild(script);
     };
 
     const timeout = setTimeout(() => {
@@ -820,10 +818,10 @@ function App() {
   const [selectedDate, setSelectedDate] = useState(initialDate);
 
   const [teamAnchors, setTeamAnchors] = useState({
-    ks: { name: "", code: "", anchorDate: initialDate },
-    my: { name: "", code: "", anchorDate: initialDate },
-    wb: { name: "", code: "", anchorDate: initialDate },
-    as: { name: "", code: "", anchorDate: initialDate },
+    ks: { name: "", code: "", anchorDate: REMOTE_BASE_DATE },
+    my: { name: "", code: "", anchorDate: REMOTE_BASE_DATE },
+    wb: { name: "", code: "", anchorDate: REMOTE_BASE_DATE },
+    as: { name: "", code: "", anchorDate: REMOTE_BASE_DATE },
   });
 
   const [overrides, setOverrides] = useState({});
@@ -884,11 +882,9 @@ function App() {
     async function loadRemote() {
       try {
         setRemoteLoading(true);
-
         const json = await fetchRemoteRosterJsonp();
         const next = normalizeRemoteRosterShape(json);
         const hasAny = TEAM_ORDER.some((teamKey) => (next[teamKey] || []).length > 0);
-
         if (hasAny) {
           setRemoteRoster(next);
         } else {
@@ -993,16 +989,16 @@ function App() {
 
   const currentTeam = effectiveData?.[selectedTeam] || null;
   const currentViewTeam = effectiveData?.[viewTeam] || null;
-  const currentAnchor = teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: selectedDate };
-  const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: selectedDate };
+  const currentAnchor = teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
+  const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
 
   const currentDayOffset = useMemo(
-    () => diffDays(currentAnchor.anchorDate || selectedDate, selectedDate),
+    () => diffDays(currentAnchor.anchorDate || REMOTE_BASE_DATE, selectedDate),
     [currentAnchor.anchorDate, selectedDate]
   );
 
   const currentViewDayOffset = useMemo(
-    () => diffDays(currentViewAnchor.anchorDate || selectedDate, selectedDate),
+    () => diffDays(currentViewAnchor.anchorDate || REMOTE_BASE_DATE, selectedDate),
     [currentViewAnchor.anchorDate, selectedDate]
   );
 
@@ -1028,9 +1024,7 @@ function App() {
   const myInfo = useMemo(() => {
     if (!currentTeam || !currentAnchor.name) return null;
 
-    const todayStr = formatDate(new Date());
-
-    if (isSameDateStr(selectedDate, todayStr)) {
+    if (isSameDateStr(selectedDate, REMOTE_BASE_DATE)) {
       const remoteMe = findMyRemoteAssignment(selectedTeam, currentAnchor.name);
       if (remoteMe?.code) {
         return {
@@ -1042,11 +1036,12 @@ function App() {
 
     if (!currentAnchor.code) return null;
 
+    const dayOffset = diffDays(currentAnchor.anchorDate || REMOTE_BASE_DATE, selectedDate);
     const assignedGrid = buildAssignedGrid(
       currentTeam,
       currentAnchor.name,
       currentAnchor.code,
-      currentDayOffset,
+      dayOffset,
       overrides
     );
 
@@ -1061,7 +1056,7 @@ function App() {
     currentTeam,
     currentAnchor.name,
     currentAnchor.code,
-    currentDayOffset,
+    currentAnchor.anchorDate,
     selectedDate,
     overrides,
     selectedTeam,
@@ -1071,10 +1066,9 @@ function App() {
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
 
-    const todayStr = formatDate(new Date());
     const remoteRows = remoteRoster?.[viewTeam] || [];
 
-    if (isSameDateStr(selectedDate, todayStr) && remoteRows.length > 0) {
+    if (isSameDateStr(selectedDate, REMOTE_BASE_DATE) && remoteRows.length > 0) {
       return getGyobunOrder(currentViewTeam)
         .map((slotCode, idx) => {
           const found = remoteRows.find(
@@ -1096,18 +1090,20 @@ function App() {
 
     if (!currentViewAnchor.name || !currentViewAnchor.code) return [];
 
+    const dayOffset = diffDays(currentViewAnchor.anchorDate || REMOTE_BASE_DATE, selectedDate);
+
     return buildAssignedGrid(
       currentViewTeam,
       currentViewAnchor.name,
       currentViewAnchor.code,
-      currentViewDayOffset,
+      dayOffset,
       overrides
     );
   }, [
     currentViewTeam,
     currentViewAnchor.name,
     currentViewAnchor.code,
-    currentViewDayOffset,
+    currentViewAnchor.anchorDate,
     overrides,
     remoteRoster,
     viewTeam,
@@ -1147,7 +1143,12 @@ function App() {
     }
   }
 
-  async function parseAndSetZip(fileOrBlob, saveToIdb = true, keepSavedSelection = false, rosterForApply = remoteRoster) {
+  async function parseAndSetZip(
+    fileOrBlob,
+    saveToIdb = true,
+    keepSavedSelection = false,
+    rosterForApply = remoteRoster
+  ) {
     setLoading(true);
     setError("");
 
@@ -1185,7 +1186,10 @@ function App() {
       const nextData = parseZipToData(parsedFiles);
       setData(nextData);
 
-      const nextEffectiveData = applyRemoteRosterToData(nextData, rosterForApply || getEmptyRemoteRoster());
+      const nextEffectiveData = applyRemoteRosterToData(
+        nextData,
+        rosterForApply || getEmptyRemoteRoster()
+      );
 
       if (!keepSavedSelection) {
         const defaultTeam = selectedTeam || "ks";
@@ -1203,7 +1207,7 @@ function App() {
           defaultTeam,
           defaultName,
           defaultCode,
-          selectedDate
+          REMOTE_BASE_DATE
         );
         setTeamAnchors(autoAnchors);
       }
@@ -1238,8 +1242,14 @@ function App() {
       return;
     }
 
-    const anchorDate = selectedDate;
-    const autoAnchors = buildAllTeamsAutoAnchors(effectiveData, teamKey, name, autoCode, anchorDate);
+    const anchorDate = REMOTE_BASE_DATE;
+    const autoAnchors = buildAllTeamsAutoAnchors(
+      effectiveData,
+      teamKey,
+      name,
+      autoCode,
+      anchorDate
+    );
 
     setTeamAnchors(autoAnchors);
     setSelectedTeam(teamKey);
@@ -1332,9 +1342,7 @@ function App() {
     }
 
     const next = { ...groups };
-    if (!next[name]) {
-      next[name] = [];
-    }
+    if (!next[name]) next[name] = [];
 
     setGroups(next);
     saveGroups(next);
@@ -1356,10 +1364,7 @@ function App() {
     }
 
     const next = { ...groups };
-
-    if (!next[targetGroup]) {
-      next[targetGroup] = [];
-    }
+    if (!next[targetGroup]) next[targetGroup] = [];
 
     const exists = next[targetGroup].some(
       (item) => item.team === groupAddTeam && item.name === groupAddName
@@ -1402,9 +1407,11 @@ function App() {
           <div className="card">
             <div className="card-title">데이터 불러오기</div>
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
-            <div className="help-text">ZIP 파일을 한 번 선택하면 근무시간표, 행로표 이미지 같은 기본 자료를 저장합니다.</div>
+            <div className="help-text">
+              ZIP 파일을 한 번 선택하면 근무시간표, 행로표 이미지 같은 기본 자료를 저장합니다.
+            </div>
             <div className="notice-box">
-              현재배정은 스프레드시트에서 최신값을 자동으로 읽고, ZIP은 기본자료용으로만 사용합니다.
+              현재배정은 스프레드시트 최신값을 읽되, 기준은 2026-03-28 배정표로 사용합니다.
             </div>
             {loading && <div className="help-text" style={{ color: "#2563eb" }}>불러오는 중...</div>}
             {zipName && <div className="help-text">현재 파일: {zipName}</div>}
@@ -1416,7 +1423,7 @@ function App() {
               <>
                 <div className="settings-row">
                   {deferredPrompt && <button className="install-btn" onClick={handleInstall}>설치</button>}
-                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>}
+                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>
                 </div>
 
                 <div className="date-grid">
@@ -1477,17 +1484,11 @@ function App() {
 
                 <div className="card main-panel">
                   <div className="center-view">
-                    <div
-                      className="main-code"
-                      style={{ color: getDateBasedColor(selectedDate) }}
-                    >
+                    <div className="main-code" style={{ color: getDateBasedColor(selectedDate) }}>
                       {myInfo?.code || "-"} {weekdayName(selectedDate)}
                     </div>
 
-                    <div
-                      className="main-time"
-                      style={{ color: getDateBasedColor(selectedDate) }}
-                    >
+                    <div className="main-time" style={{ color: getDateBasedColor(selectedDate) }}>
                       {myInfo?.time || "----"}
                     </div>
 
@@ -1565,10 +1566,7 @@ function App() {
                           className={`all-cell-real ${isMine ? "cell-my" : ""}`}
                           style={
                             item.customColor
-                              ? {
-                                  background: item.customColor,
-                                  backgroundImage: "none",
-                                }
+                              ? { background: item.customColor, backgroundImage: "none" }
                               : undefined
                           }
                           onClick={() => handleAllCellTap(item)}
@@ -1619,7 +1617,9 @@ function App() {
                         const isSelected = date === selectedDate;
                         const toneClass = getDateToneClass(date);
 
-                        const worktime = item?.code ? pickWorktime(effectiveData[selectedTeam], item.code, date) : "";
+                        const worktime = item?.code
+                          ? pickWorktime(effectiveData[selectedTeam], item.code, date)
+                          : "";
                         const { startTime, endTime } = splitWorktime(worktime);
 
                         return (
@@ -1686,7 +1686,9 @@ function App() {
                         <th>이름</th>
                         {weekDates.map((date) => (
                           <th key={date}>
-                            <div className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>
+                            <div
+                              className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}
+                            >
                               {weekdayShort(date)}
                             </div>
                             <div>{parseLocalDate(date).getDate()}</div>
@@ -1713,7 +1715,13 @@ function App() {
                               </button>
                             </td>
                             {weekDates.map((date) => {
-                              const item = getPersonGyobunForDate(effectiveData, member.team, member.name, date, overrides);
+                              const item = getPersonGyobunForDate(
+                                effectiveData,
+                                member.team,
+                                member.name,
+                                date,
+                                overrides
+                              );
                               return <td key={date}>{item?.code || "-"}</td>;
                             })}
                           </tr>
@@ -1804,7 +1812,7 @@ function App() {
             </select>
 
             <div className="help-text">
-              이름만 선택하면 현재배정 기준으로 자동 적용되고, 필요하면 교번을 직접 바꿀 수 있습니다.
+              현재배정 시트는 2026-03-28 기준표로 관리하고, 날짜 변경은 앱이 자동 계산합니다.
             </div>
 
             <div className="modal-actions">
@@ -1902,9 +1910,7 @@ function App() {
 
             <div className="modal-actions">
               <button className="modal-btn" onClick={closeEditDialog}>아니요</button>
-              <button className="modal-btn primary" onClick={() => commitEdit(editColor)}>
-                변경
-              </button>
+              <button className="modal-btn primary" onClick={() => commitEdit(editColor)}>변경</button>
             </div>
           </div>
         </div>
