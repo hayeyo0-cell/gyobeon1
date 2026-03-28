@@ -887,8 +887,6 @@ function App() {
         const hasAny = TEAM_ORDER.some((teamKey) => (next[teamKey] || []).length > 0);
         if (hasAny) {
           setRemoteRoster(next);
-        } else {
-          console.log("원격 현재배정 데이터가 비어 있음");
         }
       } catch (e) {
         console.log("원격 현재배정 로드 실패", e);
@@ -992,16 +990,6 @@ function App() {
   const currentAnchor = teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
   const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
 
-  const currentDayOffset = useMemo(
-    () => diffDays(currentAnchor.anchorDate || REMOTE_BASE_DATE, selectedDate),
-    [currentAnchor.anchorDate, selectedDate]
-  );
-
-  const currentViewDayOffset = useMemo(
-    () => diffDays(currentViewAnchor.anchorDate || REMOTE_BASE_DATE, selectedDate),
-    [currentViewAnchor.anchorDate, selectedDate]
-  );
-
   function findMyCurrentCodeFromRemote(teamKey, name) {
     const rows = remoteRoster?.[teamKey] || [];
     const found = rows.find(
@@ -1019,6 +1007,13 @@ function App() {
         String(row.name || "").trim().replace(/\s/g, "") ===
         String(name || "").trim().replace(/\s/g, "")
     ) || null;
+  }
+
+  function findZipBaseCode(teamKey, name) {
+    const team = data?.[teamKey];
+    if (!team?.people?.length) return "";
+    const person = team.people.find((p) => p.name === name);
+    return person?.baseCode || "";
   }
 
   const myInfo = useMemo(() => {
@@ -1228,17 +1223,21 @@ function App() {
     await parseAndSetZip(file, true, false, remoteRoster);
   }
 
-  function applyMySelection(name, code, teamKey = selectedTeam) {
+  function applyMySelection(name, manualCode, teamKey = selectedTeam) {
     if (!effectiveData || !name) return;
 
-    const autoCode =
-      code ||
-      findMyCurrentCodeFromRemote(teamKey, name) ||
+    const remoteCode = findMyCurrentCodeFromRemote(teamKey, name);
+    const zipCode = findZipBaseCode(teamKey, name);
+
+    const anchorCode =
+      manualCode ||
+      remoteCode ||
+      zipCode ||
       teamAnchors?.[teamKey]?.code ||
       "";
 
-    if (!autoCode) {
-      alert("현재배정에서 선택한 이름의 교번을 찾지 못했습니다.");
+    if (!anchorCode) {
+      alert("선택한 이름의 기준 교번을 찾지 못했습니다.");
       return;
     }
 
@@ -1247,7 +1246,7 @@ function App() {
       effectiveData,
       teamKey,
       name,
-      autoCode,
+      anchorCode,
       anchorDate
     );
 
@@ -1258,7 +1257,7 @@ function App() {
     saveMySelection({
       teamKey,
       name,
-      code: autoCode,
+      code: anchorCode,
       anchorDate,
     });
   }
@@ -1411,7 +1410,7 @@ function App() {
               ZIP 파일을 한 번 선택하면 근무시간표, 행로표 이미지 같은 기본 자료를 저장합니다.
             </div>
             <div className="notice-box">
-              현재배정은 스프레드시트 최신값을 읽되, 기준은 2026-03-28 배정표로 사용합니다.
+              기준 교번은 스프레드시트의 2026-03-28 실제 배정을 우선 사용합니다.
             </div>
             {loading && <div className="help-text" style={{ color: "#2563eb" }}>불러오는 중...</div>}
             {zipName && <div className="help-text">현재 파일: {zipName}</div>}
@@ -1686,9 +1685,7 @@ function App() {
                         <th>이름</th>
                         {weekDates.map((date) => (
                           <th key={date}>
-                            <div
-                              className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}
-                            >
+                            <div className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>
                               {weekdayShort(date)}
                             </div>
                             <div>{parseLocalDate(date).getDate()}</div>
@@ -1798,7 +1795,7 @@ function App() {
               ))}
             </select>
 
-            <label className="label" style={{ marginTop: 12 }}>오늘 내 교번</label>
+            <label className="label" style={{ marginTop: 12 }}>기준 교번</label>
             <select
               className="select"
               value={currentAnchor.code || ""}
@@ -1812,7 +1809,7 @@ function App() {
             </select>
 
             <div className="help-text">
-              현재배정 시트는 2026-03-28 기준표로 관리하고, 날짜 변경은 앱이 자동 계산합니다.
+              이름을 선택하면 기준 교번은 스프레드시트 3/28 실제 배정을 우선 적용하고, 없으면 ZIP 기준을 사용합니다.
             </div>
 
             <div className="modal-actions">
