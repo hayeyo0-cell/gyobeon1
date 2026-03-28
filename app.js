@@ -977,8 +977,30 @@ function App() {
     [currentViewAnchor.anchorDate, selectedDate]
   );
 
+  function findMyCurrentCodeFromRemote(teamKey, name) {
+    const rows = remoteRoster?.[teamKey] || [];
+    const found = rows.find((row) => String(row.name || "").trim() === String(name || "").trim());
+    return found?.code || "";
+  }
+
+  function findMyRemoteAssignment(teamKey, name) {
+    const rows = remoteRoster?.[teamKey] || [];
+    return rows.find((row) => String(row.name || "").trim() === String(name || "").trim()) || null;
+  }
+
   const myInfo = useMemo(() => {
-    if (!currentTeam || !currentAnchor.name || !currentAnchor.code) return null;
+    if (!currentTeam || !currentAnchor.name) return null;
+
+    const remoteMe = findMyRemoteAssignment(selectedTeam, currentAnchor.name);
+
+    if (remoteMe?.code) {
+      return {
+        code: remoteMe.code,
+        time: pickWorktime(currentTeam, remoteMe.code, selectedDate),
+      };
+    }
+
+    if (!currentAnchor.code) return null;
 
     const assignedGrid = buildAssignedGrid(
       currentTeam,
@@ -995,7 +1017,16 @@ function App() {
       code: me.code,
       time: pickWorktime(currentTeam, me.code, selectedDate),
     };
-  }, [currentTeam, currentAnchor.name, currentAnchor.code, currentDayOffset, selectedDate, overrides]);
+  }, [
+    currentTeam,
+    currentAnchor.name,
+    currentAnchor.code,
+    currentDayOffset,
+    selectedDate,
+    overrides,
+    selectedTeam,
+    remoteRoster,
+  ]);
 
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
@@ -1152,10 +1183,21 @@ function App() {
   }
 
   function applyMySelection(name, code, teamKey = selectedTeam) {
-    if (!effectiveData || !name || !code) return;
+    if (!effectiveData || !name) return;
+
+    const autoCode =
+      code ||
+      findMyCurrentCodeFromRemote(teamKey, name) ||
+      teamAnchors?.[teamKey]?.code ||
+      "";
+
+    if (!autoCode) {
+      alert("현재배정에서 선택한 이름의 교번을 찾지 못했습니다.");
+      return;
+    }
 
     const anchorDate = selectedDate;
-    const autoAnchors = buildAllTeamsAutoAnchors(effectiveData, teamKey, name, code, anchorDate);
+    const autoAnchors = buildAllTeamsAutoAnchors(effectiveData, teamKey, name, autoCode, anchorDate);
 
     setTeamAnchors(autoAnchors);
     setSelectedTeam(teamKey);
@@ -1164,7 +1206,7 @@ function App() {
     saveMySelection({
       teamKey,
       name,
-      code,
+      code: autoCode,
       anchorDate,
     });
   }
@@ -1693,7 +1735,7 @@ function App() {
               className="select"
               value={currentAnchor.name || ""}
               onChange={(e) => {
-                applyMySelection(e.target.value, currentAnchor.code || "", selectedTeam);
+                applyMySelection(e.target.value, "", selectedTeam);
               }}
             >
               {(currentTeam?.people || []).map((person) => (
@@ -1703,21 +1745,8 @@ function App() {
               ))}
             </select>
 
-            <label className="label" style={{ marginTop: 12 }}>오늘 내 교번</label>
-            <select
-              className="select"
-              value={currentAnchor.code || ""}
-              onChange={(e) => {
-                applyMySelection(currentAnchor.name || "", e.target.value, selectedTeam);
-              }}
-            >
-              {getGyobunOrder(currentTeam).map((code) => (
-                <option key={code} value={code}>{code}</option>
-              ))}
-            </select>
-
             <div className="help-text">
-              기본자료는 ZIP에서 읽고, 현재배정은 스프레드시트에서 최신값을 자동 반영합니다.
+              이름만 선택하면 현재배정 기준으로 오늘 내 교번이 자동 적용됩니다.
             </div>
 
             <div className="modal-actions">
