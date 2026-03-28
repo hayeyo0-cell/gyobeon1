@@ -622,25 +622,6 @@ function splitWorktime(worktime) {
   };
 }
 
-function getPersonGyobunForDate(data, teamKey, name, dateStr, overrides = {}) {
-  const team = data?.[teamKey];
-  if (!team) return null;
-
-  const saved = loadMySelection();
-  const anchor =
-    saved?.teamKey === teamKey && saved?.name === name && saved?.code && saved?.anchorDate
-      ? {
-          name: saved.name,
-          code: saved.code,
-          anchorDate: saved.anchorDate,
-        }
-      : buildTeamAnchorForDate(team);
-
-  const offset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE, dateStr);
-  const grid = buildAssignedGrid(team, anchor.name, anchor.code, offset, overrides);
-  return grid.find((item) => item.name === name || item.displayName === name) || null;
-}
-
 function normalizeTeamKey(value) {
   const v = String(value || "").trim().toLowerCase();
   if (TEAM_ORDER.includes(v)) return v;
@@ -721,7 +702,7 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
         team.info?.baseCode && fixedOrder.includes(team.info.baseCode)
           ? team.info.baseCode
           : fixedOrder[0] || "",
-      baseDate: team.info?.baseDate || REMOTE_BASE_DATE,
+      baseDate: REMOTE_BASE_DATE,
     };
   });
 
@@ -837,6 +818,7 @@ function App() {
   const [pathImage, setPathImage] = useState("");
 
   const [showSettings, setShowSettings] = useState(false);
+  const [showManualCode, setShowManualCode] = useState(false);
 
   const [groups, setGroups] = useState(initialGroups);
   const [currentGroup, setCurrentGroup] = useState(Object.keys(initialGroups)[0] || "");
@@ -959,22 +941,68 @@ function App() {
     setGroupBaseDate(selectedDate);
   }, [selectedDate]);
 
+  function findRemoteCodeByName(teamKey, name) {
+    const rows = remoteRoster?.[teamKey] || [];
+    const found = rows.find(
+      (row) =>
+        String(row.name || "").trim().replace(/\s/g, "") ===
+        String(name || "").trim().replace(/\s/g, "")
+    );
+    return found?.code || "";
+  }
+
+  function findRemoteAssignment(teamKey, name) {
+    const rows = remoteRoster?.[teamKey] || [];
+    return rows.find(
+      (row) =>
+        String(row.name || "").trim().replace(/\s/g, "") ===
+        String(name || "").trim().replace(/\s/g, "")
+    ) || null;
+  }
+
+  function findZipCodeByName(teamKey, name) {
+    const team = data?.[teamKey];
+    if (!team?.people?.length) return "";
+    const found = team.people.find((p) => p.name === name);
+    return found?.baseCode || "";
+  }
+
+  function resolveAnchorCode(teamKey, name, manualCode = "") {
+    return (
+      manualCode ||
+      findRemoteCodeByName(teamKey, name) ||
+      findZipCodeByName(teamKey, name) ||
+      ""
+    );
+  }
+
   useEffect(() => {
     if (!effectiveData) return;
 
     const saved = loadMySelection();
 
-    if (saved?.teamKey && saved?.name && saved?.code && saved?.anchorDate) {
+    if (saved?.teamKey && saved?.name) {
+      const fixedCode = resolveAnchorCode(saved.teamKey, saved.name, saved.code || "");
+      const fixedSelection = {
+        teamKey: saved.teamKey,
+        name: saved.name,
+        code: fixedCode,
+        anchorDate: REMOTE_BASE_DATE,
+      };
+
+      saveMySelection(fixedSelection);
+
       const autoAnchors = buildAllTeamsAutoAnchors(
         effectiveData,
-        saved.teamKey,
-        saved.name,
-        saved.code,
-        saved.anchorDate
+        fixedSelection.teamKey,
+        fixedSelection.name,
+        fixedSelection.code,
+        fixedSelection.anchorDate
       );
+
       setTeamAnchors(autoAnchors);
-      setSelectedTeam(saved.teamKey);
-      setViewTeam(saved.teamKey);
+      setSelectedTeam(fixedSelection.teamKey);
+      setViewTeam(fixedSelection.teamKey);
       return;
     }
 
@@ -990,37 +1018,11 @@ function App() {
   const currentAnchor = teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
   const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
 
-  function findMyCurrentCodeFromRemote(teamKey, name) {
-    const rows = remoteRoster?.[teamKey] || [];
-    const found = rows.find(
-      (row) =>
-        String(row.name || "").trim().replace(/\s/g, "") ===
-        String(name || "").trim().replace(/\s/g, "")
-    );
-    return found?.code || "";
-  }
-
-  function findMyRemoteAssignment(teamKey, name) {
-    const rows = remoteRoster?.[teamKey] || [];
-    return rows.find(
-      (row) =>
-        String(row.name || "").trim().replace(/\s/g, "") ===
-        String(name || "").trim().replace(/\s/g, "")
-    ) || null;
-  }
-
-  function findZipBaseCode(teamKey, name) {
-    const team = data?.[teamKey];
-    if (!team?.people?.length) return "";
-    const person = team.people.find((p) => p.name === name);
-    return person?.baseCode || "";
-  }
-
   const myInfo = useMemo(() => {
     if (!currentTeam || !currentAnchor.name) return null;
 
     if (isSameDateStr(selectedDate, REMOTE_BASE_DATE)) {
-      const remoteMe = findMyRemoteAssignment(selectedTeam, currentAnchor.name);
+      const remoteMe = findRemoteAssignment(selectedTeam, currentAnchor.name);
       if (remoteMe?.code) {
         return {
           code: remoteMe.code,
@@ -1192,10 +1194,7 @@ function App() {
           nextEffectiveData?.[defaultTeam]?.info?.baseName ||
           nextEffectiveData?.[defaultTeam]?.people?.[0]?.name ||
           "";
-        const defaultCode =
-          nextEffectiveData?.[defaultTeam]?.info?.baseCode ||
-          getGyobunOrder(nextEffectiveData?.[defaultTeam])[0] ||
-          "";
+        const defaultCode = resolveAnchorCode(defaultTeam, defaultName);
 
         const autoAnchors = buildAllTeamsAutoAnchors(
           nextEffectiveData,
@@ -1223,43 +1222,34 @@ function App() {
     await parseAndSetZip(file, true, false, remoteRoster);
   }
 
-  function applyMySelection(name, manualCode, teamKey = selectedTeam) {
+  function applyMySelection(name, manualCode = "", teamKey = selectedTeam) {
     if (!effectiveData || !name) return;
 
-    const remoteCode = findMyCurrentCodeFromRemote(teamKey, name);
-    const zipCode = findZipBaseCode(teamKey, name);
-
-    const anchorCode =
-      manualCode ||
-      remoteCode ||
-      zipCode ||
-      teamAnchors?.[teamKey]?.code ||
-      "";
-
+    const anchorCode = resolveAnchorCode(teamKey, name, manualCode);
     if (!anchorCode) {
       alert("선택한 이름의 기준 교번을 찾지 못했습니다.");
       return;
     }
 
-    const anchorDate = REMOTE_BASE_DATE;
-    const autoAnchors = buildAllTeamsAutoAnchors(
-      effectiveData,
+    const selection = {
       teamKey,
       name,
-      anchorCode,
-      anchorDate
+      code: anchorCode,
+      anchorDate: REMOTE_BASE_DATE,
+    };
+
+    const autoAnchors = buildAllTeamsAutoAnchors(
+      effectiveData,
+      selection.teamKey,
+      selection.name,
+      selection.code,
+      selection.anchorDate
     );
 
     setTeamAnchors(autoAnchors);
     setSelectedTeam(teamKey);
     setViewTeam(teamKey);
-
-    saveMySelection({
-      teamKey,
-      name,
-      code: anchorCode,
-      anchorDate,
-    });
+    saveMySelection(selection);
   }
 
   function handleAllCellTap(item) {
@@ -1331,6 +1321,8 @@ function App() {
   function resetOverrides() {
     setOverrides({});
     saveOverrides({});
+    localStorage.removeItem("gyobeon_my_selection");
+    setShowManualCode(false);
   }
 
   function createGroup() {
@@ -1410,7 +1402,7 @@ function App() {
               ZIP 파일을 한 번 선택하면 근무시간표, 행로표 이미지 같은 기본 자료를 저장합니다.
             </div>
             <div className="notice-box">
-              기준 교번은 스프레드시트의 2026-03-28 실제 배정을 우선 사용합니다.
+              사용자는 이름만 선택하면 되고, 기준 교번은 앱이 스프레드시트 3/28 실제 배정표를 우선 사용해 자동 계산합니다.
             </div>
             {loading && <div className="help-text" style={{ color: "#2563eb" }}>불러오는 중...</div>}
             {zipName && <div className="help-text">현재 파일: {zipName}</div>}
@@ -1604,13 +1596,15 @@ function App() {
                   {monthMatrix.map((row, rowIdx) => (
                     <div className="month-row" key={rowIdx}>
                       {row.map((date) => {
-                        const item = getPersonGyobunForDate(
-                          effectiveData,
-                          selectedTeam,
-                          currentAnchor.name,
-                          date,
-                          overrides
-                        );
+                        const item = currentAnchor.name
+                          ? getPersonGyobunForDate(
+                              effectiveData,
+                              selectedTeam,
+                              currentAnchor.name,
+                              date,
+                              overrides
+                            )
+                          : null;
 
                         const sameMonth = parseLocalDate(date).getMonth() === monthHeaderDate.getMonth();
                         const isSelected = date === selectedDate;
@@ -1769,9 +1763,9 @@ function App() {
                 setSelectedTeam(teamKey);
                 setViewTeam(teamKey);
 
-                const anchor = teamAnchors[teamKey];
-                if (anchor?.name) {
-                  applyMySelection(anchor.name, anchor.code || "", teamKey);
+                const currentName = teamAnchors[teamKey]?.name || "";
+                if (currentName) {
+                  applyMySelection(currentName, "", teamKey);
                 }
               }}
             >
@@ -1788,6 +1782,7 @@ function App() {
                 applyMySelection(e.target.value, "", selectedTeam);
               }}
             >
+              <option value="">선택</option>
               {(currentTeam?.people || []).map((person) => (
                 <option key={`${person.idx}-${person.name}`} value={person.name}>
                   {person.name}
@@ -1795,25 +1790,37 @@ function App() {
               ))}
             </select>
 
-            <label className="label" style={{ marginTop: 12 }}>기준 교번</label>
-            <select
-              className="select"
-              value={currentAnchor.code || ""}
-              onChange={(e) => {
-                applyMySelection(currentAnchor.name || "", e.target.value, selectedTeam);
-              }}
+            <button
+              className="modal-btn"
+              style={{ marginTop: 12 }}
+              onClick={() => setShowManualCode((prev) => !prev)}
             >
-              {getGyobunOrder(currentTeam).map((code) => (
-                <option key={code} value={code}>{code}</option>
-              ))}
-            </select>
+              {showManualCode ? "기준 교번 직접 수정 숨기기" : "기준 교번 직접 수정"}
+            </button>
+
+            {showManualCode && (
+              <>
+                <label className="label" style={{ marginTop: 12 }}>기준 교번</label>
+                <select
+                  className="select"
+                  value={currentAnchor.code || ""}
+                  onChange={(e) => {
+                    applyMySelection(currentAnchor.name || "", e.target.value, selectedTeam);
+                  }}
+                >
+                  {getGyobunOrder(currentTeam).map((code) => (
+                    <option key={code} value={code}>{code}</option>
+                  ))}
+                </select>
+              </>
+            )}
 
             <div className="help-text">
-              이름을 선택하면 기준 교번은 스프레드시트 3/28 실제 배정을 우선 적용하고, 없으면 ZIP 기준을 사용합니다.
+              이름만 선택하면 앱이 스프레드시트 3/28 실제 배정을 기준으로 자동 계산해서 오늘 교번을 보여줍니다.
             </div>
 
             <div className="modal-actions">
-              <button className="modal-btn" onClick={resetOverrides}>수정값 초기화</button>
+              <button className="modal-btn" onClick={resetOverrides}>초기화</button>
               <button className="modal-btn primary" onClick={() => setShowSettings(false)}>닫기</button>
             </div>
           </div>
