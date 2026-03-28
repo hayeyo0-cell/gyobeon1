@@ -49,7 +49,6 @@ button:active {
   display: none !important;
 }
 
-/* 하단 고정탭 안 가리게 최종 보강 */
 .container {
   width: 100%;
   height: 100dvh;
@@ -132,7 +131,6 @@ button:active {
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
 }
 
-/* 홈 */
 .settings-row {
   height: 52px;
   display: flex;
@@ -281,7 +279,6 @@ button:active {
   }
 }
 
-/* 하단 탭 */
 .bottom-tabs {
   position: fixed;
   left: 0;
@@ -346,7 +343,6 @@ button:active {
   background: rgba(255,255,255,0.95);
 }
 
-/* 공통 상단바 */
 .month-header-bar,
 .group-topbar {
   display: grid;
@@ -388,7 +384,6 @@ button:active {
   box-shadow: none;
 }
 
-/* 전체교번 */
 .all-page {
   display: flex;
   flex-direction: column;
@@ -470,6 +465,7 @@ button:active {
 }
 
 .all-team-tab {
+  position: relative;
   border: 0;
   background: linear-gradient(180deg, #8db1ff 0%, #6d93ef 100%);
   color: #0f172a;
@@ -492,6 +488,17 @@ button:active {
     inset 0 1px 0 rgba(255,255,255,0.38);
 }
 
+.my-dot {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+}
+
 .all-tab-grid-wrap {
   overflow: visible;
   background: linear-gradient(180deg, rgba(194, 211, 245, 0.78) 0%, rgba(178, 198, 238, 0.72) 100%);
@@ -512,7 +519,6 @@ button:active {
 }
 
 .all-cell-real {
-  position: relative;
   min-width: 0;
   min-height: 58px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
@@ -525,7 +531,6 @@ button:active {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
@@ -572,24 +577,12 @@ button:active {
 }
 
 .cell-my {
-  border: 4px solid #22c7d8 !important;
+  border: 2px solid #22c7d8 !important;
   background: linear-gradient(180deg, #ffffff 0%, #ecfeff 100%) !important;
   box-shadow:
-    0 0 0 4px rgba(34,199,216,0.16),
-    0 10px 20px rgba(34,199,216,0.16),
+    0 0 0 2px rgba(34,199,216,0.16),
+    0 6px 14px rgba(34,199,216,0.12),
     inset 0 1px 0 rgba(255,255,255,0.95);
-  transform: scale(1.03);
-  z-index: 2;
-}
-
-.cell-my .all-code {
-  font-weight: 900;
-  color: #0f172a;
-}
-
-.cell-my .all-name {
-  font-weight: 800;
-  color: #0f172a;
 }
 
 .all-grid-real.density-6 .all-code {
@@ -616,7 +609,6 @@ button:active {
   font-size: 12px;
 }
 
-/* 월교번 */
 .month-calendar {
   background: rgba(255,255,255,0.76);
   border-radius: 24px;
@@ -728,7 +720,6 @@ button:active {
   white-space: nowrap;
 }
 
-/* 월교번 토/일/평일 색상 */
 .tone-normal {
   color: #111827 !important;
 }
@@ -749,7 +740,6 @@ button:active {
   color: #3b82f6 !important;
 }
 
-/* 모달 */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -841,7 +831,6 @@ button:active {
   background: white;
 }
 
-/* 그룹 */
 .group-page {
   background: rgba(255,255,255,0.78);
   border-radius: 24px;
@@ -914,7 +903,6 @@ button:active {
     inset 0 1px 0 rgba(255,255,255,0.18);
 }
 
-/* 뷰어 */
 .viewer-page {
   position: fixed;
   inset: 0;
@@ -966,7 +954,6 @@ button:active {
   text-align: center;
 }
 
-/* 모바일 */
 @media (max-width: 420px) {
   .container {
     height: 100dvh;
@@ -1126,6 +1113,13 @@ button:active {
     border-radius: 14px;
   }
 
+  .my-dot {
+    top: 5px;
+    right: 7px;
+    width: 5px;
+    height: 5px;
+  }
+
   .all-tab-grid-wrap {
     padding: 6px;
     border-radius: 22px;
@@ -1149,10 +1143,6 @@ button:active {
   .all-name {
     font-size: 8px;
     margin-top: 3px;
-  }
-
-  .cell-my {
-    transform: scale(1.02);
   }
 
   .all-grid-real.density-6 .all-code {
