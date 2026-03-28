@@ -16,6 +16,9 @@ const NIGHT_RANGE_BY_TEAM = {
   as: { start: 25, end: 37 },
 };
 
+const ADMIN_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbwjtUuLeABXGdPbdfsGNbvMh_xynrZHeyU3V82ElZUnXqr9U-D6tWqeYNbsqN-6F9vxLg/exec";
+
 const COLOR_OPTIONS = [
   { value: "", label: "기본" },
   { value: "#dbeafe", label: "하늘" },
@@ -44,6 +47,11 @@ function shouldHideName(name) {
   return HIDDEN_NAME_KEYS.includes(normalizeNameKey(name));
 }
 
+function parseLocalDate(dateStr) {
+  const [y, m, d] = String(dateStr).split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
 function getAllGridLayout(count) {
   if (count >= 49) return { cols: 6, className: "density-6" };
   if (count >= 36) return { cols: 5, className: "density-5" };
@@ -58,13 +66,13 @@ function formatDate(date) {
 }
 
 function addDays(dateStr, days) {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   d.setDate(d.getDate() + days);
   return formatDate(d);
 }
 
 function addMonths(dateStr, months) {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   const originalDate = d.getDate();
   d.setDate(1);
   d.setMonth(d.getMonth() + months);
@@ -74,8 +82,10 @@ function addMonths(dateStr, months) {
 }
 
 function diffDays(a, b) {
-  const da = new Date(a);
-  const db = new Date(b);
+  const da = parseLocalDate(a);
+  const db = parseLocalDate(b);
+  da.setHours(0, 0, 0, 0);
+  db.setHours(0, 0, 0, 0);
   return Math.round((db.getTime() - da.getTime()) / 86400000);
 }
 
@@ -85,20 +95,20 @@ function positiveMod(n, mod) {
 
 function weekdayName(dateStr) {
   const names = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
-  return names[new Date(dateStr).getDay()];
+  return names[parseLocalDate(dateStr).getDay()];
 }
 
 function weekdayShort(dateStr) {
   const names = ["일", "월", "화", "수", "목", "금", "토"];
-  return names[new Date(dateStr).getDay()];
+  return names[parseLocalDate(dateStr).getDay()];
 }
 
 function isSaturday(dateStr) {
-  return new Date(dateStr).getDay() === 6;
+  return parseLocalDate(dateStr).getDay() === 6;
 }
 
 function isSunday(dateStr) {
-  return new Date(dateStr).getDay() === 0;
+  return parseLocalDate(dateStr).getDay() === 0;
 }
 
 function guessDayType(dateStr) {
@@ -114,7 +124,7 @@ function getDateToneClass(dateStr) {
 }
 
 function parseLines(text) {
-  return text
+  return String(text || "")
     .replace(/\r/g, "")
     .split("\n")
     .map((v) => v.trim())
@@ -137,7 +147,7 @@ function parseInfo(text) {
 }
 
 function normalizeWorktimeLine(line) {
-  return line.replace(/\s+/g, " ").trim().toLowerCase();
+  return String(line || "").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 function parseWorktime(text, gyobunOrder = []) {
@@ -199,7 +209,7 @@ function pickWorktime(team, code, dateStr) {
 }
 
 function getPathFolder(teamKey, dateStr, code) {
-  const day = new Date(dateStr).getDay();
+  const day = parseLocalDate(dateStr).getDay();
 
   if (isNightStartCode(teamKey, code)) {
     if (day >= 1 && day <= 4) return "nor";
@@ -296,6 +306,35 @@ function createTeamBucket(teamKey) {
     worktimes: { nor: {}, sat: {}, hol: {} },
     paths: { nor: {}, sat: {}, hol: {}, nor_sat: {}, sat_hol: {}, hol_nor: {} },
   };
+}
+
+function cloneTeamData(data) {
+  const result = {};
+  TEAM_ORDER.forEach((teamKey) => {
+    const team = data?.[teamKey];
+    if (!team) return;
+    result[teamKey] = {
+      ...team,
+      names: Array.isArray(team.names) ? [...team.names] : [],
+      gyobun: Array.isArray(team.gyobun) ? [...team.gyobun] : [],
+      people: Array.isArray(team.people) ? team.people.map((p) => ({ ...p })) : [],
+      info: team.info ? { ...team.info, raw: [...(team.info.raw || [])] } : createTeamBucket(teamKey).info,
+      worktimes: {
+        nor: { ...(team.worktimes?.nor || {}) },
+        sat: { ...(team.worktimes?.sat || {}) },
+        hol: { ...(team.worktimes?.hol || {}) },
+      },
+      paths: {
+        nor: { ...(team.paths?.nor || {}) },
+        sat: { ...(team.paths?.sat || {}) },
+        hol: { ...(team.paths?.hol || {}) },
+        nor_sat: { ...(team.paths?.nor_sat || {}) },
+        sat_hol: { ...(team.paths?.sat_hol || {}) },
+        hol_nor: { ...(team.paths?.hol_nor || {}) },
+      },
+    };
+  });
+  return result;
 }
 
 function parseZipToData(parsedFiles) {
@@ -402,6 +441,18 @@ function saveGroups(groups) {
   localStorage.setItem("gyobeon_groups", JSON.stringify(groups));
 }
 
+function loadRemoteRoster() {
+  try {
+    return JSON.parse(localStorage.getItem("gyobeon_remote_roster") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveRemoteRoster(value) {
+  localStorage.setItem("gyobeon_remote_roster", JSON.stringify(value));
+}
+
 function getOverrideKey(teamKey, index) {
   return `${teamKey}_${index}`;
 }
@@ -486,7 +537,7 @@ function buildAllTeamsAutoAnchors(data, selectedTeamKey, selectedName, selectedC
 }
 
 function getMonthMatrix(dateStr) {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   const year = d.getFullYear();
   const month = d.getMonth();
 
@@ -508,7 +559,7 @@ function getMonthMatrix(dateStr) {
 }
 
 function getWeekDates(baseDate) {
-  const d = new Date(baseDate);
+  const d = parseLocalDate(baseDate);
   const day = d.getDay();
   const sunday = new Date(d);
   sunday.setDate(d.getDate() - day);
@@ -565,6 +616,116 @@ function getPersonGyobunForDate(data, teamKey, name, dateStr, overrides = {}) {
   return grid.find((item) => item.name === name || item.displayName === name) || null;
 }
 
+function normalizeTeamKey(value) {
+  const v = String(value || "").trim().toLowerCase();
+  if (TEAM_ORDER.includes(v)) return v;
+  const found = TEAM_ORDER.find((key) => TEAM_LABELS[key] === String(value || "").trim());
+  return found || "";
+}
+
+function normalizeRemoteRosterShape(input) {
+  const result = {};
+  TEAM_ORDER.forEach((teamKey) => {
+    result[teamKey] = [];
+  });
+
+  if (!input || typeof input !== "object") return result;
+
+  if (Array.isArray(input.rows)) {
+    input.rows.forEach((row) => {
+      const teamKey =
+        normalizeTeamKey(row?.teamKey) ||
+        normalizeTeamKey(row?.team) ||
+        normalizeTeamKey(row?.teamLabel) ||
+        normalizeTeamKey(row?.소속);
+
+      const code = String(row?.gyobun || row?.code || row?.교번 || "").trim();
+      const employeeId = String(row?.employeeId || row?.직원ID || row?.id || "").trim();
+      const name = String(row?.name || row?.이름 || "").trim();
+
+      if (!teamKey || !code || !name) return;
+      result[teamKey].push({ code, employeeId, name });
+    });
+    return result;
+  }
+
+  TEAM_ORDER.forEach((teamKey) => {
+    const rows = Array.isArray(input[teamKey]) ? input[teamKey] : [];
+    result[teamKey] = rows
+      .map((row) => ({
+        code: String(row?.gyobun || row?.code || row?.교번 || "").trim(),
+        employeeId: String(row?.employeeId || row?.직원ID || row?.id || "").trim(),
+        name: String(row?.name || row?.이름 || "").trim(),
+      }))
+      .filter((row) => row.code && row.name);
+  });
+
+  return result;
+}
+
+function applyRemoteRosterToData(baseData, remoteRoster) {
+  if (!baseData) return null;
+
+  const next = cloneTeamData(baseData);
+
+  TEAM_ORDER.forEach((teamKey) => {
+    const team = next[teamKey];
+    if (!team) return;
+
+    const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : [];
+    if (!rows.length) return;
+
+    const fixedOrder = getGyobunOrder(team);
+    const mapped = [];
+
+    fixedOrder.forEach((slotCode, idx) => {
+      const found = rows.find((row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode));
+      if (!found) return;
+      if (shouldHideName(found.name)) return;
+
+      mapped.push({
+        idx,
+        name: found.name,
+        baseCode: slotCode,
+        employeeId: found.employeeId || "",
+      });
+    });
+
+    if (!mapped.length) return;
+
+    team.people = mapped;
+    team.names = mapped.map((p) => p.name);
+    team.gyobun = fixedOrder.slice();
+    team.info = {
+      ...team.info,
+      totalCount: mapped.length,
+      baseName: team.info?.baseName && mapped.some((p) => p.name === team.info.baseName)
+        ? team.info.baseName
+        : mapped[0]?.name || "",
+      baseCode: team.info?.baseCode && fixedOrder.includes(team.info.baseCode)
+        ? team.info.baseCode
+        : fixedOrder[0] || "",
+    };
+  });
+
+  return next;
+}
+
+async function fetchRemoteRoster() {
+  const response = await fetch(`${ADMIN_SCRIPT_URL}?t=${Date.now()}`, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("현재배정 데이터 조회 실패");
+  }
+
+  const json = await response.json();
+  const raw = json?.data && typeof json.data === "object" ? json.data : json;
+  return normalizeRemoteRosterShape(raw);
+}
+
 function openZipDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("gyobeon-app-db", 1);
@@ -604,12 +765,15 @@ async function loadZipBlob() {
 function App() {
   const initialSelection = loadMySelection();
   const initialGroups = loadGroups();
+  const initialRemoteRoster = loadRemoteRoster();
   const initialDate = formatDate(new Date());
 
   const [zipName, setZipName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
+  const [remoteRoster, setRemoteRoster] = useState(initialRemoteRoster);
+  const [remoteLoading, setRemoteLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState("home");
   const activeTabRef = useRef("home");
@@ -652,6 +816,11 @@ function App() {
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
 
+  const effectiveData = useMemo(() => {
+    if (!data) return null;
+    return applyRemoteRosterToData(data, remoteRoster);
+  }, [data, remoteRoster]);
+
   useEffect(() => {
     activeTabRef.current = activeTab;
   }, [activeTab]);
@@ -672,6 +841,26 @@ function App() {
     }
 
     tryAutoLoad();
+  }, []);
+
+  useEffect(() => {
+    async function loadRemote() {
+      try {
+        setRemoteLoading(true);
+        const next = await fetchRemoteRoster();
+        const hasAny = TEAM_ORDER.some((teamKey) => (next[teamKey] || []).length > 0);
+        if (hasAny) {
+          setRemoteRoster(next);
+          saveRemoteRoster(next);
+        }
+      } catch (e) {
+        console.log("원격 현재배정 로드 실패", e);
+      } finally {
+        setRemoteLoading(false);
+      }
+    }
+
+    loadRemote();
   }, []);
 
   useEffect(() => {
@@ -735,29 +924,14 @@ function App() {
     setGroupBaseDate(selectedDate);
   }, [selectedDate]);
 
-  const currentTeam = data?.[selectedTeam] || null;
-  const currentViewTeam = data?.[viewTeam] || null;
-  const currentAnchor = teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: selectedDate };
-  const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: selectedDate };
-
-  const currentDayOffset = useMemo(
-    () => diffDays(currentAnchor.anchorDate || selectedDate, selectedDate),
-    [currentAnchor.anchorDate, selectedDate]
-  );
-
-  const currentViewDayOffset = useMemo(
-    () => diffDays(currentViewAnchor.anchorDate || selectedDate, selectedDate),
-    [currentViewAnchor.anchorDate, selectedDate]
-  );
-
   useEffect(() => {
-    if (!data) return;
+    if (!effectiveData) return;
 
     const saved = loadMySelection();
 
     if (saved?.teamKey && saved?.name && saved?.code && saved?.anchorDate) {
       const autoAnchors = buildAllTeamsAutoAnchors(
-        data,
+        effectiveData,
         saved.teamKey,
         saved.name,
         saved.code,
@@ -771,10 +945,25 @@ function App() {
 
     const nextAnchors = {};
     TEAM_ORDER.forEach((teamKey) => {
-      nextAnchors[teamKey] = buildTeamAnchorForDate(data[teamKey]);
+      nextAnchors[teamKey] = buildTeamAnchorForDate(effectiveData[teamKey]);
     });
     setTeamAnchors(nextAnchors);
-  }, [data]);
+  }, [effectiveData]);
+
+  const currentTeam = effectiveData?.[selectedTeam] || null;
+  const currentViewTeam = effectiveData?.[viewTeam] || null;
+  const currentAnchor = teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: selectedDate };
+  const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: selectedDate };
+
+  const currentDayOffset = useMemo(
+    () => diffDays(currentAnchor.anchorDate || selectedDate, selectedDate),
+    [currentAnchor.anchorDate, selectedDate]
+  );
+
+  const currentViewDayOffset = useMemo(
+    () => diffDays(currentViewAnchor.anchorDate || selectedDate, selectedDate),
+    [currentViewAnchor.anchorDate, selectedDate]
+  );
 
   const myInfo = useMemo(() => {
     if (!currentTeam || !currentAnchor.name || !currentAnchor.code) return null;
@@ -820,7 +1009,7 @@ function App() {
   }, [visibleAllGrid.length, allGridLayout.cols]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(selectedDate), [selectedDate]);
-  const monthHeaderDate = new Date(selectedDate);
+  const monthHeaderDate = parseLocalDate(selectedDate);
   const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
   const groupMembers = groups[currentGroup] || [];
 
@@ -878,19 +1067,21 @@ function App() {
       const nextData = parseZipToData(parsedFiles);
       setData(nextData);
 
+      const nextEffectiveData = applyRemoteRosterToData(nextData, loadRemoteRoster());
+
       if (!keepSavedSelection) {
         const defaultTeam = selectedTeam || "ks";
         const defaultName =
-          nextData[defaultTeam]?.info?.baseName ||
-          nextData[defaultTeam]?.people?.[0]?.name ||
+          nextEffectiveData?.[defaultTeam]?.info?.baseName ||
+          nextEffectiveData?.[defaultTeam]?.people?.[0]?.name ||
           "";
         const defaultCode =
-          nextData[defaultTeam]?.info?.baseCode ||
-          getGyobunOrder(nextData[defaultTeam])[0] ||
+          nextEffectiveData?.[defaultTeam]?.info?.baseCode ||
+          getGyobunOrder(nextEffectiveData?.[defaultTeam])[0] ||
           "";
 
         const autoAnchors = buildAllTeamsAutoAnchors(
-          nextData,
+          nextEffectiveData,
           defaultTeam,
           defaultName,
           defaultCode,
@@ -916,10 +1107,10 @@ function App() {
   }
 
   function applyMySelection(name, code, teamKey = selectedTeam) {
-    if (!data || !name || !code) return;
+    if (!effectiveData || !name || !code) return;
 
     const anchorDate = selectedDate;
-    const autoAnchors = buildAllTeamsAutoAnchors(data, teamKey, name, code, anchorDate);
+    const autoAnchors = buildAllTeamsAutoAnchors(effectiveData, teamKey, name, code, anchorDate);
 
     setTeamAnchors(autoAnchors);
     setSelectedTeam(teamKey);
@@ -1078,13 +1269,13 @@ function App() {
   return (
     <>
       <div className="container">
-        {!data ? (
+        {!effectiveData ? (
           <div className="card">
             <div className="card-title">데이터 불러오기</div>
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
-            <div className="help-text">ZIP 파일을 선택하면 압축 내부 데이터를 그대로 읽어서 적용합니다.</div>
+            <div className="help-text">ZIP 파일을 한 번 선택하면 근무시간표, 행로표 이미지 같은 기본 데이터를 저장합니다.</div>
             <div className="notice-box">
-              처음 한 번 ZIP을 선택하면 이후에는 휴대폰에서 다시 열 때 자동으로 불러옵니다.
+              현재배정은 스프레드시트에서 자동으로 불러오고, ZIP은 기본 자료용으로만 사용합니다.
             </div>
             {loading && <div className="help-text" style={{ color: "#2563eb" }}>불러오는 중...</div>}
             {zipName && <div className="help-text">현재 파일: {zipName}</div>}
@@ -1104,18 +1295,18 @@ function App() {
                     <button
                       className="date-btn"
                       onClick={() => {
-                        const d = new Date(selectedDate);
+                        const d = parseLocalDate(selectedDate);
                         d.setFullYear(d.getFullYear() + 1);
                         setSelectedDate(formatDate(d));
                       }}
                     >
                       +
                     </button>
-                    <div className="date-value">{new Date(selectedDate).getFullYear()}년</div>
+                    <div className="date-value">{parseLocalDate(selectedDate).getFullYear()}년</div>
                     <button
                       className="date-btn"
                       onClick={() => {
-                        const d = new Date(selectedDate);
+                        const d = parseLocalDate(selectedDate);
                         d.setFullYear(d.getFullYear() - 1);
                         setSelectedDate(formatDate(d));
                       }}
@@ -1128,18 +1319,18 @@ function App() {
                     <button
                       className="date-btn"
                       onClick={() => {
-                        const d = new Date(selectedDate);
+                        const d = parseLocalDate(selectedDate);
                         d.setMonth(d.getMonth() + 1);
                         setSelectedDate(formatDate(d));
                       }}
                     >
                       +
                     </button>
-                    <div className="date-value">{new Date(selectedDate).getMonth() + 1}월</div>
+                    <div className="date-value">{parseLocalDate(selectedDate).getMonth() + 1}월</div>
                     <button
                       className="date-btn"
                       onClick={() => {
-                        const d = new Date(selectedDate);
+                        const d = parseLocalDate(selectedDate);
                         d.setMonth(d.getMonth() - 1);
                         setSelectedDate(formatDate(d));
                       }}
@@ -1150,7 +1341,7 @@ function App() {
 
                   <div className="date-box">
                     <button className="date-btn" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>+</button>
-                    <div className="date-value">{new Date(selectedDate).getDate()}일</div>
+                    <div className="date-value">{parseLocalDate(selectedDate).getDate()}일</div>
                     <button className="date-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>-</button>
                   </div>
                 </div>
@@ -1177,6 +1368,12 @@ function App() {
                     <div className="main-subinfo">
                       {TEAM_LABELS[selectedTeam]} / {currentAnchor.name || "-"}
                     </div>
+
+                    {remoteLoading && (
+                      <div className="help-text" style={{ color: "#2563eb" }}>
+                        최신 현재배정 확인 중...
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
@@ -1189,9 +1386,9 @@ function App() {
                     <button className="all-header-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>-</button>
 
                     <div className="all-header-title">
-                      {TEAM_LABELS[viewTeam]} {new Date(selectedDate).getFullYear()}.
-                      {new Date(selectedDate).getMonth() + 1}.
-                      {new Date(selectedDate).getDate()} {weekdayName(selectedDate)}
+                      {TEAM_LABELS[viewTeam]} {parseLocalDate(selectedDate).getFullYear()}.
+                      {parseLocalDate(selectedDate).getMonth() + 1}.
+                      {parseLocalDate(selectedDate).getDate()} {weekdayName(selectedDate)}
                     </div>
 
                     <button
@@ -1279,18 +1476,18 @@ function App() {
                     <div className="month-row" key={rowIdx}>
                       {row.map((date) => {
                         const item = getPersonGyobunForDate(
-                          data,
+                          effectiveData,
                           selectedTeam,
                           currentAnchor.name,
                           date,
                           overrides
                         );
 
-                        const sameMonth = new Date(date).getMonth() === monthHeaderDate.getMonth();
+                        const sameMonth = parseLocalDate(date).getMonth() === monthHeaderDate.getMonth();
                         const isSelected = date === selectedDate;
                         const toneClass = getDateToneClass(date);
 
-                        const worktime = item?.code ? pickWorktime(data[selectedTeam], item.code, date) : "";
+                        const worktime = item?.code ? pickWorktime(effectiveData[selectedTeam], item.code, date) : "";
                         const { startTime, endTime } = splitWorktime(worktime);
 
                         return (
@@ -1301,7 +1498,7 @@ function App() {
                           >
                             <div className={`month-cell-inner ${toneClass}`}>
                               <div className={`month-day ${toneClass}`}>
-                                {new Date(date).getDate()}
+                                {parseLocalDate(date).getDate()}
                               </div>
 
                               <div className={`month-code-line ${toneClass}`}>
@@ -1360,7 +1557,7 @@ function App() {
                             <div className={`${isSunday(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>
                               {weekdayShort(date)}
                             </div>
-                            <div>{new Date(date).getDate()}</div>
+                            <div>{parseLocalDate(date).getDate()}</div>
                           </th>
                         ))}
                       </tr>
@@ -1384,7 +1581,7 @@ function App() {
                               </button>
                             </td>
                             {weekDates.map((date) => {
-                              const item = getPersonGyobunForDate(data, member.team, member.name, date, overrides);
+                              const item = getPersonGyobunForDate(effectiveData, member.team, member.name, date, overrides);
                               return <td key={date}>{item?.code || "-"}</td>;
                             })}
                           </tr>
@@ -1399,7 +1596,7 @@ function App() {
         )}
       </div>
 
-      {data && (
+      {effectiveData && (
         <div
           className={`bottom-tabs tabs-4 ${
             activeTab === "home"
@@ -1423,7 +1620,7 @@ function App() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">설정</div>
 
-            <label className="label">데이터 ZIP 다시 불러오기</label>
+            <label className="label">기본자료 ZIP 다시 불러오기</label>
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
 
             <label className="label" style={{ marginTop: 12 }}>내 소속</label>
@@ -1475,7 +1672,7 @@ function App() {
             </select>
 
             <div className="help-text">
-              내 소속/이름/오늘 내 교번만 선택하면 다른 소속은 자동 계산됩니다.
+              기본자료는 ZIP에서 읽고, 현재배정은 스프레드시트에서 자동 반영됩니다.
             </div>
 
             <div className="modal-actions">
@@ -1526,7 +1723,7 @@ function App() {
             <label className="label" style={{ marginTop: 12 }}>이름</label>
             <select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}>
               <option value="">선택</option>
-              {(data?.[groupAddTeam]?.people || []).map((person) => (
+              {(effectiveData?.[groupAddTeam]?.people || []).map((person) => (
                 <option key={`${groupAddTeam}-${person.name}`} value={person.name}>
                   {person.name}
                 </option>
