@@ -26,6 +26,9 @@ const COLOR_OPTIONS = [
   { value: "#e5e7eb", label: "회색" },
 ];
 
+const ADMIN_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbwjtUuLeABXGdPbdfsGNbvMh_xynrZHeyU3V82ElZUnXqr9U-D6tWqeYNbsqN-6F9vxLg/exec";
+
 /**
  * 공휴일 목록
  * YYYY-MM-DD 형식
@@ -79,6 +82,11 @@ function getAllGridLayout(count) {
   return { cols: 4, className: "density-4" };
 }
 
+function parseLocalDate(dateStr) {
+  const [y, m, d] = String(dateStr).split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
 function formatDate(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -87,13 +95,13 @@ function formatDate(date) {
 }
 
 function addDays(dateStr, days) {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   d.setDate(d.getDate() + days);
   return formatDate(d);
 }
 
 function addMonths(dateStr, months) {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   const originalDate = d.getDate();
   d.setDate(1);
   d.setMonth(d.getMonth() + months);
@@ -103,8 +111,10 @@ function addMonths(dateStr, months) {
 }
 
 function diffDays(a, b) {
-  const da = new Date(a);
-  const db = new Date(b);
+  const da = parseLocalDate(a);
+  const db = parseLocalDate(b);
+  da.setHours(0, 0, 0, 0);
+  db.setHours(0, 0, 0, 0);
   return Math.round((db.getTime() - da.getTime()) / 86400000);
 }
 
@@ -114,20 +124,20 @@ function positiveMod(n, mod) {
 
 function weekdayName(dateStr) {
   const names = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
-  return names[new Date(dateStr).getDay()];
+  return names[parseLocalDate(dateStr).getDay()];
 }
 
 function weekdayShort(dateStr) {
   const names = ["일", "월", "화", "수", "목", "금", "토"];
-  return names[new Date(dateStr).getDay()];
+  return names[parseLocalDate(dateStr).getDay()];
 }
 
 function isSaturday(dateStr) {
-  return new Date(dateStr).getDay() === 6;
+  return parseLocalDate(dateStr).getDay() === 6;
 }
 
 function isSunday(dateStr) {
-  return new Date(dateStr).getDay() === 0;
+  return parseLocalDate(dateStr).getDay() === 0;
 }
 
 function isHolidayDate(dateStr) {
@@ -153,7 +163,7 @@ function getDateBasedColor(dateStr) {
 }
 
 function parseLines(text) {
-  return text
+  return String(text || "")
     .replace(/\r/g, "")
     .split("\n")
     .map((v) => v.trim())
@@ -176,7 +186,7 @@ function parseInfo(text) {
 }
 
 function normalizeWorktimeLine(line) {
-  return line.replace(/\s+/g, " ").trim().toLowerCase();
+  return String(line || "").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 function parseWorktime(text, gyobunOrder = []) {
@@ -238,7 +248,7 @@ function pickWorktime(team, code, dateStr) {
 }
 
 function getPathFolder(teamKey, dateStr, code) {
-  const day = new Date(dateStr).getDay();
+  const day = parseLocalDate(dateStr).getDay();
   const isHol = isHolidayDate(dateStr);
 
   if (isNightStartCode(teamKey, code)) {
@@ -327,6 +337,35 @@ function createTeamBucket(teamKey) {
     worktimes: { nor: {}, sat: {}, hol: {} },
     paths: { nor: {}, sat: {}, hol: {}, nor_sat: {}, sat_hol: {}, hol_nor: {} },
   };
+}
+
+function cloneTeamData(data) {
+  const result = {};
+  TEAM_ORDER.forEach((teamKey) => {
+    const team = data?.[teamKey];
+    if (!team) return;
+    result[teamKey] = {
+      ...team,
+      names: Array.isArray(team.names) ? [...team.names] : [],
+      gyobun: Array.isArray(team.gyobun) ? [...team.gyobun] : [],
+      people: Array.isArray(team.people) ? team.people.map((p) => ({ ...p })) : [],
+      info: team.info ? { ...team.info, raw: [...(team.info.raw || [])] } : createTeamBucket(teamKey).info,
+      worktimes: {
+        nor: { ...(team.worktimes?.nor || {}) },
+        sat: { ...(team.worktimes?.sat || {}) },
+        hol: { ...(team.worktimes?.hol || {}) },
+      },
+      paths: {
+        nor: { ...(team.paths?.nor || {}) },
+        sat: { ...(team.paths?.sat || {}) },
+        hol: { ...(team.paths?.hol || {}) },
+        nor_sat: { ...(team.paths?.nor_sat || {}) },
+        sat_hol: { ...(team.paths?.sat_hol || {}) },
+        hol_nor: { ...(team.paths?.hol_nor || {}) },
+      },
+    };
+  });
+  return result;
 }
 
 function parseZipToData(parsedFiles) {
@@ -433,6 +472,18 @@ function saveGroups(groups) {
   localStorage.setItem("gyobeon_groups", JSON.stringify(groups));
 }
 
+function loadAdminRoster() {
+  try {
+    return JSON.parse(localStorage.getItem("gyobeon_admin_roster") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveAdminRoster(value) {
+  localStorage.setItem("gyobeon_admin_roster", JSON.stringify(value));
+}
+
 function getOverrideKey(teamKey, index) {
   return `${teamKey}_${index}`;
 }
@@ -517,7 +568,7 @@ function buildAllTeamsAutoAnchors(data, selectedTeamKey, selectedName, selectedC
 }
 
 function getMonthMatrix(dateStr) {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   const year = d.getFullYear();
   const month = d.getMonth();
 
@@ -539,7 +590,7 @@ function getMonthMatrix(dateStr) {
 }
 
 function getWeekDates(baseDate) {
-  const d = new Date(baseDate);
+  const d = parseLocalDate(baseDate);
   const day = d.getDay();
   const sunday = new Date(d);
   sunday.setDate(d.getDate() - day);
@@ -574,18 +625,22 @@ function splitWorktime(worktime) {
   };
 }
 
-function getPersonGyobunForDate(data, teamKey, name, dateStr, overrides = {}) {
+function getPersonGyobunForDate(data, teamKey, name, dateStr, overrides = {}, savedSelection = null) {
   const team = data?.[teamKey];
   if (!team) return null;
 
-  const saved = loadMySelection();
   let anchor;
 
-  if (saved?.teamKey === teamKey && saved?.name === name && saved?.code && saved?.anchorDate) {
+  if (
+    savedSelection?.teamKey === teamKey &&
+    savedSelection?.name === name &&
+    savedSelection?.code &&
+    savedSelection?.anchorDate
+  ) {
     anchor = {
-      name: saved.name,
-      code: saved.code,
-      anchorDate: saved.anchorDate,
+      name: savedSelection.name,
+      code: savedSelection.code,
+      anchorDate: savedSelection.anchorDate,
     };
   } else {
     anchor = buildTeamAnchorForDate(team);
@@ -594,6 +649,178 @@ function getPersonGyobunForDate(data, teamKey, name, dateStr, overrides = {}) {
   const offset = diffDays(anchor.anchorDate, dateStr);
   const grid = buildAssignedGrid(team, anchor.name, anchor.code, offset, overrides);
   return grid.find((item) => item.name === name || item.displayName === name) || null;
+}
+
+function normalizeTeamKeyFromSheet(value) {
+  const v = String(value || "").trim().toLowerCase();
+  if (TEAM_ORDER.includes(v)) return v;
+
+  const labelMatch = TEAM_ORDER.find((key) => TEAM_LABELS[key] === String(value || "").trim());
+  if (labelMatch) return labelMatch;
+
+  return "";
+}
+
+function buildAdminSheetText(data) {
+  const lines = [];
+  lines.push(["소속코드", "소속명", "이름", "기준교번", "사용여부"].join("\t"));
+
+  TEAM_ORDER.forEach((teamKey) => {
+    const team = data?.[teamKey];
+    if (!team) return;
+
+    const people = team.people || [];
+    people.forEach((person, idx) => {
+      lines.push(
+        [
+          teamKey,
+          TEAM_LABELS[teamKey],
+          person.name || "",
+          getGyobunOrder(team)[idx] || person.baseCode || "",
+          "Y",
+        ].join("\t")
+      );
+    });
+  });
+
+  return lines.join("\n");
+}
+
+function parseDelimitedText(text) {
+  const raw = String(text || "").replace(/\r/g, "").trim();
+  if (!raw) return [];
+
+  const lines = raw.split("\n").filter(Boolean);
+  if (!lines.length) return [];
+
+  const delimiter = lines[0].includes("\t") ? "\t" : ",";
+  return lines.map((line) => line.split(delimiter).map((v) => String(v || "").trim()));
+}
+
+function parseAdminSheetText(text) {
+  const rows = parseDelimitedText(text);
+  if (!rows.length) return { ok: false, message: "내용이 비어 있습니다." };
+
+  const header = rows[0].map((v) => v.replace(/\s+/g, ""));
+  const body = rows.slice(1);
+
+  const teamIdx = header.findIndex((h) => ["소속코드", "소속", "team", "teamkey"].includes(h.toLowerCase()));
+  const teamNameIdx = header.findIndex((h) => ["소속명", "teamlabel"].includes(h.toLowerCase()));
+  const nameIdx = header.findIndex((h) => ["이름", "name"].includes(h.toLowerCase()));
+  const codeIdx = header.findIndex((h) => ["기준교번", "교번", "basecode", "code"].includes(h.toLowerCase()));
+  const enabledIdx = header.findIndex((h) => ["사용여부", "활성", "enabled", "use"].includes(h.toLowerCase()));
+
+  if (nameIdx < 0 || codeIdx < 0 || (teamIdx < 0 && teamNameIdx < 0)) {
+    return { ok: false, message: "헤더는 소속코드(또는 소속명), 이름, 기준교번, 사용여부 형식이어야 합니다." };
+  }
+
+  const result = {};
+  TEAM_ORDER.forEach((teamKey) => {
+    result[teamKey] = [];
+  });
+
+  body.forEach((cols) => {
+    const rawTeam = teamIdx >= 0 ? cols[teamIdx] : "";
+    const rawTeamLabel = teamNameIdx >= 0 ? cols[teamNameIdx] : "";
+    const teamKey = normalizeTeamKeyFromSheet(rawTeam) || normalizeTeamKeyFromSheet(rawTeamLabel);
+    const name = String(cols[nameIdx] || "").trim();
+    const baseCode = String(cols[codeIdx] || "").trim();
+    const enabledRaw = enabledIdx >= 0 ? String(cols[enabledIdx] || "").trim().toUpperCase() : "Y";
+    const enabled = !["N", "NO", "0", "FALSE"].includes(enabledRaw);
+
+    if (!teamKey || !name || !baseCode) return;
+
+    result[teamKey].push({
+      name,
+      baseCode,
+      enabled,
+    });
+  });
+
+  const hasAny = TEAM_ORDER.some((teamKey) => result[teamKey].length > 0);
+  if (!hasAny) {
+    return { ok: false, message: "적용 가능한 데이터가 없습니다." };
+  }
+
+  return { ok: true, data: result };
+}
+
+function normalizeAdminRosterShape(input) {
+  const result = {};
+  TEAM_ORDER.forEach((teamKey) => {
+    result[teamKey] = [];
+  });
+
+  if (!input || typeof input !== "object") return result;
+
+  if (Array.isArray(input.rows)) {
+    input.rows.forEach((row) => {
+      const teamKey =
+        normalizeTeamKeyFromSheet(row?.teamKey) ||
+        normalizeTeamKeyFromSheet(row?.team) ||
+        normalizeTeamKeyFromSheet(row?.teamLabel);
+      const name = String(row?.name || "").trim();
+      const baseCode = String(row?.baseCode || row?.code || "").trim();
+      const enabled = row?.enabled === false ? false : true;
+
+      if (!teamKey || !name || !baseCode) return;
+      result[teamKey].push({ name, baseCode, enabled });
+    });
+    return result;
+  }
+
+  TEAM_ORDER.forEach((teamKey) => {
+    const rows = Array.isArray(input[teamKey]) ? input[teamKey] : [];
+    result[teamKey] = rows
+      .map((row) => ({
+        name: String(row?.name || "").trim(),
+        baseCode: String(row?.baseCode || row?.code || "").trim(),
+        enabled: row?.enabled === false ? false : true,
+      }))
+      .filter((row) => row.name && row.baseCode);
+  });
+
+  return result;
+}
+
+function applyAdminRosterToData(baseData, adminRoster) {
+  if (!baseData) return null;
+  const next = cloneTeamData(baseData);
+
+  TEAM_ORDER.forEach((teamKey) => {
+    const team = next[teamKey];
+    if (!team) return;
+
+    const rows = Array.isArray(adminRoster?.[teamKey]) ? adminRoster[teamKey] : [];
+    if (!rows.length) return;
+
+    const filtered = rows
+      .filter((row) => row && row.name && row.baseCode && row.enabled !== false)
+      .filter((row) => !shouldHideName(row.name))
+      .map((row, idx) => ({
+        idx,
+        name: row.name,
+        baseCode: row.baseCode,
+      }));
+
+    if (!filtered.length) return;
+
+    team.people = filtered;
+    team.names = filtered.map((p) => p.name);
+    team.gyobun = filtered.map((p) => p.baseCode);
+    team.info = {
+      ...team.info,
+      totalCount: filtered.length,
+      baseName: team.info?.baseName && filtered.some((p) => p.name === team.info.baseName)
+        ? team.info.baseName
+        : filtered[0]?.name || "",
+      baseCode: team.info?.baseCode && filtered.some((p) => p.baseCode === team.info.baseCode)
+        ? team.info.baseCode
+        : filtered[0]?.baseCode || "",
+    };
+  });
+
+  return next;
 }
 
 function openZipDB() {
@@ -632,15 +859,66 @@ async function loadZipBlob() {
   });
 }
 
+async function fetchAdminRosterFromScript() {
+  const response = await fetch(ADMIN_SCRIPT_URL, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("관리자 데이터 조회 실패");
+  }
+
+  const json = await response.json();
+  const rawRoster = json?.data && typeof json.data === "object" ? json.data : json;
+  return normalizeAdminRosterShape(rawRoster);
+}
+
+async function saveAdminRosterToScript(roster) {
+  const response = await fetch(ADMIN_SCRIPT_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8",
+    },
+    body: JSON.stringify({
+      action: "saveRoster",
+      data: roster,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("관리자 데이터 저장 실패");
+  }
+
+  const json = await response.json().catch(() => ({}));
+  if (json?.ok === false) {
+    throw new Error(json?.message || "관리자 데이터 저장 실패");
+  }
+
+  return json;
+}
+
+function downloadTextFile(filename, text, mime = "text/tab-separated-values;charset=utf-8") {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function App() {
   const initialSelection = loadMySelection();
   const initialGroups = loadGroups();
+  const initialAdminRoster = loadAdminRoster();
   const initialDate = formatDate(new Date());
 
   const [zipName, setZipName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [data, setData] = useState(null);
+  const [baseData, setBaseData] = useState(null);
+  const [remoteRosterLoading, setRemoteRosterLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState("home");
   const activeTabRef = useRef("home");
@@ -680,8 +958,19 @@ function App() {
 
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
+  const [adminRoster, setAdminRoster] = useState(initialAdminRoster);
+  const [showAdminSheet, setShowAdminSheet] = useState(false);
+  const [adminSheetText, setAdminSheetText] = useState("");
+  const [adminSheetError, setAdminSheetError] = useState("");
+  const [adminSaving, setAdminSaving] = useState(false);
+
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
+
+  const data = useMemo(() => {
+    if (!baseData) return null;
+    return applyAdminRosterToData(baseData, adminRoster);
+  }, [baseData, adminRoster]);
 
   useEffect(() => {
     activeTabRef.current = activeTab;
@@ -703,6 +992,27 @@ function App() {
     }
 
     tryAutoLoad();
+  }, []);
+
+  useEffect(() => {
+    async function loadRemoteAdminRoster() {
+      setRemoteRosterLoading(true);
+      try {
+        const remoteRoster = await fetchAdminRosterFromScript();
+        const hasAny = TEAM_ORDER.some((teamKey) => (remoteRoster[teamKey] || []).length > 0);
+
+        if (hasAny) {
+          setAdminRoster(remoteRoster);
+          saveAdminRoster(remoteRoster);
+        }
+      } catch (e) {
+        console.log("원격 관리자 데이터 로드 실패", e);
+      } finally {
+        setRemoteRosterLoading(false);
+      }
+    }
+
+    loadRemoteAdminRoster();
   }, []);
 
   useEffect(() => {
@@ -738,6 +1048,21 @@ function App() {
         return;
       }
 
+      if (showAdminSheet) {
+        setShowAdminSheet(false);
+        return;
+      }
+
+      if (showSettings) {
+        setShowSettings(false);
+        return;
+      }
+
+      if (showGroupAdd) {
+        setShowGroupAdd(false);
+        return;
+      }
+
       if (activeTabRef.current !== "home") {
         setActiveTab("home");
         return;
@@ -748,7 +1073,7 @@ function App() {
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [showAdminSheet, showSettings, showGroupAdd]);
 
   useEffect(() => {
     if (pathOpen && (!window.history.state || window.history.state.layer !== "path")) {
@@ -766,6 +1091,38 @@ function App() {
     setGroupBaseDate(selectedDate);
   }, [selectedDate]);
 
+  useEffect(() => {
+    if (!data) return;
+
+    const saved = loadMySelection();
+
+    if (saved?.teamKey && saved?.name && saved?.code && saved?.anchorDate) {
+      const team = data[saved.teamKey];
+      const exists = team?.people?.some((p) => p.name === saved.name);
+      const codeExists = getGyobunOrder(team).includes(saved.code);
+
+      if (exists && codeExists) {
+        const autoAnchors = buildAllTeamsAutoAnchors(
+          data,
+          saved.teamKey,
+          saved.name,
+          saved.code,
+          saved.anchorDate
+        );
+        setTeamAnchors(autoAnchors);
+        setSelectedTeam(saved.teamKey);
+        setViewTeam(saved.teamKey);
+        return;
+      }
+    }
+
+    const nextAnchors = {};
+    TEAM_ORDER.forEach((teamKey) => {
+      nextAnchors[teamKey] = buildTeamAnchorForDate(data[teamKey]);
+    });
+    setTeamAnchors(nextAnchors);
+  }, [data]);
+
   const currentTeam = data?.[selectedTeam] || null;
   const currentViewTeam = data?.[viewTeam] || null;
   const currentAnchor = teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: selectedDate };
@@ -781,31 +1138,7 @@ function App() {
     [currentViewAnchor.anchorDate, selectedDate]
   );
 
-  useEffect(() => {
-    if (!data) return;
-
-    const saved = loadMySelection();
-
-    if (saved?.teamKey && saved?.name && saved?.code && saved?.anchorDate) {
-      const autoAnchors = buildAllTeamsAutoAnchors(
-        data,
-        saved.teamKey,
-        saved.name,
-        saved.code,
-        saved.anchorDate
-      );
-      setTeamAnchors(autoAnchors);
-      setSelectedTeam(saved.teamKey);
-      setViewTeam(saved.teamKey);
-      return;
-    }
-
-    const nextAnchors = {};
-    TEAM_ORDER.forEach((teamKey) => {
-      nextAnchors[teamKey] = buildTeamAnchorForDate(data[teamKey]);
-    });
-    setTeamAnchors(nextAnchors);
-  }, [data]);
+  const savedSelection = useMemo(() => loadMySelection(), [selectedTeam, selectedDate, teamAnchors]);
 
   const myInfo = useMemo(() => {
     if (!currentTeam || !currentAnchor.name || !currentAnchor.code) return null;
@@ -851,12 +1184,16 @@ function App() {
   }, [visibleAllGrid.length, allGridLayout.cols]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(selectedDate), [selectedDate]);
-  const monthHeaderDate = new Date(selectedDate);
+  const monthHeaderDate = parseLocalDate(selectedDate);
   const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
   const groupMembers = groups[currentGroup] || [];
 
   function switchTab(tabName) {
     if (tabName === activeTabRef.current) return;
+
+    if (tabName === "all") {
+      setViewTeam(selectedTeam);
+    }
 
     setActiveTab(tabName);
 
@@ -903,21 +1240,22 @@ function App() {
       await Promise.all(tasks);
 
       const nextData = parseZipToData(parsedFiles);
-      setData(nextData);
+      setBaseData(nextData);
 
       if (!keepSavedSelection) {
         const defaultTeam = selectedTeam || "ks";
+        const effectiveData = applyAdminRosterToData(nextData, adminRoster);
         const defaultName =
-          nextData[defaultTeam]?.info?.baseName ||
-          nextData[defaultTeam]?.people?.[0]?.name ||
+          effectiveData?.[defaultTeam]?.info?.baseName ||
+          effectiveData?.[defaultTeam]?.people?.[0]?.name ||
           "";
         const defaultCode =
-          nextData[defaultTeam]?.info?.baseCode ||
-          getGyobunOrder(nextData[defaultTeam])[0] ||
+          effectiveData?.[defaultTeam]?.info?.baseCode ||
+          getGyobunOrder(effectiveData?.[defaultTeam])[0] ||
           "";
 
         const autoAnchors = buildAllTeamsAutoAnchors(
-          nextData,
+          effectiveData,
           defaultTeam,
           defaultName,
           defaultCode,
@@ -1102,6 +1440,78 @@ function App() {
     setDeferredPrompt(null);
   }
 
+  function openAdminSheetEditor() {
+    if (!data) return;
+    const text = buildAdminSheetText(data);
+    setAdminSheetText(text);
+    setAdminSheetError("");
+    setShowAdminSheet(true);
+  }
+
+  async function applyAdminSheetChanges() {
+    const parsed = parseAdminSheetText(adminSheetText);
+    if (!parsed.ok) {
+      setAdminSheetError(parsed.message || "스프레드시트 형식이 올바르지 않습니다.");
+      return;
+    }
+
+    try {
+      setAdminSaving(true);
+      const nextRoster = parsed.data;
+
+      setAdminRoster(nextRoster);
+      saveAdminRoster(nextRoster);
+
+      await saveAdminRosterToScript(nextRoster);
+
+      setAdminSheetError("");
+      setShowAdminSheet(false);
+    } catch (e) {
+      console.error(e);
+      setAdminSheetError("앱스 스크립트 저장에 실패했습니다.");
+    } finally {
+      setAdminSaving(false);
+    }
+  }
+
+  async function handleAdminSheetFileUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      setAdminSheetText(text);
+      setAdminSheetError("");
+    } catch (e) {
+      console.error(e);
+      setAdminSheetError("파일을 읽지 못했습니다.");
+    }
+  }
+
+  async function refreshAdminRosterNow() {
+    try {
+      setRemoteRosterLoading(true);
+      const remoteRoster = await fetchAdminRosterFromScript();
+      const hasAny = TEAM_ORDER.some((teamKey) => (remoteRoster[teamKey] || []).length > 0);
+
+      if (hasAny) {
+        setAdminRoster(remoteRoster);
+        saveAdminRoster(remoteRoster);
+      }
+    } catch (e) {
+      console.error(e);
+      setAdminSheetError("최신 관리자 명단을 불러오지 못했습니다.");
+    } finally {
+      setRemoteRosterLoading(false);
+    }
+  }
+
+  function resetAdminRoster() {
+    setAdminRoster({});
+    saveAdminRoster({});
+    setAdminSheetText("");
+    setAdminSheetError("");
+  }
+
   return (
     <>
       <div className="container">
@@ -1137,18 +1547,18 @@ function App() {
                     <button
                       className="date-btn"
                       onClick={() => {
-                        const d = new Date(selectedDate);
+                        const d = parseLocalDate(selectedDate);
                         d.setFullYear(d.getFullYear() + 1);
                         setSelectedDate(formatDate(d));
                       }}
                     >
                       +
                     </button>
-                    <div className="date-value">{new Date(selectedDate).getFullYear()}년</div>
+                    <div className="date-value">{parseLocalDate(selectedDate).getFullYear()}년</div>
                     <button
                       className="date-btn"
                       onClick={() => {
-                        const d = new Date(selectedDate);
+                        const d = parseLocalDate(selectedDate);
                         d.setFullYear(d.getFullYear() - 1);
                         setSelectedDate(formatDate(d));
                       }}
@@ -1161,18 +1571,18 @@ function App() {
                     <button
                       className="date-btn"
                       onClick={() => {
-                        const d = new Date(selectedDate);
+                        const d = parseLocalDate(selectedDate);
                         d.setMonth(d.getMonth() + 1);
                         setSelectedDate(formatDate(d));
                       }}
                     >
                       +
                     </button>
-                    <div className="date-value">{new Date(selectedDate).getMonth() + 1}월</div>
+                    <div className="date-value">{parseLocalDate(selectedDate).getMonth() + 1}월</div>
                     <button
                       className="date-btn"
                       onClick={() => {
-                        const d = new Date(selectedDate);
+                        const d = parseLocalDate(selectedDate);
                         d.setMonth(d.getMonth() - 1);
                         setSelectedDate(formatDate(d));
                       }}
@@ -1183,7 +1593,7 @@ function App() {
 
                   <div className="date-box">
                     <button className="date-btn" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>+</button>
-                    <div className="date-value">{new Date(selectedDate).getDate()}일</div>
+                    <div className="date-value">{parseLocalDate(selectedDate).getDate()}일</div>
                     <button className="date-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>-</button>
                   </div>
                 </div>
@@ -1207,6 +1617,12 @@ function App() {
                     <div className="main-subinfo">
                       {TEAM_LABELS[selectedTeam]} / {currentAnchor.name || "-"}
                     </div>
+
+                    {remoteRosterLoading && (
+                      <div className="help-text" style={{ marginTop: 8, color: "#2563eb" }}>
+                        관리자 명단 동기화 중...
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
@@ -1219,9 +1635,9 @@ function App() {
                     <button className="all-header-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>-</button>
 
                     <div className="all-header-title">
-                      {TEAM_LABELS[viewTeam]} {new Date(selectedDate).getFullYear()}.
-                      {new Date(selectedDate).getMonth() + 1}.
-                      {new Date(selectedDate).getDate()} {weekdayName(selectedDate)}
+                      {TEAM_LABELS[viewTeam]} {parseLocalDate(selectedDate).getFullYear()}.
+                      {parseLocalDate(selectedDate).getMonth() + 1}.
+                      {parseLocalDate(selectedDate).getDate()} {weekdayName(selectedDate)}
                     </div>
 
                     <button
@@ -1313,10 +1729,11 @@ function App() {
                           selectedTeam,
                           currentAnchor.name,
                           date,
-                          overrides
+                          overrides,
+                          savedSelection
                         );
 
-                        const sameMonth = new Date(date).getMonth() === monthHeaderDate.getMonth();
+                        const sameMonth = parseLocalDate(date).getMonth() === monthHeaderDate.getMonth();
                         const isSelected = date === selectedDate;
                         const toneClass = getDateToneClass(date);
 
@@ -1331,7 +1748,7 @@ function App() {
                           >
                             <div className={`month-cell-inner ${toneClass}`}>
                               <div className={`month-day ${toneClass}`}>
-                                {new Date(date).getDate()}
+                                {parseLocalDate(date).getDate()}
                               </div>
 
                               <div className={`month-code-line ${toneClass}`}>
@@ -1390,7 +1807,7 @@ function App() {
                             <div className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>
                               {weekdayShort(date)}
                             </div>
-                            <div>{new Date(date).getDate()}</div>
+                            <div>{parseLocalDate(date).getDate()}</div>
                           </th>
                         ))}
                       </tr>
@@ -1414,7 +1831,14 @@ function App() {
                               </button>
                             </td>
                             {weekDates.map((date) => {
-                              const item = getPersonGyobunForDate(data, member.team, member.name, date, overrides);
+                              const item = getPersonGyobunForDate(
+                                data,
+                                member.team,
+                                member.name,
+                                date,
+                                overrides,
+                                savedSelection
+                              );
                               return <td key={date}>{item?.code || "-"}</td>;
                             })}
                           </tr>
@@ -1506,6 +1930,26 @@ function App() {
 
             <div className="help-text">
               내 소속/이름/오늘 내 교번만 선택하면 다른 소속은 자동 계산됩니다.
+            </div>
+
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
+              <div className="label" style={{ marginBottom: 8 }}>관리자</div>
+
+              <button className="modal-btn" onClick={openAdminSheetEditor}>
+                관리자 스프레드시트 편집
+              </button>
+
+              <button
+                className="modal-btn"
+                style={{ marginTop: 8 }}
+                onClick={refreshAdminRosterNow}
+              >
+                최신 관리자 명단 다시 불러오기
+              </button>
+
+              <div className="help-text" style={{ marginTop: 8 }}>
+                관리자 편집 내용은 Apps Script와 연동되어 저장되고, 사용자는 앱 실행 시 최신 명단을 자동으로 받아옵니다.
+              </div>
             </div>
 
             <div className="modal-actions">
@@ -1605,6 +2049,79 @@ function App() {
               <button className="modal-btn" onClick={closeEditDialog}>아니요</button>
               <button className="modal-btn primary" onClick={() => commitEdit(editColor)}>
                 변경
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAdminSheet && (
+        <div className="modal-backdrop" onClick={() => setShowAdminSheet(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, width: "94vw" }}>
+            <div className="modal-title">관리자 스프레드시트 편집</div>
+
+            <div className="help-text" style={{ marginBottom: 10 }}>
+              헤더 형식: 소속코드 / 소속명 / 이름 / 기준교번 / 사용여부
+              <br />
+              사용여부는 Y 또는 N 으로 입력하세요.
+            </div>
+
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+              <button
+                className="modal-btn"
+                onClick={() => {
+                  const text = buildAdminSheetText(data);
+                  setAdminSheetText(text);
+                  downloadTextFile("교번관리자편집.tsv", text);
+                }}
+              >
+                현재표 다운로드
+              </button>
+
+              <label className="modal-btn" style={{ cursor: "pointer" }}>
+                파일 불러오기
+                <input
+                  type="file"
+                  accept=".tsv,.csv,.txt"
+                  style={{ display: "none" }}
+                  onChange={handleAdminSheetFileUpload}
+                />
+              </label>
+
+              <button
+                className="modal-btn"
+                onClick={() => {
+                  const text = buildAdminSheetText(data);
+                  setAdminSheetText(text);
+                  setAdminSheetError("");
+                }}
+              >
+                현재표 다시 불러오기
+              </button>
+
+              <button className="modal-btn" onClick={resetAdminRoster}>
+                관리자 변경 초기화
+              </button>
+            </div>
+
+            <textarea
+              className="input"
+              value={adminSheetText}
+              onChange={(e) => setAdminSheetText(e.target.value)}
+              style={{ minHeight: 280, fontFamily: "monospace", whiteSpace: "pre" }}
+              placeholder="여기에 엑셀/구글시트 내용을 복사해서 붙여넣으세요."
+            />
+
+            {adminSheetError && (
+              <div className="help-text" style={{ color: "#dc2626", marginTop: 8 }}>
+                {adminSheetError}
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button className="modal-btn" onClick={() => setShowAdminSheet(false)}>취소</button>
+              <button className="modal-btn primary" onClick={applyAdminSheetChanges} disabled={adminSaving}>
+                {adminSaving ? "저장중..." : "적용"}
               </button>
             </div>
           </div>
