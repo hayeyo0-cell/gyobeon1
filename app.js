@@ -289,6 +289,12 @@ function getGyobunOrder(team) {
   return DEFAULT_GYOBUN;
 }
 
+function getAllGridLayout(count) {
+  if (count >= 49) return { cols: 6, className: "density-6" };
+  if (count >= 36) return { cols: 5, className: "density-5" };
+  return { cols: 4, className: "density-4" };
+}
+
 function createTeamBucket(teamKey) {
   return {
     key: teamKey,
@@ -693,22 +699,40 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
   return next;
 }
 
-async function fetchRemoteRoster() {
-  const response = await fetch(`${ADMIN_SCRIPT_URL}?t=${Date.now()}`, {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      "Cache-Control": "no-cache, no-store, max-age=0",
-      Pragma: "no-cache",
-    },
+function fetchRemoteRosterJsonp() {
+  return new Promise((resolve, reject) => {
+    const callbackName = `gyobeonJsonp_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    const script = document.createElement("script");
+
+    const cleanup = () => {
+      try {
+        delete window[callbackName];
+      } catch (_) {}
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    };
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("현재배정 JSONP 로드 시간 초과"));
+    }, 10000);
+
+    window[callbackName] = (data) => {
+      clearTimeout(timeout);
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      clearTimeout(timeout);
+      cleanup();
+      reject(new Error("현재배정 JSONP 로드 실패"));
+    };
+
+    script.src = `${ADMIN_SCRIPT_URL}?callback=${callbackName}&t=${Date.now()}`;
+    document.body.appendChild(script);
   });
-
-  if (!response.ok) {
-    throw new Error("현재배정 데이터 조회 실패");
-  }
-
-  const json = await response.json();
-  return normalizeRemoteRosterShape(json);
 }
 
 function openZipDB() {
@@ -831,7 +855,9 @@ function App() {
     async function loadRemote() {
       try {
         setRemoteLoading(true);
-        const next = await fetchRemoteRoster();
+
+        const json = await fetchRemoteRosterJsonp();
+        const next = normalizeRemoteRosterShape(json);
         const hasAny = TEAM_ORDER.some((teamKey) => (next[teamKey] || []).length > 0);
 
         if (hasAny) {
