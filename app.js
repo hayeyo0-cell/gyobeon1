@@ -818,7 +818,6 @@ function App() {
   const [pathImage, setPathImage] = useState("");
 
   const [showSettings, setShowSettings] = useState(false);
-  const [showManualCode, setShowManualCode] = useState(false);
 
   const [groups, setGroups] = useState(initialGroups);
   const [currentGroup, setCurrentGroup] = useState(Object.keys(initialGroups)[0] || "");
@@ -1222,10 +1221,10 @@ function App() {
     await parseAndSetZip(file, true, false, remoteRoster);
   }
 
-  function applyMySelection(name, manualCode = "", teamKey = selectedTeam) {
+  function applyMySelection(name, teamKey = selectedTeam) {
     if (!effectiveData || !name) return;
 
-    const anchorCode = resolveAnchorCode(teamKey, name, manualCode);
+    const anchorCode = resolveAnchorCode(teamKey, name);
     if (!anchorCode) {
       alert("선택한 이름의 기준 교번을 찾지 못했습니다.");
       return;
@@ -1322,7 +1321,6 @@ function App() {
     setOverrides({});
     saveOverrides({});
     localStorage.removeItem("gyobeon_my_selection");
-    setShowManualCode(false);
   }
 
   function createGroup() {
@@ -1402,7 +1400,7 @@ function App() {
               ZIP 파일을 한 번 선택하면 근무시간표, 행로표 이미지 같은 기본 자료를 저장합니다.
             </div>
             <div className="notice-box">
-              사용자는 이름만 선택하면 되고, 기준 교번은 앱이 스프레드시트 3/28 실제 배정표를 우선 사용해 자동 계산합니다.
+              사용자는 이름만 선택하면 되고, 앱이 자동으로 오늘 교번을 계산해 보여줍니다.
             </div>
             {loading && <div className="help-text" style={{ color: "#2563eb" }}>불러오는 중...</div>}
             {zipName && <div className="help-text">현재 파일: {zipName}</div>}
@@ -1765,7 +1763,7 @@ function App() {
 
                 const currentName = teamAnchors[teamKey]?.name || "";
                 if (currentName) {
-                  applyMySelection(currentName, "", teamKey);
+                  applyMySelection(currentName, teamKey);
                 }
               }}
             >
@@ -1779,7 +1777,7 @@ function App() {
               className="select"
               value={currentAnchor.name || ""}
               onChange={(e) => {
-                applyMySelection(e.target.value, "", selectedTeam);
+                applyMySelection(e.target.value, selectedTeam);
               }}
             >
               <option value="">선택</option>
@@ -1790,33 +1788,8 @@ function App() {
               ))}
             </select>
 
-            <button
-              className="modal-btn"
-              style={{ marginTop: 12 }}
-              onClick={() => setShowManualCode((prev) => !prev)}
-            >
-              {showManualCode ? "기준 교번 직접 수정 숨기기" : "기준 교번 직접 수정"}
-            </button>
-
-            {showManualCode && (
-              <>
-                <label className="label" style={{ marginTop: 12 }}>기준 교번</label>
-                <select
-                  className="select"
-                  value={currentAnchor.code || ""}
-                  onChange={(e) => {
-                    applyMySelection(currentAnchor.name || "", e.target.value, selectedTeam);
-                  }}
-                >
-                  {getGyobunOrder(currentTeam).map((code) => (
-                    <option key={code} value={code}>{code}</option>
-                  ))}
-                </select>
-              </>
-            )}
-
             <div className="help-text">
-              이름만 선택하면 앱이 스프레드시트 3/28 실제 배정을 기준으로 자동 계산해서 오늘 교번을 보여줍니다.
+              내 이름만 선택하면 앱이 자동으로 기준 교번을 찾아 오늘 교번을 보여줍니다.
             </div>
 
             <div className="modal-actions">
@@ -1945,6 +1918,25 @@ function App() {
       )}
     </>
   );
+}
+
+function getPersonGyobunForDate(data, teamKey, name, dateStr, overrides = {}) {
+  const team = data?.[teamKey];
+  if (!team) return null;
+
+  const saved = loadMySelection();
+  const anchor =
+    saved?.teamKey === teamKey && saved?.name === name && saved?.code && saved?.anchorDate
+      ? {
+          name: saved.name,
+          code: saved.code,
+          anchorDate: saved.anchorDate,
+        }
+      : buildTeamAnchorForDate(team);
+
+  const offset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE, dateStr);
+  const grid = buildAssignedGrid(team, anchor.name, anchor.code, offset, overrides);
+  return grid.find((item) => item.name === name || item.displayName === name) || null;
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
