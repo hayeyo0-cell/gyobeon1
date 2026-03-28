@@ -41,7 +41,7 @@ button {
 .card {
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.78);
   border-radius: 26px;
   box-shadow: 0 12px 30px rgba(37, 99, 235, 0.1);
   padding: 18px;
@@ -145,7 +145,7 @@ button {
   padding: 12px 10px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.88);
 }
 
 .date-btn {
@@ -788,4 +788,4 @@ button {
     min-height: 52px;
     font-size: 16px;
   }
-}
+  }
