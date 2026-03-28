@@ -59,6 +59,10 @@ function formatDate(date) {
   return `${y}-${m}-${d}`;
 }
 
+function isSameDateStr(a, b) {
+  return String(a || "") === String(b || "");
+}
+
 function addDays(dateStr, days) {
   const d = parseLocalDate(dateStr);
   d.setDate(d.getDate() + days);
@@ -991,13 +995,17 @@ function App() {
   const myInfo = useMemo(() => {
     if (!currentTeam || !currentAnchor.name) return null;
 
-    const remoteMe = findMyRemoteAssignment(selectedTeam, currentAnchor.name);
+    const todayStr = formatDate(new Date());
 
-    if (remoteMe?.code) {
-      return {
-        code: remoteMe.code,
-        time: pickWorktime(currentTeam, remoteMe.code, selectedDate),
-      };
+    if (isSameDateStr(selectedDate, todayStr)) {
+      const remoteMe = findMyRemoteAssignment(selectedTeam, currentAnchor.name);
+
+      if (remoteMe?.code) {
+        return {
+          code: remoteMe.code,
+          time: pickWorktime(currentTeam, remoteMe.code, selectedDate),
+        };
+      }
     }
 
     if (!currentAnchor.code) return null;
@@ -1031,9 +1039,10 @@ function App() {
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
 
+    const todayStr = formatDate(new Date());
     const remoteRows = remoteRoster?.[viewTeam] || [];
 
-    if (remoteRows.length > 0) {
+    if (isSameDateStr(selectedDate, todayStr) && remoteRows.length > 0) {
       return getGyobunOrder(currentViewTeam)
         .map((slotCode, idx) => {
           const found = remoteRows.find(
@@ -1070,6 +1079,7 @@ function App() {
     overrides,
     remoteRoster,
     viewTeam,
+    selectedDate,
   ]);
 
   const visibleAllGrid = useMemo(() => {
@@ -1490,15 +1500,21 @@ function App() {
                 </div>
 
                 <div className="all-team-tabs">
-                  {TEAM_ORDER.map((key) => (
-                    <button
-                      key={key}
-                      className={`all-team-tab ${viewTeam === key ? "active" : ""}`}
-                      onClick={() => setViewTeam(key)}
-                    >
-                      {TEAM_LABELS[key]}
-                    </button>
-                  ))}
+                  {TEAM_ORDER.map((key) => {
+                    const isActive = viewTeam === key;
+                    const isMyTeam = selectedTeam === key;
+
+                    return (
+                      <button
+                        key={key}
+                        className={`all-team-tab ${isActive ? "active" : ""}`}
+                        onClick={() => setViewTeam(key)}
+                      >
+                        {TEAM_LABELS[key]}
+                        {isMyTeam && !isActive && <span className="my-dot" />}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <div className="all-tab-grid-wrap">
@@ -1720,8 +1736,8 @@ function App() {
                 setViewTeam(teamKey);
 
                 const anchor = teamAnchors[teamKey];
-                if (anchor?.name && anchor?.code) {
-                  applyMySelection(anchor.name, anchor.code, teamKey);
+                if (anchor?.name) {
+                  applyMySelection(anchor.name, anchor.code || "", teamKey);
                 }
               }}
             >
@@ -1745,8 +1761,21 @@ function App() {
               ))}
             </select>
 
+            <label className="label" style={{ marginTop: 12 }}>오늘 내 교번</label>
+            <select
+              className="select"
+              value={currentAnchor.code || ""}
+              onChange={(e) => {
+                applyMySelection(currentAnchor.name || "", e.target.value, selectedTeam);
+              }}
+            >
+              {getGyobunOrder(currentTeam).map((code) => (
+                <option key={code} value={code}>{code}</option>
+              ))}
+            </select>
+
             <div className="help-text">
-              이름만 선택하면 현재배정 기준으로 오늘 내 교번이 자동 적용됩니다.
+              이름만 선택하면 현재배정 기준으로 자동 적용되고, 필요하면 교번을 직접 바꿀 수 있습니다.
             </div>
 
             <div className="modal-actions">
