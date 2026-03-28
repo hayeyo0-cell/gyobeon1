@@ -17,7 +17,7 @@ const NIGHT_RANGE_BY_TEAM = {
 };
 
 const ADMIN_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwjtUuLeABXGdPbdfsGNbvMh_xynrZHeyU3V82ElZUnXqr9U-D6tWqeYNbsqN-6F9vxLg/exec";
+  "https://script.google.com/macros/s/AKfycbyuUPBooxDqRp2jHzjljRKNUFz3MeZTwLX-9WCGd2tQu44oBffXS3BYyxjBER5Gj5-N3g/exec";
 
 const COLOR_OPTIONS = [
   { value: "", label: "기본" },
@@ -1332,7 +1332,7 @@ function App() {
               <>
                 <div className="settings-row">
                   {deferredPrompt && <button className="install-btn" onClick={handleInstall}>설치</button>}
-                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>}
+                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>
                 </div>
 
                 <div className="date-grid">
@@ -1412,16 +1412,6 @@ function App() {
 
                     <div className="main-subinfo">
                       {TEAM_LABELS[selectedTeam]} / {currentAnchor.name || "-"}
-                    </div>
-
-                    <div style={{ marginTop: 8, fontSize: 12, color: "#2563eb" }}>
-                      DEBUG remote ks: {(remoteRoster.ks || []).length}
-                    </div>
-                    <div style={{ marginTop: 4, fontSize: 12, color: "#2563eb" }}>
-                      DEBUG 휴3: {(remoteRoster.ks || []).find(v => v.code === "휴3")?.name || "없음"}
-                    </div>
-                    <div style={{ marginTop: 4, fontSize: 12, color: "#2563eb" }}>
-                      DEBUG 13d: {(remoteRoster.ks || []).find(v => v.code === "13d")?.name || "없음"}
                     </div>
 
                     {remoteLoading && (
