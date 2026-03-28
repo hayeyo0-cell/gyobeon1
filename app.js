@@ -52,12 +52,6 @@ function parseLocalDate(dateStr) {
   return new Date(y, (m || 1) - 1, d || 1);
 }
 
-function getAllGridLayout(count) {
-  if (count >= 49) return { cols: 6, className: "density-6" };
-  if (count >= 36) return { cols: 5, className: "density-5" };
-  return { cols: 4, className: "density-4" };
-}
-
 function formatDate(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -441,16 +435,13 @@ function saveGroups(groups) {
   localStorage.setItem("gyobeon_groups", JSON.stringify(groups));
 }
 
-function loadRemoteRoster() {
-  try {
-    return JSON.parse(localStorage.getItem("gyobeon_remote_roster") || "{}");
-  } catch {
-    return {};
-  }
-}
-
-function saveRemoteRoster(value) {
-  localStorage.setItem("gyobeon_remote_roster", JSON.stringify(value));
+function getEmptyRemoteRoster() {
+  return {
+    ks: [],
+    my: [],
+    wb: [],
+    as: [],
+  };
 }
 
 function getOverrideKey(teamKey, index) {
@@ -624,40 +615,29 @@ function normalizeTeamKey(value) {
 }
 
 function normalizeRemoteRosterShape(input) {
-  const result = {};
-  TEAM_ORDER.forEach((teamKey) => {
-    result[teamKey] = [];
-  });
-
+  const result = getEmptyRemoteRoster();
   if (!input || typeof input !== "object") return result;
 
-  if (Array.isArray(input.rows)) {
-    input.rows.forEach((row) => {
-      const teamKey =
-        normalizeTeamKey(row?.teamKey) ||
-        normalizeTeamKey(row?.team) ||
-        normalizeTeamKey(row?.teamLabel) ||
-        normalizeTeamKey(row?.소속);
+  const rows = Array.isArray(input.rows) ? input.rows : [];
 
-      const code = String(row?.gyobun || row?.code || row?.교번 || "").trim();
-      const employeeId = String(row?.employeeId || row?.직원ID || row?.id || "").trim();
-      const name = String(row?.name || row?.이름 || "").trim();
+  rows.forEach((row) => {
+    const teamKey =
+      normalizeTeamKey(row?.team) ||
+      normalizeTeamKey(row?.teamKey) ||
+      normalizeTeamKey(row?.teamLabel) ||
+      normalizeTeamKey(row?.소속);
 
-      if (!teamKey || !code || !name) return;
-      result[teamKey].push({ code, employeeId, name });
+    const gyobun = String(row?.gyobun || row?.교번 || row?.code || "").trim();
+    const employeeId = String(row?.employeeId || row?.직원ID || row?.id || "").trim();
+    const name = String(row?.name || row?.이름 || "").trim();
+
+    if (!teamKey || !gyobun || !name) return;
+
+    result[teamKey].push({
+      code: gyobun,
+      employeeId,
+      name,
     });
-    return result;
-  }
-
-  TEAM_ORDER.forEach((teamKey) => {
-    const rows = Array.isArray(input[teamKey]) ? input[teamKey] : [];
-    result[teamKey] = rows
-      .map((row) => ({
-        code: String(row?.gyobun || row?.code || row?.교번 || "").trim(),
-        employeeId: String(row?.employeeId || row?.직원ID || row?.id || "").trim(),
-        name: String(row?.name || row?.이름 || "").trim(),
-      }))
-      .filter((row) => row.code && row.name);
   });
 
   return result;
@@ -699,12 +679,14 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
     team.info = {
       ...team.info,
       totalCount: mapped.length,
-      baseName: team.info?.baseName && mapped.some((p) => p.name === team.info.baseName)
-        ? team.info.baseName
-        : mapped[0]?.name || "",
-      baseCode: team.info?.baseCode && fixedOrder.includes(team.info.baseCode)
-        ? team.info.baseCode
-        : fixedOrder[0] || "",
+      baseName:
+        team.info?.baseName && mapped.some((p) => p.name === team.info.baseName)
+          ? team.info.baseName
+          : mapped[0]?.name || "",
+      baseCode:
+        team.info?.baseCode && fixedOrder.includes(team.info.baseCode)
+          ? team.info.baseCode
+          : fixedOrder[0] || "",
     };
   });
 
@@ -715,6 +697,10 @@ async function fetchRemoteRoster() {
   const response = await fetch(`${ADMIN_SCRIPT_URL}?t=${Date.now()}`, {
     method: "GET",
     cache: "no-store",
+    headers: {
+      "Cache-Control": "no-cache, no-store, max-age=0",
+      Pragma: "no-cache",
+    },
   });
 
   if (!response.ok) {
@@ -722,8 +708,7 @@ async function fetchRemoteRoster() {
   }
 
   const json = await response.json();
-  const raw = json?.data && typeof json.data === "object" ? json.data : json;
-  return normalizeRemoteRosterShape(raw);
+  return normalizeRemoteRosterShape(json);
 }
 
 function openZipDB() {
@@ -765,14 +750,13 @@ async function loadZipBlob() {
 function App() {
   const initialSelection = loadMySelection();
   const initialGroups = loadGroups();
-  const initialRemoteRoster = loadRemoteRoster();
   const initialDate = formatDate(new Date());
 
   const [zipName, setZipName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
-  const [remoteRoster, setRemoteRoster] = useState(initialRemoteRoster);
+  const [remoteRoster, setRemoteRoster] = useState(getEmptyRemoteRoster());
   const [remoteLoading, setRemoteLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState("home");
@@ -833,7 +817,7 @@ function App() {
         const saved = await loadZipBlob();
         if (saved?.blob) {
           setZipName(saved.name || "이전 ZIP");
-          await parseAndSetZip(saved.blob, false, true);
+          await parseAndSetZip(saved.blob, false, true, getEmptyRemoteRoster());
         }
       } catch (e) {
         console.log("자동 ZIP 로드 실패", e);
@@ -849,9 +833,11 @@ function App() {
         setRemoteLoading(true);
         const next = await fetchRemoteRoster();
         const hasAny = TEAM_ORDER.some((teamKey) => (next[teamKey] || []).length > 0);
+
         if (hasAny) {
           setRemoteRoster(next);
-          saveRemoteRoster(next);
+        } else {
+          console.log("원격 현재배정 데이터가 비어 있음");
         }
       } catch (e) {
         console.log("원격 현재배정 로드 실패", e);
@@ -1029,7 +1015,7 @@ function App() {
     }
   }
 
-  async function parseAndSetZip(fileOrBlob, saveToIdb = true, keepSavedSelection = false) {
+  async function parseAndSetZip(fileOrBlob, saveToIdb = true, keepSavedSelection = false, rosterForApply = remoteRoster) {
     setLoading(true);
     setError("");
 
@@ -1067,7 +1053,7 @@ function App() {
       const nextData = parseZipToData(parsedFiles);
       setData(nextData);
 
-      const nextEffectiveData = applyRemoteRosterToData(nextData, loadRemoteRoster());
+      const nextEffectiveData = applyRemoteRosterToData(nextData, rosterForApply || getEmptyRemoteRoster());
 
       if (!keepSavedSelection) {
         const defaultTeam = selectedTeam || "ks";
@@ -1103,7 +1089,7 @@ function App() {
     const file = event.target.files?.[0];
     if (!file) return;
     setZipName(file.name);
-    await parseAndSetZip(file, true, false);
+    await parseAndSetZip(file, true, false, remoteRoster);
   }
 
   function applyMySelection(name, code, teamKey = selectedTeam) {
@@ -1273,9 +1259,9 @@ function App() {
           <div className="card">
             <div className="card-title">데이터 불러오기</div>
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
-            <div className="help-text">ZIP 파일을 한 번 선택하면 근무시간표, 행로표 이미지 같은 기본 데이터를 저장합니다.</div>
+            <div className="help-text">ZIP 파일을 한 번 선택하면 근무시간표, 행로표 이미지 같은 기본 자료를 저장합니다.</div>
             <div className="notice-box">
-              현재배정은 스프레드시트에서 자동으로 불러오고, ZIP은 기본 자료용으로만 사용합니다.
+              현재배정은 스프레드시트에서 최신값을 자동으로 읽고, ZIP은 기본자료용으로만 사용합니다.
             </div>
             {loading && <div className="help-text" style={{ color: "#2563eb" }}>불러오는 중...</div>}
             {zipName && <div className="help-text">현재 파일: {zipName}</div>}
@@ -1371,7 +1357,7 @@ function App() {
 
                     {remoteLoading && (
                       <div className="help-text" style={{ color: "#2563eb" }}>
-                        최신 현재배정 확인 중...
+                        최신 현재배정 불러오는 중...
                       </div>
                     )}
                   </div>
@@ -1672,7 +1658,7 @@ function App() {
             </select>
 
             <div className="help-text">
-              기본자료는 ZIP에서 읽고, 현재배정은 스프레드시트에서 자동 반영됩니다.
+              기본자료는 ZIP에서 읽고, 현재배정은 스프레드시트에서 최신값을 자동 반영합니다.
             </div>
 
             <div className="modal-actions">
