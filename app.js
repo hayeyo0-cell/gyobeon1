@@ -33,7 +33,6 @@ const ADMIN_SCRIPT_URL =
  * 공휴일 목록
  * YYYY-MM-DD 형식
  * 해가 바뀌면 이 배열만 수정하면 됩니다.
- * 아래는 2026년 기준 예시입니다.
  */
 const HOLIDAYS = [
   "2026-01-01",
@@ -158,7 +157,7 @@ function getDateToneClass(dateStr) {
 
 function getDateBasedColor(dateStr) {
   if (isSunday(dateStr) || isHolidayDate(dateStr)) return "#ef4444";
-  if (isSaturday(dateStr)) return "#3b82f6";
+  if (isSaturday(dateStr)) return "#2563eb";
   return "#111827";
 }
 
@@ -661,90 +660,6 @@ function normalizeTeamKeyFromSheet(value) {
   return "";
 }
 
-function buildAdminSheetText(data) {
-  const lines = [];
-  lines.push(["소속코드", "소속명", "이름", "기준교번", "사용여부"].join("\t"));
-
-  TEAM_ORDER.forEach((teamKey) => {
-    const team = data?.[teamKey];
-    if (!team) return;
-
-    const people = team.people || [];
-    people.forEach((person, idx) => {
-      lines.push(
-        [
-          teamKey,
-          TEAM_LABELS[teamKey],
-          person.name || "",
-          getGyobunOrder(team)[idx] || person.baseCode || "",
-          "Y",
-        ].join("\t")
-      );
-    });
-  });
-
-  return lines.join("\n");
-}
-
-function parseDelimitedText(text) {
-  const raw = String(text || "").replace(/\r/g, "").trim();
-  if (!raw) return [];
-
-  const lines = raw.split("\n").filter(Boolean);
-  if (!lines.length) return [];
-
-  const delimiter = lines[0].includes("\t") ? "\t" : ",";
-  return lines.map((line) => line.split(delimiter).map((v) => String(v || "").trim()));
-}
-
-function parseAdminSheetText(text) {
-  const rows = parseDelimitedText(text);
-  if (!rows.length) return { ok: false, message: "내용이 비어 있습니다." };
-
-  const header = rows[0].map((v) => v.replace(/\s+/g, ""));
-  const body = rows.slice(1);
-
-  const teamIdx = header.findIndex((h) => ["소속코드", "소속", "team", "teamkey"].includes(h.toLowerCase()));
-  const teamNameIdx = header.findIndex((h) => ["소속명", "teamlabel"].includes(h.toLowerCase()));
-  const nameIdx = header.findIndex((h) => ["이름", "name"].includes(h.toLowerCase()));
-  const codeIdx = header.findIndex((h) => ["기준교번", "교번", "basecode", "code"].includes(h.toLowerCase()));
-  const enabledIdx = header.findIndex((h) => ["사용여부", "활성", "enabled", "use"].includes(h.toLowerCase()));
-
-  if (nameIdx < 0 || codeIdx < 0 || (teamIdx < 0 && teamNameIdx < 0)) {
-    return { ok: false, message: "헤더는 소속코드(또는 소속명), 이름, 기준교번, 사용여부 형식이어야 합니다." };
-  }
-
-  const result = {};
-  TEAM_ORDER.forEach((teamKey) => {
-    result[teamKey] = [];
-  });
-
-  body.forEach((cols) => {
-    const rawTeam = teamIdx >= 0 ? cols[teamIdx] : "";
-    const rawTeamLabel = teamNameIdx >= 0 ? cols[teamNameIdx] : "";
-    const teamKey = normalizeTeamKeyFromSheet(rawTeam) || normalizeTeamKeyFromSheet(rawTeamLabel);
-    const name = String(cols[nameIdx] || "").trim();
-    const baseCode = String(cols[codeIdx] || "").trim();
-    const enabledRaw = enabledIdx >= 0 ? String(cols[enabledIdx] || "").trim().toUpperCase() : "Y";
-    const enabled = !["N", "NO", "0", "FALSE"].includes(enabledRaw);
-
-    if (!teamKey || !name || !baseCode) return;
-
-    result[teamKey].push({
-      name,
-      baseCode,
-      enabled,
-    });
-  });
-
-  const hasAny = TEAM_ORDER.some((teamKey) => result[teamKey].length > 0);
-  if (!hasAny) {
-    return { ok: false, message: "적용 가능한 데이터가 없습니다." };
-  }
-
-  return { ok: true, data: result };
-}
-
 function normalizeAdminRosterShape(input) {
   const result = {};
   TEAM_ORDER.forEach((teamKey) => {
@@ -874,40 +789,6 @@ async function fetchAdminRosterFromScript() {
   return normalizeAdminRosterShape(rawRoster);
 }
 
-async function saveAdminRosterToScript(roster) {
-  const response = await fetch(ADMIN_SCRIPT_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8",
-    },
-    body: JSON.stringify({
-      action: "saveRoster",
-      data: roster,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error("관리자 데이터 저장 실패");
-  }
-
-  const json = await response.json().catch(() => ({}));
-  if (json?.ok === false) {
-    throw new Error(json?.message || "관리자 데이터 저장 실패");
-  }
-
-  return json;
-}
-
-function downloadTextFile(filename, text, mime = "text/tab-separated-values;charset=utf-8") {
-  const blob = new Blob([text], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 function App() {
   const initialSelection = loadMySelection();
   const initialGroups = loadGroups();
@@ -958,19 +839,18 @@ function App() {
 
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
-  const [adminRoster, setAdminRoster] = useState(initialAdminRoster);
-  const [showAdminSheet, setShowAdminSheet] = useState(false);
-  const [adminSheetText, setAdminSheetText] = useState("");
-  const [adminSheetError, setAdminSheetError] = useState("");
-  const [adminSaving, setAdminSaving] = useState(false);
-
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
 
   const data = useMemo(() => {
     if (!baseData) return null;
-    return applyAdminRosterToData(baseData, adminRoster);
-  }, [baseData, adminRoster]);
+    return applyAdminRosterToData(baseData, initialAdminRoster && Object.keys(loadAdminRoster()).length ? loadAdminRoster() : loadAdminRoster()) || applyAdminRosterToData(baseData, loadAdminRoster());
+  }, [baseData]);
+
+  const effectiveData = useMemo(() => {
+    if (!baseData) return null;
+    return applyAdminRosterToData(baseData, loadAdminRoster());
+  }, [baseData, remoteRosterLoading]);
 
   useEffect(() => {
     activeTabRef.current = activeTab;
@@ -1002,8 +882,31 @@ function App() {
         const hasAny = TEAM_ORDER.some((teamKey) => (remoteRoster[teamKey] || []).length > 0);
 
         if (hasAny) {
-          setAdminRoster(remoteRoster);
           saveAdminRoster(remoteRoster);
+          if (baseData) {
+            const nextData = applyAdminRosterToData(baseData, remoteRoster);
+            if (nextData) {
+              const saved = loadMySelection();
+              if (saved?.teamKey && saved?.name && saved?.code && saved?.anchorDate) {
+                const team = nextData[saved.teamKey];
+                const exists = team?.people?.some((p) => p.name === saved.name);
+                const codeExists = getGyobunOrder(team).includes(saved.code);
+
+                if (exists && codeExists) {
+                  const autoAnchors = buildAllTeamsAutoAnchors(
+                    nextData,
+                    saved.teamKey,
+                    saved.name,
+                    saved.code,
+                    saved.anchorDate
+                  );
+                  setTeamAnchors(autoAnchors);
+                  setSelectedTeam(saved.teamKey);
+                  setViewTeam(saved.teamKey);
+                }
+              }
+            }
+          }
         }
       } catch (e) {
         console.log("원격 관리자 데이터 로드 실패", e);
@@ -1013,7 +916,7 @@ function App() {
     }
 
     loadRemoteAdminRoster();
-  }, []);
+  }, [baseData]);
 
   useEffect(() => {
     pathOpenRef.current = pathOpen;
@@ -1048,11 +951,6 @@ function App() {
         return;
       }
 
-      if (showAdminSheet) {
-        setShowAdminSheet(false);
-        return;
-      }
-
       if (showSettings) {
         setShowSettings(false);
         return;
@@ -1073,7 +971,7 @@ function App() {
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [showAdminSheet, showSettings, showGroupAdd]);
+  }, [showSettings, showGroupAdd]);
 
   useEffect(() => {
     if (pathOpen && (!window.history.state || window.history.state.layer !== "path")) {
@@ -1092,18 +990,18 @@ function App() {
   }, [selectedDate]);
 
   useEffect(() => {
-    if (!data) return;
+    if (!effectiveData) return;
 
     const saved = loadMySelection();
 
     if (saved?.teamKey && saved?.name && saved?.code && saved?.anchorDate) {
-      const team = data[saved.teamKey];
+      const team = effectiveData[saved.teamKey];
       const exists = team?.people?.some((p) => p.name === saved.name);
       const codeExists = getGyobunOrder(team).includes(saved.code);
 
       if (exists && codeExists) {
         const autoAnchors = buildAllTeamsAutoAnchors(
-          data,
+          effectiveData,
           saved.teamKey,
           saved.name,
           saved.code,
@@ -1118,13 +1016,13 @@ function App() {
 
     const nextAnchors = {};
     TEAM_ORDER.forEach((teamKey) => {
-      nextAnchors[teamKey] = buildTeamAnchorForDate(data[teamKey]);
+      nextAnchors[teamKey] = buildTeamAnchorForDate(effectiveData[teamKey]);
     });
     setTeamAnchors(nextAnchors);
-  }, [data]);
+  }, [effectiveData]);
 
-  const currentTeam = data?.[selectedTeam] || null;
-  const currentViewTeam = data?.[viewTeam] || null;
+  const currentTeam = effectiveData?.[selectedTeam] || null;
+  const currentViewTeam = effectiveData?.[viewTeam] || null;
   const currentAnchor = teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: selectedDate };
   const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: selectedDate };
 
@@ -1242,20 +1140,22 @@ function App() {
       const nextData = parseZipToData(parsedFiles);
       setBaseData(nextData);
 
+      const adminRoster = loadAdminRoster();
+      const nextEffectiveData = applyAdminRosterToData(nextData, adminRoster);
+
       if (!keepSavedSelection) {
         const defaultTeam = selectedTeam || "ks";
-        const effectiveData = applyAdminRosterToData(nextData, adminRoster);
         const defaultName =
-          effectiveData?.[defaultTeam]?.info?.baseName ||
-          effectiveData?.[defaultTeam]?.people?.[0]?.name ||
+          nextEffectiveData?.[defaultTeam]?.info?.baseName ||
+          nextEffectiveData?.[defaultTeam]?.people?.[0]?.name ||
           "";
         const defaultCode =
-          effectiveData?.[defaultTeam]?.info?.baseCode ||
-          getGyobunOrder(effectiveData?.[defaultTeam])[0] ||
+          nextEffectiveData?.[defaultTeam]?.info?.baseCode ||
+          getGyobunOrder(nextEffectiveData?.[defaultTeam])[0] ||
           "";
 
         const autoAnchors = buildAllTeamsAutoAnchors(
-          effectiveData,
+          nextEffectiveData,
           defaultTeam,
           defaultName,
           defaultCode,
@@ -1281,10 +1181,10 @@ function App() {
   }
 
   function applyMySelection(name, code, teamKey = selectedTeam) {
-    if (!data || !name || !code) return;
+    if (!effectiveData || !name || !code) return;
 
     const anchorDate = selectedDate;
-    const autoAnchors = buildAllTeamsAutoAnchors(data, teamKey, name, code, anchorDate);
+    const autoAnchors = buildAllTeamsAutoAnchors(effectiveData, teamKey, name, code, anchorDate);
 
     setTeamAnchors(autoAnchors);
     setSelectedTeam(teamKey);
@@ -1440,92 +1340,20 @@ function App() {
     setDeferredPrompt(null);
   }
 
-  function openAdminSheetEditor() {
-    if (!data) return;
-    const text = buildAdminSheetText(data);
-    setAdminSheetText(text);
-    setAdminSheetError("");
-    setShowAdminSheet(true);
-  }
-
-  async function applyAdminSheetChanges() {
-    const parsed = parseAdminSheetText(adminSheetText);
-    if (!parsed.ok) {
-      setAdminSheetError(parsed.message || "스프레드시트 형식이 올바르지 않습니다.");
-      return;
-    }
-
-    try {
-      setAdminSaving(true);
-      const nextRoster = parsed.data;
-
-      setAdminRoster(nextRoster);
-      saveAdminRoster(nextRoster);
-
-      await saveAdminRosterToScript(nextRoster);
-
-      setAdminSheetError("");
-      setShowAdminSheet(false);
-    } catch (e) {
-      console.error(e);
-      setAdminSheetError("앱스 스크립트 저장에 실패했습니다.");
-    } finally {
-      setAdminSaving(false);
-    }
-  }
-
-  async function handleAdminSheetFileUpload(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      setAdminSheetText(text);
-      setAdminSheetError("");
-    } catch (e) {
-      console.error(e);
-      setAdminSheetError("파일을 읽지 못했습니다.");
-    }
-  }
-
-  async function refreshAdminRosterNow() {
-    try {
-      setRemoteRosterLoading(true);
-      const remoteRoster = await fetchAdminRosterFromScript();
-      const hasAny = TEAM_ORDER.some((teamKey) => (remoteRoster[teamKey] || []).length > 0);
-
-      if (hasAny) {
-        setAdminRoster(remoteRoster);
-        saveAdminRoster(remoteRoster);
-      }
-    } catch (e) {
-      console.error(e);
-      setAdminSheetError("최신 관리자 명단을 불러오지 못했습니다.");
-    } finally {
-      setRemoteRosterLoading(false);
-    }
-  }
-
-  function resetAdminRoster() {
-    setAdminRoster({});
-    saveAdminRoster({});
-    setAdminSheetText("");
-    setAdminSheetError("");
-  }
-
   return (
     <>
       <div className="container">
-        {!data ? (
-          <div className="card">
+        {!effectiveData ? (
+          <div className="card upload-card">
             <div className="card-title">데이터 불러오기</div>
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
             <div className="help-text">ZIP 파일을 선택하면 압축 내부 데이터를 그대로 읽어서 적용합니다.</div>
             <div className="notice-box">
               처음 한 번 ZIP을 선택하면 이후에는 휴대폰에서 다시 열 때 자동으로 불러옵니다.
             </div>
-            {loading && <div className="help-text" style={{ color: "#2563eb" }}>불러오는 중...</div>}
+            {loading && <div className="help-text status-blue">불러오는 중...</div>}
             {zipName && <div className="help-text">현재 파일: {zipName}</div>}
-            {error && <div className="help-text" style={{ color: "#dc2626" }}>{error}</div>}
+            {error && <div className="help-text status-red">{error}</div>}
           </div>
         ) : (
           <>
@@ -1600,17 +1428,11 @@ function App() {
 
                 <div className="card main-panel">
                   <div className="center-view">
-                    <div
-                      className="main-code"
-                      style={{ color: getDateBasedColor(selectedDate) }}
-                    >
+                    <div className="main-code" style={{ color: getDateBasedColor(selectedDate) }}>
                       {myInfo?.code || "-"} {weekdayName(selectedDate)}
                     </div>
 
-                    <div
-                      className="main-time"
-                      style={{ color: getDateBasedColor(selectedDate) }}
-                    >
+                    <div className="main-time" style={{ color: getDateBasedColor(selectedDate) }}>
                       {myInfo?.time || "----"}
                     </div>
 
@@ -1619,8 +1441,8 @@ function App() {
                     </div>
 
                     {remoteRosterLoading && (
-                      <div className="help-text" style={{ marginTop: 8, color: "#2563eb" }}>
-                        관리자 명단 동기화 중...
+                      <div className="help-text status-blue top-gap">
+                        최신 관리자 명단 확인 중...
                       </div>
                     )}
                   </div>
@@ -1725,7 +1547,7 @@ function App() {
                     <div className="month-row" key={rowIdx}>
                       {row.map((date) => {
                         const item = getPersonGyobunForDate(
-                          data,
+                          effectiveData,
                           selectedTeam,
                           currentAnchor.name,
                           date,
@@ -1737,7 +1559,7 @@ function App() {
                         const isSelected = date === selectedDate;
                         const toneClass = getDateToneClass(date);
 
-                        const worktime = item?.code ? pickWorktime(data[selectedTeam], item.code, date) : "";
+                        const worktime = item?.code ? pickWorktime(effectiveData[selectedTeam], item.code, date) : "";
                         const { startTime, endTime } = splitWorktime(worktime);
 
                         return (
@@ -1832,7 +1654,7 @@ function App() {
                             </td>
                             {weekDates.map((date) => {
                               const item = getPersonGyobunForDate(
-                                data,
+                                effectiveData,
                                 member.team,
                                 member.name,
                                 date,
@@ -1853,7 +1675,7 @@ function App() {
         )}
       </div>
 
-      {data && (
+      {effectiveData && (
         <div
           className={`bottom-tabs tabs-4 ${
             activeTab === "home"
@@ -1880,7 +1702,7 @@ function App() {
             <label className="label">데이터 ZIP 다시 불러오기</label>
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
 
-            <label className="label" style={{ marginTop: 12 }}>내 소속</label>
+            <label className="label top-gap">내 소속</label>
             <select
               className="select"
               value={selectedTeam}
@@ -1900,7 +1722,7 @@ function App() {
               ))}
             </select>
 
-            <label className="label" style={{ marginTop: 12 }}>내 이름</label>
+            <label className="label top-gap">내 이름</label>
             <select
               className="select"
               value={currentAnchor.name || ""}
@@ -1915,7 +1737,7 @@ function App() {
               ))}
             </select>
 
-            <label className="label" style={{ marginTop: 12 }}>오늘 내 교번</label>
+            <label className="label top-gap">오늘 내 교번</label>
             <select
               className="select"
               value={currentAnchor.code || ""}
@@ -1932,24 +1754,10 @@ function App() {
               내 소속/이름/오늘 내 교번만 선택하면 다른 소속은 자동 계산됩니다.
             </div>
 
-            <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
-              <div className="label" style={{ marginBottom: 8 }}>관리자</div>
+            <div className="settings-divider" />
 
-              <button className="modal-btn" onClick={openAdminSheetEditor}>
-                관리자 스프레드시트 편집
-              </button>
-
-              <button
-                className="modal-btn"
-                style={{ marginTop: 8 }}
-                onClick={refreshAdminRosterNow}
-              >
-                최신 관리자 명단 다시 불러오기
-              </button>
-
-              <div className="help-text" style={{ marginTop: 8 }}>
-                관리자 편집 내용은 Apps Script와 연동되어 저장되고, 사용자는 앱 실행 시 최신 명단을 자동으로 받아옵니다.
-              </div>
+            <div className="help-text">
+              관리자 명단은 스프레드시트에서만 관리되고, 앱은 실행 시 최신 명단을 자동으로 받아옵니다.
             </div>
 
             <div className="modal-actions">
@@ -1977,9 +1785,9 @@ function App() {
               현재 그룹이 없으면 새 그룹 이름을 입력한 뒤 바로 추가할 수 있습니다.
             </div>
 
-            <button className="modal-btn primary" style={{ marginTop: 10 }} onClick={createGroup}>그룹 생성</button>
+            <button className="modal-btn primary single-btn" onClick={createGroup}>그룹 생성</button>
 
-            <label className="label" style={{ marginTop: 16 }}>현재 그룹</label>
+            <label className="label top-gap">현재 그룹</label>
             <select className="select" value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
               {Object.keys(groups).length === 0 ? (
                 <option value="">그룹 없음</option>
@@ -1990,17 +1798,17 @@ function App() {
               )}
             </select>
 
-            <label className="label" style={{ marginTop: 12 }}>소속</label>
+            <label className="label top-gap">소속</label>
             <select className="select" value={groupAddTeam} onChange={(e) => setGroupAddTeam(e.target.value)}>
               {TEAM_ORDER.map((key) => (
                 <option key={key} value={key}>{TEAM_LABELS[key]}</option>
               ))}
             </select>
 
-            <label className="label" style={{ marginTop: 12 }}>이름</label>
+            <label className="label top-gap">이름</label>
             <select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}>
               <option value="">선택</option>
-              {(data?.[groupAddTeam]?.people || []).map((person) => (
+              {(effectiveData?.[groupAddTeam]?.people || []).map((person) => (
                 <option key={`${groupAddTeam}-${person.name}`} value={person.name}>
                   {person.name}
                 </option>
@@ -2026,7 +1834,7 @@ function App() {
             <label className="label">이름</label>
             <input className="input" value={editName} onChange={(e) => setEditName(e.target.value)} />
 
-            <label className="label" style={{ marginTop: 12 }}>색상</label>
+            <label className="label top-gap">색상</label>
             <select
               className="select"
               value={editColor || "default"}
@@ -2040,88 +1848,12 @@ function App() {
               ))}
             </select>
 
-            <div
-              className="color-preview"
-              style={{ backgroundColor: editColor || "#ffffff" }}
-            />
+            <div className="color-preview" style={{ backgroundColor: editColor || "#ffffff" }} />
 
             <div className="modal-actions">
               <button className="modal-btn" onClick={closeEditDialog}>아니요</button>
               <button className="modal-btn primary" onClick={() => commitEdit(editColor)}>
                 변경
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showAdminSheet && (
-        <div className="modal-backdrop" onClick={() => setShowAdminSheet(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, width: "94vw" }}>
-            <div className="modal-title">관리자 스프레드시트 편집</div>
-
-            <div className="help-text" style={{ marginBottom: 10 }}>
-              헤더 형식: 소속코드 / 소속명 / 이름 / 기준교번 / 사용여부
-              <br />
-              사용여부는 Y 또는 N 으로 입력하세요.
-            </div>
-
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-              <button
-                className="modal-btn"
-                onClick={() => {
-                  const text = buildAdminSheetText(data);
-                  setAdminSheetText(text);
-                  downloadTextFile("교번관리자편집.tsv", text);
-                }}
-              >
-                현재표 다운로드
-              </button>
-
-              <label className="modal-btn" style={{ cursor: "pointer" }}>
-                파일 불러오기
-                <input
-                  type="file"
-                  accept=".tsv,.csv,.txt"
-                  style={{ display: "none" }}
-                  onChange={handleAdminSheetFileUpload}
-                />
-              </label>
-
-              <button
-                className="modal-btn"
-                onClick={() => {
-                  const text = buildAdminSheetText(data);
-                  setAdminSheetText(text);
-                  setAdminSheetError("");
-                }}
-              >
-                현재표 다시 불러오기
-              </button>
-
-              <button className="modal-btn" onClick={resetAdminRoster}>
-                관리자 변경 초기화
-              </button>
-            </div>
-
-            <textarea
-              className="input"
-              value={adminSheetText}
-              onChange={(e) => setAdminSheetText(e.target.value)}
-              style={{ minHeight: 280, fontFamily: "monospace", whiteSpace: "pre" }}
-              placeholder="여기에 엑셀/구글시트 내용을 복사해서 붙여넣으세요."
-            />
-
-            {adminSheetError && (
-              <div className="help-text" style={{ color: "#dc2626", marginTop: 8 }}>
-                {adminSheetError}
-              </div>
-            )}
-
-            <div className="modal-actions">
-              <button className="modal-btn" onClick={() => setShowAdminSheet(false)}>취소</button>
-              <button className="modal-btn primary" onClick={applyAdminSheetChanges} disabled={adminSaving}>
-                {adminSaving ? "저장중..." : "적용"}
               </button>
             </div>
           </div>
@@ -2136,10 +1868,10 @@ function App() {
           </div>
 
           <div className="viewer-body">
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+            <div className="viewer-main-title">
               {TEAM_LABELS[viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}
             </div>
-            <div style={{ color: "#6b7280", marginBottom: 16 }}>
+            <div className="viewer-date-text">
               {selectedDate} {weekdayName(selectedDate)}
             </div>
 
