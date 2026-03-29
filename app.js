@@ -17,9 +17,16 @@ const NIGHT_RANGE_BY_TEAM = {
 };
 
 const ADMIN_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbyuUPBooxDqRp2jHzjljRKNUFz3MeZTwLX-9WCGd2tQu44oBffXS3BYyxjBER5Gj5-N3g/exec";
+  "https://script.google.com/macros/s/AKfycbxdEOtps60qtHeyXtC7O_n9XmzgagOTLqkp0BDcQX7U9upbCQAojeXUD3N61_mO9phRgQ/exec";
 
-const REMOTE_BASE_DATE = "2026-03-28";
+const ADMIN_NAME = "권재림";
+const ADMIN_PASSWORD = "7717tutu";
+
+let REMOTE_BASE_DATE = "2026-03-28";
+
+function setGlobalBaseDate(value) {
+  REMOTE_BASE_DATE = value || "2026-03-28";
+}
 
 const COLOR_OPTIONS = [
   { value: "", label: "기본" },
@@ -757,7 +764,7 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
   return next;
 }
 
-function fetchRemoteRosterJsonp() {
+function fetchJsonp(params = {}) {
   return new Promise((resolve, reject) => {
     const callbackName = `gyobeonJsonp_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     const script = document.createElement("script");
@@ -771,8 +778,8 @@ function fetchRemoteRosterJsonp() {
 
     const timeout = setTimeout(() => {
       cleanup();
-      reject(new Error("현재배정 JSONP 로드 시간 초과"));
-    }, 10000);
+      reject(new Error("JSONP 로드 시간 초과"));
+    }, 15000);
 
     window[callbackName] = (data) => {
       clearTimeout(timeout);
@@ -783,11 +790,43 @@ function fetchRemoteRosterJsonp() {
     script.onerror = () => {
       clearTimeout(timeout);
       cleanup();
-      reject(new Error("현재배정 JSONP 로드 실패"));
+      reject(new Error("JSONP 로드 실패"));
     };
 
-    script.src = `${ADMIN_SCRIPT_URL}?callback=${callbackName}&t=${Date.now()}`;
+    const search = new URLSearchParams({
+      ...params,
+      callback: callbackName,
+      t: String(Date.now()),
+    });
+
+    script.src = `${ADMIN_SCRIPT_URL}?${search.toString()}`;
     document.body.appendChild(script);
+  });
+}
+
+function fetchRemoteRosterJsonp() {
+  return fetchJsonp({ mode: "roster" });
+}
+
+function fetchSharedConfigJsonp() {
+  return fetchJsonp({ mode: "config" });
+}
+
+function base64ToBlob(base64, mime = "application/zip") {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  return new Blob([bytes], { type: mime });
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      const base64 = result.includes(",") ? result.split(",")[1] : result;
+      resolve(base64);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
   });
 }
 
@@ -878,6 +917,14 @@ function App() {
 
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
+  const [remoteBaseDate, setRemoteBaseDate] = useState(REMOTE_BASE_DATE);
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminZipFile, setAdminZipFile] = useState(null);
+  const [savingSharedConfig, setSavingSharedConfig] = useState(false);
+  const [sharedConfigReady, setSharedConfigReady] = useState(false);
+  const [hasSharedZip, setHasSharedZip] = useState(false);
+
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
 
@@ -891,7 +938,42 @@ function App() {
   }, [activeTab]);
 
   useEffect(() => {
+    async function loadSharedConfig() {
+      try {
+        const shared = await fetchSharedConfigJsonp();
+
+        if (shared?.baseDate) {
+          setGlobalBaseDate(shared.baseDate);
+          setRemoteBaseDate(shared.baseDate);
+        }
+
+        if (shared?.zipBase64) {
+          const blob = base64ToBlob(shared.zipBase64, "application/zip");
+          const fileLike = new File([blob], "shared-config.zip", { type: "application/zip" });
+
+          setZipName("공용 ZIP");
+          setHasSharedZip(true);
+          await parseAndSetZip(fileLike, true, true, getEmptyRemoteRoster());
+        } else {
+          setHasSharedZip(false);
+        }
+      } catch (e) {
+        console.log("공용 설정 로드 실패", e);
+        setHasSharedZip(false);
+      } finally {
+        setSharedConfigReady(true);
+      }
+    }
+
+    loadSharedConfig();
+  }, []);
+
+  useEffect(() => {
     setOverrides(loadOverrides());
+  }, []);
+
+  useEffect(() => {
+    if (!sharedConfigReady || hasSharedZip) return;
 
     async function tryAutoLoad() {
       try {
@@ -906,7 +988,7 @@ function App() {
     }
 
     tryAutoLoad();
-  }, []);
+  }, [sharedConfigReady, hasSharedZip]);
 
   useEffect(() => {
     async function loadRemote() {
@@ -1067,6 +1149,7 @@ function App() {
   const currentViewTeam = effectiveData?.[viewTeam] || null;
   const currentAnchor = teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
   const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
+  const isAdminUser = currentAnchor.name === ADMIN_NAME;
 
   const myInfo = useMemo(() => {
     if (!currentTeam || !currentAnchor.name) return null;
@@ -1278,6 +1361,68 @@ function App() {
     if (!file) return;
     setZipName(file.name);
     await parseAndSetZip(file, true, false, remoteRoster);
+  }
+
+  async function saveSharedConfig() {
+    if (!isAdminUser) {
+      alert("관리자만 저장할 수 있습니다.");
+      return;
+    }
+
+    if (!isAdminMode) {
+      alert("관리자 모드에서만 저장할 수 있습니다.");
+      return;
+    }
+
+    if (adminPassword !== ADMIN_PASSWORD) {
+      alert("관리자 비밀번호가 올바르지 않습니다.");
+      return;
+    }
+
+    try {
+      setSavingSharedConfig(true);
+
+      let zipBase64 = "";
+      if (adminZipFile) {
+        zipBase64 = await fileToBase64(adminZipFile);
+      }
+
+      const payload = {
+        adminKey: adminPassword,
+        baseDate: remoteBaseDate,
+        zipBase64,
+      };
+
+      const res = await fetch(ADMIN_SCRIPT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+
+      if (!json?.ok) {
+        throw new Error(json?.error || "공용 설정 저장 실패");
+      }
+
+      setGlobalBaseDate(remoteBaseDate);
+
+      if (adminZipFile) {
+        setZipName(adminZipFile.name);
+        setHasSharedZip(true);
+        await parseAndSetZip(adminZipFile, true, true, remoteRoster);
+      }
+
+      alert("공용 설정 저장 완료");
+      setAdminZipFile(null);
+    } catch (e) {
+      console.error(e);
+      alert(`저장 실패: ${e.message || e}`);
+    } finally {
+      setSavingSharedConfig(false);
+    }
   }
 
   function applyMySelection(name, teamKey = selectedTeam) {
@@ -1891,6 +2036,99 @@ function App() {
             <div className="help-text">
               내 이름만 선택하면 앱이 자동으로 기준 교번을 찾아 오늘 교번을 보여줍니다.
             </div>
+
+            {isAdminUser && (
+              <div className="card" style={{ marginTop: 14, padding: 12 }}>
+                <div className="label" style={{ marginBottom: 10 }}>관리자 모드</div>
+
+                {!isAdminMode ? (
+                  <>
+                    <input
+                      className="input"
+                      type="password"
+                      placeholder="관리자 비밀번호"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                    />
+                    <button
+                      className="modal-btn primary"
+                      style={{ marginTop: 10 }}
+                      onClick={() => {
+                        if (!isAdminUser) {
+                          alert("관리자만 사용할 수 있습니다.");
+                          return;
+                        }
+
+                        if (!adminPassword) {
+                          alert("관리자 비밀번호를 입력해주세요.");
+                          return;
+                        }
+
+                        if (adminPassword !== ADMIN_PASSWORD) {
+                          alert("관리자 비밀번호가 올바르지 않습니다.");
+                          return;
+                        }
+
+                        setIsAdminMode(true);
+                      }}
+                    >
+                      관리자 모드 열기
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="notice-box" style={{ marginTop: 0 }}>
+                      관리자 전용: 공용 ZIP / 공용 기준일 저장
+                    </div>
+
+                    <label className="label" style={{ marginTop: 12 }}>공용 기준일</label>
+                    <input
+                      className="input"
+                      type="date"
+                      value={remoteBaseDate}
+                      onChange={(e) => {
+                        setRemoteBaseDate(e.target.value);
+                        setGlobalBaseDate(e.target.value);
+                      }}
+                    />
+
+                    <label className="label" style={{ marginTop: 12 }}>공용 ZIP 업로드 (선택)</label>
+                    <input
+                      type="file"
+                      accept=".zip"
+                      className="input"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setAdminZipFile(file);
+                      }}
+                    />
+
+                    <div className="help-text">
+                      ZIP을 선택하지 않으면 기준일만 저장합니다.
+                    </div>
+
+                    <div className="modal-actions">
+                      <button
+                        className="modal-btn"
+                        onClick={() => {
+                          setIsAdminMode(false);
+                          setAdminZipFile(null);
+                        }}
+                      >
+                        관리자 종료
+                      </button>
+                      <button
+                        className="modal-btn primary"
+                        onClick={saveSharedConfig}
+                        disabled={savingSharedConfig}
+                      >
+                        {savingSharedConfig ? "저장중..." : "공용 설정 저장"}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="modal-actions">
               <button className="modal-btn" onClick={resetOverrides}>초기화</button>
