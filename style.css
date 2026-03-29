@@ -1252,3 +1252,7 @@ button:active {
     font-size: 16px;
   }
   }
+.modal-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
