@@ -19,6 +19,9 @@ const NIGHT_RANGE_BY_TEAM = {
 const ADMIN_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxdEOtps60qtHeyXtC7O_n9XmzgagOTLqkp0BDcQX7U9upbCQAojeXUD3N61_mO9phRgQ/exec";
 
+const REMOTE_ZIP_URL =
+  "https://drive.google.com/uc?export=download&id=1Cg4PPPzqcxx9OdDGGjz7_r2grik0x4Cm";
+
 const ADMIN_NAME = "권재림";
 const ADMIN_PASSWORD = "7717tutu";
 
@@ -812,22 +815,25 @@ function fetchSharedConfigJsonp() {
   return fetchJsonp({ mode: "config" });
 }
 
-function base64ToBlob(base64, mime = "application/zip") {
-  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-  return new Blob([bytes], { type: mime });
-}
+async function fetchRemoteZipBlob() {
+  const url = `${REMOTE_ZIP_URL}&t=${Date.now()}`;
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result || "");
-      const base64 = result.includes(",") ? result.split(",")[1] : result;
-      resolve(base64);
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
+  const res = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
   });
+
+  if (!res.ok) {
+    throw new Error(`공용 ZIP 다운로드 실패 (${res.status})`);
+  }
+
+  const blob = await res.blob();
+
+  if (!blob || blob.size === 0) {
+    throw new Error("공용 ZIP 파일이 비어 있습니다.");
+  }
+
+  return blob;
 }
 
 function openZipDB() {
@@ -920,11 +926,10 @@ function App() {
   const [remoteBaseDate, setRemoteBaseDate] = useState(REMOTE_BASE_DATE);
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
-  const [adminZipFile, setAdminZipFile] = useState(null);
   const [savingSharedConfig, setSavingSharedConfig] = useState(false);
 
   const [sharedConfigReady, setSharedConfigReady] = useState(false);
-  const [hasSharedZip, setHasSharedZip] = useState(false);
+  const [remoteZipLoading, setRemoteZipLoading] = useState(false);
 
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
@@ -939,57 +944,50 @@ function App() {
   }, [activeTab]);
 
   useEffect(() => {
-    async function loadSharedConfig() {
-      try {
-        const shared = await fetchSharedConfigJsonp();
-
-        if (shared?.baseDate) {
-          setGlobalBaseDate(shared.baseDate);
-          setRemoteBaseDate(shared.baseDate);
-        }
-
-        if (shared?.zipBase64) {
-          const blob = base64ToBlob(shared.zipBase64, "application/zip");
-          const fileLike = new File([blob], "shared-config.zip", { type: "application/zip" });
-
-          setZipName("공용 ZIP");
-          setHasSharedZip(true);
-          await parseAndSetZip(fileLike, true, true, getEmptyRemoteRoster());
-        } else {
-          setHasSharedZip(false);
-        }
-      } catch (e) {
-        console.log("공용 설정 로드 실패", e);
-        setHasSharedZip(false);
-      } finally {
-        setSharedConfigReady(true);
-      }
-    }
-
-    loadSharedConfig();
-  }, []);
-
-  useEffect(() => {
     setOverrides(loadOverrides());
   }, []);
 
   useEffect(() => {
-    if (!sharedConfigReady || hasSharedZip) return;
-
-    async function tryAutoLoad() {
+    async function initSharedData() {
       try {
-        const saved = await loadZipBlob();
-        if (saved?.blob) {
-          setZipName(saved.name || "이전 ZIP");
-          await parseAndSetZip(saved.blob, false, true, getEmptyRemoteRoster());
+        setRemoteZipLoading(true);
+
+        try {
+          const shared = await fetchSharedConfigJsonp();
+
+          if (shared?.baseDate) {
+            setGlobalBaseDate(shared.baseDate);
+            setRemoteBaseDate(shared.baseDate);
+          }
+        } catch (e) {
+          console.log("공용 기준일 로드 실패", e);
         }
-      } catch (e) {
-        console.log("자동 ZIP 로드 실패", e);
+
+        try {
+          const remoteBlob = await fetchRemoteZipBlob();
+          setZipName("공용 ZIP");
+          await parseAndSetZip(remoteBlob, true, true, getEmptyRemoteRoster());
+        } catch (e) {
+          console.log("공용 ZIP 로드 실패, 로컬 ZIP으로 대체 시도", e);
+
+          try {
+            const saved = await loadZipBlob();
+            if (saved?.blob) {
+              setZipName(saved.name || "이전 ZIP");
+              await parseAndSetZip(saved.blob, false, true, getEmptyRemoteRoster());
+            }
+          } catch (localErr) {
+            console.log("로컬 ZIP 대체 로드 실패", localErr);
+          }
+        }
+      } finally {
+        setRemoteZipLoading(false);
+        setSharedConfigReady(true);
       }
     }
 
-    tryAutoLoad();
-  }, [sharedConfigReady, hasSharedZip]);
+    initSharedData();
+  }, []);
 
   useEffect(() => {
     async function loadRemote() {
@@ -1152,6 +1150,8 @@ function App() {
   const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
   const isAdminUser = currentAnchor.name === ADMIN_NAME;
 
+  const todayStr = formatDate(new Date());
+
   const myInfo = useMemo(() => {
     if (!currentTeam || !currentAnchor.name) return null;
 
@@ -1292,7 +1292,7 @@ function App() {
 
     try {
       if (saveToIdb) {
-        await saveZipBlob(fileOrBlob, fileOrBlob.name || "gyobeon-data.zip");
+        await saveZipBlob(fileOrBlob, "shared-config.zip");
       }
 
       const zip = await JSZip.loadAsync(fileOrBlob);
@@ -1355,13 +1355,6 @@ function App() {
     }
   }
 
-  async function handleZipUpload(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setZipName(file.name);
-    await parseAndSetZip(file, true, false, remoteRoster);
-  }
-
   async function saveSharedConfig() {
     if (!isAdminUser) {
       alert("관리자만 저장할 수 있습니다.");
@@ -1381,15 +1374,10 @@ function App() {
     try {
       setSavingSharedConfig(true);
 
-      let zipBase64 = "";
-      if (adminZipFile) {
-        zipBase64 = await fileToBase64(adminZipFile);
-      }
-
       const payload = {
         adminKey: adminPassword,
         baseDate: remoteBaseDate,
-        zipBase64,
+        zipBase64: "",
       };
 
       const res = await fetch(ADMIN_SCRIPT_URL, {
@@ -1403,19 +1391,11 @@ function App() {
       const json = await res.json();
 
       if (!json?.ok) {
-        throw new Error(json?.error || "공용 설정 저장 실패");
+        throw new Error(json?.error || "공용 기준일 저장 실패");
       }
 
       setGlobalBaseDate(remoteBaseDate);
-
-      if (adminZipFile) {
-        setZipName(adminZipFile.name);
-        setHasSharedZip(true);
-        await parseAndSetZip(adminZipFile, true, true, remoteRoster);
-      }
-
-      alert("공용 설정 저장 완료");
-      setAdminZipFile(null);
+      alert("공용 기준일 저장 완료");
     } catch (e) {
       console.error(e);
       alert(`저장 실패: ${e.message || e}`);
@@ -1596,22 +1576,18 @@ function App() {
   return (
     <>
       <div className="container">
-        {!sharedConfigReady ? (
+        {!sharedConfigReady || remoteZipLoading ? (
           <div className="card">
             <div className="card-title">앱 준비중</div>
             <div className="help-text" style={{ color: "#2563eb" }}>
-              공용 자료를 확인하는 중입니다...
+              공용 기준일과 공용 ZIP을 불러오는 중입니다...
             </div>
           </div>
         ) : !effectiveData ? (
           <div className="card">
             <div className="card-title">데이터 불러오기</div>
-            <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
-            <div className="help-text">
-              ZIP 파일을 한 번 선택하면 근무시간표, 행로표 이미지 같은 기본 자료를 저장합니다.
-            </div>
             <div className="notice-box">
-              사용자는 이름만 선택하면 되고, 앱이 자동으로 오늘 교번을 계산해 보여줍니다.
+              공용 ZIP을 자동으로 불러오지 못했습니다. 관리자에게 문의해주세요.
             </div>
             {loading && <div className="help-text" style={{ color: "#2563eb" }}>불러오는 중...</div>}
             {zipName && <div className="help-text">현재 파일: {zipName}</div>}
@@ -1684,7 +1660,10 @@ function App() {
 
                 <div className="card main-panel">
                   <div className="center-view">
-                    <div className="main-code" style={{ color: getDateBasedColor(selectedDate) }}>
+                    <div
+                      className={`main-code ${isSameDateStr(selectedDate, todayStr) ? "today-blink" : ""}`}
+                      style={{ color: getDateBasedColor(selectedDate) }}
+                    >
                       {myInfo?.code || "-"} {weekdayName(selectedDate)}
                     </div>
 
@@ -1760,7 +1739,7 @@ function App() {
                         viewTeam === selectedTeam &&
                         item.name === currentAnchor.name;
 
-                      const isTodaySelected = isSameDateStr(selectedDate, formatDate(new Date()));
+                      const isTodaySelected = isSameDateStr(selectedDate, todayStr);
 
                       return (
                         <div
@@ -2000,8 +1979,9 @@ function App() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">설정</div>
 
-            <label className="label">기본자료 ZIP 다시 불러오기</label>
-            <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
+            <div className="notice-box" style={{ marginBottom: 12 }}>
+              기본자료는 공용 서버에서 자동으로 불러옵니다.
+            </div>
 
             <label className="label" style={{ marginTop: 12 }}>내 소속</label>
             <select
@@ -2084,7 +2064,7 @@ function App() {
                 ) : (
                   <>
                     <div className="notice-box" style={{ marginTop: 0 }}>
-                      관리자 전용: 공용 ZIP / 공용 기준일 저장
+                      관리자 전용: 공용 기준일 저장
                     </div>
 
                     <label className="label" style={{ marginTop: 12 }}>공용 기준일</label>
@@ -2098,19 +2078,13 @@ function App() {
                       }}
                     />
 
-                    <label className="label" style={{ marginTop: 12 }}>공용 ZIP 업로드 (선택)</label>
-                    <input
-                      type="file"
-                      accept=".zip"
-                      className="input"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        setAdminZipFile(file);
-                      }}
-                    />
+                    <div className="help-text" style={{ marginTop: 10 }}>
+                      공용 ZIP은 구글드라이브 고정 링크에서 자동으로 불러옵니다.
+                    </div>
 
-                    <div className="help-text">
-                      ZIP을 선택하지 않으면 기준일만 저장합니다.
+                    <div className="notice-box" style={{ marginTop: 10 }}>
+                      ZIP 변경 시에는 앱에서 업로드하지 않고, 구글드라이브에서 기존 파일에
+                      “버전 업로드”만 하면 됩니다.
                     </div>
 
                     <div className="modal-actions">
@@ -2118,7 +2092,6 @@ function App() {
                         className="modal-btn"
                         onClick={() => {
                           setIsAdminMode(false);
-                          setAdminZipFile(null);
                         }}
                       >
                         관리자 종료
@@ -2128,7 +2101,7 @@ function App() {
                         onClick={saveSharedConfig}
                         disabled={savingSharedConfig}
                       >
-                        {savingSharedConfig ? "저장중..." : "공용 설정 저장"}
+                        {savingSharedConfig ? "저장중..." : "공용 기준일 저장"}
                       </button>
                     </div>
                   </>
