@@ -814,7 +814,7 @@ function fetchSharedConfigJsonp() {
 }
 
 async function fetchRemoteZipBlob() {
-  const url = `${REMOTE_ZIP_URL}&t=${Date.now()}`;
+  const url = `${REMOTE_ZIP_URL}?t=${Date.now()}`;
 
   const res = await fetch(url, {
     method: "GET",
@@ -834,7 +834,7 @@ async function fetchRemoteZipBlob() {
   }
 
   if (contentType.includes("text/html")) {
-    throw new Error("구글드라이브가 ZIP 대신 HTML 페이지를 반환했습니다.");
+    throw new Error("ZIP 대신 HTML 페이지를 반환했습니다.");
   }
 
   return blob;
