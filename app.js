@@ -1176,7 +1176,6 @@ function App() {
 
   useEffect(() => {
     if (!weekDates.length) return;
-
     if (!selectedGroupDate || !weekDates.includes(selectedGroupDate)) {
       setSelectedGroupDate(weekDates[0]);
     }
@@ -1743,13 +1742,33 @@ function App() {
                           return (
                             <th
                               key={date}
-                              className={`group-date-head ${isSelectedCol ? "selected-col" : ""}`}
                               onClick={() => setSelectedGroupDate(date)}
+                              style={{
+                                cursor: "pointer",
+                                background: isSelectedCol ? "#ede9fe" : "",
+                                boxShadow: isSelectedCol ? "inset 0 -3px 0 #7c3aed" : "",
+                                transition: "background-color 0.18s ease, box-shadow 0.18s ease",
+                              }}
                             >
-                              <div className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>
+                              <div
+                                className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${
+                                  isSaturday(date) ? "sat" : ""
+                                }`}
+                                style={{
+                                  color: isSelectedCol ? "#6d28d9" : undefined,
+                                  fontWeight: isSelectedCol ? 800 : undefined,
+                                }}
+                              >
                                 {weekdayShort(date)}
                               </div>
-                              <div>{parseLocalDate(date).getDate()}</div>
+                              <div
+                                style={{
+                                  color: isSelectedCol ? "#4c1d95" : undefined,
+                                  fontWeight: isSelectedCol ? 800 : undefined,
+                                }}
+                              >
+                                {parseLocalDate(date).getDate()}
+                              </div>
                             </th>
                           );
                         })}
@@ -1788,8 +1807,14 @@ function App() {
                               return (
                                 <td
                                   key={date}
-                                  className={`group-date-cell ${isSelectedCol ? "selected-col" : ""}`}
                                   onClick={() => setSelectedGroupDate(date)}
+                                  style={{
+                                    cursor: "pointer",
+                                    background: isSelectedCol
+                                      ? "linear-gradient(180deg, #f5f3ff 0%, #ede9fe 100%)"
+                                      : "",
+                                    transition: "background-color 0.18s ease, box-shadow 0.18s ease",
+                                  }}
                                 >
                                   {item?.code || "-"}
                                 </td>
