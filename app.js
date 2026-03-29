@@ -531,18 +531,66 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
 }
 
 function buildTeamAnchorForDate(team) {
-  const baseName = team.info?.baseName || team.people?.[0]?.name || "";
-  const baseCode = team.info?.baseCode || getGyobunOrder(team)[0] || "";
-  const baseDate = team.info?.baseDate || REMOTE_BASE_DATE;
+  const people = Array.isArray(team?.people) ? team.people : [];
+  const fixedCodes = getGyobunOrder(team);
+  const baseDate = REMOTE_BASE_DATE;
+
+  if (!people.length) {
+    return {
+      name: team?.info?.baseName || "",
+      code: team?.info?.baseCode || fixedCodes[0] || "",
+      anchorDate: baseDate,
+    };
+  }
+
+  const matchedPerson = people.find((p) => p.name === team?.info?.baseName);
+
+  if (matchedPerson) {
+    return {
+      name: matchedPerson.name,
+      code: matchedPerson.baseCode || team?.info?.baseCode || fixedCodes[0] || "",
+      anchorDate: baseDate,
+    };
+  }
+
+  const firstPerson = people[0];
 
   return {
-    name: baseName,
-    code: baseCode,
+    name: firstPerson?.name || "",
+    code: firstPerson?.baseCode || team?.info?.baseCode || fixedCodes[0] || "",
     anchorDate: baseDate,
   };
 }
 
-function buildAllTeamsAutoAnchors(data, selectedTeamKey, selectedName, selectedCode, selectedAnchorDate) {
+function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
+  const rows = remoteRoster?.[teamKey] || [];
+  const gyobunOrder = getGyobunOrder(team);
+
+  for (const code of gyobunOrder) {
+    const found = rows.find(
+      (row) => normalizeCodeKey(row.code) === normalizeCodeKey(code)
+    );
+
+    if (found?.name) {
+      return {
+        name: found.name,
+        code,
+        anchorDate: REMOTE_BASE_DATE,
+      };
+    }
+  }
+
+  return buildTeamAnchorForDate(team);
+}
+
+function buildAllTeamsAutoAnchors(
+  data,
+  remoteRoster,
+  selectedTeamKey,
+  selectedName,
+  selectedCode,
+  selectedAnchorDate
+) {
   const result = {};
 
   TEAM_ORDER.forEach((teamKey) => {
@@ -558,7 +606,7 @@ function buildAllTeamsAutoAnchors(data, selectedTeamKey, selectedName, selectedC
       return;
     }
 
-    result[teamKey] = buildTeamAnchorForDate(team);
+    result[teamKey] = buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
   });
 
   return result;
@@ -993,6 +1041,7 @@ function App() {
 
       const autoAnchors = buildAllTeamsAutoAnchors(
         effectiveData,
+        remoteRoster,
         fixedSelection.teamKey,
         fixedSelection.name,
         fixedSelection.code,
@@ -1007,10 +1056,11 @@ function App() {
 
     const nextAnchors = {};
     TEAM_ORDER.forEach((teamKey) => {
-      nextAnchors[teamKey] = buildTeamAnchorForDate(effectiveData[teamKey]);
+      const team = effectiveData[teamKey];
+      nextAnchors[teamKey] = buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
     });
     setTeamAnchors(nextAnchors);
-  }, [effectiveData]);
+  }, [effectiveData, remoteRoster]);
 
   const currentTeam = effectiveData?.[selectedTeam] || null;
   const currentViewTeam = effectiveData?.[viewTeam] || null;
@@ -1197,6 +1247,7 @@ function App() {
 
         const autoAnchors = buildAllTeamsAutoAnchors(
           nextEffectiveData,
+          rosterForApply || getEmptyRemoteRoster(),
           defaultTeam,
           defaultName,
           defaultCode,
@@ -1239,6 +1290,7 @@ function App() {
 
     const autoAnchors = buildAllTeamsAutoAnchors(
       effectiveData,
+      remoteRoster,
       selection.teamKey,
       selection.name,
       selection.code,
@@ -1597,6 +1649,7 @@ function App() {
                         const item = currentAnchor.name
                           ? getPersonGyobunForDate(
                               effectiveData,
+                              remoteRoster,
                               selectedTeam,
                               currentAnchor.name,
                               date,
@@ -1706,6 +1759,7 @@ function App() {
                             {weekDates.map((date) => {
                               const item = getPersonGyobunForDate(
                                 effectiveData,
+                                remoteRoster,
                                 member.team,
                                 member.name,
                                 date,
@@ -1920,7 +1974,14 @@ function App() {
   );
 }
 
-function getPersonGyobunForDate(data, teamKey, name, dateStr, overrides = {}) {
+function getPersonGyobunForDate(
+  data,
+  remoteRoster,
+  teamKey,
+  name,
+  dateStr,
+  overrides = {}
+) {
   const team = data?.[teamKey];
   if (!team) return null;
 
@@ -1932,7 +1993,7 @@ function getPersonGyobunForDate(data, teamKey, name, dateStr, overrides = {}) {
           code: saved.code,
           anchorDate: saved.anchorDate,
         }
-      : buildTeamAnchorForDate(team);
+      : buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
 
   const offset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE, dateStr);
   const grid = buildAssignedGrid(team, anchor.name, anchor.code, offset, overrides);
