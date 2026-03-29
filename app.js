@@ -922,6 +922,7 @@ function App() {
   const [adminPassword, setAdminPassword] = useState("");
   const [adminZipFile, setAdminZipFile] = useState(null);
   const [savingSharedConfig, setSavingSharedConfig] = useState(false);
+
   const [sharedConfigReady, setSharedConfigReady] = useState(false);
   const [hasSharedZip, setHasSharedZip] = useState(false);
 
@@ -1346,8 +1347,6 @@ function App() {
         );
         setTeamAnchors(autoAnchors);
       }
-
-      setShowSettings(false);
     } catch (e) {
       console.error(e);
       setError("ZIP 파일을 읽는 중 오류가 발생했습니다.");
@@ -1597,7 +1596,14 @@ function App() {
   return (
     <>
       <div className="container">
-        {!effectiveData ? (
+        {!sharedConfigReady ? (
+          <div className="card">
+            <div className="card-title">앱 준비중</div>
+            <div className="help-text" style={{ color: "#2563eb" }}>
+              공용 자료를 확인하는 중입니다...
+            </div>
+          </div>
+        ) : !effectiveData ? (
           <div className="card">
             <div className="card-title">데이터 불러오기</div>
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
