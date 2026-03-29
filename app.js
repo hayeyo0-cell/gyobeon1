@@ -870,6 +870,7 @@ function App() {
   const [groups, setGroups] = useState(initialGroups);
   const [currentGroup, setCurrentGroup] = useState(Object.keys(initialGroups)[0] || "");
   const [groupBaseDate, setGroupBaseDate] = useState(selectedDate);
+  const [selectedGroupDate, setSelectedGroupDate] = useState("");
   const [showGroupAdd, setShowGroupAdd] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [groupAddTeam, setGroupAddTeam] = useState("ks");
@@ -1172,6 +1173,14 @@ function App() {
   const monthHeaderDate = parseLocalDate(selectedDate);
   const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
   const groupMembers = groups[currentGroup] || [];
+
+  useEffect(() => {
+    if (!weekDates.length) return;
+
+    if (!selectedGroupDate || !weekDates.includes(selectedGroupDate)) {
+      setSelectedGroupDate(weekDates[0]);
+    }
+  }, [weekDates, selectedGroupDate]);
 
   function switchTab(tabName) {
     if (tabName === activeTabRef.current) return;
@@ -1728,14 +1737,22 @@ function App() {
                     <thead>
                       <tr>
                         <th>이름</th>
-                        {weekDates.map((date) => (
-                          <th key={date}>
-                            <div className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>
-                              {weekdayShort(date)}
-                            </div>
-                            <div>{parseLocalDate(date).getDate()}</div>
-                          </th>
-                        ))}
+                        {weekDates.map((date) => {
+                          const isSelectedCol = selectedGroupDate === date;
+
+                          return (
+                            <th
+                              key={date}
+                              className={`group-date-head ${isSelectedCol ? "selected-col" : ""}`}
+                              onClick={() => setSelectedGroupDate(date)}
+                            >
+                              <div className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>
+                                {weekdayShort(date)}
+                              </div>
+                              <div>{parseLocalDate(date).getDate()}</div>
+                            </th>
+                          );
+                        })}
                       </tr>
                     </thead>
                     <tbody>
@@ -1765,7 +1782,18 @@ function App() {
                                 date,
                                 overrides
                               );
-                              return <td key={date}>{item?.code || "-"}</td>;
+
+                              const isSelectedCol = selectedGroupDate === date;
+
+                              return (
+                                <td
+                                  key={date}
+                                  className={`group-date-cell ${isSelectedCol ? "selected-col" : ""}`}
+                                  onClick={() => setSelectedGroupDate(date)}
+                                >
+                                  {item?.code || "-"}
+                                </td>
+                              );
                             })}
                           </tr>
                         ))
