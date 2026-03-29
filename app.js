@@ -821,16 +821,22 @@ async function fetchRemoteZipBlob() {
   const res = await fetch(url, {
     method: "GET",
     cache: "no-store",
+    redirect: "follow",
   });
 
   if (!res.ok) {
     throw new Error(`공용 ZIP 다운로드 실패 (${res.status})`);
   }
 
+  const contentType = res.headers.get("content-type") || "";
   const blob = await res.blob();
 
   if (!blob || blob.size === 0) {
     throw new Error("공용 ZIP 파일이 비어 있습니다.");
+  }
+
+  if (contentType.includes("text/html")) {
+    throw new Error("구글드라이브가 ZIP 대신 HTML 페이지를 반환했습니다.");
   }
 
   return blob;
