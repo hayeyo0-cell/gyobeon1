@@ -592,10 +592,14 @@ button:active {
 .cell-my {
   border: 2px solid #22c7d8 !important;
   background: linear-gradient(180deg, #ffffff 0%, #ecfeff 100%) !important;
+  transform: translateY(-4px) scale(1.03);
   box-shadow:
-    0 0 0 2px rgba(34,199,216,0.16),
-    0 6px 14px rgba(34,199,216,0.12),
+    0 10px 20px rgba(34, 199, 216, 0.25),
+    0 4px 8px rgba(34, 199, 216, 0.18),
     inset 0 1px 0 rgba(255,255,255,0.95);
+  z-index: 2;
+  position: relative;
+  transition: all 0.2s ease;
 }
 
 .all-grid-real.density-6 .all-code {
@@ -967,6 +971,34 @@ button:active {
   text-align: center;
 }
 
+.group-head-box {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cell-my-today {
+  animation: myTodayPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes myTodayPulse {
+  0%, 100% {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow:
+      0 10px 20px rgba(34, 199, 216, 0.25),
+      0 4px 8px rgba(34, 199, 216, 0.18),
+      inset 0 1px 0 rgba(255,255,255,0.95);
+  }
+
+  50% {
+    transform: translateY(-6px) scale(1.055);
+    box-shadow:
+      0 14px 28px rgba(34, 199, 216, 0.34),
+      0 6px 14px rgba(34, 199, 216, 0.24),
+      0 0 0 4px rgba(34, 199, 216, 0.14),
+      inset 0 1px 0 rgba(255,255,255,0.98);
+  }
+}
+
 @media (max-width: 420px) {
   .container {
     height: 100dvh;
@@ -1223,4 +1255,4 @@ button:active {
   .modal-sub {
     font-size: 16px;
   }
-}
+                              }
