@@ -19,9 +19,7 @@ const NIGHT_RANGE_BY_TEAM = {
 const ADMIN_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxdEOtps60qtHeyXtC7O_n9XmzgagOTLqkp0BDcQX7U9upbCQAojeXUD3N61_mO9phRgQ/exec";
 
-const REMOTE_ZIP_URL =
-  "https://drive.google.com/uc?export=download&id=1Cg4PPPzqcxx9OdDGGjz7_r2grik0x4Cm";
-
+const REMOTE_ZIP_URL = "./gyobeon-data.zip";
 const ADMIN_NAME = "권재림";
 const ADMIN_PASSWORD = "7717tutu";
 
