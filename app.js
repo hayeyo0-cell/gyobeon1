@@ -1609,10 +1609,12 @@ function App() {
                         viewTeam === selectedTeam &&
                         item.name === currentAnchor.name;
 
+                      const isTodaySelected = isSameDateStr(selectedDate, formatDate(new Date()));
+
                       return (
                         <div
                           key={`${item.idx}-${item.displayName}`}
-                          className={`all-cell-real ${isMine ? "cell-my" : ""}`}
+                          className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isTodaySelected ? "cell-my-today" : ""}`}
                           style={
                             item.customColor
                               ? { background: item.customColor, backgroundImage: "none" }
@@ -1735,45 +1737,49 @@ function App() {
                   <table className="group-table">
                     <thead>
                       <tr>
-                        <th>이름</th>
+                        <th>
+                          <div className="group-head-box">이름</div>
+                        </th>
                         {weekDates.map((date) => {
                           const isSelectedCol = selectedGroupDate === date;
 
                           return (
-                            <th
-                              key={date}
-                              onClick={() => setSelectedGroupDate(date)}
-                              style={{
-                                cursor: "pointer",
-                                background: isSelectedCol ? "#ede9fe" : "",
-                                boxShadow: isSelectedCol ? "inset 0 -3px 0 #7c3aed" : "",
-                                transition: "background-color 0.18s ease, box-shadow 0.18s ease",
-                              }}
-                            >
+                            <th key={date} onClick={() => setSelectedGroupDate(date)}>
                               <div
-                                className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${
-                                  isSaturday(date) ? "sat" : ""
-                                }`}
+                                className="group-head-box"
                                 style={{
-                                  color: isSelectedCol ? "#6d28d9" : undefined,
-                                  fontWeight: isSelectedCol ? 800 : undefined,
+                                  cursor: "pointer",
+                                  background: isSelectedCol ? "#ede9fe" : "#ffffff",
+                                  borderRadius: "12px",
+                                  boxShadow: isSelectedCol ? "inset 0 -3px 0 #7c3aed" : "none",
+                                  transition: "all 0.18s ease",
+                                  padding: "8px 4px",
                                 }}
                               >
-                                {weekdayShort(date)}
-                              </div>
-                              <div
-                                style={{
-                                  color: isSelectedCol ? "#4c1d95" : undefined,
-                                  fontWeight: isSelectedCol ? 800 : undefined,
-                                }}
-                              >
-                                {parseLocalDate(date).getDate()}
+                                <div
+                                  className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}
+                                  style={{
+                                    color: isSelectedCol ? "#6d28d9" : undefined,
+                                    fontWeight: isSelectedCol ? 800 : undefined,
+                                  }}
+                                >
+                                  {weekdayShort(date)}
+                                </div>
+                                <div
+                                  style={{
+                                    color: isSelectedCol ? "#4c1d95" : undefined,
+                                    fontWeight: isSelectedCol ? 800 : undefined,
+                                  }}
+                                >
+                                  {parseLocalDate(date).getDate()}
+                                </div>
                               </div>
                             </th>
                           );
                         })}
                       </tr>
                     </thead>
+
                     <tbody>
                       {groupMembers.length === 0 ? (
                         <tr>
@@ -1792,6 +1798,7 @@ function App() {
                                 삭제
                               </button>
                             </td>
+
                             {weekDates.map((date) => {
                               const item = getPersonGyobunForDate(
                                 effectiveData,
@@ -1805,18 +1812,28 @@ function App() {
                               const isSelectedCol = selectedGroupDate === date;
 
                               return (
-                                <td
-                                  key={date}
-                                  onClick={() => setSelectedGroupDate(date)}
-                                  style={{
-                                    cursor: "pointer",
-                                    background: isSelectedCol
-                                      ? "linear-gradient(180deg, #f5f3ff 0%, #ede9fe 100%)"
-                                      : "",
-                                    transition: "background-color 0.18s ease, box-shadow 0.18s ease",
-                                  }}
-                                >
-                                  {item?.code || "-"}
+                                <td key={date} onClick={() => setSelectedGroupDate(date)}>
+                                  <div
+                                    style={{
+                                      minHeight: "72px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      borderRadius: "12px",
+                                      cursor: "pointer",
+                                      background: isSelectedCol
+                                        ? "linear-gradient(180deg, #f5f3ff 0%, #ede9fe 100%)"
+                                        : "#ffffff",
+                                      boxShadow: isSelectedCol
+                                        ? "inset 0 0 0 2px rgba(124, 58, 237, 0.18)"
+                                        : "none",
+                                      fontWeight: isSelectedCol ? 800 : 500,
+                                      color: isSelectedCol ? "#4c1d95" : "#111827",
+                                      transition: "all 0.18s ease",
+                                    }}
+                                  >
+                                    {item?.code || "-"}
+                                  </div>
                                 </td>
                               );
                             })}
@@ -1825,6 +1842,21 @@ function App() {
                       )}
                     </tbody>
                   </table>
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 10,
+                    textAlign: "center",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: "#6d28d9",
+                  }}
+                >
+                  선택 날짜:{" "}
+                  {selectedGroupDate
+                    ? `${weekdayShort(selectedGroupDate)} ${parseLocalDate(selectedGroupDate).getDate()}`
+                    : "-"}
                 </div>
               </div>
             )}
