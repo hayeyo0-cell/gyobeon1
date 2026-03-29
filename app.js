@@ -21,7 +21,7 @@ const ADMIN_SCRIPT_URL =
 
 const REMOTE_ZIP_URL = "./gyobeon-data.zip";
 const ADMIN_NAME = "권재림";
-const ADMIN_PASSWORD = "7717tutu";
+const ADMIN_PASSWORD = "본인만아는값";
 
 let REMOTE_BASE_DATE = "2026-03-28";
 
