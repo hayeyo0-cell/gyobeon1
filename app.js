@@ -1737,43 +1737,29 @@ function App() {
                   <table className="group-table">
                     <thead>
                       <tr>
-                        <th>
-                          <div className="group-head-box">이름</div>
-                        </th>
+                        <th>이름</th>
                         {weekDates.map((date) => {
                           const isSelectedCol = selectedGroupDate === date;
 
                           return (
-                            <th key={date} onClick={() => setSelectedGroupDate(date)}>
+                            <th
+                              key={date}
+                              onClick={() => setSelectedGroupDate(date)}
+                              style={{
+                                cursor: "pointer",
+                                background: isSelectedCol ? "#ede9fe" : "",
+                                borderBottom: isSelectedCol ? "3px solid #7c3aed" : "",
+                                transition: "all 0.18s ease",
+                              }}
+                            >
                               <div
-                                className="group-head-box"
-                                style={{
-                                  cursor: "pointer",
-                                  background: isSelectedCol ? "#ede9fe" : "#ffffff",
-                                  borderRadius: "12px",
-                                  boxShadow: isSelectedCol ? "inset 0 -3px 0 #7c3aed" : "none",
-                                  transition: "all 0.18s ease",
-                                  padding: "8px 4px",
-                                }}
+                                className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${
+                                  isSaturday(date) ? "sat" : ""
+                                }`}
                               >
-                                <div
-                                  className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}
-                                  style={{
-                                    color: isSelectedCol ? "#6d28d9" : undefined,
-                                    fontWeight: isSelectedCol ? 800 : undefined,
-                                  }}
-                                >
-                                  {weekdayShort(date)}
-                                </div>
-                                <div
-                                  style={{
-                                    color: isSelectedCol ? "#4c1d95" : undefined,
-                                    fontWeight: isSelectedCol ? 800 : undefined,
-                                  }}
-                                >
-                                  {parseLocalDate(date).getDate()}
-                                </div>
+                                {weekdayShort(date)}
                               </div>
+                              <div>{parseLocalDate(date).getDate()}</div>
                             </th>
                           );
                         })}
@@ -1812,28 +1798,18 @@ function App() {
                               const isSelectedCol = selectedGroupDate === date;
 
                               return (
-                                <td key={date} onClick={() => setSelectedGroupDate(date)}>
-                                  <div
-                                    style={{
-                                      minHeight: "72px",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      borderRadius: "12px",
-                                      cursor: "pointer",
-                                      background: isSelectedCol
-                                        ? "linear-gradient(180deg, #f5f3ff 0%, #ede9fe 100%)"
-                                        : "#ffffff",
-                                      boxShadow: isSelectedCol
-                                        ? "inset 0 0 0 2px rgba(124, 58, 237, 0.18)"
-                                        : "none",
-                                      fontWeight: isSelectedCol ? 800 : 500,
-                                      color: isSelectedCol ? "#4c1d95" : "#111827",
-                                      transition: "all 0.18s ease",
-                                    }}
-                                  >
-                                    {item?.code || "-"}
-                                  </div>
+                                <td
+                                  key={date}
+                                  onClick={() => setSelectedGroupDate(date)}
+                                  style={{
+                                    cursor: "pointer",
+                                    background: isSelectedCol ? "#f5f3ff" : "",
+                                    fontWeight: isSelectedCol ? 700 : 500,
+                                    color: isSelectedCol ? "#4c1d95" : "#111827",
+                                    transition: "all 0.18s ease",
+                                  }}
+                                >
+                                  {item?.code || "-"}
                                 </td>
                               );
                             })}
@@ -1842,21 +1818,6 @@ function App() {
                       )}
                     </tbody>
                   </table>
-                </div>
-
-                <div
-                  style={{
-                    marginTop: 10,
-                    textAlign: "center",
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: "#6d28d9",
-                  }}
-                >
-                  선택 날짜:{" "}
-                  {selectedGroupDate
-                    ? `${weekdayShort(selectedGroupDate)} ${parseLocalDate(selectedGroupDate).getDate()}`
-                    : "-"}
                 </div>
               </div>
             )}
