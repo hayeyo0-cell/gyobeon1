@@ -1302,3 +1302,66 @@ button:active {
 .bottom-tab {
   box-sizing: border-box;
 }
+/* 하단 고정탭 5개 강제 정렬 */
+.bottom-tabs.tabs-5 {
+  display: flex !important;
+  width: 100%;
+}
+
+.bottom-tabs.tabs-5 .bottom-tab {
+  flex: 1 1 20% !important;
+  width: 20% !important;
+  min-width: 0;
+  font-size: 12px;
+  padding: 0 2px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* 혹시 기존 스타일 충돌 방지 */
+.bottom-tabs {
+  overflow: hidden;
+}
+
+.bottom-tab {
+  box-sizing: border-box;
+  word-break: keep-all;
+}
+
+/* 홈 메인 글씨 크기 줄이기 */
+.main-code {
+  font-size: clamp(40px, 9vw, 56px);
+  line-height: 1.1;
+}
+
+.main-time {
+  font-size: clamp(24px, 6vw, 36px);
+  line-height: 1.15;
+}
+
+.main-subinfo {
+  font-size: 15px;
+}
+
+/* 설정창 버튼/글씨 넘침 방지 */
+.modal-btn {
+  font-size: 15px;
+  line-height: 1.2;
+  word-break: keep-all;
+}
+
+.help-text {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* 전체 화면 칸 글씨 살짝 줄이기 */
+.all-code {
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.all-name {
+  font-size: 13px;
+  line-height: 1.2;
+}
