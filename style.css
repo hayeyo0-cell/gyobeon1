@@ -1270,3 +1270,11 @@ button:active {
     font-size: 16px;
   }
                               }
+.bottom-tabs.tabs-5 .bottom-tab {
+  width: 20%;
+}
+
+.bottom-tab {
+  white-space: nowrap;
+  font-size: 13px;
+}
