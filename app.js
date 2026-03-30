@@ -460,14 +460,23 @@ function saveOverrides(value) {
 
 function loadMySelection() {
   try {
-    return JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null");
+    const raw = JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null");
+    if (!raw) return null;
+    return {
+      teamKey: raw.teamKey || "ks",
+      name: raw.name || "",
+    };
   } catch {
     return null;
   }
 }
 
 function saveMySelection(value) {
-  localStorage.setItem("gyobeon_my_selection", JSON.stringify(value));
+  const next = {
+    teamKey: value?.teamKey || "ks",
+    name: value?.name || "",
+  };
+  localStorage.setItem("gyobeon_my_selection", JSON.stringify(next));
 }
 
 function loadGroups() {
@@ -567,7 +576,9 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
   const fixedCodes = getGyobunOrder(team);
 
   const anchorPersonIndex = people.findIndex((p) => p.name === anchorName);
-  const anchorCodeIndex = fixedCodes.indexOf(anchorCode);
+  const anchorCodeIndex = fixedCodes.findIndex(
+    (code) => normalizeCodeKey(code) === normalizeCodeKey(anchorCode)
+  );
 
   if (anchorPersonIndex < 0 || anchorCodeIndex < 0) {
     return fixedCodes
@@ -637,6 +648,61 @@ function buildTeamAnchorForDate(team) {
   };
 }
 
+function findRemoteRowByName(teamKey, name, remoteRoster) {
+  const rows = remoteRoster?.[teamKey] || [];
+  return (
+    rows.find(
+      (row) =>
+        String(row.name || "").trim().replace(/\s/g, "") ===
+        String(name || "").trim().replace(/\s/g, "")
+    ) || null
+  );
+}
+
+function findZipPersonByName(team, name) {
+  if (!team?.people?.length) return null;
+  return team.people.find(
+    (p) =>
+      String(p.name || "").trim().replace(/\s/g, "") ===
+      String(name || "").trim().replace(/\s/g, "")
+  ) || null;
+}
+
+function normalizeToFixedCode(team, code) {
+  const fixedCodes = getGyobunOrder(team);
+  return (
+    fixedCodes.find((item) => normalizeCodeKey(item) === normalizeCodeKey(code)) ||
+    code ||
+    ""
+  );
+}
+
+function buildAnchorForIdentity(teamKey, team, remoteRoster, name) {
+  if (!team || !name) {
+    return buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
+  }
+
+  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
+  if (remoteRow?.code) {
+    return {
+      name,
+      code: normalizeToFixedCode(team, remoteRow.code),
+      anchorDate: REMOTE_BASE_DATE,
+    };
+  }
+
+  const zipPerson = findZipPersonByName(team, name);
+  if (zipPerson?.baseCode) {
+    return {
+      name,
+      code: zipPerson.baseCode,
+      anchorDate: REMOTE_BASE_DATE,
+    };
+  }
+
+  return buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
+}
+
 function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
   const rows = remoteRoster?.[teamKey] || [];
   const gyobunOrder = getGyobunOrder(team);
@@ -658,13 +724,11 @@ function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
   return buildTeamAnchorForDate(team);
 }
 
-function buildAllTeamsAutoAnchors(
+function buildAllTeamsAutoAnchorsFromIdentity(
   data,
   remoteRoster,
   selectedTeamKey,
-  selectedName,
-  selectedCode,
-  selectedAnchorDate
+  selectedName
 ) {
   const result = {};
 
@@ -672,12 +736,13 @@ function buildAllTeamsAutoAnchors(
     const team = data?.[teamKey];
     if (!team) return;
 
-    if (teamKey === selectedTeamKey) {
-      result[teamKey] = {
-        name: selectedName,
-        code: selectedCode,
-        anchorDate: selectedAnchorDate,
-      };
+    if (teamKey === selectedTeamKey && selectedName) {
+      result[teamKey] = buildAnchorForIdentity(
+        teamKey,
+        team,
+        remoteRoster,
+        selectedName
+      );
       return;
     }
 
@@ -1008,7 +1073,6 @@ function App() {
           console.log("ZIP 메타 로드 실패", e);
         }
 
-        // parsedData가 없을 때만 fallback으로 ZIP 재파싱
         try {
           const parsedSaved = await loadParsedData();
           if (!cancelled && !parsedSaved?.data) {
@@ -1031,7 +1095,6 @@ function App() {
         console.log("초기 로컬 복원 실패", e);
       }
 
-      // 뒤에서 조용히 공용 기준일 동기화
       try {
         const shared = await fetchSharedConfigJsonp(4000);
         if (cancelled) return;
@@ -1045,7 +1108,6 @@ function App() {
         console.log("공용 기준일 백그라운드 로드 실패", e);
       }
 
-      // 뒤에서 조용히 현재배정 동기화
       try {
         setRemoteLoading(true);
         const json = await fetchRemoteRosterJsonp(6000);
@@ -1136,38 +1198,12 @@ function App() {
   }, [selectedDate]);
 
   function findRemoteCodeByName(teamKey, name) {
-    const rows = remoteRoster?.[teamKey] || [];
-    const found = rows.find(
-      (row) =>
-        String(row.name || "").trim().replace(/\s/g, "") ===
-        String(name || "").trim().replace(/\s/g, "")
-    );
+    const found = findRemoteRowByName(teamKey, name, remoteRoster);
     return found?.code || "";
   }
 
   function findRemoteAssignment(teamKey, name) {
-    const rows = remoteRoster?.[teamKey] || [];
-    return rows.find(
-      (row) =>
-        String(row.name || "").trim().replace(/\s/g, "") ===
-        String(name || "").trim().replace(/\s/g, "")
-    ) || null;
-  }
-
-  function findZipCodeByName(teamKey, name) {
-    const team = data?.[teamKey];
-    if (!team?.people?.length) return "";
-    const found = team.people.find((p) => p.name === name);
-    return found?.baseCode || "";
-  }
-
-  function resolveAnchorCode(teamKey, name, manualCode = "") {
-    return (
-      manualCode ||
-      findRemoteCodeByName(teamKey, name) ||
-      findZipCodeByName(teamKey, name) ||
-      ""
-    );
+    return findRemoteRowByName(teamKey, name, remoteRoster);
   }
 
   useEffect(() => {
@@ -1176,28 +1212,15 @@ function App() {
     const saved = loadMySelection();
 
     if (saved?.teamKey && saved?.name) {
-      const fixedCode = resolveAnchorCode(saved.teamKey, saved.name, saved.code || "");
-      const fixedSelection = {
-        teamKey: saved.teamKey,
-        name: saved.name,
-        code: fixedCode,
-        anchorDate: REMOTE_BASE_DATE,
-      };
-
-      saveMySelection(fixedSelection);
-
-      const autoAnchors = buildAllTeamsAutoAnchors(
+      const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(
         effectiveData,
         remoteRoster,
-        fixedSelection.teamKey,
-        fixedSelection.name,
-        fixedSelection.code,
-        fixedSelection.anchorDate
+        saved.teamKey,
+        saved.name
       );
 
       setTeamAnchors(autoAnchors);
-      setSelectedTeam(fixedSelection.teamKey);
-      setViewTeam(fixedSelection.teamKey);
+      setSelectedTeam(saved.teamKey);
       return;
     }
 
@@ -1224,7 +1247,7 @@ function App() {
       const remoteMe = findRemoteAssignment(selectedTeam, currentAnchor.name);
       if (remoteMe?.code) {
         return {
-          code: remoteMe.code,
+          code: normalizeToFixedCode(currentTeam, remoteMe.code),
           time: pickWorktime(currentTeam, remoteMe.code, selectedDate),
         };
       }
@@ -1400,19 +1423,19 @@ function App() {
 
       if (!keepSavedSelection) {
         const defaultTeam = selectedTeam || "ks";
+        const saved = loadMySelection();
         const defaultName =
-          nextEffectiveData?.[defaultTeam]?.info?.baseName ||
-          nextEffectiveData?.[defaultTeam]?.people?.[0]?.name ||
-          "";
-        const defaultCode = resolveAnchorCode(defaultTeam, defaultName);
+          saved?.teamKey === defaultTeam
+            ? saved?.name || ""
+            : nextEffectiveData?.[defaultTeam]?.info?.baseName ||
+              nextEffectiveData?.[defaultTeam]?.people?.[0]?.name ||
+              "";
 
-        const autoAnchors = buildAllTeamsAutoAnchors(
+        const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(
           nextEffectiveData,
           rosterForApply || getEmptyRemoteRoster(),
           defaultTeam,
-          defaultName,
-          defaultCode,
-          REMOTE_BASE_DATE
+          defaultName
         );
         setTeamAnchors(autoAnchors);
       }
@@ -1484,26 +1507,16 @@ function App() {
   function applyMySelection(name, teamKey = selectedTeam) {
     if (!effectiveData || !name) return;
 
-    const anchorCode = resolveAnchorCode(teamKey, name);
-    if (!anchorCode) {
-      alert("선택한 이름의 기준 교번을 찾지 못했습니다.");
-      return;
-    }
-
     const selection = {
       teamKey,
       name,
-      code: anchorCode,
-      anchorDate: REMOTE_BASE_DATE,
     };
 
-    const autoAnchors = buildAllTeamsAutoAnchors(
+    const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(
       effectiveData,
       remoteRoster,
       selection.teamKey,
-      selection.name,
-      selection.code,
-      selection.anchorDate
+      selection.name
     );
 
     setTeamAnchors(autoAnchors);
@@ -2069,7 +2082,10 @@ function App() {
                 setSelectedTeam(teamKey);
                 setViewTeam(teamKey);
 
-                const currentName = teamAnchors[teamKey]?.name || "";
+                const currentName = loadMySelection()?.teamKey === teamKey
+                  ? loadMySelection()?.name || ""
+                  : "";
+
                 if (currentName) {
                   applyMySelection(currentName, teamKey);
                 }
@@ -2097,7 +2113,7 @@ function App() {
             </select>
 
             <div className="help-text">
-              내 이름만 선택하면 앱이 자동으로 기준 교번을 찾아 오늘 교번을 보여줍니다.
+              내 소속과 내 이름만 저장되며, 교번 기준은 항상 최신 스프레드시트 정보로 다시 계산됩니다.
             </div>
 
             {isAdminUser && (
@@ -2322,13 +2338,9 @@ function getPersonGyobunForDate(
 
   const saved = loadMySelection();
   const anchor =
-    saved?.teamKey === teamKey && saved?.name === name && saved?.code && saved?.anchorDate
-      ? {
-          name: saved.name,
-          code: saved.code,
-          anchorDate: saved.anchorDate,
-        }
-      : buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
+    saved?.teamKey === teamKey && saved?.name === name
+      ? buildAnchorForIdentity(teamKey, team, remoteRoster, saved.name)
+      : buildAnchorForIdentity(teamKey, team, remoteRoster, name);
 
   const offset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE, dateStr);
   const grid = buildAssignedGrid(team, anchor.name, anchor.code, offset, overrides);
