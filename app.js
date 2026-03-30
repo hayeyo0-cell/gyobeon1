@@ -20,7 +20,6 @@ const ADMIN_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxdEOtps60qtHeyXtC7O_n9XmzgagOTLqkp0BDcQX7U9upbCQAojeXUD3N61_mO9phRgQ/exec";
 
 const ADMIN_NAME = "권재림";
-const ADMIN_PASSWORD = "7717tutu";
 
 let REMOTE_BASE_DATE = "2026-03-28";
 
@@ -335,6 +334,16 @@ function findPathImage(team, dateStr, code) {
 function getGyobunOrder(team) {
   if (team?.gyobun?.length) return team.gyobun;
   return DEFAULT_GYOBUN;
+}
+
+function shiftCodeByDays(team, baseCode, dayOffset) {
+  const order = getGyobunOrder(team);
+  const baseIdx = order.findIndex(
+    (code) => normalizeCodeKey(code) === normalizeCodeKey(baseCode)
+  );
+
+  if (baseIdx < 0) return baseCode || "";
+  return order[positiveMod(baseIdx + dayOffset, order.length)] || baseCode || "";
 }
 
 function getAllGridLayout(count) {
@@ -827,7 +836,9 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
     const mapped = [];
 
     fixedOrder.forEach((slotCode, idx) => {
-      const found = rows.find((row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode));
+      const found = rows.find(
+        (row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode)
+      );
       if (!found) return;
       if (shouldHideName(found.name)) return;
 
@@ -839,7 +850,10 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
       });
     });
 
-    if (!mapped.length) return;
+    const minRequired = Math.max(1, Math.floor(fixedOrder.length * 0.7));
+    if (mapped.length < minRequired) {
+      return;
+    }
 
     team.people = mapped;
     team.names = mapped.map((p) => p.name);
@@ -852,7 +866,8 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
           ? team.info.baseName
           : mapped[0]?.name || "",
       baseCode:
-        team.info?.baseCode && fixedOrder.includes(team.info.baseCode)
+        team.info?.baseCode &&
+        fixedOrder.some((code) => normalizeCodeKey(code) === normalizeCodeKey(team.info.baseCode))
           ? team.info.baseCode
           : fixedOrder[0] || "",
       baseDate: REMOTE_BASE_DATE,
@@ -968,6 +983,26 @@ async function loadParsedData() {
   });
 }
 
+async function verifyAdminPassword(password) {
+  const res = await fetch(ADMIN_SCRIPT_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8",
+    },
+    body: JSON.stringify({
+      action: "verifyAdmin",
+      adminKey: password,
+    }),
+  });
+
+  const json = await res.json();
+  if (!json?.ok) {
+    throw new Error(json?.error || "관리자 인증 실패");
+  }
+
+  return true;
+}
+
 function App() {
   const initialSelection = loadMySelection();
   const initialGroups = loadGroups();
@@ -991,6 +1026,10 @@ function App() {
   const [selectedTeam, setSelectedTeam] = useState(initialSelection?.teamKey || "ks");
   const [viewTeam, setViewTeam] = useState(initialSelection?.teamKey || "ks");
   const [selectedDate, setSelectedDate] = useState(initialDate);
+
+  const [mySelection, setMySelection] = useState(
+    initialSelection || { teamKey: "ks", name: "" }
+  );
 
   const [teamAnchors, setTeamAnchors] = useState({
     ks: { name: "", code: "", anchorDate: REMOTE_BASE_DATE },
@@ -1045,6 +1084,10 @@ function App() {
   useEffect(() => {
     setOverrides(loadOverrides());
   }, []);
+
+  useEffect(() => {
+    saveMySelection(mySelection);
+  }, [mySelection]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1190,21 +1233,19 @@ function App() {
   useEffect(() => {
     if (!effectiveData) return;
 
-    const saved = loadMySelection();
-
-    if (saved?.teamKey && saved?.name) {
+    if (mySelection?.teamKey && mySelection?.name) {
       const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(
         effectiveData,
         remoteRoster,
-        saved.teamKey,
-        saved.name
+        mySelection.teamKey,
+        mySelection.name
       );
 
       setTeamAnchors(autoAnchors);
-      setSelectedTeam(saved.teamKey);
+      setSelectedTeam(mySelection.teamKey);
 
       if (activeTabRef.current === "home") {
-        setViewTeam(saved.teamKey);
+        setViewTeam(mySelection.teamKey);
       }
       return;
     }
@@ -1215,18 +1256,17 @@ function App() {
       nextAnchors[teamKey] = buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
     });
     setTeamAnchors(nextAnchors);
-  }, [effectiveData, remoteRoster]);
+  }, [effectiveData, remoteRoster, mySelection]);
 
   const currentTeam = effectiveData?.[selectedTeam] || null;
   const currentViewTeam = effectiveData?.[viewTeam] || null;
   const currentAnchor = teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
   const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
-  const isAdminUser = samePersonName(currentAnchor.name, ADMIN_NAME);
+  const isAdminUser = samePersonName(mySelection?.name, ADMIN_NAME);
 
   const myInfo = useMemo(() => {
-    const saved = loadMySelection();
-    const myTeamKey = saved?.teamKey || selectedTeam;
-    const myName = saved?.name || "";
+    const myTeamKey = mySelection?.teamKey || selectedTeam;
+    const myName = mySelection?.name || "";
 
     const team = effectiveData?.[myTeamKey];
     if (!team || !myName) return null;
@@ -1235,50 +1275,52 @@ function App() {
     if (!anchor?.code) return null;
 
     const dayOffset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE, selectedDate);
-    const assignedGrid = buildAssignedGrid(
-      team,
-      anchor.name,
-      anchor.code,
-      dayOffset,
-      overrides
-    );
-
-    const me = assignedGrid.find(
-      (item) => samePersonName(item.name, myName) || samePersonName(item.displayName, myName)
-    );
-
-    if (!me) return null;
+    const code = shiftCodeByDays(team, anchor.code, dayOffset);
 
     return {
-      code: me.code,
-      time: pickWorktime(team, me.code, selectedDate),
+      code,
+      time: pickWorktime(team, code, selectedDate),
     };
   }, [
     effectiveData,
     remoteRoster,
     selectedDate,
     selectedTeam,
-    overrides,
+    mySelection,
   ]);
 
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
-    if (!currentViewAnchor.name || !currentViewAnchor.code) return [];
 
-    const dayOffset = diffDays(currentViewAnchor.anchorDate || REMOTE_BASE_DATE, selectedDate);
+    return (currentViewTeam.people || []).map((person) => {
+      const anchor = buildAnchorForIdentity(viewTeam, currentViewTeam, remoteRoster, person.name);
+      if (!anchor?.code) {
+        const override = overrides[getOverrideKey(viewTeam, person.idx)] || {};
+        return {
+          idx: person.idx,
+          name: person.name,
+          displayName: override.name || person.name,
+          code: "-",
+          customColor: override.color || "",
+        };
+      }
 
-    return buildAssignedGrid(
-      currentViewTeam,
-      currentViewAnchor.name,
-      currentViewAnchor.code,
-      dayOffset,
-      overrides
-    );
+      const dayOffset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE, selectedDate);
+      const code = shiftCodeByDays(currentViewTeam, anchor.code, dayOffset);
+      const override = overrides[getOverrideKey(viewTeam, person.idx)] || {};
+
+      return {
+        idx: person.idx,
+        name: person.name,
+        displayName: override.name || person.name,
+        code,
+        customColor: override.color || "",
+      };
+    });
   }, [
     currentViewTeam,
-    currentViewAnchor.name,
-    currentViewAnchor.code,
-    currentViewAnchor.anchorDate,
+    viewTeam,
+    remoteRoster,
     overrides,
     selectedDate,
   ]);
@@ -1301,40 +1343,31 @@ function App() {
 
     const order = getGyobunOrder(team);
 
-    if (!currentViewAnchor.name || !currentViewAnchor.code) {
-      return order.map((code) => ({ code, name: "-" }));
-    }
-
-    const dayOffset = diffDays(
-      currentViewAnchor.anchorDate || REMOTE_BASE_DATE,
-      selectedDate
-    );
-
-    const grid = buildAssignedGrid(
-      team,
-      currentViewAnchor.name,
-      currentViewAnchor.code,
-      dayOffset,
-      overrides
-    );
-
     return order.map((code) => {
-      const found = grid.find(
-        (item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)
-      );
+      const foundPerson = (team.people || []).find((person) => {
+        const anchor = buildAnchorForIdentity(viewTeam, team, remoteRoster, person.name);
+        if (!anchor?.code) return false;
+
+        const dayOffset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE, selectedDate);
+        const shiftedCode = shiftCodeByDays(team, anchor.code, dayOffset);
+
+        return normalizeCodeKey(shiftedCode) === normalizeCodeKey(code);
+      });
+
+      const override =
+        foundPerson ? overrides[getOverrideKey(viewTeam, foundPerson.idx)] || {} : {};
 
       return {
         code,
-        name: found?.displayName || found?.name || "-",
+        name: override.name || foundPerson?.name || "-",
       };
     });
   }, [
     currentViewTeam,
-    currentViewAnchor.name,
-    currentViewAnchor.code,
-    currentViewAnchor.anchorDate,
-    overrides,
+    remoteRoster,
     selectedDate,
+    viewTeam,
+    overrides,
   ]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(selectedDate), [selectedDate]);
@@ -1421,10 +1454,9 @@ function App() {
       );
 
       if (!keepSavedSelection) {
-        const saved = loadMySelection();
-        const defaultTeam = saved?.teamKey || selectedTeam || "ks";
+        const defaultTeam = mySelection?.teamKey || selectedTeam || "ks";
         const defaultName =
-          saved?.name ||
+          mySelection?.name ||
           nextEffectiveData?.[defaultTeam]?.info?.baseName ||
           nextEffectiveData?.[defaultTeam]?.people?.[0]?.name ||
           "";
@@ -1463,8 +1495,8 @@ function App() {
       return;
     }
 
-    if (adminPassword !== ADMIN_PASSWORD) {
-      alert("관리자 비밀번호가 올바르지 않습니다.");
+    if (!adminPassword) {
+      alert("관리자 인증정보가 없습니다.");
       return;
     }
 
@@ -1472,6 +1504,7 @@ function App() {
       setSavingSharedConfig(true);
 
       const payload = {
+        action: "saveConfig",
         adminKey: adminPassword,
         baseDate: remoteBaseDate,
         zipBase64: "",
@@ -1520,26 +1553,26 @@ function App() {
     setTeamAnchors(autoAnchors);
     setSelectedTeam(teamKey);
     setViewTeam(teamKey);
-    saveMySelection(selection);
+    setMySelection(selection);
     setAllowProfileEdit(false);
   }
 
   function startReconfigureProfile() {
     setAllowProfileEdit(true);
-    setSelectedTeam(loadMySelection()?.teamKey || selectedTeam || "ks");
+    setSelectedTeam(mySelection?.teamKey || selectedTeam || "ks");
   }
 
   function cancelReconfigureProfile() {
-    const saved = loadMySelection();
-    if (saved?.teamKey) {
-      setSelectedTeam(saved.teamKey);
-      setViewTeam(saved.teamKey);
+    if (mySelection?.teamKey) {
+      setSelectedTeam(mySelection.teamKey);
+      setViewTeam(mySelection.teamKey);
     }
     setAllowProfileEdit(false);
   }
 
   function resetMyProfile() {
     clearMySelection();
+    setMySelection({ teamKey: "ks", name: "" });
     setAllowProfileEdit(true);
     setSelectedTeam("ks");
     setViewTeam("ks");
@@ -1773,7 +1806,7 @@ function App() {
                     </div>
 
                     <div className="main-subinfo">
-                      {TEAM_LABELS[loadMySelection()?.teamKey || selectedTeam] || "-"} / {loadMySelection()?.name || "-"}
+                      {TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {mySelection?.name || "-"}
                     </div>
 
                     {remoteLoading && (
@@ -1836,10 +1869,10 @@ function App() {
                     }}
                   >
                     {visibleAllGrid.map((item) => {
-                      const saved = loadMySelection();
                       const isMine =
-                        viewTeam === (saved?.teamKey || selectedTeam) &&
-                        (samePersonName(item.name, saved?.name) || samePersonName(item.displayName, saved?.name));
+                        viewTeam === (mySelection?.teamKey || selectedTeam) &&
+                        (samePersonName(item.name, mySelection?.name) ||
+                          samePersonName(item.displayName, mySelection?.name));
 
                       return (
                         <div
@@ -1949,13 +1982,12 @@ function App() {
                   {monthMatrix.map((row, rowIdx) => (
                     <div className="month-row" key={rowIdx}>
                       {row.map((date) => {
-                        const saved = loadMySelection();
-                        const item = saved?.name
+                        const item = mySelection?.name
                           ? getPersonGyobunForDate(
                               effectiveData,
                               remoteRoster,
-                              saved?.teamKey || selectedTeam,
-                              saved.name,
+                              mySelection?.teamKey || selectedTeam,
+                              mySelection.name,
                               date,
                               overrides
                             )
@@ -1965,7 +1997,7 @@ function App() {
                         const isSelected = date === selectedDate;
                         const toneClass = getDateToneClass(date);
 
-                        const targetTeamKey = saved?.teamKey || selectedTeam;
+                        const targetTeamKey = mySelection?.teamKey || selectedTeam;
                         const worktime = item?.code
                           ? pickWorktime(effectiveData[targetTeamKey], item.code, date)
                           : "";
@@ -2158,8 +2190,8 @@ function App() {
               <>
                 <label className="label" style={{ marginTop: 14 }}>내 정보</label>
                 <div className="notice-box" style={{ marginTop: 8 }}>
-                  내 소속: {TEAM_LABELS[loadMySelection()?.teamKey || selectedTeam] || "-"}<br />
-                  내 이름: {loadMySelection()?.name || "-"}
+                  내 소속: {TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"}<br />
+                  내 이름: {mySelection?.name || "-"}
                 </div>
 
                 <div className="help-text" style={{ marginTop: 10 }}>
@@ -2189,7 +2221,7 @@ function App() {
                 <label className="label" style={{ marginTop: 12 }}>내 이름</label>
                 <select
                   className="select"
-                  value={loadMySelection()?.teamKey === selectedTeam ? loadMySelection()?.name || "" : ""}
+                  value={mySelection?.teamKey === selectedTeam ? mySelection?.name || "" : ""}
                   onChange={(e) => {
                     applyMySelection(e.target.value, selectedTeam);
                   }}
@@ -2228,23 +2260,23 @@ function App() {
                     <button
                       className="modal-btn primary"
                       style={{ marginTop: 10 }}
-                      onClick={() => {
-                        if (!isAdminUser) {
-                          alert("관리자만 사용할 수 있습니다.");
-                          return;
-                        }
+                      onClick={async () => {
+                        try {
+                          if (!isAdminUser) {
+                            alert("관리자만 사용할 수 있습니다.");
+                            return;
+                          }
 
-                        if (!adminPassword) {
-                          alert("관리자 비밀번호를 입력해주세요.");
-                          return;
-                        }
+                          if (!adminPassword) {
+                            alert("관리자 비밀번호를 입력해주세요.");
+                            return;
+                          }
 
-                        if (adminPassword !== ADMIN_PASSWORD) {
-                          alert("관리자 비밀번호가 올바르지 않습니다.");
-                          return;
+                          await verifyAdminPassword(adminPassword);
+                          setIsAdminMode(true);
+                        } catch (e) {
+                          alert(e.message || "관리자 인증 실패");
                         }
-
-                        setIsAdminMode(true);
                       }}
                     >
                       관리자 모드 열기
@@ -2432,20 +2464,20 @@ function getPersonGyobunForDate(
   const team = data?.[teamKey];
   if (!team) return null;
 
-  const saved = loadMySelection();
-  const anchor =
-    saved?.teamKey === teamKey && samePersonName(saved?.name, name)
-      ? buildAnchorForIdentity(teamKey, team, remoteRoster, saved.name)
-      : buildAnchorForIdentity(teamKey, team, remoteRoster, name);
+  const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name);
+  if (!anchor?.code) return null;
 
-  const offset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE, dateStr);
-  const grid = buildAssignedGrid(team, anchor.name, anchor.code, offset, overrides);
+  const dayOffset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE, dateStr);
+  const code = shiftCodeByDays(team, anchor.code, dayOffset);
 
-  return (
-    grid.find(
-      (item) => samePersonName(item.name, name) || samePersonName(item.displayName, name)
-    ) || null
-  );
+  const person = team.people.find((p) => samePersonName(p.name, name));
+  const override = person ? overrides[getOverrideKey(teamKey, person.idx)] || {} : {};
+
+  return {
+    code,
+    name,
+    displayName: override.name || name,
+  };
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
