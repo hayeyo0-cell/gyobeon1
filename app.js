@@ -21,7 +21,7 @@ const ADMIN_SCRIPT_URL =
 
 const REMOTE_ZIP_URL = "./gyobeon-data.zip";
 const ADMIN_NAME = "권재림";
-const ADMIN_PASSWORD = "본인만아는값";
+const ADMIN_PASSWORD = "7717tutu";
 
 let REMOTE_BASE_DATE = "2026-03-28";
 
@@ -814,11 +814,11 @@ function fetchSharedConfigJsonp() {
 }
 
 async function fetchRemoteZipBlob() {
-  const url = `${REMOTE_ZIP_URL}?t=${Date.now()}`;
+  const url = REMOTE_ZIP_URL;
 
   const res = await fetch(url, {
     method: "GET",
-    cache: "no-store",
+    cache: "default",
     redirect: "follow",
   });
 
@@ -953,6 +953,8 @@ function App() {
 
   useEffect(() => {
     async function initSharedData() {
+      let localLoaded = false;
+
       try {
         setRemoteZipLoading(true);
 
@@ -968,25 +970,39 @@ function App() {
         }
 
         try {
-          const remoteBlob = await fetchRemoteZipBlob();
-          setZipName("공용 ZIP");
-          await parseAndSetZip(remoteBlob, true, true, getEmptyRemoteRoster());
-        } catch (e) {
-          console.log("공용 ZIP 로드 실패, 로컬 ZIP으로 대체 시도", e);
-
-          try {
-            const saved = await loadZipBlob();
-            if (saved?.blob) {
-              setZipName(saved.name || "이전 ZIP");
-              await parseAndSetZip(saved.blob, false, true, getEmptyRemoteRoster());
-            }
-          } catch (localErr) {
-            console.log("로컬 ZIP 대체 로드 실패", localErr);
+          const saved = await loadZipBlob();
+          if (saved?.blob) {
+            setZipName(saved.name || "이전 ZIP");
+            await parseAndSetZip(saved.blob, false, true, getEmptyRemoteRoster());
+            localLoaded = true;
           }
+        } catch (e) {
+          console.log("로컬 ZIP 로드 실패", e);
         }
-      } finally {
+
         setRemoteZipLoading(false);
         setSharedConfigReady(true);
+
+        try {
+          const remoteBlob = await fetchRemoteZipBlob();
+          await saveZipBlob(remoteBlob, "shared-config.zip");
+          setZipName("공용 ZIP");
+          await parseAndSetZip(remoteBlob, false, true, getEmptyRemoteRoster());
+        } catch (e) {
+          console.log("공용 ZIP 새로고침 실패", e);
+
+          if (!localLoaded) {
+            setError("공용 ZIP을 불러오지 못했습니다.");
+          }
+        }
+      } catch (e) {
+        console.error(e);
+        setRemoteZipLoading(false);
+        setSharedConfigReady(true);
+
+        if (!localLoaded) {
+          setError("앱 초기화 중 오류가 발생했습니다.");
+        }
       }
     }
 
@@ -2083,12 +2099,12 @@ function App() {
                     />
 
                     <div className="help-text" style={{ marginTop: 10 }}>
-                      공용 ZIP은 구글드라이브 고정 링크에서 자동으로 불러옵니다.
+                      공용 ZIP은 GitHub의 gyobeon-data.zip에서 자동으로 불러옵니다.
                     </div>
 
                     <div className="notice-box" style={{ marginTop: 10 }}>
-                      ZIP 변경 시에는 앱에서 업로드하지 않고, 구글드라이브에서 기존 파일에
-                      “버전 업로드”만 하면 됩니다.
+                      ZIP 변경 시에는 앱에서 업로드하지 않고, GitHub에서 기존 파일을 같은 이름
+                      (gyobeon-data.zip)으로 교체하면 됩니다.
                     </div>
 
                     <div className="modal-actions">
