@@ -479,6 +479,10 @@ function saveMySelection(value) {
   localStorage.setItem("gyobeon_my_selection", JSON.stringify(next));
 }
 
+function clearMySelection() {
+  localStorage.removeItem("gyobeon_my_selection");
+}
+
 function loadGroups() {
   try {
     return JSON.parse(localStorage.getItem("gyobeon_groups") || "{}");
@@ -1011,6 +1015,7 @@ function App() {
   const [pathImage, setPathImage] = useState("");
 
   const [showSettings, setShowSettings] = useState(false);
+  const [allowProfileEdit, setAllowProfileEdit] = useState(!initialSelection);
 
   const [groups, setGroups] = useState(initialGroups);
   const [currentGroup, setCurrentGroup] = useState(Object.keys(initialGroups)[0] || "");
@@ -1035,6 +1040,8 @@ function App() {
     if (!data) return null;
     return applyRemoteRosterToData(data, remoteRoster);
   }, [data, remoteRoster]);
+
+  const todayStr = formatDate(new Date());
 
   useEffect(() => {
     activeTabRef.current = activeTab;
@@ -1221,6 +1228,11 @@ function App() {
 
       setTeamAnchors(autoAnchors);
       setSelectedTeam(saved.teamKey);
+
+      // 홈에 있을 땐 항상 내 소속 유지
+      if (activeTabRef.current === "home") {
+        setViewTeam(saved.teamKey);
+      }
       return;
     }
 
@@ -1238,17 +1250,17 @@ function App() {
   const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
   const isAdminUser = currentAnchor.name === ADMIN_NAME;
 
-  const todayStr = formatDate(new Date());
-
   const myInfo = useMemo(() => {
     if (!currentTeam || !currentAnchor.name) return null;
 
-    if (isSameDateStr(selectedDate, REMOTE_BASE_DATE)) {
+    // 오늘은 무조건 최신 스프레드시트 배정 우선
+    if (isSameDateStr(selectedDate, todayStr)) {
       const remoteMe = findRemoteAssignment(selectedTeam, currentAnchor.name);
       if (remoteMe?.code) {
+        const fixedCode = normalizeToFixedCode(currentTeam, remoteMe.code);
         return {
-          code: normalizeToFixedCode(currentTeam, remoteMe.code),
-          time: pickWorktime(currentTeam, remoteMe.code, selectedDate),
+          code: fixedCode,
+          time: pickWorktime(currentTeam, fixedCode, selectedDate),
         };
       }
     }
@@ -1277,6 +1289,7 @@ function App() {
     currentAnchor.code,
     currentAnchor.anchorDate,
     selectedDate,
+    todayStr,
     overrides,
     selectedTeam,
     remoteRoster,
@@ -1287,7 +1300,8 @@ function App() {
 
     const remoteRows = remoteRoster?.[viewTeam] || [];
 
-    if (isSameDateStr(selectedDate, REMOTE_BASE_DATE) && remoteRows.length > 0) {
+    // 오늘은 전체도 최신 스프레드시트 배정 우선
+    if (isSameDateStr(selectedDate, todayStr) && remoteRows.length > 0) {
       return getGyobunOrder(currentViewTeam)
         .map((slotCode, idx) => {
           const found = remoteRows.find(
@@ -1327,6 +1341,7 @@ function App() {
     remoteRoster,
     viewTeam,
     selectedDate,
+    todayStr,
   ]);
 
   const visibleAllGrid = useMemo(() => {
@@ -1340,6 +1355,61 @@ function App() {
   const allGridRows = useMemo(() => {
     return Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols));
   }, [visibleAllGrid.length, allGridLayout.cols]);
+
+  const diaList = useMemo(() => {
+    const team = currentViewTeam;
+    if (!team) return [];
+
+    const order = getGyobunOrder(team);
+    const remoteRows = remoteRoster?.[viewTeam] || [];
+
+    // 오늘은 DIA순서도 최신 스프레드시트 배정 우선
+    if (isSameDateStr(selectedDate, todayStr) && remoteRows.length > 0) {
+      return order.map((code) => {
+        const found = remoteRows.find(
+          (row) => normalizeCodeKey(row.code) === normalizeCodeKey(code)
+        );
+        return {
+          code,
+          name: found?.name || "-",
+        };
+      });
+    }
+
+    if (!currentViewAnchor.name || !currentViewAnchor.code) {
+      return order.map((code) => ({ code, name: "-" }));
+    }
+
+    const dayOffset = diffDays(currentViewAnchor.anchorDate || REMOTE_BASE_DATE, selectedDate);
+    const grid = buildAssignedGrid(
+      team,
+      currentViewAnchor.name,
+      currentViewAnchor.code,
+      dayOffset,
+      overrides
+    );
+
+    return order.map((code) => {
+      const found = grid.find(
+        (item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)
+      );
+
+      return {
+        code,
+        name: found?.displayName || found?.name || "-",
+      };
+    });
+  }, [
+    currentViewTeam,
+    currentViewAnchor.name,
+    currentViewAnchor.code,
+    currentViewAnchor.anchorDate,
+    remoteRoster,
+    overrides,
+    selectedDate,
+    todayStr,
+    viewTeam,
+  ]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(selectedDate), [selectedDate]);
   const monthHeaderDate = parseLocalDate(selectedDate);
@@ -1356,7 +1426,14 @@ function App() {
   function switchTab(tabName) {
     if (tabName === activeTabRef.current) return;
 
+    // 전체는 항상 내 소속으로 진입
     if (tabName === "all") {
+      setViewTeam(selectedTeam);
+    }
+
+    // 홈에서 DIA순서 누르면 내 소속 기준
+    // 전체에서 DIA순서 누르면 현재 선택된 소속 유지
+    if (tabName === "dia" && activeTabRef.current !== "all") {
       setViewTeam(selectedTeam);
     }
 
@@ -1413,7 +1490,6 @@ function App() {
       const nextData = parseZipToData(parsedFiles);
 
       await saveParsedData(nextData);
-
       setData(nextData);
 
       const nextEffectiveData = applyRemoteRosterToData(
@@ -1422,14 +1498,13 @@ function App() {
       );
 
       if (!keepSavedSelection) {
-        const defaultTeam = selectedTeam || "ks";
         const saved = loadMySelection();
+        const defaultTeam = saved?.teamKey || selectedTeam || "ks";
         const defaultName =
-          saved?.teamKey === defaultTeam
-            ? saved?.name || ""
-            : nextEffectiveData?.[defaultTeam]?.info?.baseName ||
-              nextEffectiveData?.[defaultTeam]?.people?.[0]?.name ||
-              "";
+          saved?.name ||
+          nextEffectiveData?.[defaultTeam]?.info?.baseName ||
+          nextEffectiveData?.[defaultTeam]?.people?.[0]?.name ||
+          "";
 
         const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(
           nextEffectiveData,
@@ -1523,6 +1598,33 @@ function App() {
     setSelectedTeam(teamKey);
     setViewTeam(teamKey);
     saveMySelection(selection);
+    setAllowProfileEdit(false);
+  }
+
+  function startReconfigureProfile() {
+    setAllowProfileEdit(true);
+    setSelectedTeam(loadMySelection()?.teamKey || selectedTeam || "ks");
+  }
+
+  function cancelReconfigureProfile() {
+    const saved = loadMySelection();
+    if (saved?.teamKey) {
+      setSelectedTeam(saved.teamKey);
+      setViewTeam(saved.teamKey);
+    }
+    setAllowProfileEdit(false);
+  }
+
+  function resetOverrides() {
+    setOverrides({});
+    saveOverrides({});
+  }
+
+  function resetMyProfile() {
+    clearMySelection();
+    setAllowProfileEdit(true);
+    setSelectedTeam("ks");
+    setViewTeam("ks");
   }
 
   function handleAllCellTap(item) {
@@ -1589,12 +1691,6 @@ function App() {
     } else {
       setPathOpen(false);
     }
-  }
-
-  function resetOverrides() {
-    setOverrides({});
-    saveOverrides({});
-    localStorage.removeItem("gyobeon_my_selection");
   }
 
   function createGroup() {
@@ -1849,6 +1945,69 @@ function App() {
               </div>
             )}
 
+            {activeTab === "dia" && (
+              <div className="tab-page">
+                <div className="all-tab-header">
+                  <div className="all-header">
+                    <button className="all-header-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>-</button>
+
+                    <div className="all-header-title">
+                      {TEAM_LABELS[viewTeam]} DIA순서 {parseLocalDate(selectedDate).getFullYear()}.
+                      {parseLocalDate(selectedDate).getMonth() + 1}.
+                      {parseLocalDate(selectedDate).getDate()} {weekdayName(selectedDate)}
+                    </div>
+
+                    <button className="all-header-btn" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>+</button>
+                  </div>
+                </div>
+
+                <div className="all-team-tabs">
+                  {TEAM_ORDER.map((key) => {
+                    const isActive = viewTeam === key;
+                    const isMyTeam = selectedTeam === key;
+
+                    return (
+                      <button
+                        key={key}
+                        className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`}
+                        onClick={() => setViewTeam(key)}
+                      >
+                        {TEAM_LABELS[key]}
+                        {isActive && <span className="view-dot" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+                  {diaList.map((item, idx) => (
+                    <div
+                      key={`${item.code}-${idx}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "14px 16px",
+                        borderBottom: idx === diaList.length - 1 ? "none" : "1px solid #e5e7eb",
+                        fontSize: 18,
+                        background:
+                          viewTeam === selectedTeam && item.name === currentAnchor.name
+                            ? "#eef6ff"
+                            : "#ffffff",
+                      }}
+                    >
+                      <div style={{ fontWeight: 800, color: getDateBasedColor(selectedDate) }}>
+                        {item.code}
+                      </div>
+                      <div style={{ color: "#111827", fontWeight: 600 }}>
+                        {item.name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {activeTab === "month" && (
               <div className="tab-page">
                 <div className="month-header-bar">
@@ -2044,10 +2203,12 @@ function App() {
 
       {effectiveData && (
         <div
-          className={`bottom-tabs tabs-4 ${
+          className={`bottom-tabs tabs-5 ${
             activeTab === "home"
               ? "home-theme"
               : activeTab === "all"
+              ? "all-theme"
+              : activeTab === "dia"
               ? "all-theme"
               : activeTab === "month"
               ? "month-theme"
@@ -2056,6 +2217,7 @@ function App() {
         >
           <button className={`bottom-tab ${activeTab === "home" ? "active" : ""}`} onClick={() => switchTab("home")}>홈</button>
           <button className={`bottom-tab ${activeTab === "all" ? "active" : ""}`} onClick={() => switchTab("all")}>전체</button>
+          <button className={`bottom-tab ${activeTab === "dia" ? "active" : ""}`} onClick={() => switchTab("dia")}>DIA순서</button>
           <button className={`bottom-tab ${activeTab === "month" ? "active" : ""}`} onClick={() => switchTab("month")}>월교번</button>
           <button className={`bottom-tab ${activeTab === "group" ? "active" : ""}`} onClick={() => switchTab("group")}>그룹</button>
         </div>
@@ -2073,48 +2235,63 @@ function App() {
               처음 한 번 등록하면 이후에는 자동 저장됩니다. ZIP 구조가 바뀔 때만 다시 등록하면 됩니다.
             </div>
 
-            <label className="label" style={{ marginTop: 12 }}>내 소속</label>
-            <select
-              className="select"
-              value={selectedTeam}
-              onChange={(e) => {
-                const teamKey = e.target.value;
-                setSelectedTeam(teamKey);
-                setViewTeam(teamKey);
+            {!allowProfileEdit ? (
+              <>
+                <label className="label" style={{ marginTop: 14 }}>내 정보</label>
+                <div className="notice-box" style={{ marginTop: 8 }}>
+                  내 소속: {TEAM_LABELS[selectedTeam] || "-"}<br />
+                  내 이름: {currentAnchor.name || loadMySelection()?.name || "-"}
+                </div>
 
-                const currentName = loadMySelection()?.teamKey === teamKey
-                  ? loadMySelection()?.name || ""
-                  : "";
+                <div className="help-text" style={{ marginTop: 10 }}>
+                  내 정보는 관리자 스프레드시트 최신값 기준으로 유지됩니다.
+                </div>
 
-                if (currentName) {
-                  applyMySelection(currentName, teamKey);
-                }
-              }}
-            >
-              {TEAM_ORDER.map((key) => (
-                <option key={key} value={key}>{TEAM_LABELS[key]}</option>
-              ))}
-            </select>
+                <div className="modal-actions">
+                  <button className="modal-btn" onClick={startReconfigureProfile}>내 정보 다시 설정</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="label" style={{ marginTop: 12 }}>내 소속</label>
+                <select
+                  className="select"
+                  value={selectedTeam}
+                  onChange={(e) => {
+                    const teamKey = e.target.value;
+                    setSelectedTeam(teamKey);
+                  }}
+                >
+                  {TEAM_ORDER.map((key) => (
+                    <option key={key} value={key}>{TEAM_LABELS[key]}</option>
+                  ))}
+                </select>
 
-            <label className="label" style={{ marginTop: 12 }}>내 이름</label>
-            <select
-              className="select"
-              value={currentAnchor.name || ""}
-              onChange={(e) => {
-                applyMySelection(e.target.value, selectedTeam);
-              }}
-            >
-              <option value="">선택</option>
-              {(currentTeam?.people || []).map((person) => (
-                <option key={`${person.idx}-${person.name}`} value={person.name}>
-                  {person.name}
-                </option>
-              ))}
-            </select>
+                <label className="label" style={{ marginTop: 12 }}>내 이름</label>
+                <select
+                  className="select"
+                  value={loadMySelection()?.teamKey === selectedTeam ? loadMySelection()?.name || "" : ""}
+                  onChange={(e) => {
+                    applyMySelection(e.target.value, selectedTeam);
+                  }}
+                >
+                  <option value="">선택</option>
+                  {(effectiveData?.[selectedTeam]?.people || []).map((person) => (
+                    <option key={`${person.idx}-${person.name}`} value={person.name}>
+                      {person.name}
+                    </option>
+                  ))}
+                </select>
 
-            <div className="help-text">
-              내 소속과 내 이름만 저장되며, 교번 기준은 항상 최신 스프레드시트 정보로 다시 계산됩니다.
-            </div>
+                <div className="help-text">
+                  내 소속과 내 이름만 저장되며, 교번 기준은 항상 최신 스프레드시트 정보로 다시 계산됩니다.
+                </div>
+
+                <div className="modal-actions">
+                  <button className="modal-btn" onClick={cancelReconfigureProfile}>취소</button>
+                </div>
+              </>
+            )}
 
             {isAdminUser && (
               <div className="card" style={{ marginTop: 14, padding: 12 }}>
@@ -2198,7 +2375,8 @@ function App() {
             )}
 
             <div className="modal-actions">
-              <button className="modal-btn" onClick={resetOverrides}>초기화</button>
+              <button className="modal-btn" onClick={resetOverrides}>색상/이름 초기화</button>
+              <button className="modal-btn" onClick={resetMyProfile}>내 정보 초기화</button>
               <button className="modal-btn primary" onClick={() => setShowSettings(false)}>닫기</button>
             </div>
           </div>
@@ -2335,6 +2513,17 @@ function getPersonGyobunForDate(
 ) {
   const team = data?.[teamKey];
   if (!team) return null;
+
+  if (isSameDateStr(dateStr, formatDate(new Date()))) {
+    const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
+    if (remoteRow?.code) {
+      return {
+        code: normalizeToFixedCode(team, remoteRow.code),
+        name,
+        displayName: name,
+      };
+    }
+  }
 
   const saved = loadMySelection();
   const anchor =
