@@ -19,7 +19,6 @@ const NIGHT_RANGE_BY_TEAM = {
 const ADMIN_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxdEOtps60qtHeyXtC7O_n9XmzgagOTLqkp0BDcQX7U9upbCQAojeXUD3N61_mO9phRgQ/exec";
 
-const REMOTE_ZIP_URL = "./gyobeon-data.zip";
 const ADMIN_NAME = "권재림";
 const ADMIN_PASSWORD = "7717tutu";
 
@@ -813,33 +812,6 @@ function fetchSharedConfigJsonp() {
   return fetchJsonp({ mode: "config" });
 }
 
-async function fetchRemoteZipBlob() {
-  const url = REMOTE_ZIP_URL;
-
-  const res = await fetch(url, {
-    method: "GET",
-    cache: "default",
-    redirect: "follow",
-  });
-
-  if (!res.ok) {
-    throw new Error(`공용 ZIP 다운로드 실패 (${res.status})`);
-  }
-
-  const contentType = res.headers.get("content-type") || "";
-  const blob = await res.blob();
-
-  if (!blob || blob.size === 0) {
-    throw new Error("공용 ZIP 파일이 비어 있습니다.");
-  }
-
-  if (contentType.includes("text/html")) {
-    throw new Error("ZIP 대신 HTML 페이지를 반환했습니다.");
-  }
-
-  return blob;
-}
-
 function openZipDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("gyobeon-app-db", 1);
@@ -933,7 +905,6 @@ function App() {
   const [savingSharedConfig, setSavingSharedConfig] = useState(false);
 
   const [sharedConfigReady, setSharedConfigReady] = useState(false);
-  const [remoteZipLoading, setRemoteZipLoading] = useState(false);
 
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
@@ -952,12 +923,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    async function initSharedData() {
-      let localLoaded = false;
-
+    async function initApp() {
       try {
-        setRemoteZipLoading(true);
-
         try {
           const shared = await fetchSharedConfigJsonp();
 
@@ -972,41 +939,18 @@ function App() {
         try {
           const saved = await loadZipBlob();
           if (saved?.blob) {
-            setZipName(saved.name || "이전 ZIP");
+            setZipName(saved.name || "저장된 ZIP");
             await parseAndSetZip(saved.blob, false, true, getEmptyRemoteRoster());
-            localLoaded = true;
           }
         } catch (e) {
           console.log("로컬 ZIP 로드 실패", e);
         }
-
-        setRemoteZipLoading(false);
+      } finally {
         setSharedConfigReady(true);
-
-        try {
-          const remoteBlob = await fetchRemoteZipBlob();
-          await saveZipBlob(remoteBlob, "shared-config.zip");
-          setZipName("공용 ZIP");
-          await parseAndSetZip(remoteBlob, false, true, getEmptyRemoteRoster());
-        } catch (e) {
-          console.log("공용 ZIP 새로고침 실패", e);
-
-          if (!localLoaded) {
-            setError("공용 ZIP을 불러오지 못했습니다.");
-          }
-        }
-      } catch (e) {
-        console.error(e);
-        setRemoteZipLoading(false);
-        setSharedConfigReady(true);
-
-        if (!localLoaded) {
-          setError("앱 초기화 중 오류가 발생했습니다.");
-        }
       }
     }
 
-    initSharedData();
+    initApp();
   }, []);
 
   useEffect(() => {
@@ -1312,7 +1256,7 @@ function App() {
 
     try {
       if (saveToIdb) {
-        await saveZipBlob(fileOrBlob, "shared-config.zip");
+        await saveZipBlob(fileOrBlob, fileOrBlob.name || "gyobeon-data.zip");
       }
 
       const zip = await JSZip.loadAsync(fileOrBlob);
@@ -1373,6 +1317,13 @@ function App() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleZipUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setZipName(file.name);
+    await parseAndSetZip(file, true, false, remoteRoster);
   }
 
   async function saveSharedConfig() {
@@ -1596,18 +1547,22 @@ function App() {
   return (
     <>
       <div className="container">
-        {!sharedConfigReady || remoteZipLoading ? (
+        {!sharedConfigReady ? (
           <div className="card">
             <div className="card-title">앱 준비중</div>
             <div className="help-text" style={{ color: "#2563eb" }}>
-              공용 기준일과 공용 ZIP을 불러오는 중입니다...
+              기본 설정을 확인하는 중입니다...
             </div>
           </div>
         ) : !effectiveData ? (
           <div className="card">
-            <div className="card-title">데이터 불러오기</div>
+            <div className="card-title">기본자료 ZIP 등록</div>
+            <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
+            <div className="help-text">
+              처음 한 번만 ZIP 파일을 등록하면 이후에는 자동으로 저장되어 계속 사용할 수 있습니다.
+            </div>
             <div className="notice-box">
-              공용 ZIP을 자동으로 불러오지 못했습니다. 관리자에게 문의해주세요.
+              관리자로부터 받은 최신 ZIP 파일을 선택해주세요.
             </div>
             {loading && <div className="help-text" style={{ color: "#2563eb" }}>불러오는 중...</div>}
             {zipName && <div className="help-text">현재 파일: {zipName}</div>}
@@ -1999,8 +1954,11 @@ function App() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">설정</div>
 
-            <div className="notice-box" style={{ marginBottom: 12 }}>
-              기본자료는 공용 서버에서 자동으로 불러옵니다.
+            <label className="label">기본자료 ZIP 등록 / 변경</label>
+            <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
+
+            <div className="help-text">
+              처음 한 번 등록하면 이후에는 자동 저장됩니다. ZIP 구조가 바뀔 때만 다시 등록하면 됩니다.
             </div>
 
             <label className="label" style={{ marginTop: 12 }}>내 소속</label>
@@ -2099,12 +2057,7 @@ function App() {
                     />
 
                     <div className="help-text" style={{ marginTop: 10 }}>
-                      공용 ZIP은 GitHub의 gyobeon-data.zip에서 자동으로 불러옵니다.
-                    </div>
-
-                    <div className="notice-box" style={{ marginTop: 10 }}>
-                      ZIP 변경 시에는 앱에서 업로드하지 않고, GitHub에서 기존 파일을 같은 이름
-                      (gyobeon-data.zip)으로 교체하면 됩니다.
+                      기본자료 ZIP은 사용자별로 한 번 등록하고, 관리자는 스프레드시트와 기준일만 관리합니다.
                     </div>
 
                     <div className="modal-actions">
