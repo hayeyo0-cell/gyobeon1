@@ -82,6 +82,13 @@ function shouldHideName(name) {
   return HIDDEN_NAME_KEYS.includes(normalizeNameKey(name));
 }
 
+function samePersonName(a, b) {
+  return (
+    String(a || "").trim().replace(/\s/g, "") ===
+    String(b || "").trim().replace(/\s/g, "")
+  );
+}
+
 function parseLocalDate(dateStr) {
   const [y, m, d] = String(dateStr).split("-").map(Number);
   return new Date(y, (m || 1) - 1, d || 1);
@@ -579,7 +586,7 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
   const people = team.people;
   const fixedCodes = getGyobunOrder(team);
 
-  const anchorPersonIndex = people.findIndex((p) => p.name === anchorName);
+  const anchorPersonIndex = people.findIndex((p) => samePersonName(p.name, anchorName));
   const anchorCodeIndex = fixedCodes.findIndex(
     (code) => normalizeCodeKey(code) === normalizeCodeKey(anchorCode)
   );
@@ -633,7 +640,7 @@ function buildTeamAnchorForDate(team) {
     };
   }
 
-  const matchedPerson = people.find((p) => p.name === team?.info?.baseName);
+  const matchedPerson = people.find((p) => samePersonName(p.name, team?.info?.baseName));
 
   if (matchedPerson) {
     return {
@@ -654,22 +661,12 @@ function buildTeamAnchorForDate(team) {
 
 function findRemoteRowByName(teamKey, name, remoteRoster) {
   const rows = remoteRoster?.[teamKey] || [];
-  return (
-    rows.find(
-      (row) =>
-        String(row.name || "").trim().replace(/\s/g, "") ===
-        String(name || "").trim().replace(/\s/g, "")
-    ) || null
-  );
+  return rows.find((row) => samePersonName(row.name, name)) || null;
 }
 
 function findZipPersonByName(team, name) {
   if (!team?.people?.length) return null;
-  return team.people.find(
-    (p) =>
-      String(p.name || "").trim().replace(/\s/g, "") ===
-      String(name || "").trim().replace(/\s/g, "")
-  ) || null;
+  return team.people.find((p) => samePersonName(p.name, name)) || null;
 }
 
 function normalizeToFixedCode(team, code) {
@@ -851,7 +848,7 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
       ...team.info,
       totalCount: mapped.length,
       baseName:
-        team.info?.baseName && mapped.some((p) => p.name === team.info.baseName)
+        team.info?.baseName && mapped.some((p) => samePersonName(p.name, team.info.baseName))
           ? team.info.baseName
           : mapped[0]?.name || "",
       baseCode:
@@ -1041,8 +1038,6 @@ function App() {
     return applyRemoteRosterToData(data, remoteRoster);
   }, [data, remoteRoster]);
 
-  const todayStr = formatDate(new Date());
-
   useEffect(() => {
     activeTabRef.current = activeTab;
   }, [activeTab]);
@@ -1067,36 +1062,24 @@ function App() {
           if (!cancelled && parsedSaved?.data) {
             setData(parsedSaved.data);
           }
-        } catch (e) {
-          console.log("parsedData 로드 실패", e);
-        }
 
-        try {
           const savedZip = await loadZipBlob();
           if (!cancelled && savedZip?.name) {
             setZipName(savedZip.name || "저장된 ZIP");
           }
-        } catch (e) {
-          console.log("ZIP 메타 로드 실패", e);
-        }
 
-        try {
-          const parsedSaved = await loadParsedData();
-          if (!cancelled && !parsedSaved?.data) {
-            const saved = await loadZipBlob();
-            if (!cancelled && saved?.blob) {
-              setZipName(saved.name || "저장된 ZIP");
-              await parseAndSetZip(
-                saved.blob,
-                false,
-                true,
-                loadCachedRemoteRoster(),
-                false
-              );
-            }
+          if (!cancelled && !parsedSaved?.data && savedZip?.blob) {
+            setZipName(savedZip.name || "저장된 ZIP");
+            await parseAndSetZip(
+              savedZip.blob,
+              false,
+              true,
+              loadCachedRemoteRoster(),
+              false
+            );
           }
         } catch (e) {
-          console.log("fallback ZIP 로드 실패", e);
+          console.log("로컬 복원 실패", e);
         }
       } catch (e) {
         console.log("초기 로컬 복원 실패", e);
@@ -1204,15 +1187,6 @@ function App() {
     setGroupBaseDate(selectedDate);
   }, [selectedDate]);
 
-  function findRemoteCodeByName(teamKey, name) {
-    const found = findRemoteRowByName(teamKey, name, remoteRoster);
-    return found?.code || "";
-  }
-
-  function findRemoteAssignment(teamKey, name) {
-    return findRemoteRowByName(teamKey, name, remoteRoster);
-  }
-
   useEffect(() => {
     if (!effectiveData) return;
 
@@ -1247,9 +1221,8 @@ function App() {
   const currentViewTeam = effectiveData?.[viewTeam] || null;
   const currentAnchor = teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
   const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
-  const isAdminUser = currentAnchor.name === ADMIN_NAME;
+  const isAdminUser = samePersonName(currentAnchor.name, ADMIN_NAME);
 
-  // 최소 수정 1: 홈 내교번은 무조건 "저장된 내 소속/내 이름" 기준
   const myInfo = useMemo(() => {
     const saved = loadMySelection();
     const myTeamKey = saved?.teamKey || selectedTeam;
@@ -1257,17 +1230,6 @@ function App() {
 
     const team = effectiveData?.[myTeamKey];
     if (!team || !myName) return null;
-
-    if (isSameDateStr(selectedDate, todayStr)) {
-      const remoteMe = findRemoteAssignment(myTeamKey, myName);
-      if (remoteMe?.code) {
-        const code = normalizeToFixedCode(team, remoteMe.code);
-        return {
-          code,
-          time: pickWorktime(team, code, selectedDate),
-        };
-      }
-    }
 
     const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, myName);
     if (!anchor?.code) return null;
@@ -1281,7 +1243,10 @@ function App() {
       overrides
     );
 
-    const me = assignedGrid.find((item) => item.name === myName);
+    const me = assignedGrid.find(
+      (item) => samePersonName(item.name, myName) || samePersonName(item.displayName, myName)
+    );
+
     if (!me) return null;
 
     return {
@@ -1292,36 +1257,12 @@ function App() {
     effectiveData,
     remoteRoster,
     selectedDate,
-    todayStr,
     selectedTeam,
     overrides,
   ]);
 
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
-
-    const remoteRows = remoteRoster?.[viewTeam] || [];
-
-    if (isSameDateStr(selectedDate, todayStr) && remoteRows.length > 0) {
-      return getGyobunOrder(currentViewTeam)
-        .map((slotCode, idx) => {
-          const found = remoteRows.find(
-            (row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode)
-          );
-          if (!found) return null;
-
-          const override = overrides[getOverrideKey(viewTeam, idx)] || {};
-          return {
-            idx,
-            name: found.name,
-            displayName: override.name || found.name,
-            code: slotCode,
-            customColor: override.color || "",
-          };
-        })
-        .filter(Boolean);
-    }
-
     if (!currentViewAnchor.name || !currentViewAnchor.code) return [];
 
     const dayOffset = diffDays(currentViewAnchor.anchorDate || REMOTE_BASE_DATE, selectedDate);
@@ -1339,10 +1280,7 @@ function App() {
     currentViewAnchor.code,
     currentViewAnchor.anchorDate,
     overrides,
-    remoteRoster,
-    viewTeam,
     selectedDate,
-    todayStr,
   ]);
 
   const visibleAllGrid = useMemo(() => {
@@ -1362,25 +1300,16 @@ function App() {
     if (!team) return [];
 
     const order = getGyobunOrder(team);
-    const remoteRows = remoteRoster?.[viewTeam] || [];
-
-    if (isSameDateStr(selectedDate, todayStr) && remoteRows.length > 0) {
-      return order.map((code) => {
-        const found = remoteRows.find(
-          (row) => normalizeCodeKey(row.code) === normalizeCodeKey(code)
-        );
-        return {
-          code,
-          name: found?.name || "-",
-        };
-      });
-    }
 
     if (!currentViewAnchor.name || !currentViewAnchor.code) {
       return order.map((code) => ({ code, name: "-" }));
     }
 
-    const dayOffset = diffDays(currentViewAnchor.anchorDate || REMOTE_BASE_DATE, selectedDate);
+    const dayOffset = diffDays(
+      currentViewAnchor.anchorDate || REMOTE_BASE_DATE,
+      selectedDate
+    );
+
     const grid = buildAssignedGrid(
       team,
       currentViewAnchor.name,
@@ -1404,11 +1333,8 @@ function App() {
     currentViewAnchor.name,
     currentViewAnchor.code,
     currentViewAnchor.anchorDate,
-    remoteRoster,
     overrides,
     selectedDate,
-    todayStr,
-    viewTeam,
   ]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(selectedDate), [selectedDate]);
@@ -1612,11 +1538,6 @@ function App() {
     setAllowProfileEdit(false);
   }
 
-  function resetOverrides() {
-    setOverrides({});
-    saveOverrides({});
-  }
-
   function resetMyProfile() {
     clearMySelection();
     setAllowProfileEdit(true);
@@ -1723,7 +1644,7 @@ function App() {
     if (!next[targetGroup]) next[targetGroup] = [];
 
     const exists = next[targetGroup].some(
-      (item) => item.team === groupAddTeam && item.name === groupAddName
+      (item) => item.team === groupAddTeam && samePersonName(item.name, groupAddName)
     );
 
     if (!exists) {
@@ -1743,7 +1664,7 @@ function App() {
   function removeFromGroup(teamKey, name) {
     const next = { ...groups };
     next[currentGroup] = (next[currentGroup] || []).filter(
-      (item) => !(item.team === teamKey && item.name === name)
+      (item) => !(item.team === teamKey && samePersonName(item.name, name))
     );
     setGroups(next);
     saveGroups(next);
@@ -1841,7 +1762,7 @@ function App() {
                 <div className="card main-panel">
                   <div className="center-view">
                     <div
-                      className={`main-code ${isSameDateStr(selectedDate, todayStr) ? "today-blink" : ""}`}
+                      className="main-code"
                       style={{ color: getDateBasedColor(selectedDate) }}
                     >
                       {myInfo?.code || "-"} {weekdayName(selectedDate)}
@@ -1851,7 +1772,6 @@ function App() {
                       {myInfo?.time || "----"}
                     </div>
 
-                    {/* 최소 수정 2: 홈 하단 표시는 저장된 내 정보 기준 */}
                     <div className="main-subinfo">
                       {TEAM_LABELS[loadMySelection()?.teamKey || selectedTeam] || "-"} / {loadMySelection()?.name || "-"}
                     </div>
@@ -1916,16 +1836,15 @@ function App() {
                     }}
                   >
                     {visibleAllGrid.map((item) => {
+                      const saved = loadMySelection();
                       const isMine =
-                        viewTeam === selectedTeam &&
-                        item.name === currentAnchor.name;
-
-                      const isTodaySelected = isSameDateStr(selectedDate, todayStr);
+                        viewTeam === (saved?.teamKey || selectedTeam) &&
+                        (samePersonName(item.name, saved?.name) || samePersonName(item.displayName, saved?.name));
 
                       return (
                         <div
                           key={`${item.idx}-${item.displayName}`}
-                          className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isTodaySelected ? "cell-my-today" : ""}`}
+                          className={`all-cell-real ${isMine ? "cell-my" : ""}`}
                           style={
                             item.customColor
                               ? { background: item.customColor, backgroundImage: "none" }
@@ -1989,7 +1908,7 @@ function App() {
                         borderBottom: idx === diaList.length - 1 ? "none" : "1px solid #e5e7eb",
                         fontSize: 18,
                         background:
-                          viewTeam === selectedTeam && item.name === currentAnchor.name
+                          viewTeam === selectedTeam && samePersonName(item.name, currentAnchor.name)
                             ? "#eef6ff"
                             : "#ffffff",
                       }}
@@ -2030,12 +1949,13 @@ function App() {
                   {monthMatrix.map((row, rowIdx) => (
                     <div className="month-row" key={rowIdx}>
                       {row.map((date) => {
-                        const item = currentAnchor.name
+                        const saved = loadMySelection();
+                        const item = saved?.name
                           ? getPersonGyobunForDate(
                               effectiveData,
                               remoteRoster,
-                              selectedTeam,
-                              currentAnchor.name,
+                              saved?.teamKey || selectedTeam,
+                              saved.name,
                               date,
                               overrides
                             )
@@ -2045,8 +1965,9 @@ function App() {
                         const isSelected = date === selectedDate;
                         const toneClass = getDateToneClass(date);
 
+                        const targetTeamKey = saved?.teamKey || selectedTeam;
                         const worktime = item?.code
-                          ? pickWorktime(effectiveData[selectedTeam], item.code, date)
+                          ? pickWorktime(effectiveData[targetTeamKey], item.code, date)
                           : "";
                         const { startTime, endTime } = splitWorktime(worktime);
 
@@ -2237,8 +2158,8 @@ function App() {
               <>
                 <label className="label" style={{ marginTop: 14 }}>내 정보</label>
                 <div className="notice-box" style={{ marginTop: 8 }}>
-                  내 소속: {TEAM_LABELS[selectedTeam] || "-"}<br />
-                  내 이름: {currentAnchor.name || loadMySelection()?.name || "-"}
+                  내 소속: {TEAM_LABELS[loadMySelection()?.teamKey || selectedTeam] || "-"}<br />
+                  내 이름: {loadMySelection()?.name || "-"}
                 </div>
 
                 <div className="help-text" style={{ marginTop: 10 }}>
@@ -2282,7 +2203,7 @@ function App() {
                 </select>
 
                 <div className="help-text">
-                  내 소속과 내 이름만 저장되며, 교번 기준은 항상 최신 스프레드시트 정보로 다시 계산됩니다.
+                  내 소속과 내 이름만 저장되며, 교번 기준은 최신 기준일과 이름 기준으로 다시 계산됩니다.
                 </div>
 
                 <div className="modal-actions">
@@ -2372,7 +2293,6 @@ function App() {
               </div>
             )}
 
-            {/* 최소 수정 3: 색상/이름 초기화 버튼 제거 */}
             <div className="modal-actions">
               <button className="modal-btn" onClick={resetMyProfile}>내 정보 초기화</button>
               <button className="modal-btn primary" onClick={() => setShowSettings(false)}>닫기</button>
@@ -2512,26 +2432,20 @@ function getPersonGyobunForDate(
   const team = data?.[teamKey];
   if (!team) return null;
 
-  if (isSameDateStr(dateStr, formatDate(new Date()))) {
-    const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
-    if (remoteRow?.code) {
-      return {
-        code: normalizeToFixedCode(team, remoteRow.code),
-        name,
-        displayName: name,
-      };
-    }
-  }
-
   const saved = loadMySelection();
   const anchor =
-    saved?.teamKey === teamKey && saved?.name === name
+    saved?.teamKey === teamKey && samePersonName(saved?.name, name)
       ? buildAnchorForIdentity(teamKey, team, remoteRoster, saved.name)
       : buildAnchorForIdentity(teamKey, team, remoteRoster, name);
 
   const offset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE, dateStr);
   const grid = buildAssignedGrid(team, anchor.name, anchor.code, offset, overrides);
-  return grid.find((item) => item.name === name || item.displayName === name) || null;
+
+  return (
+    grid.find(
+      (item) => samePersonName(item.name, name) || samePersonName(item.displayName, name)
+    ) || null
+  );
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
