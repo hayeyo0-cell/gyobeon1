@@ -1312,11 +1312,6 @@ function App() {
               선택한 날짜의 내 교번을 기준으로 전체 교번이 자동 계산됩니다.
             </div>
 
-            <div className="notice-box" style={{ marginTop: 12 }}>
-              기본 기준값<br />
-              2026-03-30 / 경산 2d 조성래 / 문양 2d 이승용 / 월배 대4 이석재 / 안심 4d 강병웅
-            </div>
-
             <div className="modal-actions">
               <button
                 className="modal-btn primary"
