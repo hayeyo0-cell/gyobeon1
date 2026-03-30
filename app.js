@@ -1229,7 +1229,6 @@ function App() {
       setTeamAnchors(autoAnchors);
       setSelectedTeam(saved.teamKey);
 
-      // 홈에 있을 땐 항상 내 소속 유지
       if (activeTabRef.current === "home") {
         setViewTeam(saved.teamKey);
       }
@@ -1250,49 +1249,52 @@ function App() {
   const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
   const isAdminUser = currentAnchor.name === ADMIN_NAME;
 
+  // 최소 수정 1: 홈 내교번은 무조건 "저장된 내 소속/내 이름" 기준
   const myInfo = useMemo(() => {
-    if (!currentTeam || !currentAnchor.name) return null;
+    const saved = loadMySelection();
+    const myTeamKey = saved?.teamKey || selectedTeam;
+    const myName = saved?.name || "";
 
-    // 오늘은 무조건 최신 스프레드시트 배정 우선
+    const team = effectiveData?.[myTeamKey];
+    if (!team || !myName) return null;
+
     if (isSameDateStr(selectedDate, todayStr)) {
-      const remoteMe = findRemoteAssignment(selectedTeam, currentAnchor.name);
+      const remoteMe = findRemoteAssignment(myTeamKey, myName);
       if (remoteMe?.code) {
-        const fixedCode = normalizeToFixedCode(currentTeam, remoteMe.code);
+        const code = normalizeToFixedCode(team, remoteMe.code);
         return {
-          code: fixedCode,
-          time: pickWorktime(currentTeam, fixedCode, selectedDate),
+          code,
+          time: pickWorktime(team, code, selectedDate),
         };
       }
     }
 
-    if (!currentAnchor.code) return null;
+    const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, myName);
+    if (!anchor?.code) return null;
 
-    const dayOffset = diffDays(currentAnchor.anchorDate || REMOTE_BASE_DATE, selectedDate);
+    const dayOffset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE, selectedDate);
     const assignedGrid = buildAssignedGrid(
-      currentTeam,
-      currentAnchor.name,
-      currentAnchor.code,
+      team,
+      anchor.name,
+      anchor.code,
       dayOffset,
       overrides
     );
 
-    const me = assignedGrid.find((item) => item.name === currentAnchor.name);
+    const me = assignedGrid.find((item) => item.name === myName);
     if (!me) return null;
 
     return {
       code: me.code,
-      time: pickWorktime(currentTeam, me.code, selectedDate),
+      time: pickWorktime(team, me.code, selectedDate),
     };
   }, [
-    currentTeam,
-    currentAnchor.name,
-    currentAnchor.code,
-    currentAnchor.anchorDate,
+    effectiveData,
+    remoteRoster,
     selectedDate,
     todayStr,
-    overrides,
     selectedTeam,
-    remoteRoster,
+    overrides,
   ]);
 
   const allGrid = useMemo(() => {
@@ -1300,7 +1302,6 @@ function App() {
 
     const remoteRows = remoteRoster?.[viewTeam] || [];
 
-    // 오늘은 전체도 최신 스프레드시트 배정 우선
     if (isSameDateStr(selectedDate, todayStr) && remoteRows.length > 0) {
       return getGyobunOrder(currentViewTeam)
         .map((slotCode, idx) => {
@@ -1363,7 +1364,6 @@ function App() {
     const order = getGyobunOrder(team);
     const remoteRows = remoteRoster?.[viewTeam] || [];
 
-    // 오늘은 DIA순서도 최신 스프레드시트 배정 우선
     if (isSameDateStr(selectedDate, todayStr) && remoteRows.length > 0) {
       return order.map((code) => {
         const found = remoteRows.find(
@@ -1426,13 +1426,10 @@ function App() {
   function switchTab(tabName) {
     if (tabName === activeTabRef.current) return;
 
-    // 전체는 항상 내 소속으로 진입
     if (tabName === "all") {
       setViewTeam(selectedTeam);
     }
 
-    // 홈에서 DIA순서 누르면 내 소속 기준
-    // 전체에서 DIA순서 누르면 현재 선택된 소속 유지
     if (tabName === "dia" && activeTabRef.current !== "all") {
       setViewTeam(selectedTeam);
     }
@@ -1854,8 +1851,9 @@ function App() {
                       {myInfo?.time || "----"}
                     </div>
 
+                    {/* 최소 수정 2: 홈 하단 표시는 저장된 내 정보 기준 */}
                     <div className="main-subinfo">
-                      {TEAM_LABELS[selectedTeam]} / {currentAnchor.name || "-"}
+                      {TEAM_LABELS[loadMySelection()?.teamKey || selectedTeam] || "-"} / {loadMySelection()?.name || "-"}
                     </div>
 
                     {remoteLoading && (
@@ -2374,8 +2372,8 @@ function App() {
               </div>
             )}
 
+            {/* 최소 수정 3: 색상/이름 초기화 버튼 제거 */}
             <div className="modal-actions">
-              <button className="modal-btn" onClick={resetOverrides}>색상/이름 초기화</button>
               <button className="modal-btn" onClick={resetMyProfile}>내 정보 초기화</button>
               <button className="modal-btn primary" onClick={() => setShowSettings(false)}>닫기</button>
             </div>
