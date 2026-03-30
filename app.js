@@ -71,6 +71,12 @@ const DEFAULT_GYOBUN = [
 
 const HIDDEN_NAME_KEYS = ["gb2601"];
 
+/* =========================
+   빠른 재실행용 캐시 키
+========================= */
+const LS_SHARED_CONFIG_CACHE = "gyobeon_shared_config_cache";
+const LS_REMOTE_ROSTER_CACHE = "gyobeon_remote_roster_cache";
+
 function normalizeNameKey(name) {
   return String(name || "").trim().toLowerCase().replace(/\s+/g, "");
 }
@@ -488,6 +494,36 @@ function getEmptyRemoteRoster() {
   };
 }
 
+function loadCachedSharedConfig() {
+  try {
+    return JSON.parse(localStorage.getItem(LS_SHARED_CONFIG_CACHE) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedSharedConfig(value) {
+  try {
+    localStorage.setItem(LS_SHARED_CONFIG_CACHE, JSON.stringify(value || null));
+  } catch (_) {}
+}
+
+function loadCachedRemoteRoster() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LS_REMOTE_ROSTER_CACHE) || "null");
+    const normalized = normalizeRemoteRosterShape(parsed);
+    return normalized;
+  } catch {
+    return getEmptyRemoteRoster();
+  }
+}
+
+function saveCachedRemoteRoster(value) {
+  try {
+    localStorage.setItem(LS_REMOTE_ROSTER_CACHE, JSON.stringify(value || getEmptyRemoteRoster()));
+  } catch (_) {}
+}
+
 function getOverrideKey(teamKey, index) {
   return `${teamKey}_${index}`;
 }
@@ -688,7 +724,7 @@ function normalizeRemoteRosterShape(input) {
   const result = getEmptyRemoteRoster();
   if (!input || typeof input !== "object") return result;
 
-  const rows = Array.isArray(input.rows) ? input.rows : [];
+  const rows = Array.isArray(input.rows) ? input.rows : Array.isArray(input) ? input : [];
 
   rows.forEach((row) => {
     const teamKey =
@@ -764,7 +800,7 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
   return next;
 }
 
-function fetchJsonp(params = {}) {
+function fetchJsonp(params = {}, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
     const callbackName = `gyobeonJsonp_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     const script = document.createElement("script");
@@ -779,7 +815,7 @@ function fetchJsonp(params = {}) {
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error("JSONP 로드 시간 초과"));
-    }, 15000);
+    }, timeoutMs);
 
     window[callbackName] = (data) => {
       clearTimeout(timeout);
@@ -804,12 +840,12 @@ function fetchJsonp(params = {}) {
   });
 }
 
-function fetchRemoteRosterJsonp() {
-  return fetchJsonp({ mode: "roster" });
+function fetchRemoteRosterJsonp(timeoutMs = 6000) {
+  return fetchJsonp({ mode: "roster" }, timeoutMs);
 }
 
-function fetchSharedConfigJsonp() {
-  return fetchJsonp({ mode: "config" });
+function fetchSharedConfigJsonp(timeoutMs = 4000) {
+  return fetchJsonp({ mode: "config" }, timeoutMs);
 }
 
 function openZipDB() {
@@ -852,12 +888,18 @@ function App() {
   const initialSelection = loadMySelection();
   const initialGroups = loadGroups();
   const initialDate = formatDate(new Date());
+  const initialCachedRemote = loadCachedRemoteRoster();
+  const initialCachedShared = loadCachedSharedConfig();
+
+  if (initialCachedShared?.baseDate) {
+    setGlobalBaseDate(initialCachedShared.baseDate);
+  }
 
   const [zipName, setZipName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
-  const [remoteRoster, setRemoteRoster] = useState(getEmptyRemoteRoster());
+  const [remoteRoster, setRemoteRoster] = useState(initialCachedRemote);
   const [remoteLoading, setRemoteLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState("home");
@@ -899,7 +941,7 @@ function App() {
 
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
-  const [remoteBaseDate, setRemoteBaseDate] = useState(REMOTE_BASE_DATE);
+  const [remoteBaseDate, setRemoteBaseDate] = useState(initialCachedShared?.baseDate || REMOTE_BASE_DATE);
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [savingSharedConfig, setSavingSharedConfig] = useState(false);
@@ -923,54 +965,78 @@ function App() {
   }, []);
 
   useEffect(() => {
-    async function initApp() {
-      try {
-        try {
-          const shared = await fetchSharedConfigJsonp();
+    let cancelled = false;
 
-          if (shared?.baseDate) {
-            setGlobalBaseDate(shared.baseDate);
-            setRemoteBaseDate(shared.baseDate);
-          }
-        } catch (e) {
-          console.log("공용 기준일 로드 실패", e);
+    async function initAppFast() {
+      try {
+        const cachedShared = loadCachedSharedConfig();
+        if (cachedShared?.baseDate) {
+          setGlobalBaseDate(cachedShared.baseDate);
+          setRemoteBaseDate(cachedShared.baseDate);
         }
 
         try {
           const saved = await loadZipBlob();
+          if (cancelled) return;
+
           if (saved?.blob) {
             setZipName(saved.name || "저장된 ZIP");
-            await parseAndSetZip(saved.blob, false, true, getEmptyRemoteRoster());
+            await parseAndSetZip(
+              saved.blob,
+              false,
+              true,
+              loadCachedRemoteRoster(),
+              false
+            );
           }
         } catch (e) {
           console.log("로컬 ZIP 로드 실패", e);
         }
       } finally {
-        setSharedConfigReady(true);
+        if (!cancelled) {
+          setSharedConfigReady(true);
+        }
       }
-    }
 
-    initApp();
-  }, []);
-
-  useEffect(() => {
-    async function loadRemote() {
       try {
-        setRemoteLoading(true);
-        const json = await fetchRemoteRosterJsonp();
-        const next = normalizeRemoteRosterShape(json);
-        const hasAny = TEAM_ORDER.some((teamKey) => (next[teamKey] || []).length > 0);
-        if (hasAny) {
-          setRemoteRoster(next);
+        const shared = await fetchSharedConfigJsonp(4000);
+        if (cancelled) return;
+
+        if (shared?.baseDate) {
+          saveCachedSharedConfig(shared);
+          setGlobalBaseDate(shared.baseDate);
+          setRemoteBaseDate(shared.baseDate);
         }
       } catch (e) {
-        console.log("원격 현재배정 로드 실패", e);
+        console.log("공용 기준일 백그라운드 로드 실패", e);
+      }
+
+      try {
+        setRemoteLoading(true);
+        const json = await fetchRemoteRosterJsonp(6000);
+        if (cancelled) return;
+
+        const next = normalizeRemoteRosterShape(json);
+        const hasAny = TEAM_ORDER.some((teamKey) => (next[teamKey] || []).length > 0);
+
+        if (hasAny) {
+          setRemoteRoster(next);
+          saveCachedRemoteRoster(next);
+        }
+      } catch (e) {
+        console.log("원격 현재배정 백그라운드 로드 실패", e);
       } finally {
-        setRemoteLoading(false);
+        if (!cancelled) {
+          setRemoteLoading(false);
+        }
       }
     }
 
-    loadRemote();
+    initAppFast();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -1249,9 +1315,10 @@ function App() {
     fileOrBlob,
     saveToIdb = true,
     keepSavedSelection = false,
-    rosterForApply = remoteRoster
+    rosterForApply = remoteRoster,
+    showBusy = true
   ) {
-    setLoading(true);
+    if (showBusy) setLoading(true);
     setError("");
 
     try {
@@ -1315,7 +1382,7 @@ function App() {
       console.error(e);
       setError("ZIP 파일을 읽는 중 오류가 발생했습니다.");
     } finally {
-      setLoading(false);
+      if (showBusy) setLoading(false);
     }
   }
 
@@ -1323,7 +1390,7 @@ function App() {
     const file = event.target.files?.[0];
     if (!file) return;
     setZipName(file.name);
-    await parseAndSetZip(file, true, false, remoteRoster);
+    await parseAndSetZip(file, true, false, remoteRoster, true);
   }
 
   async function saveSharedConfig() {
@@ -1366,6 +1433,7 @@ function App() {
       }
 
       setGlobalBaseDate(remoteBaseDate);
+      saveCachedSharedConfig({ baseDate: remoteBaseDate });
       alert("공용 기준일 저장 완료");
     } catch (e) {
       console.error(e);
