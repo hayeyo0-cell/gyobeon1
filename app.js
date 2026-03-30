@@ -963,8 +963,6 @@ function App() {
   const [adminPassword, setAdminPassword] = useState("");
   const [savingSharedConfig, setSavingSharedConfig] = useState(false);
 
-  const [sharedConfigReady, setSharedConfigReady] = useState(false);
-
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
 
@@ -985,8 +983,6 @@ function App() {
     let cancelled = false;
 
     async function initAppFast() {
-      let hasParsed = false;
-
       try {
         const shared = loadCachedSharedConfig();
         if (shared?.baseDate) {
@@ -998,7 +994,6 @@ function App() {
           const parsedSaved = await loadParsedData();
           if (!cancelled && parsedSaved?.data) {
             setData(parsedSaved.data);
-            hasParsed = true;
           }
         } catch (e) {
           console.log("parsedData 로드 실패", e);
@@ -1013,8 +1008,10 @@ function App() {
           console.log("ZIP 메타 로드 실패", e);
         }
 
-        if (!hasParsed) {
-          try {
+        // parsedData가 없을 때만 fallback으로 ZIP 재파싱
+        try {
+          const parsedSaved = await loadParsedData();
+          if (!cancelled && !parsedSaved?.data) {
             const saved = await loadZipBlob();
             if (!cancelled && saved?.blob) {
               setZipName(saved.name || "저장된 ZIP");
@@ -1026,16 +1023,15 @@ function App() {
                 false
               );
             }
-          } catch (e) {
-            console.log("fallback ZIP 로드 실패", e);
           }
+        } catch (e) {
+          console.log("fallback ZIP 로드 실패", e);
         }
-      } finally {
-        if (!cancelled) {
-          setSharedConfigReady(true);
-        }
+      } catch (e) {
+        console.log("초기 로컬 복원 실패", e);
       }
 
+      // 뒤에서 조용히 공용 기준일 동기화
       try {
         const shared = await fetchSharedConfigJsonp(4000);
         if (cancelled) return;
@@ -1049,6 +1045,7 @@ function App() {
         console.log("공용 기준일 백그라운드 로드 실패", e);
       }
 
+      // 뒤에서 조용히 현재배정 동기화
       try {
         setRemoteLoading(true);
         const json = await fetchRemoteRosterJsonp(6000);
@@ -1656,14 +1653,7 @@ function App() {
   return (
     <>
       <div className="container">
-        {!sharedConfigReady ? (
-          <div className="card">
-            <div className="card-title">앱 준비중</div>
-            <div className="help-text" style={{ color: "#2563eb" }}>
-              기본 설정을 확인하는 중입니다...
-            </div>
-          </div>
-        ) : !effectiveData ? (
+        {!effectiveData ? (
           <div className="card">
             <div className="card-title">기본자료 ZIP 등록</div>
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
