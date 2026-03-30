@@ -59,7 +59,7 @@ button:active {
 .container::after {
   content: "";
   display: block;
-  height: calc(78px + env(safe-area-inset-bottom, 0px));
+  height: calc(86px + env(safe-area-inset-bottom, 0px));
   flex-shrink: 0;
 }
 
@@ -84,7 +84,7 @@ button:active {
 
 .help-text {
   color: #6b7280;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   margin-top: 6px;
 }
@@ -232,16 +232,16 @@ button:active {
 }
 
 .main-code {
-  font-size: 44px;
+  font-size: clamp(40px, 9vw, 56px);
+  line-height: 1.1;
   font-weight: 800;
-  line-height: 1.18;
   letter-spacing: -0.02em;
 }
 
 .main-time {
   margin-top: 14px;
-  font-size: 32px;
-  line-height: 1.18;
+  font-size: clamp(24px, 6vw, 36px);
+  line-height: 1.15;
   font-weight: 700;
 }
 
@@ -282,19 +282,31 @@ button:active {
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(52px + env(safe-area-inset-bottom, 0px));
+  height: calc(60px + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  display: grid;
   background: rgba(39, 82, 191, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid rgba(255,255,255,0.16);
   box-shadow: 0 -6px 22px rgba(15,23,42,0.12);
   z-index: 50;
+  overflow: hidden;
 }
 
 .bottom-tabs.tabs-4 {
+  display: grid;
   grid-template-columns: repeat(4, 1fr);
+}
+
+.bottom-tabs.tabs-5 {
+  display: flex !important;
+  width: 100%;
+}
+
+.bottom-tabs.tabs-5 .bottom-tab {
+  flex: 1 1 20% !important;
+  width: 20% !important;
+  min-width: 0;
 }
 
 .bottom-tabs.home-theme {
@@ -314,20 +326,30 @@ button:active {
 }
 
 .bottom-tab {
-  height: 52px;
+  height: 60px;
   border: 0;
   background: transparent;
   color: rgba(255,255,255,0.84);
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
   line-height: 1;
   position: relative;
+  padding: 0 2px;
+  white-space: nowrap;
+  text-align: center;
+  box-sizing: border-box;
+  word-break: keep-all;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .bottom-tab.active {
   color: #ffffff;
   background: rgba(255,255,255,0.08);
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .bottom-tab.active::after {
@@ -568,8 +590,8 @@ button:active {
 }
 
 .all-code {
-  font-size: 15px;
-  line-height: 1;
+  font-size: 18px;
+  line-height: 1.1;
   font-weight: 800;
   color: #0f172a;
   white-space: nowrap;
@@ -578,8 +600,8 @@ button:active {
 
 .all-name {
   margin-top: 5px;
-  font-size: 10px;
-  line-height: 1.1;
+  font-size: 13px;
+  line-height: 1.2;
   font-weight: 700;
   color: #374151;
   word-break: keep-all;
@@ -829,6 +851,9 @@ button:active {
   cursor: pointer;
   border-radius: 14px;
   font-weight: 700;
+  font-size: 15px;
+  line-height: 1.2;
+  word-break: keep-all;
 }
 
 .modal-btn.primary {
@@ -1020,7 +1045,7 @@ button:active {
   }
 
   .container::after {
-    height: calc(82px + env(safe-area-inset-bottom, 0px));
+    height: calc(92px + env(safe-area-inset-bottom, 0px));
   }
 
   .date-grid {
@@ -1075,14 +1100,18 @@ button:active {
   }
 
   .bottom-tabs {
-    height: calc(46px + env(safe-area-inset-bottom, 0px));
+    height: calc(56px + env(safe-area-inset-bottom, 0px));
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .bottom-tab {
-    height: 46px;
-    font-size: 13px;
-    padding: 0;
+    height: 56px;
+    font-size: 14px;
+    padding: 0 2px;
+  }
+
+  .bottom-tab.active {
+    font-size: 15px;
   }
 
   .month-header-title {
@@ -1269,99 +1298,4 @@ button:active {
   .modal-sub {
     font-size: 16px;
   }
-                              }
-.bottom-tabs.tabs-5 .bottom-tab {
-  width: 20%;
-}
-
-.bottom-tab {
-  white-space: nowrap;
-  font-size: 13px;
-}
-/* 하단 고정탭 5개 강제 정렬 */
-.bottom-tabs.tabs-5 {
-  display: flex !important;
-  width: 100%;
-}
-
-.bottom-tabs.tabs-5 .bottom-tab {
-  flex: 1 1 20% !important;
-  width: 20% !important;
-  min-width: 0;
-  font-size: 12px;
-  padding: 0 2px;
-  white-space: nowrap;
-  text-align: center;
-}
-
-/* 혹시 기존 스타일 충돌 방지 */
-.bottom-tabs {
-  overflow: hidden;
-}
-
-.bottom-tab {
-  box-sizing: border-box;
-}
-/* 하단 고정탭 5개 강제 정렬 */
-.bottom-tabs.tabs-5 {
-  display: flex !important;
-  width: 100%;
-}
-
-.bottom-tabs.tabs-5 .bottom-tab {
-  flex: 1 1 20% !important;
-  width: 20% !important;
-  min-width: 0;
-  font-size: 12px;
-  padding: 0 2px;
-  white-space: nowrap;
-  text-align: center;
-}
-
-/* 혹시 기존 스타일 충돌 방지 */
-.bottom-tabs {
-  overflow: hidden;
-}
-
-.bottom-tab {
-  box-sizing: border-box;
-  word-break: keep-all;
-}
-
-/* 홈 메인 글씨 크기 줄이기 */
-.main-code {
-  font-size: clamp(40px, 9vw, 56px);
-  line-height: 1.1;
-}
-
-.main-time {
-  font-size: clamp(24px, 6vw, 36px);
-  line-height: 1.15;
-}
-
-.main-subinfo {
-  font-size: 15px;
-}
-
-/* 설정창 버튼/글씨 넘침 방지 */
-.modal-btn {
-  font-size: 15px;
-  line-height: 1.2;
-  word-break: keep-all;
-}
-
-.help-text {
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-/* 전체 화면 칸 글씨 살짝 줄이기 */
-.all-code {
-  font-size: 18px;
-  line-height: 1.1;
-}
-
-.all-name {
-  font-size: 13px;
-  line-height: 1.2;
-}
+    }
