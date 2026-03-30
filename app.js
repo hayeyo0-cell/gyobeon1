@@ -21,10 +21,17 @@ const ADMIN_SCRIPT_URL =
 
 const ADMIN_NAME = "권재림";
 
-let REMOTE_BASE_DATE = "2026-03-28";
+let REMOTE_BASE_DATE = "2026-03-30";
+
+const FALLBACK_TEAM_ANCHORS = {
+  ks: { code: "2d", name: "조성래" },
+  my: { code: "2d", name: "이승용" },
+  wb: { code: "대4", name: "이석재" },
+  as: { code: "4d", name: "강병웅" },
+};
 
 function setGlobalBaseDate(value) {
-  REMOTE_BASE_DATE = value || "2026-03-28";
+  REMOTE_BASE_DATE = value || "2026-03-30";
 }
 
 const COLOR_OPTIONS = [
@@ -100,10 +107,6 @@ function formatDate(date) {
   return `${y}-${m}-${d}`;
 }
 
-function isSameDateStr(a, b) {
-  return String(a || "") === String(b || "");
-}
-
 function addDays(dateStr, days) {
   const d = parseLocalDate(dateStr);
   d.setDate(d.getDate() + days);
@@ -168,7 +171,7 @@ function getDateToneClass(dateStr) {
 
 function getDateBasedColor(dateStr) {
   if (isSunday(dateStr) || isHolidayDate(dateStr)) return "#ef4444";
-  if (isSaturday(dateStr)) return "#3b82f6";
+  if (isSaturday(dateStr)) return "#2563eb";
   return "#111827";
 }
 
@@ -336,6 +339,11 @@ function getGyobunOrder(team) {
   return DEFAULT_GYOBUN;
 }
 
+function getDiaOrder(team) {
+  if (team?.diaOrder?.length) return team.diaOrder;
+  return getGyobunOrder(team);
+}
+
 function shiftCodeByDays(team, baseCode, dayOffset) {
   const order = getGyobunOrder(team);
   const baseIdx = order.findIndex(
@@ -358,6 +366,7 @@ function createTeamBucket(teamKey) {
     label: TEAM_LABELS[teamKey],
     names: [],
     gyobun: [],
+    diaOrder: [],
     people: [],
     info: { totalCount: 0, baseDate: null, baseCode: null, baseName: null, raw: [] },
     worktimes: { nor: {}, sat: {}, hol: {} },
@@ -374,8 +383,11 @@ function cloneTeamData(data) {
       ...team,
       names: Array.isArray(team.names) ? [...team.names] : [],
       gyobun: Array.isArray(team.gyobun) ? [...team.gyobun] : [],
+      diaOrder: Array.isArray(team.diaOrder) ? [...team.diaOrder] : [],
       people: Array.isArray(team.people) ? team.people.map((p) => ({ ...p })) : [],
-      info: team.info ? { ...team.info, raw: [...(team.info.raw || [])] } : createTeamBucket(teamKey).info,
+      info: team.info
+        ? { ...team.info, raw: [...(team.info.raw || [])] }
+        : createTeamBucket(teamKey).info,
       worktimes: {
         nor: { ...(team.worktimes?.nor || {}) },
         sat: { ...(team.worktimes?.sat || {}) },
@@ -411,6 +423,7 @@ function parseZipToData(parsedFiles) {
 
     if (fileName === "name.txt") team.names = parseLines(content);
     if (fileName === "gyobun.txt") team.gyobun = parseLines(content);
+    if (fileName === "dialist.txt") team.diaOrder = parseLines(content);
     if (fileName === "info.txt") team.info = parseInfo(content);
   });
 
@@ -636,16 +649,33 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
     .filter((item) => item.name);
 }
 
-function buildTeamAnchorForDate(team) {
+function normalizeToFixedCode(team, code) {
+  const fixedCodes = getGyobunOrder(team);
+  return (
+    fixedCodes.find((item) => normalizeCodeKey(item) === normalizeCodeKey(code)) ||
+    code ||
+    ""
+  );
+}
+
+function buildTeamAnchorForDate(teamKey, team) {
   const people = Array.isArray(team?.people) ? team.people : [];
   const fixedCodes = getGyobunOrder(team);
-  const baseDate = REMOTE_BASE_DATE;
+  const fallback = FALLBACK_TEAM_ANCHORS[teamKey];
+
+  if (fallback?.name && fallback?.code) {
+    return {
+      name: fallback.name,
+      code: normalizeToFixedCode(team, fallback.code),
+      anchorDate: REMOTE_BASE_DATE,
+    };
+  }
 
   if (!people.length) {
     return {
       name: team?.info?.baseName || "",
       code: team?.info?.baseCode || fixedCodes[0] || "",
-      anchorDate: baseDate,
+      anchorDate: REMOTE_BASE_DATE,
     };
   }
 
@@ -655,16 +685,15 @@ function buildTeamAnchorForDate(team) {
     return {
       name: matchedPerson.name,
       code: matchedPerson.baseCode || team?.info?.baseCode || fixedCodes[0] || "",
-      anchorDate: baseDate,
+      anchorDate: REMOTE_BASE_DATE,
     };
   }
 
   const firstPerson = people[0];
-
   return {
     name: firstPerson?.name || "",
     code: firstPerson?.baseCode || team?.info?.baseCode || fixedCodes[0] || "",
-    anchorDate: baseDate,
+    anchorDate: REMOTE_BASE_DATE,
   };
 }
 
@@ -678,15 +707,6 @@ function findZipPersonByName(team, name) {
   return team.people.find((p) => samePersonName(p.name, name)) || null;
 }
 
-function normalizeToFixedCode(team, code) {
-  const fixedCodes = getGyobunOrder(team);
-  return (
-    fixedCodes.find((item) => normalizeCodeKey(item) === normalizeCodeKey(code)) ||
-    code ||
-    ""
-  );
-}
-
 function buildAnchorForIdentity(teamKey, team, remoteRoster, name) {
   if (!team || !name) {
     return buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
@@ -697,6 +717,15 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name) {
     return {
       name,
       code: normalizeToFixedCode(team, remoteRow.code),
+      anchorDate: REMOTE_BASE_DATE,
+    };
+  }
+
+  const fallback = FALLBACK_TEAM_ANCHORS[teamKey];
+  if (fallback?.name && samePersonName(fallback.name, name)) {
+    return {
+      name: fallback.name,
+      code: normalizeToFixedCode(team, fallback.code),
       anchorDate: REMOTE_BASE_DATE,
     };
   }
@@ -731,7 +760,16 @@ function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
     }
   }
 
-  return buildTeamAnchorForDate(team);
+  const fallback = FALLBACK_TEAM_ANCHORS[teamKey];
+  if (fallback?.name && fallback?.code) {
+    return {
+      name: fallback.name,
+      code: normalizeToFixedCode(team, fallback.code),
+      anchorDate: REMOTE_BASE_DATE,
+    };
+  }
+
+  return buildTeamAnchorForDate(teamKey, team);
 }
 
 function buildAllTeamsAutoAnchorsFromIdentity(
@@ -851,9 +889,7 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
     });
 
     const minRequired = Math.max(1, Math.floor(fixedOrder.length * 0.7));
-    if (mapped.length < minRequired) {
-      return;
-    }
+    if (mapped.length < minRequired) return;
 
     team.people = mapped;
     team.names = mapped.map((p) => p.name);
@@ -1032,10 +1068,10 @@ function App() {
   );
 
   const [teamAnchors, setTeamAnchors] = useState({
-    ks: { name: "", code: "", anchorDate: REMOTE_BASE_DATE },
-    my: { name: "", code: "", anchorDate: REMOTE_BASE_DATE },
-    wb: { name: "", code: "", anchorDate: REMOTE_BASE_DATE },
-    as: { name: "", code: "", anchorDate: REMOTE_BASE_DATE },
+    ks: { name: FALLBACK_TEAM_ANCHORS.ks.name, code: FALLBACK_TEAM_ANCHORS.ks.code, anchorDate: REMOTE_BASE_DATE },
+    my: { name: FALLBACK_TEAM_ANCHORS.my.name, code: FALLBACK_TEAM_ANCHORS.my.code, anchorDate: REMOTE_BASE_DATE },
+    wb: { name: FALLBACK_TEAM_ANCHORS.wb.name, code: FALLBACK_TEAM_ANCHORS.wb.code, anchorDate: REMOTE_BASE_DATE },
+    as: { name: FALLBACK_TEAM_ANCHORS.as.name, code: FALLBACK_TEAM_ANCHORS.as.code, anchorDate: REMOTE_BASE_DATE },
   });
 
   const [overrides, setOverrides] = useState({});
@@ -1260,8 +1296,16 @@ function App() {
 
   const currentTeam = effectiveData?.[selectedTeam] || null;
   const currentViewTeam = effectiveData?.[viewTeam] || null;
-  const currentAnchor = teamAnchors[selectedTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
-  const currentViewAnchor = teamAnchors[viewTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
+  const currentAnchor = teamAnchors[selectedTeam] || {
+    name: "",
+    code: "",
+    anchorDate: REMOTE_BASE_DATE,
+  };
+  const currentViewAnchor = teamAnchors[viewTeam] || {
+    name: "",
+    code: "",
+    anchorDate: REMOTE_BASE_DATE,
+  };
   const isAdminUser = samePersonName(mySelection?.name, ADMIN_NAME);
 
   const myInfo = useMemo(() => {
@@ -1281,13 +1325,7 @@ function App() {
       code,
       time: pickWorktime(team, code, selectedDate),
     };
-  }, [
-    effectiveData,
-    remoteRoster,
-    selectedDate,
-    selectedTeam,
-    mySelection,
-  ]);
+  }, [effectiveData, remoteRoster, selectedDate, selectedTeam, mySelection]);
 
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
@@ -1317,13 +1355,7 @@ function App() {
         customColor: override.color || "",
       };
     });
-  }, [
-    currentViewTeam,
-    viewTeam,
-    remoteRoster,
-    overrides,
-    selectedDate,
-  ]);
+  }, [currentViewTeam, viewTeam, remoteRoster, overrides, selectedDate]);
 
   const visibleAllGrid = useMemo(() => {
     return allGrid.filter((item) => item && item.name && !shouldHideName(item.name));
@@ -1341,34 +1373,39 @@ function App() {
     const team = currentViewTeam;
     if (!team) return [];
 
-    const order = getGyobunOrder(team);
+    const teamAnchor =
+      currentViewAnchor || buildTeamAnchorFromRemote(viewTeam, team, remoteRoster);
 
-    return order.map((code) => {
-      const foundPerson = (team.people || []).find((person) => {
-        const anchor = buildAnchorForIdentity(viewTeam, team, remoteRoster, person.name);
-        if (!anchor?.code) return false;
+    const diaOrder = getDiaOrder(team);
 
-        const dayOffset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE, selectedDate);
-        const shiftedCode = shiftCodeByDays(team, anchor.code, dayOffset);
+    if (!teamAnchor?.name || !teamAnchor?.code) {
+      return diaOrder.map((code) => ({ code, name: "-" }));
+    }
 
-        return normalizeCodeKey(shiftedCode) === normalizeCodeKey(code);
-      });
+    const dayOffset = diffDays(
+      teamAnchor.anchorDate || REMOTE_BASE_DATE,
+      selectedDate
+    );
 
-      const override =
-        foundPerson ? overrides[getOverrideKey(viewTeam, foundPerson.idx)] || {} : {};
+    const grid = buildAssignedGrid(
+      team,
+      teamAnchor.name,
+      teamAnchor.code,
+      dayOffset,
+      overrides
+    );
+
+    return diaOrder.map((code) => {
+      const found = grid.find(
+        (item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)
+      );
 
       return {
         code,
-        name: override.name || foundPerson?.name || "-",
+        name: found?.displayName || found?.name || "-",
       };
     });
-  }, [
-    currentViewTeam,
-    remoteRoster,
-    selectedDate,
-    viewTeam,
-    overrides,
-  ]);
+  }, [currentViewTeam, currentViewAnchor, viewTeam, remoteRoster, selectedDate, overrides]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(selectedDate), [selectedDate]);
   const monthHeaderDate = parseLocalDate(selectedDate);
@@ -1385,11 +1422,7 @@ function App() {
   function switchTab(tabName) {
     if (tabName === activeTabRef.current) return;
 
-    if (tabName === "all") {
-      setViewTeam(selectedTeam);
-    }
-
-    if (tabName === "dia" && activeTabRef.current !== "all") {
+    if (tabName === "all" || tabName === "dia") {
       setViewTeam(selectedTeam);
     }
 
@@ -1536,24 +1569,16 @@ function App() {
   }
 
   function applyMySelection(name, teamKey = selectedTeam) {
-    if (!effectiveData || !name) return;
+    if (!name) return;
 
     const selection = {
       teamKey,
       name,
     };
 
-    const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(
-      effectiveData,
-      remoteRoster,
-      selection.teamKey,
-      selection.name
-    );
-
-    setTeamAnchors(autoAnchors);
+    setMySelection(selection);
     setSelectedTeam(teamKey);
     setViewTeam(teamKey);
-    setMySelection(selection);
     setAllowProfileEdit(false);
   }
 
@@ -1936,20 +1961,32 @@ function App() {
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "14px 16px",
+                        padding: "16px 18px",
                         borderBottom: idx === diaList.length - 1 ? "none" : "1px solid #e5e7eb",
-                        fontSize: 18,
+                        fontSize: 20,
                         background:
                           viewTeam === selectedTeam && samePersonName(item.name, currentAnchor.name)
                             ? "#eef6ff"
                             : "#ffffff",
                       }}
                     >
-                      <div style={{ fontWeight: 800, color: getDateBasedColor(selectedDate) }}>
+                      <div
+                        style={{
+                          fontWeight: 800,
+                          width: 72,
+                          color: getDateBasedColor(selectedDate),
+                        }}
+                      >
                         {item.code}
                       </div>
-                      <div style={{ color: "#111827", fontWeight: 600 }}>
+
+                      <div
+                        style={{
+                          color: "#111827",
+                          fontWeight: 600,
+                          letterSpacing: "-0.2px",
+                        }}
+                      >
                         {item.name}
                       </div>
                     </div>
@@ -2227,7 +2264,7 @@ function App() {
                   }}
                 >
                   <option value="">선택</option>
-                  {(effectiveData?.[selectedTeam]?.people || []).map((person) => (
+                  {(data?.[selectedTeam]?.people || []).map((person) => (
                     <option key={`${person.idx}-${person.name}`} value={person.name}>
                       {person.name}
                     </option>
@@ -2373,7 +2410,7 @@ function App() {
             <label className="label" style={{ marginTop: 12 }}>이름</label>
             <select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}>
               <option value="">선택</option>
-              {(effectiveData?.[groupAddTeam]?.people || []).map((person) => (
+              {(data?.[groupAddTeam]?.people || []).map((person) => (
                 <option key={`${groupAddTeam}-${person.name}`} value={person.name}>
                   {person.name}
                 </option>
