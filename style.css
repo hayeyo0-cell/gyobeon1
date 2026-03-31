@@ -841,6 +841,7 @@ button:active {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
+  flex-wrap: wrap;
 }
 
 .modal-btn {
@@ -1298,4 +1299,4 @@ button:active {
   .modal-sub {
     font-size: 16px;
   }
-    }
+}
