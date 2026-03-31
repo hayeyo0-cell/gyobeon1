@@ -1335,38 +1335,50 @@ function App() {
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
 
-    return (currentViewTeam.people || []).map((person) => {
-      const anchor = buildAnchorForIdentity(
+    let anchorName = "";
+    let anchorCode = "";
+    let anchorDate = REMOTE_BASE_DATE || BASE_DATE;
+
+    if (
+      mySelection?.teamKey === viewTeam &&
+      mySelection?.name &&
+      mySelection?.code
+    ) {
+      anchorName = mySelection.name;
+      anchorCode = normalizeToFixedCode(currentViewTeam, mySelection.code);
+      anchorDate = mySelection.anchorDate || BASE_DATE;
+    } else {
+      const teamAnchor = buildTeamAnchorFromRemote(
         viewTeam,
         currentViewTeam,
-        remoteRoster,
-        person.name,
-        mySelection
+        remoteRoster
       );
-      if (!anchor?.code) {
-        const override = overrides[getOverrideKey(viewTeam, person.idx)] || {};
-        return {
-          idx: person.idx,
-          name: person.name,
-          displayName: override.name || person.name,
-          code: "-",
-          customColor: override.color || "",
-        };
-      }
+      anchorName = teamAnchor?.name || "";
+      anchorCode = normalizeToFixedCode(currentViewTeam, teamAnchor?.code || "");
+      anchorDate = teamAnchor?.anchorDate || REMOTE_BASE_DATE || BASE_DATE;
+    }
 
-      const dayOffset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE || BASE_DATE, selectedDate);
-      const code = shiftCodeByDays(currentViewTeam, anchor.code, dayOffset);
-      const override = overrides[getOverrideKey(viewTeam, person.idx)] || {};
+    if (!anchorName || !anchorCode) {
+      return buildAssignedGrid(currentViewTeam, "", "", 0, overrides);
+    }
 
-      return {
-        idx: person.idx,
-        name: person.name,
-        displayName: override.name || person.name,
-        code,
-        customColor: override.color || "",
-      };
-    });
-  }, [currentViewTeam, viewTeam, remoteRoster, overrides, selectedDate, mySelection]);
+    const dayOffset = diffDays(anchorDate, selectedDate);
+
+    return buildAssignedGrid(
+      currentViewTeam,
+      anchorName,
+      anchorCode,
+      dayOffset,
+      overrides
+    );
+  }, [
+    currentViewTeam,
+    viewTeam,
+    remoteRoster,
+    overrides,
+    selectedDate,
+    mySelection,
+  ]);
 
   const visibleAllGrid = useMemo(() => {
     return allGrid.filter((item) => item && item.name && !shouldHideName(item.name));
