@@ -17,7 +17,6 @@ const NIGHT_RANGE_BY_TEAM = {
 };
 
 const BASE_DATE = "2026-03-30";
-
 const ADMIN_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxdEOtps60qtHeyXtC7O_n9XmzgagOTLqkp0BDcQX7U9upbCQAojeXUD3N61_mO9phRgQ/exec";
 
@@ -81,6 +80,7 @@ const HIDDEN_NAME_KEYS = ["gb2601"];
 
 const LS_SHARED_CONFIG_CACHE = "gyobeon_shared_config_cache";
 const LS_REMOTE_ROSTER_CACHE = "gyobeon_remote_roster_cache";
+const LS_LAST_SEEN_PUBLISHED_AT = "gyobeon_last_seen_published_at";
 
 function normalizeNameKey(name) {
   return String(name || "").trim().toLowerCase().replace(/\s+/g, "");
@@ -1052,6 +1052,12 @@ function App() {
   const [remoteLoading, setRemoteLoading] = useState(false);
   const [refreshRosterMessage, setRefreshRosterMessage] = useState("");
 
+  const [pendingRosterJson, setPendingRosterJson] = useState(null);
+  const [showUpdatePopup, setShowUpdatePopup] = useState(false);
+  const [lastSeenPublishedAt, setLastSeenPublishedAt] = useState(
+    localStorage.getItem(LS_LAST_SEEN_PUBLISHED_AT) || ""
+  );
+
   const [activeTab, setActiveTab] = useState("home");
   const activeTabRef = useRef("home");
 
@@ -1188,10 +1194,21 @@ function App() {
 
         const next = normalizeRemoteRosterShape(json);
         const hasAny = TEAM_ORDER.some((teamKey) => (next[teamKey] || []).length > 0);
+        const serverPublishedAt = String(json?.publishedAt || "").trim();
 
         if (hasAny) {
-          setRemoteRoster(next);
-          saveCachedRemoteRoster(next);
+          if (serverPublishedAt && lastSeenPublishedAt && serverPublishedAt !== lastSeenPublishedAt) {
+            setPendingRosterJson(json);
+            setShowUpdatePopup(true);
+          } else {
+            setRemoteRoster(next);
+            saveCachedRemoteRoster(next);
+
+            if (serverPublishedAt) {
+              localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
+              setLastSeenPublishedAt(serverPublishedAt);
+            }
+          }
         }
       } catch (e) {
         console.log("원격 현재배정 백그라운드 로드 실패", e);
@@ -1242,6 +1259,11 @@ function App() {
         return;
       }
 
+      if (showUpdatePopup) {
+        setShowUpdatePopup(false);
+        return;
+      }
+
       if (activeTabRef.current !== "home") {
         setActiveTab("home");
         return;
@@ -1252,7 +1274,7 @@ function App() {
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [showUpdatePopup]);
 
   useEffect(() => {
     if (pathOpen && (!window.history.state || window.history.state.layer !== "path")) {
@@ -1265,6 +1287,12 @@ function App() {
       window.history.pushState({ __gyobeon: true, layer: "edit" }, "");
     }
   }, [editOpen]);
+
+  useEffect(() => {
+    if (showUpdatePopup && (!window.history.state || window.history.state.layer !== "update")) {
+      window.history.pushState({ __gyobeon: true, layer: "update" }, "");
+    }
+  }, [showUpdatePopup]);
 
   useEffect(() => {
     setGroupBaseDate(selectedDate);
@@ -1590,6 +1618,7 @@ function App() {
       const json = await fetchRemoteRosterJsonp(8000);
       const next = normalizeRemoteRosterShape(json);
       const hasAny = TEAM_ORDER.some((teamKey) => (next[teamKey] || []).length > 0);
+      const serverPublishedAt = String(json?.publishedAt || "").trim();
 
       if (!hasAny) {
         throw new Error("배포된 최신 현재배정 데이터가 없습니다.");
@@ -1597,6 +1626,14 @@ function App() {
 
       setRemoteRoster(next);
       saveCachedRemoteRoster(next);
+
+      if (serverPublishedAt) {
+        localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
+        setLastSeenPublishedAt(serverPublishedAt);
+      }
+
+      setPendingRosterJson(null);
+      setShowUpdatePopup(false);
       setRefreshRosterMessage("배포된 최신 인원이 반영되었습니다.");
 
       if (showAlert) {
@@ -1653,6 +1690,60 @@ function App() {
     } catch (e) {
       console.error(e);
       alert(`저장 실패: ${e.message || e}`);
+    } finally {
+      setSavingSharedConfig(false);
+    }
+  }
+
+  async function publishRoster() {
+    if (!isAdminUser) {
+      alert("관리자만 배포할 수 있습니다.");
+      return;
+    }
+
+    const adminKey = promptAdminPassword();
+    if (!adminKey) return;
+
+    try {
+      setSavingSharedConfig(true);
+
+      const payload = {
+        action: "publishRoster",
+        adminKey,
+        baseDate: remoteBaseDate,
+      };
+
+      const res = await fetch(ADMIN_SCRIPT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+
+      if (!json?.ok) {
+        throw new Error(json?.error || "배포 실패");
+      }
+
+      if (json?.baseDate) {
+        setGlobalBaseDate(json.baseDate);
+        setRemoteBaseDate(json.baseDate);
+        saveCachedSharedConfig({ baseDate: json.baseDate });
+      }
+
+      if (json?.publishedAt) {
+        localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, json.publishedAt);
+        setLastSeenPublishedAt(json.publishedAt);
+      }
+
+      await refreshLatestRoster(false);
+
+      alert(`배포 완료 (${json?.publishedCount || 0}건)`);
+    } catch (e) {
+      console.error(e);
+      alert(`배포 실패: ${e.message || e}`);
     } finally {
       setSavingSharedConfig(false);
     }
@@ -1843,6 +1934,32 @@ function App() {
     deferredPrompt.prompt();
     await deferredPrompt.userChoice;
     setDeferredPrompt(null);
+  }
+
+  function applyPendingRosterUpdate() {
+    if (!pendingRosterJson) {
+      setShowUpdatePopup(false);
+      return;
+    }
+
+    const next = normalizeRemoteRosterShape(pendingRosterJson);
+    const serverPublishedAt = String(pendingRosterJson?.publishedAt || "").trim();
+
+    setRemoteRoster(next);
+    saveCachedRemoteRoster(next);
+
+    if (serverPublishedAt) {
+      localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
+      setLastSeenPublishedAt(serverPublishedAt);
+    }
+
+    setPendingRosterJson(null);
+    setShowUpdatePopup(false);
+    alert("최신 교번 정보가 반영되었습니다.");
+  }
+
+  function closeUpdatePopup() {
+    setShowUpdatePopup(false);
   }
 
   const canEnterApp =
@@ -2486,7 +2603,7 @@ function App() {
                 </div>
 
                 <div className="help-text" style={{ marginTop: 10 }}>
-                  앱은 먼저 ZIP/저장값으로 빠르게 열리고, 배포된 최신 현재배정은 뒤에서 자동 반영됩니다.
+                  앱은 먼저 ZIP/저장값으로 빠르게 열리고, 배포된 최신 현재배정은 뒤에서 자동 확인됩니다.
                 </div>
 
                 <div className="modal-actions">
@@ -2608,17 +2725,26 @@ function App() {
                 />
 
                 <div className="help-text" style={{ marginTop: 10 }}>
-                  관리자에서 저장하면 App Script 공용 기준일이 갱신되고, 사용자들은 다음 실행 시 자동 반영됩니다.
+                  관리자에서 저장 또는 배포하면 공용 기준일과 배포본이 반영됩니다.
                 </div>
 
                 <div className="modal-actions">
                   <button
                     className="modal-btn"
                     onClick={() => refreshLatestRoster(true)}
-                    disabled={remoteLoading}
+                    disabled={remoteLoading || savingSharedConfig}
                   >
                     {remoteLoading ? "불러오는 중..." : "배포된 최신 인원 새로고침"}
                   </button>
+
+                  <button
+                    className="modal-btn"
+                    onClick={publishRoster}
+                    disabled={savingSharedConfig}
+                  >
+                    {savingSharedConfig ? "처리중..." : "현재배정 배포"}
+                  </button>
+
                   <button
                     className="modal-btn primary"
                     onClick={saveSharedConfig}
@@ -2744,6 +2870,23 @@ function App() {
             ) : (
               <div className="empty-box">해당 행로표 이미지를 찾지 못했습니다.</div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showUpdatePopup && (
+        <div className="modal-backdrop" onClick={closeUpdatePopup}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">업데이트 알림</div>
+            <div className="help-text" style={{ marginTop: 8 }}>
+              새로운 교번 정보가 있습니다.<br />
+              지금 업데이트하시겠습니까?
+            </div>
+
+            <div className="modal-actions">
+              <button className="modal-btn" onClick={closeUpdatePopup}>나중에</button>
+              <button className="modal-btn primary" onClick={applyPendingRosterUpdate}>업데이트</button>
+            </div>
           </div>
         </div>
       )}
