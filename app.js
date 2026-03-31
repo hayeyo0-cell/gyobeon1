@@ -17,6 +17,7 @@ const NIGHT_RANGE_BY_TEAM = {
 };
 
 const BASE_DATE = "2026-03-30";
+
 const ADMIN_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxdEOtps60qtHeyXtC7O_n9XmzgagOTLqkp0BDcQX7U9upbCQAojeXUD3N61_mO9phRgQ/exec";
 
@@ -1298,6 +1299,44 @@ function App() {
     setTeamAnchors(nextAnchors);
   }, [effectiveData, remoteRoster, mySelection]);
 
+  useEffect(() => {
+    if (!allowProfileEdit) return;
+
+    const teamKey = selectedTeam;
+    const currentName =
+      mySelection?.teamKey === teamKey ? mySelection?.name || "" : "";
+
+    if (!currentName) return;
+
+    const team = effectiveData?.[teamKey] || data?.[teamKey];
+    if (!team) return;
+
+    let nextCode = "";
+    const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster);
+    if (remoteRow?.code) {
+      nextCode = normalizeToFixedCode(team, remoteRow.code);
+    } else {
+      const zipPerson = findZipPersonByName(team, currentName);
+      if (zipPerson?.baseCode) {
+        nextCode = normalizeToFixedCode(team, zipPerson.baseCode);
+      }
+    }
+
+    if (!nextCode) return;
+
+    if (
+      mySelection?.teamKey !== teamKey ||
+      normalizeCodeKey(mySelection?.code) !== normalizeCodeKey(nextCode)
+    ) {
+      setMySelection((prev) => ({
+        ...prev,
+        teamKey,
+        code: nextCode,
+        anchorDate: REMOTE_BASE_DATE || BASE_DATE,
+      }));
+    }
+  }, [allowProfileEdit, selectedTeam, mySelection?.name, remoteRoster, effectiveData, data]);
+
   const currentTeam = effectiveData?.[selectedTeam] || null;
   const currentViewTeam = effectiveData?.[viewTeam] || null;
   const currentViewAnchor =
@@ -1553,15 +1592,15 @@ function App() {
       const hasAny = TEAM_ORDER.some((teamKey) => (next[teamKey] || []).length > 0);
 
       if (!hasAny) {
-        throw new Error("최신 현재배정 데이터가 없습니다.");
+        throw new Error("배포된 최신 현재배정 데이터가 없습니다.");
       }
 
       setRemoteRoster(next);
       saveCachedRemoteRoster(next);
-      setRefreshRosterMessage("최신 인원이 반영되었습니다.");
+      setRefreshRosterMessage("배포된 최신 인원이 반영되었습니다.");
 
       if (showAlert) {
-        alert("최신 인원이 반영되었습니다.");
+        alert("배포된 최신 인원이 반영되었습니다.");
       }
     } catch (e) {
       console.error(e);
@@ -1838,7 +1877,16 @@ function App() {
             <select
               className="select"
               value={selectedTeam}
-              onChange={(e) => setSelectedTeam(e.target.value)}
+              onChange={(e) => {
+                const nextTeam = e.target.value;
+                setSelectedTeam(nextTeam);
+                setMySelection((prev) => ({
+                  ...prev,
+                  teamKey: nextTeam,
+                  name: "",
+                  code: "",
+                }));
+              }}
             >
               {TEAM_ORDER.map((key) => (
                 <option key={key} value={key}>
@@ -1912,7 +1960,7 @@ function App() {
             />
 
             <div className="help-text" style={{ marginTop: 10 }}>
-              선택한 날짜의 내 교번을 기준으로 전체 교번이 자동 계산됩니다.
+              이름이 최신 현재배정에 있으면 오늘 교번은 자동으로 채워집니다.
             </div>
 
             <div className="modal-actions">
@@ -1925,6 +1973,7 @@ function App() {
                     mySelection?.code
                   )
                 }
+                disabled={!mySelection?.name || !mySelection?.code}
               >
                 시작하기
               </button>
@@ -2013,7 +2062,7 @@ function App() {
 
                     {remoteLoading && (
                       <div className="help-text" style={{ color: "#2563eb" }}>
-                        최신 현재배정 불러오는 중...
+                        배포된 최신 현재배정 불러오는 중...
                       </div>
                     )}
                   </div>
@@ -2437,7 +2486,7 @@ function App() {
                 </div>
 
                 <div className="help-text" style={{ marginTop: 10 }}>
-                  앱은 먼저 ZIP/저장값으로 빠르게 열리고, 최신 현재배정은 뒤에서 자동 반영됩니다.
+                  앱은 먼저 ZIP/저장값으로 빠르게 열리고, 배포된 최신 현재배정은 뒤에서 자동 반영됩니다.
                 </div>
 
                 <div className="modal-actions">
@@ -2450,7 +2499,16 @@ function App() {
                 <select
                   className="select"
                   value={selectedTeam}
-                  onChange={(e) => setSelectedTeam(e.target.value)}
+                  onChange={(e) => {
+                    const nextTeam = e.target.value;
+                    setSelectedTeam(nextTeam);
+                    setMySelection((prev) => ({
+                      ...prev,
+                      teamKey: nextTeam,
+                      name: "",
+                      code: "",
+                    }));
+                  }}
                 >
                   {TEAM_ORDER.map((key) => (
                     <option key={key} value={key}>{TEAM_LABELS[key]}</option>
@@ -2483,7 +2541,7 @@ function App() {
                     onClick={() => refreshLatestRoster(true)}
                     disabled={remoteLoading}
                   >
-                    {remoteLoading ? "불러오는 중..." : "최신 인원 불러오기"}
+                    {remoteLoading ? "불러오는 중..." : "이름이 없나요? 최신 인원 불러오기"}
                   </button>
                 </div>
 
@@ -2526,6 +2584,7 @@ function App() {
                         mySelection?.code
                       )
                     }
+                    disabled={!mySelection?.name || !mySelection?.code}
                   >
                     저장
                   </button>
@@ -2549,7 +2608,7 @@ function App() {
                 />
 
                 <div className="help-text" style={{ marginTop: 10 }}>
-                  관리자 UI는 이름으로만 노출되고, 실제 저장할 때만 비밀번호를 확인합니다.
+                  관리자에서 저장하면 App Script 공용 기준일이 갱신되고, 사용자들은 다음 실행 시 자동 반영됩니다.
                 </div>
 
                 <div className="modal-actions">
@@ -2558,7 +2617,7 @@ function App() {
                     onClick={() => refreshLatestRoster(true)}
                     disabled={remoteLoading}
                   >
-                    {remoteLoading ? "불러오는 중..." : "현재배정 새로고침"}
+                    {remoteLoading ? "불러오는 중..." : "배포된 최신 인원 새로고침"}
                   </button>
                   <button
                     className="modal-btn primary"
