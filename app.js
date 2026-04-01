@@ -18,7 +18,7 @@ const NIGHT_RANGE_BY_TEAM = {
 
 const BASE_DATE = "2026-03-30";
 const ADMIN_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbxdEOtps60qtHeyXtC7O_n9XmzgagOTLqkp0BDcQX7U9upbCQAojeXUD3N61_mO9phRgQ/exec";
+  "https://script.google.com/macros/s/AKfycbw8NMVjH3J_Mt7SBymWOg44zvD4gd4GXkQB3r95QTl63M3aWqtf-OglLrG2rQPH7J6UjA/exec";
 
 const ADMIN_NAME = "권재림";
 const ADMIN_PASSWORD = "7717tutu";
