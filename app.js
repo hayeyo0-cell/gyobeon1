@@ -2614,7 +2614,7 @@ function App() {
                         gap: "16px",
                         padding: "14px 16px",
                         borderBottom: idx === diaList.length - 1 ? "none" : "1px solid #e5e7eb",
-                        fontSize: 19,
+                        fontSize: 18,
                         background:
                           viewTeam === selectedTeam && samePersonName(item.name, currentViewAnchor.name)
                             ? "#eef6ff"
