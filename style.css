@@ -1869,11 +1869,12 @@ filter: brightness(1.18);
 @media (max-width: 420px) {
 
 .container {
-
-height: 100dvh;
-
-padding: 6px 6px 20px;
-
+ 
+ min-height: 100dvh;
+  
+ padding: 22px 6px 20px;
+  
+ overflow-x: hidden;
 }
 
 .container::after {
