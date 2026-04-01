@@ -38,28 +38,33 @@ const COLOR_OPTIONS = [
   { value: "#e5e7eb", label: "회색" },
 ];
 
-const HOLIDAYS = [
-  "2026-01-01",
-  "2026-02-16",
-  "2026-02-17",
-  "2026-02-18",
-  "2026-03-01",
-  "2026-03-02",
-  "2026-05-05",
-  "2026-05-24",
-  "2026-05-25",
-  "2026-06-03",
-  "2026-06-06",
-  "2026-08-15",
-  "2026-08-17",
-  "2026-09-24",
-  "2026-09-25",
-  "2026-09-26",
-  "2026-10-03",
-  "2026-10-05",
-  "2026-10-09",
-  "2026-12-25",
-];
+const DEFAULT_HOLIDAYS_BY_YEAR = {
+  2026: [
+    "2026-01-01",
+    "2026-02-16",
+    "2026-02-17",
+    "2026-02-18",
+    "2026-03-01",
+    "2026-03-02",
+    "2026-05-05",
+    "2026-05-24",
+    "2026-05-25",
+    "2026-06-03",
+    "2026-06-06",
+    "2026-08-15",
+    "2026-08-17",
+    "2026-09-24",
+    "2026-09-25",
+    "2026-09-26",
+    "2026-10-03",
+    "2026-10-05",
+    "2026-10-09",
+    "2026-12-25",
+  ],
+};
+
+let RUNTIME_HOLIDAYS_BY_YEAR = { ...DEFAULT_HOLIDAYS_BY_YEAR };
+const HOLIDAY_FETCHING_YEARS = new Set();
 
 const DEFAULT_GYOBUN = [
   "2d","대3","16d","휴1","휴2","대2","14d","24d","24~","휴3","5d","17d",
@@ -74,6 +79,7 @@ const HIDDEN_NAME_KEYS = ["gb2601"];
 const LS_SHARED_CONFIG_CACHE = "gyobeon_shared_config_cache";
 const LS_REMOTE_ROSTER_CACHE = "gyobeon_remote_roster_cache";
 const LS_LAST_SEEN_PUBLISHED_AT = "gyobeon_last_seen_published_at";
+const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
 
 function normalizeNameKey(name) {
   return String(name || "").trim().toLowerCase().replace(/\s+/g, "");
@@ -100,6 +106,16 @@ function formatDate(date) {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function getKoreaNow() {
+  const now = new Date();
+  const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utcTime + 9 * 60 * 60000);
+}
+
+function getKoreaToday() {
+  return formatDate(getKoreaNow());
 }
 
 function addDays(dateStr, days) {
@@ -148,8 +164,107 @@ function isSunday(dateStr) {
   return parseLocalDate(dateStr).getDay() === 0;
 }
 
+function getYearFromDateStr(dateStr) {
+  return Number(String(dateStr || "").slice(0, 4));
+}
+
+function dedupeSortDates(list) {
+  return [...new Set((list || []).map((v) => String(v || "").trim()).filter(Boolean))].sort();
+}
+
+function setHolidayYear(year, dates) {
+  const y = Number(year);
+  if (!y) return;
+  RUNTIME_HOLIDAYS_BY_YEAR[y] = dedupeSortDates(dates);
+}
+
+function loadHolidayYearFromCache(year) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(`${LS_HOLIDAY_CACHE_PREFIX}${year}`) || "null");
+    if (!raw?.dates?.length) return null;
+    return dedupeSortDates(raw.dates);
+  } catch {
+    return null;
+  }
+}
+
+function saveHolidayYearToCache(year, dates) {
+  try {
+    localStorage.setItem(
+      `${LS_HOLIDAY_CACHE_PREFIX}${year}`,
+      JSON.stringify({
+        year,
+        savedAt: Date.now(),
+        dates: dedupeSortDates(dates),
+      })
+    );
+  } catch (_) {}
+}
+
 function isHolidayDate(dateStr) {
-  return HOLIDAYS.includes(String(dateStr || "").trim());
+  const clean = String(dateStr || "").trim();
+  const year = getYearFromDateStr(clean);
+  const yearly = RUNTIME_HOLIDAYS_BY_YEAR[year] || DEFAULT_HOLIDAYS_BY_YEAR[year] || [];
+  return yearly.includes(clean);
+}
+
+async function fetchHolidayYear(year) {
+  const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/KR`, {
+    method: "GET",
+  });
+
+  if (!res.ok) {
+    throw new Error(`공휴일 조회 실패 (${year})`);
+  }
+
+  const json = await res.json();
+  const dates = (Array.isArray(json) ? json : [])
+    .filter((row) => {
+      const types = Array.isArray(row?.types) ? row.types : [];
+      return row?.date && (types.includes("Public") || row?.global === true);
+    })
+    .map((row) => String(row.date).trim());
+
+  return dedupeSortDates(dates);
+}
+
+async function ensureHolidayYear(year, onApplied) {
+  const y = Number(year);
+  if (!y) return;
+
+  if (RUNTIME_HOLIDAYS_BY_YEAR[y]?.length) return;
+  if (HOLIDAY_FETCHING_YEARS.has(y)) return;
+
+  const cached = loadHolidayYearFromCache(y);
+  if (cached?.length) {
+    setHolidayYear(y, cached);
+    onApplied?.();
+    return;
+  }
+
+  HOLIDAY_FETCHING_YEARS.add(y);
+  try {
+    const fetched = await fetchHolidayYear(y);
+    if (fetched?.length) {
+      setHolidayYear(y, fetched);
+      saveHolidayYearToCache(y, fetched);
+      onApplied?.();
+      return;
+    }
+
+    if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) {
+      setHolidayYear(y, DEFAULT_HOLIDAYS_BY_YEAR[y]);
+      onApplied?.();
+    }
+  } catch (err) {
+    console.log(`${y} 공휴일 조회 실패`, err);
+    if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) {
+      setHolidayYear(y, DEFAULT_HOLIDAYS_BY_YEAR[y]);
+      onApplied?.();
+    }
+  } finally {
+    HOLIDAY_FETCHING_YEARS.delete(y);
+  }
 }
 
 function guessDayType(dateStr) {
@@ -535,7 +650,7 @@ function loadMySelection() {
       teamKey: raw.teamKey || "ks",
       name: raw.name || "",
       code: raw.code || "",
-      anchorDate: raw.anchorDate || formatDate(new Date()),
+      anchorDate: raw.anchorDate || getKoreaToday(),
     };
   } catch {
     return null;
@@ -547,7 +662,7 @@ function saveMySelection(value) {
     teamKey: value?.teamKey || "ks",
     name: value?.name || "",
     code: value?.code || "",
-    anchorDate: value?.anchorDate || formatDate(new Date()),
+    anchorDate: value?.anchorDate || getKoreaToday(),
   };
   localStorage.setItem("gyobeon_my_selection", JSON.stringify(next));
 }
@@ -650,7 +765,7 @@ function getTeamBaseDate(team) {
   return (
     String(SHARED_REMOTE_BASE_DATE || "").trim() ||
     String(team?.info?.baseDate || "").trim() ||
-    formatDate(new Date())
+    getKoreaToday()
   );
 }
 
@@ -1106,7 +1221,7 @@ function promptAdminPassword() {
 function App() {
   const initialSelection = loadMySelection();
   const initialGroups = loadGroups();
-  const todayStr = formatDate(new Date());
+  const todayStr = getKoreaToday();
 
   const cachedShared = loadCachedSharedConfig();
   if (cachedShared?.baseDate) {
@@ -1125,6 +1240,7 @@ function App() {
   const [lastSeenPublishedAt, setLastSeenPublishedAt] = useState(
     localStorage.getItem(LS_LAST_SEEN_PUBLISHED_AT) || ""
   );
+  const [holidayVersion, setHolidayVersion] = useState(0);
 
   const [activeTab, setActiveTab] = useState("home");
   const activeTabRef = useRef("home");
@@ -1222,6 +1338,20 @@ function App() {
   }, [data]);
 
   useEffect(() => {
+    const years = [
+      getYearFromDateStr(homeDate),
+      getYearFromDateStr(allDate),
+      getYearFromDateStr(diaDate),
+      getYearFromDateStr(monthDate),
+      getYearFromDateStr(groupBaseDate),
+    ].filter(Boolean);
+
+    [...new Set(years)].forEach((year) => {
+      ensureHolidayYear(year, () => setHolidayVersion((v) => v + 1));
+    });
+  }, [homeDate, allDate, diaDate, monthDate, groupBaseDate]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function initAppFast() {
@@ -1258,6 +1388,20 @@ function App() {
         }
       } catch (e) {
         console.log("초기 로컬 복원 실패", e);
+      }
+
+      try {
+        const thisYear = getYearFromDateStr(getKoreaToday());
+        const preloadYears = [thisYear - 1, thisYear, thisYear + 1];
+        await Promise.all(
+          preloadYears.map((year) =>
+            ensureHolidayYear(year, () => {
+              if (!cancelled) setHolidayVersion((v) => v + 1);
+            })
+          )
+        );
+      } catch (e) {
+        console.log("공휴일 초기 로드 실패", e);
       }
 
       try {
@@ -1353,7 +1497,7 @@ function App() {
 
       if (activeTabRef.current !== "home") {
         setActiveTab("home");
-        setHomeDate(formatDate(new Date()));
+        setHomeDate(getKoreaToday());
         return;
       }
 
@@ -1493,7 +1637,7 @@ function App() {
       code,
       time: pickWorktime(team, code, homeDate),
     };
-  }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection]);
+  }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion]);
 
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
@@ -1639,7 +1783,7 @@ function App() {
 
   function switchTab(tabName) {
     const currentTab = activeTabRef.current;
-    const today = formatDate(new Date());
+    const today = getKoreaToday();
 
     if (tabName === currentTab) {
       if (tabName === "home") {
@@ -1942,9 +2086,9 @@ function App() {
       teamKey: "ks",
       name: "",
       code: "",
-      anchorDate: formatDate(new Date()),
+      anchorDate: getKoreaToday(),
     });
-    setProfileAnchorDate(formatDate(new Date()));
+    setProfileAnchorDate(getKoreaToday());
     setAllowProfileEdit(true);
     setSelectedTeam("ks");
     setViewTeam("ks");
@@ -2398,7 +2542,7 @@ function App() {
                         viewTeam === (mySelection?.teamKey || selectedTeam) &&
                         samePersonName(item.name, mySelection?.name);
 
-                      const isToday = allDate === formatDate(new Date());
+                      const isToday = allDate === getKoreaToday();
 
                       const customStyle = item.customColor
                         ? {
@@ -2428,7 +2572,7 @@ function App() {
             {activeTab === "dia" && (
               <div className="tab-page">
                 <div className="all-tab-header">
-                  <div className="all-header">
+                  <div className="all-header dia-header">
                     <button className="all-header-btn" onClick={() => setDiaDate(addDays(diaDate, -1))}>-</button>
 
                     <div className="all-header-title">
@@ -2470,7 +2614,7 @@ function App() {
                         gap: "16px",
                         padding: "14px 16px",
                         borderBottom: idx === diaList.length - 1 ? "none" : "1px solid #e5e7eb",
-                        fontSize: 18,
+                        fontSize: 19,
                         background:
                           viewTeam === selectedTeam && samePersonName(item.name, currentViewAnchor.name)
                             ? "#eef6ff"
@@ -2478,7 +2622,7 @@ function App() {
                         cursor: "pointer",
                       }}
                     >
-                      <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(diaDate) }}>
+                      <div style={{ fontWeight: 800, width: 64, color: getDateBasedColor(diaDate) }}>
                         {item.code}
                       </div>
                       <div style={{ color: "#111827", fontWeight: 600 }}>
@@ -2695,7 +2839,7 @@ function App() {
                                   style={{
                                     cursor: "pointer",
                                     background: isSelectedCol ? "#f5f3ff" : "",
-                                    fontWeight: isSelectedCol ? 700 : 500,
+                                    fontWeight: isSelectedCol ? 700 : 600,
                                     color: isSelectedCol ? "#4c1d95" : "#111827",
                                     transition: "all 0.18s ease",
                                   }}
