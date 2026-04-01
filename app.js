@@ -1189,6 +1189,7 @@ function App() {
 
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
+  const allGridWrapRef = useRef(null);
 
   const effectiveData = useMemo(() => {
     if (!data) return null;
@@ -1600,24 +1601,76 @@ function App() {
     }
   }, [weekDates, selectedGroupDate]);
 
+  useEffect(() => {
+    if (activeTab !== "all") return;
+    if (!allGridWrapRef.current) return;
+    if (!visibleAllGrid.length) return;
+
+    const myTeamKey = mySelection?.teamKey || selectedTeam;
+    const myName = mySelection?.name || "";
+
+    if (!myName) return;
+    if (viewTeam !== myTeamKey) return;
+
+    const index = visibleAllGrid.findIndex((item) =>
+      samePersonName(item.name, myName)
+    );
+
+    if (index < 0) return;
+
+    const target = allGridWrapRef.current.querySelector(
+      `[data-cell-index="${index}"]`
+    );
+
+    if (!target) return;
+
+    requestAnimationFrame(() => {
+      try {
+        target.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "nearest",
+        });
+      } catch (_) {
+        target.scrollIntoView();
+      }
+    });
+  }, [activeTab, viewTeam, allDate, visibleAllGrid, mySelection, selectedTeam]);
+
   function switchTab(tabName) {
-    if (tabName === activeTabRef.current) {
+    const currentTab = activeTabRef.current;
+    const today = formatDate(new Date());
+
+    if (tabName === currentTab) {
       if (tabName === "home") {
-        setHomeDate(formatDate(new Date()));
+        setHomeDate(today);
       }
       return;
+    }
+
+    if (tabName === "home") {
+      setHomeDate(today);
+    }
+
+    if (currentTab === "home" && tabName !== "home") {
+      if (tabName === "all") {
+        setAllDate(today);
+      } else if (tabName === "dia") {
+        setDiaDate(today);
+      } else if (tabName === "month") {
+        setMonthDate(today);
+      } else if (tabName === "group") {
+        setGroupBaseDate(today);
+        setSelectedGroupDate("");
+      }
     }
 
     if (tabName === "all") {
       setViewTeam(selectedTeam);
     }
 
-    if (tabName === "dia" && activeTabRef.current !== "all") {
+    if (tabName === "dia" && currentTab !== "all") {
       setViewTeam(selectedTeam);
-    }
-
-    if (tabName === "home") {
-      setHomeDate(formatDate(new Date()));
     }
 
     setActiveTab(tabName);
@@ -2332,7 +2385,7 @@ function App() {
                   })}
                 </div>
 
-                <div className="all-tab-grid-wrap">
+                <div className="all-tab-grid-wrap" ref={allGridWrapRef}>
                   <div
                     className={`all-grid-real ${allGridLayout.className}`}
                     style={{
@@ -2340,7 +2393,7 @@ function App() {
                       gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))`,
                     }}
                   >
-                    {visibleAllGrid.map((item) => {
+                    {visibleAllGrid.map((item, index) => {
                       const isMine =
                         viewTeam === (mySelection?.teamKey || selectedTeam) &&
                         samePersonName(item.name, mySelection?.name);
@@ -2357,6 +2410,7 @@ function App() {
                       return (
                         <div
                           key={`${item.idx}-${item.name}`}
+                          data-cell-index={index}
                           className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`}
                           style={customStyle}
                           onClick={() => handleAllCellTap(item)}
