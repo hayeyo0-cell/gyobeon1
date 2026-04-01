@@ -498,6 +498,30 @@ function saveOverrides(value) {
   localStorage.setItem("gyobeon_overrides", JSON.stringify(value));
 }
 
+function cleanupNameOverrides() {
+  try {
+    const raw = localStorage.getItem("gyobeon_overrides");
+    if (!raw) return;
+
+    const data = JSON.parse(raw);
+    let changed = false;
+
+    Object.keys(data).forEach((key) => {
+      const item = data[key];
+      if (item && typeof item === "object" && "name" in item) {
+        delete item.name;
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      localStorage.setItem("gyobeon_overrides", JSON.stringify(data));
+    }
+  } catch (err) {
+    console.error("cleanupNameOverrides failed:", err);
+  }
+}
+
 function loadMySelection() {
   try {
     const raw = JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null");
@@ -636,7 +660,7 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
         return {
           idx: person.idx,
           name: person.name,
-          displayName: override.name || person.name,
+          displayName: person.name,
           code: slotCode,
           customColor: override.color || "",
         };
@@ -656,7 +680,7 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
       return {
         idx: person.idx,
         name: person.name,
-        displayName: override.name || person.name,
+        displayName: person.name,
         code: slotCode,
         customColor: override.color || "",
       };
@@ -1128,6 +1152,7 @@ function App() {
   }, [activeTab]);
 
   useEffect(() => {
+    cleanupNameOverrides();
     setOverrides(loadOverrides());
   }, []);
 
@@ -1801,7 +1826,6 @@ function App() {
     setEditingCell(item);
     const key = getOverrideKey(viewTeam, item.idx);
     const current = overrides[key] || {};
-    setEditName(current.name || item.displayName || item.name || "");
     setEditColor(current.color || "");
     setEditOpen(true);
   }
@@ -1817,17 +1841,15 @@ function App() {
   function commitEdit(nextColorValue = editColor) {
     if (!editingCell) return;
 
-    const cleanName = editName.trim();
     const cleanColor = nextColorValue || "";
 
     const key = getOverrideKey(viewTeam, editingCell.idx);
     const next = { ...overrides };
 
-    if (!cleanName && !cleanColor) {
+    if (!cleanColor) {
       delete next[key];
     } else {
       next[key] = {
-        name: cleanName,
         color: cleanColor,
       };
     }
@@ -2238,8 +2260,7 @@ function App() {
                     {visibleAllGrid.map((item) => {
                       const isMine =
                         viewTeam === (mySelection?.teamKey || selectedTeam) &&
-                        (samePersonName(item.name, mySelection?.name) ||
-                          samePersonName(item.displayName, mySelection?.name));
+                        samePersonName(item.name, mySelection?.name);
 
                       const isToday = selectedDate === formatDate(new Date());
 
@@ -2252,7 +2273,7 @@ function App() {
 
                       return (
                         <div
-                          key={`${item.idx}-${item.displayName}`}
+                          key={`${item.idx}-${item.name}`}
                           className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`}
                           style={customStyle}
                           onClick={() => handleAllCellTap(item)}
@@ -2818,13 +2839,10 @@ function App() {
       {editOpen && (
         <div className="modal-backdrop" onClick={closeEditDialog}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">이름변경 및 색상 수정</div>
+            <div className="modal-title">색상 수정</div>
             <div className="modal-sub">
               {TEAM_LABELS[viewTeam]} {editingCell?.code} {editingCell?.displayName || editingCell?.name}
             </div>
-
-            <label className="label">이름</label>
-            <input className="input" value={editName} onChange={(e) => setEditName(e.target.value)} />
 
             <label className="label" style={{ marginTop: 12 }}>색상</label>
             <select
@@ -2912,13 +2930,10 @@ function getPersonGyobunForDate(
   const dayOffset = diffDays(anchor.anchorDate || REMOTE_BASE_DATE || BASE_DATE, dateStr);
   const code = shiftCodeByDays(team, anchor.code, dayOffset);
 
-  const person = team.people.find((p) => samePersonName(p.name, name));
-  const override = person ? overrides[getOverrideKey(teamKey, person.idx)] || {} : {};
-
   return {
     code,
     name,
-    displayName: override.name || name,
+    displayName: name,
   };
 }
 
