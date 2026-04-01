@@ -97,7 +97,7 @@ button:active {
   padding: 10px 12px;
   margin-top: 10px;
   font-size: 13px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .label {
@@ -117,7 +117,7 @@ button:active {
   border: 1px solid rgba(203, 213, 225, 0.95);
   background: rgba(255, 255, 255, 0.95);
   outline: none;
-  box-shadow: inset 0 1px 1px rgba(0,0,0,0.02);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.02);
   transition:
     border-color 0.18s ease,
     box-shadow 0.18s ease,
@@ -151,7 +151,7 @@ button:active {
   font-size: 15px;
   box-shadow:
     0 8px 18px rgba(47, 97, 220, 0.22),
-    inset 0 1px 0 rgba(255,255,255,0.22);
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .settings-btn {
@@ -184,8 +184,8 @@ button:active {
   border-radius: 22px;
   box-shadow:
     0 8px 20px rgba(15, 23, 42, 0.08),
-    inset 0 1px 0 rgba(255,255,255,0.7);
-  border: 1px solid rgba(255,255,255,0.8);
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .date-btn {
@@ -213,7 +213,7 @@ button:active {
 
 .main-panel {
   min-height: 210px;
-  background: rgba(255,255,255,0.84);
+  background: rgba(255, 255, 255, 0.84);
   border-radius: 28px;
   display: flex;
   align-items: center;
@@ -221,8 +221,8 @@ button:active {
   margin-bottom: 0;
   box-shadow:
     0 14px 32px rgba(15, 23, 42, 0.08),
-    inset 0 1px 0 rgba(255,255,255,0.72);
-  border: 1px solid rgba(255,255,255,0.8);
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .center-view {
@@ -287,8 +287,8 @@ button:active {
   background: rgba(39, 82, 191, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid rgba(255,255,255,0.16);
-  box-shadow: 0 -6px 22px rgba(15,23,42,0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 -6px 22px rgba(15, 23, 42, 0.12);
   z-index: 50;
   overflow: hidden;
 }
@@ -329,7 +329,7 @@ button:active {
   height: 60px;
   border: 0;
   background: transparent;
-  color: rgba(255,255,255,0.84);
+  color: rgba(255, 255, 255, 0.84);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -347,7 +347,7 @@ button:active {
 
 .bottom-tab.active {
   color: #ffffff;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   font-size: 16px;
   font-weight: 700;
 }
@@ -360,7 +360,7 @@ button:active {
   bottom: 5px;
   height: 3px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .month-header-bar,
@@ -388,7 +388,7 @@ button:active {
   cursor: pointer;
   box-shadow:
     0 8px 18px rgba(47, 97, 220, 0.18),
-    inset 0 1px 0 rgba(255,255,255,0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .month-header-title {
@@ -435,13 +435,13 @@ button:active {
   border-radius: 24px;
   overflow: hidden;
   box-shadow:
-    0 8px 18px rgba(15,23,42,0.08),
-    inset 0 1px 0 rgba(255,255,255,0.35);
+    0 8px 18px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
   border: 1px solid rgba(160, 185, 240, 0.9);
 }
 
 .all-header-btn {
-  border: 1px solid rgba(93,127,213,0.45);
+  border: 1px solid rgba(93, 127, 213, 0.45);
   background: transparent;
   font-size: 22px;
   font-weight: 800;
@@ -463,7 +463,7 @@ button:active {
 }
 
 .all-edit-btn {
-  border: 1px solid rgba(93,127,213,0.45);
+  border: 1px solid rgba(93, 127, 213, 0.45);
   background: transparent;
   font-size: 14px;
   font-weight: 800;
@@ -496,8 +496,8 @@ button:active {
   cursor: pointer;
   line-height: 1;
   box-shadow:
-    0 8px 16px rgba(90,130,235,0.18),
-    inset 0 1px 0 rgba(255,255,255,0.28);
+    0 8px 16px rgba(90, 130, 235, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .all-team-tab.my-team {
@@ -505,22 +505,22 @@ button:active {
   color: #0f3d2e;
   border: 1px solid rgba(16, 185, 129, 0.24);
   box-shadow:
-    0 8px 16px rgba(16,185,129,0.16),
-    inset 0 1px 0 rgba(255,255,255,0.35);
+    0 8px 16px rgba(16, 185, 129, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .all-team-tab.active {
   box-shadow:
     0 0 0 2px rgba(37, 99, 235, 0.22),
-    0 10px 18px rgba(90,130,235,0.2),
-    inset 0 1px 0 rgba(255,255,255,0.38);
+    0 10px 18px rgba(90, 130, 235, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38);
 }
 
 .all-team-tab.my-team.active {
   box-shadow:
     0 0 0 2px rgba(37, 99, 235, 0.22),
-    0 10px 18px rgba(16,185,129,0.18),
-    inset 0 1px 0 rgba(255,255,255,0.4);
+    0 10px 18px rgba(16, 185, 129, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .view-dot {
@@ -536,12 +536,16 @@ button:active {
 
 .all-tab-grid-wrap {
   overflow: visible;
-  background: linear-gradient(180deg, rgba(194, 211, 245, 0.78) 0%, rgba(178, 198, 238, 0.72) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(194, 211, 245, 0.78) 0%,
+    rgba(178, 198, 238, 0.72) 100%
+  );
   border-radius: 28px;
   padding: 8px;
   box-shadow:
-    0 14px 30px rgba(15,23,42,0.08),
-    inset 0 1px 0 rgba(255,255,255,0.38);
+    0 14px 30px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38);
   margin-bottom: 12px;
 }
 
@@ -572,8 +576,8 @@ button:active {
   touch-action: manipulation;
   border: 1px solid #c8d6f0;
   box-shadow:
-    0 2px 6px rgba(15,23,42,0.05),
-    inset 0 1px 0 rgba(255,255,255,0.92);
+    0 2px 6px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
   transition:
     transform 0.12s ease,
     border-color 0.18s ease,
@@ -611,7 +615,12 @@ button:active {
   width: 100%;
 }
 
-/* 수정됨: customColor가 우선 보이도록 배경 제거 */
+/* 사용자 지정 색상 우선 */
+.all-cell-real[style] {
+  background-image: none !important;
+}
+
+/* 내 셀 강조는 테두리/그림자만, 배경은 덮어쓰지 않음 */
 .cell-my {
   border: 2px solid #22c7d8 !important;
   background-image: none !important;
@@ -619,10 +628,14 @@ button:active {
   box-shadow:
     0 10px 20px rgba(34, 199, 216, 0.25),
     0 4px 8px rgba(34, 199, 216, 0.18),
-    inset 0 0 0 1px rgba(255,255,255,0.72);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.72);
   z-index: 2;
   position: relative;
   transition: all 0.2s ease;
+}
+
+.cell-my-today {
+  animation: myCellBlink 1.4s ease-in-out infinite;
 }
 
 .all-grid-real.density-6 .all-code {
@@ -650,14 +663,14 @@ button:active {
 }
 
 .month-calendar {
-  background: rgba(255,255,255,0.76);
+  background: rgba(255, 255, 255, 0.76);
   border-radius: 24px;
   padding: 10px;
   margin-bottom: 12px;
-  border: 1px solid rgba(255,255,255,0.8);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow:
-    0 10px 24px rgba(15,23,42,0.06),
-    inset 0 1px 0 rgba(255,255,255,0.7);
+    0 10px 24px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .month-weekdays,
@@ -797,21 +810,25 @@ button:active {
 .modal {
   width: 100%;
   max-width: 520px;
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 24px;
   padding: 20px;
   max-height: 90vh;
   overflow: auto;
   box-shadow:
-    0 24px 50px rgba(15,23,42,0.16),
-    inset 0 1px 0 rgba(255,255,255,0.78);
-  border: 1px solid rgba(255,255,255,0.86);
+    0 24px 50px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.86);
   animation: modalUp 0.2s ease;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes modalUp {
@@ -849,7 +866,7 @@ button:active {
   min-width: 88px;
   height: 42px;
   border: 1px solid rgba(203, 213, 225, 0.95);
-  background: rgba(255,255,255,0.92);
+  background: rgba(255, 255, 255, 0.92);
   cursor: pointer;
   border-radius: 14px;
   font-weight: 700;
@@ -864,7 +881,7 @@ button:active {
   border-color: transparent;
   box-shadow:
     0 8px 16px rgba(47, 97, 220, 0.22),
-    inset 0 1px 0 rgba(255,255,255,0.2);
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .modal-btn:disabled {
@@ -881,13 +898,13 @@ button:active {
 }
 
 .group-page {
-  background: rgba(255,255,255,0.78);
+  background: rgba(255, 255, 255, 0.78);
   border-radius: 24px;
   padding: 10px;
   box-shadow:
-    0 12px 28px rgba(15,23,42,0.08),
-    inset 0 1px 0 rgba(255,255,255,0.72);
-  border: 1px solid rgba(255,255,255,0.8);
+    0 12px 28px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   margin-bottom: 12px;
 }
 
@@ -900,7 +917,7 @@ button:active {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.95);
   font-size: 14px;
   overflow: hidden;
   border-radius: 18px;
@@ -949,8 +966,8 @@ button:active {
   cursor: pointer;
   font-weight: 700;
   box-shadow:
-    0 8px 14px rgba(239,68,68,0.18),
-    inset 0 1px 0 rgba(255,255,255,0.18);
+    0 8px 14px rgba(239, 68, 68, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .viewer-page {
@@ -980,7 +997,7 @@ button:active {
   font-weight: 800;
 }
 
-/* 수정됨: 이미지 잘림 방지 */
+/* 행로표 잘림 방지 */
 .viewer-body {
   padding: 16px;
   overflow: visible;
@@ -994,7 +1011,7 @@ button:active {
   background: white;
   border: 1px solid #cbd5e1;
   border-radius: 0;
-  box-shadow: 0 12px 24px rgba(15,23,42,0.08);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
 }
 
 .empty-box {
@@ -1006,34 +1023,31 @@ button:active {
   text-align: center;
 }
 
-.cell-my-today {
-  animation: myCellBlink 1.4s ease-in-out infinite;
-}
-
 .today-blink {
   animation: todayTextBlink 1.2s ease-in-out infinite;
 }
 
-/* 수정됨: 배경 없이 강조만 애니메이션 */
 @keyframes myCellBlink {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(-2px) scale(1.015);
     box-shadow:
-      0 0 0 2px rgba(34,199,216,0.18),
-      0 8px 16px rgba(34,199,216,0.14),
-      inset 0 0 0 1px rgba(255,255,255,0.76);
+      0 0 0 2px rgba(34, 199, 216, 0.18),
+      0 8px 16px rgba(34, 199, 216, 0.14),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.76);
   }
   50% {
     transform: translateY(-4px) scale(1.03);
     box-shadow:
-      0 0 0 3px rgba(34,199,216,0.28),
-      0 12px 24px rgba(34,199,216,0.22),
-      inset 0 0 0 1px rgba(255,255,255,0.82);
+      0 0 0 3px rgba(34, 199, 216, 0.28),
+      0 12px 24px rgba(34, 199, 216, 0.22),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.82);
   }
 }
 
 @keyframes todayTextBlink {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     filter: brightness(1);
   }
@@ -1303,4 +1317,4 @@ button:active {
   .modal-sub {
     font-size: 16px;
   }
-  }
+}
