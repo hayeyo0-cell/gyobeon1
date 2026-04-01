@@ -1365,7 +1365,6 @@ function App() {
     }
   }, [allowProfileEdit, selectedTeam, mySelection?.name, remoteRoster, effectiveData, data]);
 
-  const currentTeam = effectiveData?.[selectedTeam] || null;
   const currentViewTeam = effectiveData?.[viewTeam] || null;
   const currentViewAnchor =
     teamAnchors[viewTeam] || { name: "", code: "", anchorDate: REMOTE_BASE_DATE };
@@ -2244,15 +2243,18 @@ function App() {
 
                       const isToday = selectedDate === formatDate(new Date());
 
+                      const customStyle = item.customColor
+                        ? {
+                            backgroundColor: item.customColor,
+                            backgroundImage: "none",
+                          }
+                        : undefined;
+
                       return (
                         <div
                           key={`${item.idx}-${item.displayName}`}
                           className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`}
-                          style={
-                            item.customColor
-                              ? { background: item.customColor, backgroundImage: "none" }
-                              : undefined
-                          }
+                          style={customStyle}
                           onClick={() => handleAllCellTap(item)}
                         >
                           <div className="all-code">{item.code || "-"}</div>
@@ -2563,9 +2565,7 @@ function App() {
           className={`bottom-tabs tabs-5 ${
             activeTab === "home"
               ? "home-theme"
-              : activeTab === "all"
-              ? "all-theme"
-              : activeTab === "dia"
+              : activeTab === "all" || activeTab === "dia"
               ? "all-theme"
               : activeTab === "month"
               ? "month-theme"
