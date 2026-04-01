@@ -2084,8 +2084,12 @@ grid-template-columns: 40px 1fr 52px 40px;
 border-radius: 18px;
 
 }
+.dia-header {
 
-.all-header-btn {
+  grid-template-columns: 40px 1fr 40px;
+}
+
+  .all-header-btn {
 
 height: 52px;
 
