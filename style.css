@@ -42,8 +42,8 @@ button {
     transform 0.14s ease,
     opacity 0.18s ease,
     background-color 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
 }
 
 button:active {
@@ -56,41 +56,30 @@ select {
 }
 
 img {
-  max-width: 100%;
   display: block;
+  max-width: 100%;
 }
 
 :root {
-  --app-bg: #eef1f6;
-  --card-bg: rgba(255, 255, 255, 0.96);
-  --line: #dbe2ea;
-  --line-soft: #e7edf4;
-  --text-main: #111827;
-  --text-sub: #6b7280;
-  --text-soft: #94a3b8;
+  --bg: #eef1f6;
+  --card: #ffffff;
+  --line: #e5e7eb;
+  --line-soft: #edf1f5;
+  --text: #111827;
+  --sub: #6b7280;
+  --muted: #94a3b8;
 
-  --blue-50: #eff6ff;
-  --blue-100: #dbeafe;
-  --blue-500: #3b82f6;
-  --blue-600: #2563eb;
-  --blue-700: #1d4ed8;
+  --blue: #2563eb;
+  --blue-soft: #dbeafe;
+  --violet: #7c3aed;
+  --violet-soft: #ede9fe;
+  --green: #059669;
+  --green-soft: #d1fae5;
+  --orange: #c2410c;
+  --orange-soft: #ffedd5;
 
-  --violet-50: #f5f3ff;
-  --violet-100: #ede9fe;
-  --violet-500: #8b5cf6;
-  --violet-600: #7c3aed;
-
-  --emerald-50: #ecfdf5;
-  --emerald-100: #d1fae5;
-  --emerald-500: #10b981;
-
-  --red-50: #fef2f2;
-  --red-500: #ef4444;
-
-  --shadow-card: 0 10px 30px rgba(15, 23, 42, 0.08);
-  --shadow-soft: 0 6px 18px rgba(15, 23, 42, 0.06);
-
-  --radius-xl: 22px;
+  --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  --radius-xl: 24px;
   --radius-lg: 18px;
   --radius-md: 14px;
   --radius-sm: 10px;
@@ -99,11 +88,8 @@ img {
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
   --bottom-tab-height: 60px;
-  --bottom-tab-font: 15px;
-  --bottom-tab-font-active: 16px;
 }
 
-/* 전체 앱 기본 레이아웃 */
 .container {
   width: 100%;
   height: 100%;
@@ -111,47 +97,43 @@ img {
   padding:
     calc(14px + var(--safe-top))
     14px
-    calc(84px + var(--safe-bottom))
+    calc(82px + var(--safe-bottom))
     14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-/* 카드 */
 .card {
-  background: var(--card-bg);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-card);
-  padding: 18px 16px;
-  backdrop-filter: blur(10px);
+  background: var(--card);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 16px;
 }
 
 .card-title {
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 800;
-  letter-spacing: -0.03em;
-  margin-bottom: 14px;
-  color: var(--text-main);
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
 }
 
 .help-text {
   font-size: 14px;
   line-height: 1.55;
-  color: var(--text-sub);
+  color: var(--sub);
 }
 
 .notice-box,
 .empty-box {
   margin-top: 12px;
-  padding: 14px 15px;
-  border-radius: var(--radius-md);
+  padding: 14px;
+  border-radius: 14px;
   background: #f8fafc;
   border: 1px solid var(--line-soft);
   color: #475569;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
 .empty-box {
@@ -162,64 +144,51 @@ img {
   text-align: center;
 }
 
-/* 입력 UI */
 .label {
   display: block;
   font-size: 14px;
-  font-weight: 800;
-  color: #334155;
+  font-weight: 700;
+  color: #374151;
   margin-bottom: 8px;
-  letter-spacing: -0.01em;
 }
 
 .input,
 .select {
   width: 100%;
-  min-height: 46px;
+  min-height: 44px;
   border-radius: 14px;
-  border: 1.5px solid var(--line);
-  background: #fff;
-  color: var(--text-main);
+  border: 1px solid #d8dee6;
+  background: #ffffff;
   padding: 0 14px;
   font-size: 15px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  color: var(--text);
 }
 
 .input:focus,
 .select:focus {
   border-color: #93c5fd;
-  box-shadow:
-    0 0 0 4px rgba(59, 130, 246, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
-/* 상단 설정 / 설치 */
 .settings-row {
   display: flex;
   justify-content: flex-end;
-  align-items: center;
   gap: 8px;
 }
 
 .install-btn,
 .settings-btn {
   min-height: 40px;
-  padding: 0 14px;
+  padding: 0 16px;
   border-radius: 999px;
-  font-size: 14px;
-  font-weight: 800;
-  color: #1e3a8a;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid #dbeafe;
-  box-shadow: var(--shadow-soft);
-}
-
-.install-btn:hover,
-.settings-btn:hover {
   background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #1d4ed8;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
 }
 
-/* 홈 날짜 영역 */
 .date-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -227,27 +196,26 @@ img {
 }
 
 .date-box {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  box-shadow: var(--shadow-soft);
-  padding: 12px 10px;
+  min-height: 70px;
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
   display: grid;
-  grid-template-columns: 34px 1fr 34px;
+  grid-template-columns: 36px 1fr 36px;
   align-items: center;
   gap: 6px;
-  min-height: 64px;
+  padding: 10px;
 }
 
 .date-btn {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 999px;
   background: #f8fafc;
-  border: 1px solid var(--line-soft);
-  color: #334155;
-  font-size: 20px;
-  font-weight: 800;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  font-size: 22px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -257,49 +225,47 @@ img {
   text-align: center;
   font-size: 18px;
   font-weight: 800;
-  color: var(--text-main);
-  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--text);
+  letter-spacing: -0.02em;
 }
 
-/* 홈 메인 패널 */
 .main-panel {
   flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 0;
 }
 
 .center-view {
   width: 100%;
   text-align: center;
-  padding: 10px 6px;
+  padding: 4px;
 }
 
 .main-code {
-  font-size: clamp(38px, 7.6vw, 52px);
+  font-size: clamp(34px, 8vw, 46px);
   font-weight: 900;
   line-height: 1.1;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.04em;
 }
 
 .main-time {
   margin-top: 12px;
-  font-size: clamp(24px, 4.8vw, 32px);
+  font-size: clamp(23px, 5vw, 30px);
   font-weight: 800;
   line-height: 1.2;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 
 .main-subinfo {
   margin-top: 14px;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
-  color: var(--text-sub);
-  line-height: 1.4;
+  color: var(--sub);
 }
 
-/* 탭 공통 페이지 */
 .tab-page {
   flex: 1;
   min-height: 0;
@@ -309,7 +275,6 @@ img {
   overflow: hidden;
 }
 
-/* 통일 헤더 */
 .all-tab-header {
   flex: 0 0 auto;
 }
@@ -317,19 +282,22 @@ img {
 .all-header,
 .month-header-bar,
 .group-topbar {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  box-shadow: var(--shadow-soft);
-  border-radius: 20px;
+  min-height: 58px;
+  background: #ffffff;
+  border-radius: 22px;
+  box-shadow: var(--shadow);
 }
 
 .all-header {
-  min-height: 58px;
-  padding: 8px 10px;
   display: grid;
-  grid-template-columns: 44px 1fr auto 44px;
+  grid-template-columns: 42px 1fr auto 42px;
   align-items: center;
   gap: 8px;
+  padding: 8px 10px;
+}
+
+.dia-header {
+  grid-template-columns: 42px 1fr 42px;
 }
 
 .all-header-btn,
@@ -339,10 +307,10 @@ img {
   height: 42px;
   border-radius: 999px;
   background: #f8fafc;
-  border: 1px solid var(--line-soft);
-  color: #334155;
+  border: 1px solid #e5e7eb;
+  color: #374151;
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -351,11 +319,18 @@ img {
 .all-header-title,
 .month-header-title {
   text-align: center;
-  font-size: 20px;
-  font-weight: 900;
-  color: var(--text-main);
-  letter-spacing: -0.035em;
-  line-height: 1.25;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.dia-header .all-header-title {
+  font-size: 17px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .all-edit-btn {
@@ -363,24 +338,19 @@ img {
   padding: 0 14px;
   border-radius: 999px;
   background: #f8fafc;
-  border: 1px solid var(--line-soft);
-  color: #475569;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   white-space: nowrap;
 }
 
 .all-edit-btn.active {
-  background: var(--violet-100);
-  border-color: #d8b4fe;
+  background: #ede9fe;
+  border-color: #ddd6fe;
   color: #6d28d9;
 }
 
-.dia-header .all-header-title {
-  font-size: 20px;
-}
-
-/* 전체 / DIA 팀 탭 */
 .all-team-tabs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -389,40 +359,38 @@ img {
 }
 
 .all-team-tab {
+  position: relative;
   min-height: 46px;
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid var(--line-soft);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+  border: 1px solid #e8edf3;
   color: #475569;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  position: relative;
-  box-shadow: var(--shadow-soft);
 }
 
 .all-team-tab.my-team {
   border-color: #bfdbfe;
-  background: #f8fbff;
 }
 
 .all-team-tab.active {
-  background: linear-gradient(180deg, #eef6ff 0%, #dbeafe 100%);
+  color: var(--blue);
   border-color: #93c5fd;
-  color: #1d4ed8;
+  background: #f8fbff;
 }
 
 .view-dot {
   position: absolute;
-  right: 8px;
   top: 8px;
+  right: 8px;
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #2563eb;
+  background: var(--blue);
 }
 
-/* 전체 화면 */
 .all-page {
   min-height: 0;
 }
@@ -432,8 +400,7 @@ img {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  border-radius: 22px;
-  padding: 4px 2px 6px;
+  padding: 2px;
 }
 
 .all-grid-real {
@@ -444,115 +411,125 @@ img {
 
 .all-cell-real {
   min-width: 0;
-  min-height: 86px;
+  min-height: 84px;
+  background: #ffffff;
   border-radius: 18px;
-  padding: 10px 8px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  border: 1px solid #e5ebf2;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--shadow);
+  border: 1px solid #eef2f7;
+  padding: 8px 6px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 4px;
   text-align: center;
   overflow: hidden;
 }
 
 .all-code {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 900;
   color: #0f172a;
   line-height: 1.05;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.02em;
   white-space: nowrap;
 }
 
 .all-name {
-  font-size: 18px;
-  font-weight: 800;
-  color: #334155;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  line-height: 1.15;
 }
 
 .cell-my {
   border-color: #93c5fd;
-  background: linear-gradient(180deg, #f4f9ff 0%, #e0f2fe 100%);
   box-shadow:
-    0 0 0 2px rgba(96, 165, 250, 0.22),
-    0 8px 20px rgba(59, 130, 246, 0.12);
+    0 0 0 2px rgba(37, 99, 235, 0.18),
+    0 8px 24px rgba(37, 99, 235, 0.08);
 }
 
 .cell-my-today {
   border-color: #60a5fa;
   box-shadow:
-    0 0 0 3px rgba(59, 130, 246, 0.24),
-    0 10px 24px rgba(59, 130, 246, 0.16);
+    0 0 0 3px rgba(37, 99, 235, 0.2),
+    0 10px 28px rgba(37, 99, 235, 0.1);
 }
 
-/* density */
 .all-grid-real.density-4 .all-cell-real {
-  min-height: 102px;
+  min-height: 96px;
 }
 
 .all-grid-real.density-4 .all-code {
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .all-grid-real.density-4 .all-name {
-  font-size: 18px;
+  font-size: 13px;
 }
 
 .all-grid-real.density-5 .all-cell-real {
-  min-height: 92px;
+  min-height: 88px;
 }
 
 .all-grid-real.density-5 .all-code {
-  font-size: 22px;
-}
-
-.all-grid-real.density-5 .all-name {
-  font-size: 17px;
-}
-
-.all-grid-real.density-6 .all-cell-real {
-  min-height: 84px;
-  padding: 9px 6px;
-}
-
-.all-grid-real.density-6 .all-code {
   font-size: 19px;
 }
 
-.all-grid-real.density-6 .all-name {
-  font-size: 15px;
+.all-grid-real.density-5 .all-name {
+  font-size: 12px;
 }
 
-/* DIA 리스트 */
+.all-grid-real.density-6 .all-cell-real {
+  min-height: 80px;
+}
+
+.all-grid-real.density-6 .all-code {
+  font-size: 17px;
+}
+
+.all-grid-real.density-6 .all-name {
+  font-size: 11px;
+}
+
+/* DIA 순서 */
 .tab-page .card[style*="overflow: hidden"] {
   flex: 1;
   min-height: 0;
   overflow-y: auto !important;
-  border-radius: 22px;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
 }
 
 .tab-page .card[style*="overflow: hidden"] > div {
-  min-height: 58px;
+  min-height: 62px;
+}
+
+/* JS 인라인 스타일 위에 정리감만 더해줌 */
+.tab-page .card[style*="overflow: hidden"] > div > div:first-child {
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.tab-page .card[style*="overflow: hidden"] > div > div:last-child {
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 월교번 */
 .month-header-bar {
-  min-height: 58px;
-  padding: 8px 10px;
   display: grid;
-  grid-template-columns: 44px 1fr 44px;
+  grid-template-columns: 42px 1fr 42px;
   align-items: center;
   gap: 8px;
+  padding: 8px 10px;
   flex: 0 0 auto;
 }
 
@@ -562,10 +539,10 @@ img {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.62);
-  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 24px;
   padding: 8px;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow);
   overflow: hidden;
 }
 
@@ -573,16 +550,14 @@ img {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
-  padding: 0 2px;
   flex: 0 0 auto;
 }
 
 .month-weekdays > div {
   text-align: center;
-  font-size: 14px;
-  font-weight: 900;
+  font-size: 13px;
+  font-weight: 800;
   color: #475569;
-  letter-spacing: -0.02em;
 }
 
 .month-weekdays .sun {
@@ -605,41 +580,39 @@ img {
   min-width: 0;
   min-height: 0;
   padding: 0;
-  border-radius: 16px;
+  border-radius: 14px;
   background: transparent;
 }
 
 .month-cell-inner {
   width: 100%;
   height: 100%;
-  min-height: 92px;
-  border-radius: 16px;
-  padding: 7px 5px 6px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  border: 1px solid #e5ebf2;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  min-height: 86px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #e9eef4;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  padding: 6px 4px 5px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 3px;
+  gap: 2px;
 }
 
 .month-cell.selected .month-cell-inner {
   border-color: #93c5fd;
   box-shadow:
-    0 0 0 2px rgba(59, 130, 246, 0.16),
-    0 8px 18px rgba(59, 130, 246, 0.08);
-  background: linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%);
+    0 0 0 2px rgba(37, 99, 235, 0.16),
+    0 8px 18px rgba(37, 99, 235, 0.08);
 }
 
 .month-cell.other-month {
-  opacity: 0.48;
+  opacity: 0.42;
 }
 
 .month-day {
-  font-size: 14px;
-  font-weight: 900;
+  font-size: 12px;
+  font-weight: 800;
   line-height: 1.05;
   color: #475569;
 }
@@ -649,7 +622,6 @@ img {
   font-weight: 900;
   line-height: 1.08;
   color: #111827;
-  letter-spacing: -0.02em;
 }
 
 .month-time-wrap {
@@ -661,15 +633,13 @@ img {
 }
 
 .month-time-line {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1.15;
-  color: #334155;
   text-align: center;
-  letter-spacing: -0.02em;
+  color: #334155;
 }
 
-/* 날짜 색상 톤 */
 .tone-normal.month-day,
 .tone-normal.month-code-line,
 .tone-normal.month-time-line {
@@ -694,12 +664,11 @@ img {
 }
 
 .group-topbar {
-  min-height: 58px;
-  padding: 8px 10px;
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) auto 42px;
   align-items: center;
   gap: 8px;
+  padding: 8px 10px;
   flex: 0 0 auto;
 }
 
@@ -707,11 +676,11 @@ img {
   width: 100%;
   min-height: 42px;
   border-radius: 14px;
-  border: 1.5px solid var(--line);
-  background: #fff;
-  color: #111827;
+  border: 1px solid #d8dee6;
+  background: #ffffff;
   padding: 0 12px;
   font-size: 15px;
+  color: var(--text);
   font-weight: 700;
 }
 
@@ -719,9 +688,9 @@ img {
   min-height: 42px;
   padding: 0 14px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #f5f3ff 0%, #ede9fe 100%);
+  background: #f5f3ff;
   border: 1px solid #ddd6fe;
-  color: #6d28d9;
+  color: var(--violet);
   font-size: 14px;
   font-weight: 800;
   white-space: nowrap;
@@ -730,35 +699,29 @@ img {
 .group-table-wrap {
   flex: 1;
   min-height: 0;
-  overflow: auto;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 22px;
-  box-shadow: var(--shadow-soft);
+  overflow-x: auto;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: var(--shadow);
   padding: 8px;
 }
 
 .group-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 760px;
-  overflow: hidden;
-}
-
-.group-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #f8fafc;
 }
 
 .group-table th,
 .group-table td {
+  min-width: 58px;
+  padding: 8px 6px;
   border-right: 1px solid #e5ebf2;
   border-bottom: 1px solid #e5ebf2;
-  padding: 10px 8px;
   text-align: center;
-  background: #fff;
+  background: #ffffff;
 }
 
 .group-table th:first-child,
@@ -771,11 +734,22 @@ img {
 }
 
 .group-table thead th {
-  font-size: 16px;
-  font-weight: 900;
-  color: #334155;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+  font-size: 14px;
+  font-weight: 800;
+  color: #374151;
+  line-height: 1.1;
+}
+
+.group-table thead th:first-child,
+.group-table tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: #fcfdff;
 }
 
 .group-table thead th .sun {
@@ -787,49 +761,55 @@ img {
 }
 
 .group-table tbody td {
-  font-size: 17px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 700;
   color: #111827;
-  line-height: 1.15;
 }
 
 .group-name-cell {
-  min-width: 114px;
+  min-width: 98px;
   background: #fcfdff !important;
 }
 
 .group-name-cell > div:first-child {
-  font-size: 17px;
-  font-weight: 900;
-  color: #0f172a;
-  line-height: 1.2;
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
 }
 
 .group-team-label {
   margin-top: 4px;
-  font-size: 13px;
-  font-weight: 800;
-  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
 }
 
 .group-remove-btn {
   margin-top: 8px;
-  min-height: 28px;
+  min-height: 26px;
   padding: 0 10px;
   border-radius: 999px;
   background: #fff1f2;
   border: 1px solid #fecdd3;
-  color: #e11d48;
+  color: #ef4444;
   font-size: 12px;
   font-weight: 800;
+}
+
+.group-table tbody td[colspan] {
+  min-width: 100%;
+  text-align: center;
+  padding: 16px 10px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 /* 모달 */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(5px);
+  background: rgba(15, 23, 42, 0.42);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -845,74 +825,71 @@ img {
   width: min(100%, 520px);
   max-height: min(88vh, 860px);
   overflow: auto;
-  background: rgba(255, 255, 255, 0.98);
+  background: #ffffff;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.75);
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.22);
   padding: 18px 16px 16px;
 }
 
 .modal-title {
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: -0.035em;
-  color: var(--text-main);
+  font-size: 21px;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
 }
 
 .modal-sub {
   margin-top: 6px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
-  color: var(--text-sub);
+  color: #6b7280;
   line-height: 1.4;
 }
 
 .modal-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
   justify-content: flex-end;
+  gap: 8px;
   margin-top: 16px;
 }
 
 .modal-btn {
-  min-height: 42px;
-  padding: 0 15px;
+  min-height: 40px;
+  padding: 0 14px;
   border-radius: 14px;
   background: #f8fafc;
-  border: 1px solid var(--line-soft);
-  color: #334155;
+  border: 1px solid #e5e7eb;
+  color: #374151;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .modal-btn.primary {
-  background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+  background: #eff6ff;
   border-color: #bfdbfe;
   color: #1d4ed8;
 }
 
 .color-preview {
   width: 100%;
-  height: 58px;
-  border-radius: 16px;
-  border: 1px solid var(--line-soft);
+  height: 54px;
   margin-top: 10px;
-  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
 }
 
 /* 행로표 뷰어 */
 .viewer-page {
   position: fixed;
   inset: 0;
-  background: #f8fafc;
   z-index: 3000;
+  background: #f8fafc;
   display: flex;
   flex-direction: column;
 }
 
 .viewer-header {
-  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -922,16 +899,15 @@ img {
     14px
     12px
     14px;
-  background: rgba(255, 255, 255, 0.95);
-  border-bottom: 1px solid var(--line-soft);
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
 }
 
 .viewer-title {
-  font-size: 22px;
-  font-weight: 900;
+  font-size: 21px;
+  font-weight: 800;
   color: #111827;
-  letter-spacing: -0.03em;
 }
 
 .viewer-body {
@@ -941,7 +917,7 @@ img {
   padding:
     14px
     14px
-    calc(22px + var(--safe-bottom))
+    calc(20px + var(--safe-bottom))
     14px;
 }
 
@@ -950,8 +926,7 @@ img {
   height: auto;
   object-fit: contain;
   border-radius: 0;
-  background: #fff;
-  box-shadow: var(--shadow-soft);
+  background: #ffffff;
 }
 
 /* 하단 탭 */
@@ -960,16 +935,16 @@ img {
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(var(--bottom-tab-height) + var(--safe-bottom));
-  padding: 0 10px var(--safe-bottom);
-  display: grid;
-  align-items: stretch;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.94);
-  border-top: 1px solid rgba(226, 232, 240, 0.95);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.07);
   z-index: 1500;
+  height: calc(var(--bottom-tab-height) + var(--safe-bottom));
+  padding: 0 8px var(--safe-bottom);
+  display: grid;
+  gap: 6px;
+  align-items: stretch;
+  background: rgba(255, 255, 255, 0.94);
+  border-top: 1px solid #e5e7eb;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 -6px 18px rgba(15, 23, 42, 0.06);
 }
 
 .bottom-tabs.tabs-5 {
@@ -980,40 +955,38 @@ img {
   min-width: 0;
   height: var(--bottom-tab-height);
   border-radius: 16px;
-  font-size: var(--bottom-tab-font);
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 700;
   color: #64748b;
   letter-spacing: -0.02em;
   white-space: nowrap;
 }
 
 .bottom-tab.active {
-  font-size: var(--bottom-tab-font-active);
-  color: #0f172a;
-  background: #f8fafc;
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .bottom-tabs.home-theme .bottom-tab.active {
-  color: #1d4ed8;
-  background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+  color: #2563eb;
+  background: #eaf2ff;
 }
 
 .bottom-tabs.all-theme .bottom-tab.active {
   color: #7c3aed;
-  background: linear-gradient(180deg, #f5f3ff 0%, #ede9fe 100%);
+  background: #f2ebff;
 }
 
 .bottom-tabs.month-theme .bottom-tab.active {
   color: #0f766e;
-  background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%);
+  background: #dcfce7;
 }
 
 .bottom-tabs.group-theme .bottom-tab.active {
   color: #c2410c;
-  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+  background: #ffedd5;
 }
 
-/* 공통 색상 보조 */
 .sun {
   color: #ef4444 !important;
 }
@@ -1022,24 +995,20 @@ img {
   color: #2563eb !important;
 }
 
-/* 스크롤바 */
 ::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 
-/* 반응형 */
 @media (max-width: 420px) {
   .container {
     padding:
@@ -1051,14 +1020,25 @@ img {
   }
 
   .card {
-    border-radius: 20px;
-    padding: 16px 14px;
+    padding: 14px;
+    border-radius: 22px;
   }
 
   .card-title,
   .modal-title,
   .viewer-title {
-    font-size: 20px;
+    font-size: 19px;
+  }
+
+  .settings-row {
+    gap: 6px;
+  }
+
+  .install-btn,
+  .settings-btn {
+    min-height: 38px;
+    padding: 0 14px;
+    font-size: 13px;
   }
 
   .date-grid {
@@ -1066,16 +1046,15 @@ img {
   }
 
   .date-box {
-    min-height: 58px;
-    padding: 10px 8px;
-    grid-template-columns: 30px 1fr 30px;
-    gap: 4px;
+    min-height: 64px;
+    grid-template-columns: 32px 1fr 32px;
+    padding: 8px;
   }
 
   .date-btn {
-    width: 30px;
-    height: 30px;
-    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    font-size: 19px;
   }
 
   .date-value {
@@ -1083,11 +1062,11 @@ img {
   }
 
   .main-code {
-    font-size: clamp(33px, 8vw, 44px);
+    font-size: clamp(31px, 8vw, 41px);
   }
 
   .main-time {
-    font-size: clamp(21px, 5vw, 28px);
+    font-size: clamp(21px, 5vw, 27px);
   }
 
   .main-subinfo {
@@ -1101,8 +1080,12 @@ img {
   }
 
   .all-header {
-    grid-template-columns: 38px 1fr auto 38px;
+    grid-template-columns: 36px 1fr auto 36px;
     gap: 6px;
+  }
+
+  .dia-header {
+    grid-template-columns: 36px 1fr 36px;
   }
 
   .all-header-btn,
@@ -1110,13 +1093,16 @@ img {
   .group-nav-btn {
     width: 36px;
     height: 36px;
-    font-size: 19px;
+    font-size: 18px;
   }
 
   .all-header-title,
-  .month-header-title,
+  .month-header-title {
+    font-size: 16px;
+  }
+
   .dia-header .all-header-title {
-    font-size: 17px;
+    font-size: 15px;
   }
 
   .all-edit-btn {
@@ -1132,7 +1118,7 @@ img {
   .all-team-tab {
     min-height: 42px;
     font-size: 15px;
-    border-radius: 13px;
+    border-radius: 16px;
   }
 
   .all-grid-real {
@@ -1140,40 +1126,39 @@ img {
   }
 
   .all-cell-real {
-    border-radius: 14px;
-    min-height: 78px;
-    padding: 8px 5px;
-    gap: 4px;
+    min-height: 76px;
+    border-radius: 16px;
+    padding: 7px 4px;
   }
 
   .all-grid-real.density-4 .all-cell-real {
-    min-height: 90px;
+    min-height: 88px;
   }
 
   .all-grid-real.density-5 .all-cell-real {
-    min-height: 82px;
+    min-height: 80px;
   }
 
   .all-grid-real.density-6 .all-cell-real {
-    min-height: 74px;
+    min-height: 72px;
   }
 
   .all-grid-real.density-4 .all-code,
   .all-grid-real.density-5 .all-code {
-    font-size: 19px;
+    font-size: 18px;
   }
 
   .all-grid-real.density-6 .all-code {
-    font-size: 17px;
+    font-size: 16px;
   }
 
   .all-grid-real.density-4 .all-name,
   .all-grid-real.density-5 .all-name {
-    font-size: 14px;
+    font-size: 11px;
   }
 
   .all-grid-real.density-6 .all-name {
-    font-size: 12.5px;
+    font-size: 10px;
   }
 
   .month-calendar {
@@ -1181,7 +1166,8 @@ img {
     gap: 5px;
   }
 
-  .month-weekdays {
+  .month-weekdays,
+  .month-row {
     gap: 5px;
   }
 
@@ -1189,18 +1175,14 @@ img {
     font-size: 12px;
   }
 
-  .month-row {
-    gap: 5px;
-  }
-
   .month-cell-inner {
-    min-height: 78px;
-    padding: 6px 4px 5px;
-    border-radius: 13px;
+    min-height: 76px;
+    border-radius: 12px;
+    padding: 5px 3px 4px;
   }
 
   .month-day {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .month-code-line {
@@ -1232,28 +1214,28 @@ img {
 
   .group-table-wrap {
     padding: 6px;
-    border-radius: 18px;
-  }
-
-  .group-table {
-    min-width: 660px;
   }
 
   .group-table th,
   .group-table td {
-    padding: 8px 6px;
+    min-width: 54px;
+    padding: 7px 5px;
   }
 
   .group-table thead th {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .group-table tbody td {
-    font-size: 15px;
+    font-size: 14px;
+  }
+
+  .group-name-cell {
+    min-width: 90px;
   }
 
   .group-name-cell > div:first-child {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .group-team-label {
@@ -1261,8 +1243,8 @@ img {
   }
 
   .bottom-tabs {
-    padding: 0 8px var(--safe-bottom);
-    gap: 6px;
+    padding: 0 6px var(--safe-bottom);
+    gap: 5px;
   }
 
   .bottom-tab {
@@ -1274,12 +1256,12 @@ img {
   }
 
   .modal {
-    border-radius: 20px;
+    border-radius: 22px;
     padding: 16px 14px 14px;
   }
 
   .modal-btn {
-    min-height: 40px;
+    min-height: 38px;
     font-size: 13px;
     padding: 0 12px;
   }
