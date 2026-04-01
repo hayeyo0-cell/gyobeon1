@@ -2622,7 +2622,7 @@ function App() {
                         cursor: "pointer",
                       }}
                     >
-                      <div style={{ fontWeight: 800, width: 64, color: getDateBasedColor(diaDate) }}>
+                      <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(diaDate) }}>
                         {item.code}
                       </div>
                       <div style={{ color: "#111827", fontWeight: 600 }}>
