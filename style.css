@@ -749,7 +749,11 @@ margin-bottom: 8px;
 
 .all-header {
 
-height: 60px;
+.dia-header {
+  grid-template-columns: 44px 1fr 44px;
+}
+
+  height: 60px;
 
 display: grid;
 
