@@ -896,9 +896,62 @@ function findZipPersonByName(team, name) {
   return team.people.find((p) => samePersonName(p.name, name)) || null;
 }
 
+// 원격 배포본 기준으로 팀 전체 사람 배열을 통일 적용
+function applyRemoteRosterToData(baseData, remoteRoster) {
+  if (!baseData) return null;
+
+  const next = cloneTeamData(baseData);
+
+  TEAM_ORDER.forEach((teamKey) => {
+    const team = next[teamKey];
+    if (!team) return;
+
+    const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : [];
+    if (!rows.length) return;
+
+    const fixedOrder = getGyobunOrder(team);
+    const mapped = [];
+
+    fixedOrder.forEach((slotCode, idx) => {
+      const found = rows.find(
+        (row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode)
+      );
+      if (!found) return;
+      if (shouldHideName(found.name)) return;
+
+      mapped.push({
+        idx,
+        name: found.name,
+        baseCode: slotCode,
+        employeeId: found.employeeId || "",
+      });
+    });
+
+    if (mapped.length > 0) {
+      team.people = mapped;
+      team.names = mapped.map((p) => p.name);
+      team.gyobun = fixedOrder.slice();
+
+      team.info = {
+        ...team.info,
+        totalCount: mapped.length,
+        baseName: mapped[0]?.name || team.info?.baseName || "",
+        baseCode: fixedOrder[0] || team.info?.baseCode || "",
+        baseDate: String(SHARED_REMOTE_BASE_DATE || "").trim() || team.info?.baseDate || null,
+      };
+    }
+  });
+
+  return next;
+}
+
 function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
   const rows = remoteRoster?.[teamKey] || [];
   const gyobunOrder = getGyobunOrder(team);
+
+  if (!rows.length) {
+    return buildTeamAnchorFromZip(team);
+  }
 
   for (const code of gyobunOrder) {
     const found = rows.find(
@@ -909,7 +962,7 @@ function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
       return {
         name: found.name,
         code: normalizeToFixedCode(team, code),
-        anchorDate: getTeamBaseDate(team),
+        anchorDate: String(SHARED_REMOTE_BASE_DATE || "").trim() || getKoreaToday(),
       };
     }
   }
@@ -927,7 +980,7 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
     return {
       name,
       code: normalizeToFixedCode(team, remoteRow.code),
-      anchorDate: String(SHARED_REMOTE_BASE_DATE || "").trim() || getTeamBaseDate(team),
+      anchorDate: String(SHARED_REMOTE_BASE_DATE || "").trim() || getKoreaToday(),
     };
   }
 
@@ -986,61 +1039,6 @@ function buildAllTeamsAutoAnchorsFromIdentity(
   });
 
   return result;
-}
-
-function applyRemoteRosterToData(baseData, remoteRoster) {
-  if (!baseData) return null;
-
-  const next = cloneTeamData(baseData);
-
-  TEAM_ORDER.forEach((teamKey) => {
-    const team = next[teamKey];
-    if (!team) return;
-
-    const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : [];
-    if (!rows.length) return;
-
-    const fixedOrder = getGyobunOrder(team);
-    const mapped = [];
-
-    fixedOrder.forEach((slotCode, idx) => {
-      const found = rows.find(
-        (row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode)
-      );
-      if (!found) return;
-      if (shouldHideName(found.name)) return;
-
-      mapped.push({
-        idx,
-        name: found.name,
-        baseCode: slotCode,
-        employeeId: found.employeeId || "",
-      });
-    });
-
-    const minRequired = Math.max(1, Math.floor(fixedOrder.length * 0.7));
-    if (mapped.length < minRequired) return;
-
-    team.people = mapped;
-    team.names = mapped.map((p) => p.name);
-    team.gyobun = fixedOrder.slice();
-    team.info = {
-      ...team.info,
-      totalCount: mapped.length,
-      baseName:
-        team.info?.baseName && mapped.some((p) => samePersonName(p.name, team.info.baseName))
-          ? team.info.baseName
-          : mapped[0]?.name || "",
-      baseCode:
-        team.info?.baseCode &&
-        fixedOrder.some((code) => normalizeCodeKey(code) === normalizeCodeKey(team.info.baseCode))
-          ? team.info.baseCode
-          : fixedOrder[0] || "",
-      baseDate: team.info?.baseDate || null,
-    };
-  });
-
-  return next;
 }
 
 function getMonthMatrix(dateStr) {
@@ -1587,7 +1585,10 @@ function App() {
         ...prev,
         teamKey,
         code: nextCode,
-        anchorDate: profileAnchorDate || getTeamBaseDate(team),
+        anchorDate:
+          String(SHARED_REMOTE_BASE_DATE || "").trim() ||
+          profileAnchorDate ||
+          getTeamBaseDate(team),
       }));
     }
   }, [
@@ -2017,7 +2018,10 @@ function App() {
       teamKey,
       name,
       code,
-      anchorDate: profileAnchorDate || todayStr,
+      anchorDate:
+        String(SHARED_REMOTE_BASE_DATE || "").trim() ||
+        profileAnchorDate ||
+        todayStr,
     });
 
     setSelectedTeam(teamKey);
@@ -2028,7 +2032,11 @@ function App() {
   function startReconfigureProfile() {
     setAllowProfileEdit(true);
     setSelectedTeam(mySelection?.teamKey || selectedTeam || "ks");
-    setProfileAnchorDate(mySelection?.anchorDate || todayStr);
+    setProfileAnchorDate(
+      String(SHARED_REMOTE_BASE_DATE || "").trim() ||
+      mySelection?.anchorDate ||
+      todayStr
+    );
   }
 
   function cancelReconfigureProfile() {
