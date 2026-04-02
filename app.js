@@ -821,7 +821,7 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
         return {
           idx: person.idx,
           name: person.name,
-          displayName: person.name,
+          displayName: override.alias || person.name,
           code: slotCode,
           customColor: override.color || "",
         };
@@ -842,7 +842,7 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
       return {
         idx: person.idx,
         name: person.name,
-        displayName: person.name,
+        displayName: override.alias || person.name,
         code: slotCode,
         customColor: override.color || "",
       };
@@ -1283,6 +1283,7 @@ function App() {
   const [editOpen, setEditOpen] = useState(false);
   const [editingCell, setEditingCell] = useState(null);
   const [editColor, setEditColor] = useState("");
+  const [editAlias, setEditAlias] = useState("");
   const [pathOpen, setPathOpen] = useState(false);
   const [pathTarget, setPathTarget] = useState(null);
   const [pathImage, setPathImage] = useState("");
@@ -2070,6 +2071,7 @@ function App() {
     const key = getOverrideKey(viewTeam, item.name);
     const current = overrides[key] || {};
     setEditColor(current.color || "");
+    setEditAlias(current.alias || "");
     setEditOpen(true);
   }
 
@@ -2081,18 +2083,20 @@ function App() {
     }
   }
 
-  function commitEdit(nextColorValue = editColor) {
+  function commitEdit(nextColorValue = editColor, nextAliasValue = editAlias) {
     if (!editingCell) return;
 
-    const cleanColor = nextColorValue || "";
+    const cleanColor = String(nextColorValue || "").trim();
+    const cleanAlias = String(nextAliasValue || "").trim();
     const key = getOverrideKey(viewTeam, editingCell.name);
     const next = { ...overrides };
 
-    if (!cleanColor) {
+    if (!cleanColor && !cleanAlias) {
       delete next[key];
     } else {
       next[key] = {
         color: cleanColor,
+        alias: cleanAlias,
       };
     }
 
@@ -2101,6 +2105,8 @@ function App() {
 
     setEditOpen(false);
     setEditingCell(null);
+    setEditColor("");
+    setEditAlias("");
   }
 
   function openPathDialog(item, dateStr = todayStr) {
@@ -3080,10 +3086,18 @@ function App() {
       {editOpen && (
         <div className="modal-backdrop" onClick={closeEditDialog}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">색상 수정</div>
+            <div className="modal-title">표시 수정</div>
             <div className="modal-sub">
-              {TEAM_LABELS[viewTeam]} {editingCell?.code} {editingCell?.displayName || editingCell?.name}
+              {TEAM_LABELS[viewTeam]} {editingCell?.code} {editingCell?.name}
             </div>
+
+            <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
+            <input
+              className="input"
+              value={editAlias}
+              onChange={(e) => setEditAlias(e.target.value)}
+              placeholder="비워두면 원래 이름 사용"
+            />
 
             <label className="label" style={{ marginTop: 12 }}>색상</label>
             <select
@@ -3101,9 +3115,14 @@ function App() {
 
             <div className="color-preview" style={{ backgroundColor: editColor || "#ffffff" }} />
 
+            <div className="help-text" style={{ marginTop: 8 }}>
+              계산과 현재배정 매칭은 원래 이름 기준으로 유지되고,
+              화면에는 여기서 입력한 이름만 표시됩니다.
+            </div>
+
             <div className="modal-actions">
               <button className="modal-btn" onClick={closeEditDialog}>아니요</button>
-              <button className="modal-btn primary" onClick={() => commitEdit(editColor)}>변경</button>
+              <button className="modal-btn primary" onClick={() => commitEdit(editColor, editAlias)}>변경</button>
             </div>
           </div>
         </div>
@@ -3170,11 +3189,12 @@ function getPersonGyobunForDate(
 
   const dayOffset = diffDays(anchor.anchorDate || getTeamBaseDate(team), dateStr);
   const code = shiftCodeByDays(team, anchor.code, dayOffset);
+  const override = overrides[getOverrideKey(teamKey, name)] || {};
 
   return {
     code,
     name,
-    displayName: name,
+    displayName: override.alias || name,
   };
 }
 
