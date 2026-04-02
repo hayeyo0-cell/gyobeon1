@@ -1249,8 +1249,7 @@ function App() {
   const [viewTeam, setViewTeam] = useState(initialSelection?.teamKey || "ks");
 
   const [homeDate, setHomeDate] = useState(todayStr);
-  const [allDate, setAllDate] = useState(todayStr);
-  const [diaDate, setDiaDate] = useState(todayStr);
+  const [browseDate, setBrowseDate] = useState(todayStr);
   const [monthDate, setMonthDate] = useState(todayStr);
 
   const [mySelection, setMySelection] = useState(
@@ -1340,8 +1339,7 @@ function App() {
   useEffect(() => {
     const years = [
       getYearFromDateStr(homeDate),
-      getYearFromDateStr(allDate),
-      getYearFromDateStr(diaDate),
+      getYearFromDateStr(browseDate),
       getYearFromDateStr(monthDate),
       getYearFromDateStr(groupBaseDate),
     ].filter(Boolean);
@@ -1349,7 +1347,7 @@ function App() {
     [...new Set(years)].forEach((year) => {
       ensureHolidayYear(year, () => setHolidayVersion((v) => v + 1));
     });
-  }, [homeDate, allDate, diaDate, monthDate, groupBaseDate]);
+  }, [homeDate, browseDate, monthDate, groupBaseDate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1669,7 +1667,7 @@ function App() {
       return buildAssignedGrid(currentViewTeam, "", "", 0, overrides);
     }
 
-    const dayOffset = diffDays(anchorDate, allDate);
+    const dayOffset = diffDays(anchorDate, browseDate);
 
     return buildAssignedGrid(
       currentViewTeam,
@@ -1683,7 +1681,7 @@ function App() {
     viewTeam,
     remoteRoster,
     overrides,
-    allDate,
+    browseDate,
     mySelection,
   ]);
 
@@ -1706,7 +1704,7 @@ function App() {
     const teamAnchor = currentViewAnchor;
     const dayOffset = diffDays(
       teamAnchor.anchorDate || getTeamBaseDate(team),
-      diaDate
+      browseDate
     );
 
     const grid = buildAssignedGrid(
@@ -1731,7 +1729,7 @@ function App() {
         displayName: found?.displayName || found?.name || "-",
       };
     });
-  }, [currentViewTeam, currentViewAnchor, diaDate, overrides]);
+  }, [currentViewTeam, currentViewAnchor, browseDate, overrides]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthDate), [monthDate]);
   const monthHeaderDate = parseLocalDate(monthDate);
@@ -1761,10 +1759,8 @@ function App() {
     }
 
     if (currentTab === "home" && tabName !== "home") {
-      if (tabName === "all") {
-        setAllDate(today);
-      } else if (tabName === "dia") {
-        setDiaDate(today);
+      if (tabName === "all" || tabName === "dia") {
+        setBrowseDate(today);
       } else if (tabName === "month") {
         setMonthDate(today);
       } else if (tabName === "group") {
@@ -2062,7 +2058,7 @@ function App() {
     if (editMode) {
       openEditDialog(item);
     } else {
-      openPathDialog(item, allDate);
+      openPathDialog(item, browseDate);
     }
   }
 
@@ -2461,12 +2457,12 @@ function App() {
               <div className="tab-page all-page">
                 <div className="all-tab-header">
                   <div className="all-header">
-                    <button className="all-header-btn" onClick={() => setAllDate(addDays(allDate, -1))}>-</button>
+                    <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
 
                     <div className="all-header-title">
-                      {TEAM_LABELS[viewTeam]} {parseLocalDate(allDate).getFullYear()}.
-                      {parseLocalDate(allDate).getMonth() + 1}.
-                      {parseLocalDate(allDate).getDate()} {weekdayName(allDate)}
+                      {TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.
+                      {parseLocalDate(browseDate).getMonth() + 1}.
+                      {parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}
                     </div>
 
                     <button
@@ -2476,7 +2472,7 @@ function App() {
                       {editMode ? "수정중" : "수정"}
                     </button>
 
-                    <button className="all-header-btn" onClick={() => setAllDate(addDays(allDate, 1))}>+</button>
+                    <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
                 </div>
 
@@ -2511,7 +2507,7 @@ function App() {
                         viewTeam === (mySelection?.teamKey || selectedTeam) &&
                         samePersonName(item.name, mySelection?.name);
 
-                      const isToday = allDate === getKoreaToday();
+                      const isToday = browseDate === getKoreaToday();
 
                       const customStyle = item.customColor
                         ? {
@@ -2541,15 +2537,15 @@ function App() {
               <div className="tab-page">
                 <div className="all-tab-header">
                   <div className="all-header dia-header">
-                    <button className="all-header-btn" onClick={() => setDiaDate(addDays(diaDate, -1))}>-</button>
+                    <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
 
                     <div className="all-header-title">
-                      {TEAM_LABELS[viewTeam]} DIA순서 {parseLocalDate(diaDate).getFullYear()}.
-                      {parseLocalDate(diaDate).getMonth() + 1}.
-                      {parseLocalDate(diaDate).getDate()} {weekdayName(diaDate)}
+                      {TEAM_LABELS[viewTeam]} DIA순서 {parseLocalDate(browseDate).getFullYear()}.
+                      {parseLocalDate(browseDate).getMonth() + 1}.
+                      {parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}
                     </div>
 
-                    <button className="all-header-btn" onClick={() => setDiaDate(addDays(diaDate, 1))}>+</button>
+                    <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
                 </div>
 
@@ -2575,7 +2571,7 @@ function App() {
                   {diaList.map((item, idx) => (
                     <div
                       key={`${item.code}-${idx}`}
-                      onClick={() => openPathDialog(item, diaDate)}
+                      onClick={() => openPathDialog(item, browseDate)}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -2590,7 +2586,7 @@ function App() {
                         cursor: "pointer",
                       }}
                     >
-                      <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(diaDate) }}>
+                      <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(browseDate) }}>
                         {item.code}
                       </div>
                       <div style={{ color: "#111827", fontWeight: 600 }}>
