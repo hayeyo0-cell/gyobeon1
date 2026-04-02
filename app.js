@@ -1563,6 +1563,23 @@ function App() {
   const team = effectiveData?.[teamKey] || data?.[teamKey];
   if (!team) return;
 
+  const currentCode =
+    mySelection?.teamKey === teamKey ? String(mySelection?.code || "").trim() : "";
+
+  // 이미 사용자가 교번을 직접 선택한 상태면 자동으로 덮어쓰지 않음
+  if (currentCode) {
+    const nextAnchorDate = profileAnchorDate || getKoreaToday();
+
+    if (String(mySelection?.anchorDate || "") !== String(nextAnchorDate)) {
+      setMySelection((prev) => ({
+        ...prev,
+        teamKey,
+        anchorDate: nextAnchorDate,
+      }));
+    }
+    return;
+  }
+
   let nextCode = "";
   const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster);
 
@@ -1579,21 +1596,16 @@ function App() {
 
   const nextAnchorDate = profileAnchorDate || getKoreaToday();
 
-  if (
-    mySelection?.teamKey !== teamKey ||
-    normalizeCodeKey(mySelection?.code) !== normalizeCodeKey(nextCode) ||
-    String(mySelection?.anchorDate || "") !== String(nextAnchorDate)
-  ) {
-    setMySelection((prev) => ({
-      ...prev,
-      teamKey,
-      code: nextCode,
-      anchorDate: nextAnchorDate,
-    }));
-  }
+  setMySelection((prev) => ({
+    ...prev,
+    teamKey,
+    code: nextCode,
+    anchorDate: nextAnchorDate,
+  }));
 }, [
   allowProfileEdit,
   selectedTeam,
+  mySelection?.teamKey,
   mySelection?.name,
   mySelection?.code,
   mySelection?.anchorDate,
@@ -1602,7 +1614,6 @@ function App() {
   data,
   profileAnchorDate,
 ]);
-
   const currentViewTeam = effectiveData?.[viewTeam] || null;
   const currentViewAnchor =
     teamAnchors[viewTeam] || { name: "", code: "", anchorDate: getTeamBaseDate(currentViewTeam) };
