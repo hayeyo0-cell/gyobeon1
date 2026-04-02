@@ -1552,54 +1552,56 @@ function App() {
   }, [effectiveData, remoteRoster, mySelection]);
 
   useEffect(() => {
-    if (!allowProfileEdit) return;
+  if (!allowProfileEdit) return;
 
-    const teamKey = selectedTeam;
-    const currentName =
-      mySelection?.teamKey === teamKey ? mySelection?.name || "" : "";
+  const teamKey = selectedTeam;
+  const currentName =
+    mySelection?.teamKey === teamKey ? mySelection?.name || "" : "";
 
-    if (!currentName) return;
+  if (!currentName) return;
 
-    const team = effectiveData?.[teamKey] || data?.[teamKey];
-    if (!team) return;
+  const team = effectiveData?.[teamKey] || data?.[teamKey];
+  if (!team) return;
 
-    let nextCode = "";
-    const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster);
+  let nextCode = "";
+  const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster);
 
-    if (remoteRow?.code) {
-      nextCode = normalizeToFixedCode(team, remoteRow.code);
-    } else {
-      const zipPerson = findZipPersonByName(team, currentName);
-      if (zipPerson?.baseCode) {
-        nextCode = normalizeToFixedCode(team, zipPerson.baseCode);
-      }
+  if (remoteRow?.code) {
+    nextCode = normalizeToFixedCode(team, remoteRow.code);
+  } else {
+    const zipPerson = findZipPersonByName(team, currentName);
+    if (zipPerson?.baseCode) {
+      nextCode = normalizeToFixedCode(team, zipPerson.baseCode);
     }
+  }
 
-    if (!nextCode) return;
+  if (!nextCode) return;
 
-    if (
-      mySelection?.teamKey !== teamKey ||
-      normalizeCodeKey(mySelection?.code) !== normalizeCodeKey(nextCode)
-    ) {
-      setMySelection((prev) => ({
-        ...prev,
-        teamKey,
-        code: nextCode,
-        anchorDate:
-          String(SHARED_REMOTE_BASE_DATE || "").trim() ||
-          profileAnchorDate ||
-          getTeamBaseDate(team),
-      }));
-    }
-  }, [
-    allowProfileEdit,
-    selectedTeam,
-    mySelection?.name,
-    remoteRoster,
-    effectiveData,
-    data,
-    profileAnchorDate,
-  ]);
+  const nextAnchorDate = profileAnchorDate || getKoreaToday();
+
+  if (
+    mySelection?.teamKey !== teamKey ||
+    normalizeCodeKey(mySelection?.code) !== normalizeCodeKey(nextCode) ||
+    String(mySelection?.anchorDate || "") !== String(nextAnchorDate)
+  ) {
+    setMySelection((prev) => ({
+      ...prev,
+      teamKey,
+      code: nextCode,
+      anchorDate: nextAnchorDate,
+    }));
+  }
+}, [
+  allowProfileEdit,
+  selectedTeam,
+  mySelection?.name,
+  mySelection?.code,
+  mySelection?.anchorDate,
+  remoteRoster,
+  effectiveData,
+  data,
+  profileAnchorDate,
+]);
 
   const currentViewTeam = effectiveData?.[viewTeam] || null;
   const currentViewAnchor =
