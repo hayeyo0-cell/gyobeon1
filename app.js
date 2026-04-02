@@ -231,7 +231,6 @@ async function fetchHolidayYear(year) {
 async function ensureHolidayYear(year, onApplied) {
   const y = Number(year);
   if (!y) return;
-
   if (RUNTIME_HOLIDAYS_BY_YEAR[y]?.length) return;
   if (HOLIDAY_FETCHING_YEARS.has(y)) return;
 
@@ -243,6 +242,7 @@ async function ensureHolidayYear(year, onApplied) {
   }
 
   HOLIDAY_FETCHING_YEARS.add(y);
+
   try {
     const fetched = await fetchHolidayYear(y);
     if (fetched?.length) {
@@ -296,9 +296,7 @@ function parseLines(text) {
 function parseInfo(text) {
   const lines = parseLines(text);
   const tokens = lines.join(" ").split(/\s+/).filter(Boolean);
-
   const [year, month, day, baseCode, baseName, total] = tokens;
-
   return {
     raw: lines,
     baseDate:
@@ -494,6 +492,7 @@ function createTeamBucket(teamKey) {
 
 function cloneTeamData(data) {
   const result = {};
+
   TEAM_ORDER.forEach((teamKey) => {
     const team = data?.[teamKey];
     if (!team) return;
@@ -522,6 +521,7 @@ function cloneTeamData(data) {
       },
     };
   });
+
   return result;
 }
 
@@ -622,7 +622,6 @@ function cleanupNameOverrides() {
   try {
     const raw = localStorage.getItem("gyobeon_overrides");
     if (!raw) return;
-
     const data = JSON.parse(raw);
     let changed = false;
 
@@ -646,6 +645,7 @@ function loadMySelection() {
   try {
     const raw = JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null");
     if (!raw) return null;
+
     return {
       teamKey: raw.teamKey || "ks",
       name: raw.name || "",
@@ -718,7 +718,6 @@ function normalizeRemoteRosterShape(input) {
   if (!input || typeof input !== "object") return result;
 
   const rows = Array.isArray(input.rows) ? input.rows : Array.isArray(input) ? input : [];
-
   rows.forEach((row) => {
     const teamKey =
       normalizeTeamKey(row?.team) ||
@@ -807,7 +806,6 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
 
   const people = team.people;
   const fixedCodes = getGyobunOrder(team);
-
   const anchorPersonIndex = people.findIndex((p) => samePersonName(p.name, anchorName));
   const anchorCodeIndex = fixedCodes.findIndex(
     (code) => normalizeCodeKey(code) === normalizeCodeKey(anchorCode)
@@ -835,7 +833,6 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
         anchorPersonIndex + (slotIndex - anchorCodeIndex - dayOffset),
         people.length
       );
-
       const person = people[personIndex];
       const override = overrides[getOverrideKey(team.key, person.name)] || {};
 
@@ -896,7 +893,6 @@ function findZipPersonByName(team, name) {
   return team.people.find((p) => samePersonName(p.name, name)) || null;
 }
 
-// 원격 배포본 기준으로 팀 전체 사람 배열을 통일 적용
 function applyRemoteRosterToData(baseData, remoteRoster) {
   if (!baseData) return null;
 
@@ -916,6 +912,7 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
       const found = rows.find(
         (row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode)
       );
+
       if (!found) return;
       if (shouldHideName(found.name)) return;
 
@@ -931,7 +928,6 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
       team.people = mapped;
       team.names = mapped.map((p) => p.name);
       team.gyobun = fixedOrder.slice();
-
       team.info = {
         ...team.info,
         totalCount: mapped.length,
@@ -957,7 +953,6 @@ function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
     const found = rows.find(
       (row) => normalizeCodeKey(row.code) === normalizeCodeKey(code)
     );
-
     if (found?.name) {
       return {
         name: found.name,
@@ -970,18 +965,10 @@ function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
   return buildTeamAnchorFromZip(team);
 }
 
+// 수정 핵심 1: 사용자가 저장한 기준 날짜/교번을 최우선으로 사용
 function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection = null) {
   if (!team || !name) {
     return buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
-  }
-
-  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
-  if (remoteRow?.code) {
-    return {
-      name,
-      code: normalizeToFixedCode(team, remoteRow.code),
-      anchorDate: String(SHARED_REMOTE_BASE_DATE || "").trim() || getKoreaToday(),
-    };
   }
 
   if (
@@ -994,8 +981,18 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
       code: normalizeToFixedCode(team, mySelection.code),
       anchorDate:
         String(mySelection.anchorDate || "").trim() ||
+        getKoreaToday(),
+    };
+  }
+
+  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
+  if (remoteRow?.code) {
+    return {
+      name,
+      code: normalizeToFixedCode(team, remoteRow.code),
+      anchorDate:
         String(SHARED_REMOTE_BASE_DATE || "").trim() ||
-        getTeamBaseDate(team),
+        getKoreaToday(),
     };
   }
 
@@ -1004,7 +1001,9 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
     return {
       name,
       code: normalizeToFixedCode(team, zipPerson.baseCode),
-      anchorDate: String(team?.info?.baseDate || "").trim() || getTeamBaseDate(team),
+      anchorDate:
+        String(team?.info?.baseDate || "").trim() ||
+        getTeamBaseDate(team),
     };
   }
 
@@ -1048,8 +1047,8 @@ function getMonthMatrix(dateStr) {
   const first = new Date(year, month, 1);
   const firstDay = first.getDay();
   const start = new Date(year, month, 1 - firstDay);
-  const matrix = [];
 
+  const matrix = [];
   for (let r = 0; r < 6; r++) {
     const row = [];
     for (let c = 0; c < 7; c++) {
@@ -1068,8 +1067,8 @@ function getWeekDates(baseDate) {
   const day = d.getDay();
   const sunday = new Date(d);
   sunday.setDate(d.getDate() - day);
-  const dates = [];
 
+  const dates = [];
   for (let i = 0; i < 7; i++) {
     const temp = new Date(sunday);
     temp.setDate(sunday.getDate() + i);
@@ -1151,12 +1150,14 @@ function fetchSharedConfigJsonp(timeoutMs = 4000) {
 function openZipDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("gyobeon-app-db", 1);
+
     request.onupgradeneeded = function () {
       const db = request.result;
       if (!db.objectStoreNames.contains("files")) {
         db.createObjectStore("files");
       }
     };
+
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
@@ -1164,10 +1165,12 @@ function openZipDB() {
 
 async function saveZipBlob(blob, name) {
   const db = await openZipDB();
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction("files", "readwrite");
     const store = tx.objectStore("files");
     store.put({ blob, name, savedAt: Date.now() }, "latestZip");
+
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -1175,10 +1178,12 @@ async function saveZipBlob(blob, name) {
 
 async function loadZipBlob() {
   const db = await openZipDB();
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction("files", "readonly");
     const store = tx.objectStore("files");
     const req = store.get("latestZip");
+
     req.onsuccess = () => resolve(req.result || null);
     req.onerror = () => reject(req.error);
   });
@@ -1186,10 +1191,12 @@ async function loadZipBlob() {
 
 async function saveParsedData(value) {
   const db = await openZipDB();
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction("files", "readwrite");
     const store = tx.objectStore("files");
     store.put({ data: value, savedAt: Date.now() }, "parsedData");
+
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -1197,10 +1204,12 @@ async function saveParsedData(value) {
 
 async function loadParsedData() {
   const db = await openZipDB();
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction("files", "readonly");
     const store = tx.objectStore("files");
     const req = store.get("parsedData");
+
     req.onsuccess = () => resolve(req.result || null);
     req.onerror = () => reject(req.error);
   });
@@ -1209,10 +1218,12 @@ async function loadParsedData() {
 function promptAdminPassword() {
   const value = window.prompt("관리자 비밀번호를 입력하세요");
   if (value == null) return null;
+
   if (String(value).trim() !== ADMIN_PASSWORD) {
     alert("비밀번호가 올바르지 않습니다.");
     return null;
   }
+
   return String(value).trim();
 }
 
@@ -1220,8 +1231,8 @@ function App() {
   const initialSelection = loadMySelection();
   const initialGroups = loadGroups();
   const todayStr = getKoreaToday();
-
   const cachedShared = loadCachedSharedConfig();
+
   if (cachedShared?.baseDate) {
     setGlobalBaseDate(cachedShared.baseDate);
   }
@@ -1281,12 +1292,15 @@ function App() {
   const [editingCell, setEditingCell] = useState(null);
   const [editColor, setEditColor] = useState("");
   const [editAlias, setEditAlias] = useState("");
+
   const [pathOpen, setPathOpen] = useState(false);
   const [pathTarget, setPathTarget] = useState(null);
   const [pathImage, setPathImage] = useState("");
   const [pathTeamKey, setPathTeamKey] = useState("");
   const [pathDate, setPathDate] = useState(todayStr);
+
   const [showSettings, setShowSettings] = useState(false);
+
   const [allowProfileEdit, setAllowProfileEdit] = useState(
     !initialSelection?.name || !initialSelection?.code
   );
@@ -1295,6 +1309,7 @@ function App() {
   const [currentGroup, setCurrentGroup] = useState(Object.keys(initialGroups)[0] || "");
   const [groupBaseDate, setGroupBaseDate] = useState(todayStr);
   const [selectedGroupDate, setSelectedGroupDate] = useState("");
+
   const [showGroupAdd, setShowGroupAdd] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [groupAddTeam, setGroupAddTeam] = useState("ks");
@@ -1389,6 +1404,7 @@ function App() {
       try {
         const thisYear = getYearFromDateStr(getKoreaToday());
         const preloadYears = [thisYear - 1, thisYear, thisYear + 1];
+
         await Promise.all(
           preloadYears.map((year) =>
             ensureHolidayYear(year, () => {
@@ -1465,7 +1481,6 @@ function App() {
       e.preventDefault();
       setDeferredPrompt(e);
     }
-
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
@@ -1551,69 +1566,76 @@ function App() {
     setTeamAnchors(nextAnchors);
   }, [effectiveData, remoteRoster, mySelection]);
 
+  // 수정 핵심 2: 자동 교번 채움은 code가 비어 있을 때만 1회
   useEffect(() => {
-  if (!allowProfileEdit) return;
+    if (!allowProfileEdit) return;
 
-  const teamKey = selectedTeam;
-  const currentName =
-    mySelection?.teamKey === teamKey ? mySelection?.name || "" : "";
+    const teamKey = selectedTeam;
+    const currentName =
+      mySelection?.teamKey === teamKey ? mySelection?.name || "" : "";
+    if (!currentName) return;
 
-  if (!currentName) return;
+    const team = effectiveData?.[teamKey] || data?.[teamKey];
+    if (!team) return;
 
-  const team = effectiveData?.[teamKey] || data?.[teamKey];
-  if (!team) return;
+    const currentCode =
+      mySelection?.teamKey === teamKey ? String(mySelection?.code || "").trim() : "";
 
-  const currentCode =
-    mySelection?.teamKey === teamKey ? String(mySelection?.code || "").trim() : "";
-
-  // 이미 사용자가 교번을 직접 선택한 상태면 자동으로 덮어쓰지 않음
-  if (currentCode) {
     const nextAnchorDate = profileAnchorDate || getKoreaToday();
 
-    if (String(mySelection?.anchorDate || "") !== String(nextAnchorDate)) {
-      setMySelection((prev) => ({
-        ...prev,
-        teamKey,
-        anchorDate: nextAnchorDate,
-      }));
+    if (currentCode) {
+      if (String(mySelection?.anchorDate || "") !== String(nextAnchorDate)) {
+        setMySelection((prev) => ({
+          ...prev,
+          teamKey,
+          anchorDate: nextAnchorDate,
+        }));
+      }
+      return;
     }
-    return;
-  }
 
-  let nextCode = "";
-  const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster);
+    let nextCode = "";
 
-  if (remoteRow?.code) {
-    nextCode = normalizeToFixedCode(team, remoteRow.code);
-  } else {
-    const zipPerson = findZipPersonByName(team, currentName);
-    if (zipPerson?.baseCode) {
-      nextCode = normalizeToFixedCode(team, zipPerson.baseCode);
+    const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster);
+    if (remoteRow?.code) {
+      nextCode = normalizeToFixedCode(team, remoteRow.code);
+    } else {
+      const zipPerson = findZipPersonByName(team, currentName);
+      if (zipPerson?.baseCode) {
+        nextCode = normalizeToFixedCode(team, zipPerson.baseCode);
+      }
     }
-  }
 
-  if (!nextCode) return;
+    if (!nextCode) {
+      if (String(mySelection?.anchorDate || "") !== String(nextAnchorDate)) {
+        setMySelection((prev) => ({
+          ...prev,
+          teamKey,
+          anchorDate: nextAnchorDate,
+        }));
+      }
+      return;
+    }
 
-  const nextAnchorDate = profileAnchorDate || getKoreaToday();
+    setMySelection((prev) => ({
+      ...prev,
+      teamKey,
+      code: nextCode,
+      anchorDate: nextAnchorDate,
+    }));
+  }, [
+    allowProfileEdit,
+    selectedTeam,
+    mySelection?.teamKey,
+    mySelection?.name,
+    mySelection?.code,
+    mySelection?.anchorDate,
+    remoteRoster,
+    effectiveData,
+    data,
+    profileAnchorDate,
+  ]);
 
-  setMySelection((prev) => ({
-    ...prev,
-    teamKey,
-    code: nextCode,
-    anchorDate: nextAnchorDate,
-  }));
-}, [
-  allowProfileEdit,
-  selectedTeam,
-  mySelection?.teamKey,
-  mySelection?.name,
-  mySelection?.code,
-  mySelection?.anchorDate,
-  remoteRoster,
-  effectiveData,
-  data,
-  profileAnchorDate,
-]);
   const currentViewTeam = effectiveData?.[viewTeam] || null;
   const currentViewAnchor =
     teamAnchors[viewTeam] || { name: "", code: "", anchorDate: getTeamBaseDate(currentViewTeam) };
@@ -1626,7 +1648,6 @@ function App() {
     const myTeamKey = mySelection?.teamKey || selectedTeam;
     const myName = mySelection?.name || "";
     const team = effectiveData?.[myTeamKey];
-
     if (!team || !myName) return null;
 
     const anchor = buildAnchorForIdentity(
@@ -1643,6 +1664,7 @@ function App() {
       anchor.anchorDate || getTeamBaseDate(team),
       homeDate
     );
+
     const code = shiftCodeByDays(team, anchor.code, dayOffset);
 
     return {
@@ -1682,7 +1704,6 @@ function App() {
     }
 
     const dayOffset = diffDays(anchorDate, browseDate);
-
     return buildAssignedGrid(
       currentViewTeam,
       anchorName,
@@ -1730,7 +1751,6 @@ function App() {
     );
 
     const diaOrder = getDiaOrder(team);
-
     return diaOrder.map((code) => {
       const found = grid.find(
         (item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)
@@ -1842,7 +1862,6 @@ function App() {
       await Promise.all(tasks);
 
       const nextData = parseZipToData(parsedFiles);
-
       await saveParsedData(nextData);
       setData(nextData);
 
@@ -1917,6 +1936,7 @@ function App() {
     } catch (e) {
       console.error(e);
       setRefreshRosterMessage("최신 인원 불러오기에 실패했습니다.");
+
       if (showAlert) {
         alert(`최신 인원 불러오기 실패: ${e.message || e}`);
       }
@@ -1954,7 +1974,6 @@ function App() {
       });
 
       const json = await res.json();
-
       if (!json?.ok) {
         throw new Error(json?.error || "공용 기준일 저장 실패");
       }
@@ -1997,7 +2016,6 @@ function App() {
       });
 
       const json = await res.json();
-
       if (!json?.ok) {
         throw new Error(json?.error || "배포 실패");
       }
@@ -2014,7 +2032,6 @@ function App() {
       }
 
       await refreshLatestRoster(false);
-
       alert(`배포 완료 (${json?.publishedCount || 0}건)`);
     } catch (e) {
       console.error(e);
@@ -2024,14 +2041,17 @@ function App() {
     }
   }
 
+  // 수정 핵심 3: 저장 시 기준 날짜는 현재 profileAnchorDate를 고정 사용
   function applyInitialSelection(teamKey, name, code) {
     if (!teamKey || !name || !code) return;
+
+    const nextAnchorDate = profileAnchorDate || getKoreaToday();
 
     setMySelection({
       teamKey,
       name,
       code,
-      anchorDate: profileAnchorDate || getKoreaToday(),
+      anchorDate: nextAnchorDate,
     });
 
     setSelectedTeam(teamKey);
@@ -2054,16 +2074,19 @@ function App() {
     setAllowProfileEdit(false);
   }
 
+  // 수정 핵심 4: 초기화 후 기준 날짜는 무조건 오늘
   function resetMyProfile() {
     const today = getKoreaToday();
 
     clearMySelection();
+
     setMySelection({
       teamKey: "ks",
       name: "",
       code: "",
       anchorDate: today,
     });
+
     setProfileAnchorDate(today);
     setAllowProfileEdit(true);
     setSelectedTeam("ks");
@@ -2114,7 +2137,6 @@ function App() {
 
     setOverrides(next);
     saveOverrides(next);
-
     setEditOpen(false);
     setEditingCell(null);
     setEditColor("");
@@ -2123,6 +2145,7 @@ function App() {
 
   function openPathDialog(item, dateStr = todayStr) {
     if (!currentViewTeam || !item?.code) return;
+
     const image = findPathImage(currentViewTeam, dateStr, item.code);
     setPathTeamKey(viewTeam);
     setPathTarget(item);
@@ -2161,7 +2184,6 @@ function App() {
 
     const next = { ...groups };
     if (!next[name]) next[name] = [];
-
     setGroups(next);
     saveGroups(next);
     setCurrentGroup(name);
@@ -2278,12 +2300,15 @@ function App() {
               value={selectedTeam}
               onChange={(e) => {
                 const nextTeam = e.target.value;
+                const nextAnchorDate = profileAnchorDate || getKoreaToday();
+
                 setSelectedTeam(nextTeam);
                 setMySelection((prev) => ({
                   ...prev,
                   teamKey: nextTeam,
                   name: "",
                   code: "",
+                  anchorDate: nextAnchorDate,
                 }));
               }}
             >
@@ -2299,10 +2324,15 @@ function App() {
               className="select"
               value={mySelection?.teamKey === selectedTeam ? mySelection?.name || "" : ""}
               onChange={(e) => {
+                const nextName = e.target.value;
+                const nextAnchorDate = profileAnchorDate || getKoreaToday();
+
                 setMySelection((prev) => ({
                   ...prev,
                   teamKey: selectedTeam,
-                  name: e.target.value,
+                  name: nextName,
+                  code: "",
+                  anchorDate: nextAnchorDate,
                 }));
               }}
             >
@@ -2335,10 +2365,14 @@ function App() {
               className="select"
               value={mySelection?.teamKey === selectedTeam ? mySelection?.code || "" : ""}
               onChange={(e) => {
+                const nextCode = e.target.value;
+                const nextAnchorDate = profileAnchorDate || getKoreaToday();
+
                 setMySelection((prev) => ({
                   ...prev,
                   teamKey: selectedTeam,
-                  code: e.target.value,
+                  code: nextCode,
+                  anchorDate: nextAnchorDate,
                 }));
               }}
             >
@@ -2355,7 +2389,14 @@ function App() {
               className="input"
               type="date"
               value={profileAnchorDate}
-              onChange={(e) => setProfileAnchorDate(e.target.value)}
+              onChange={(e) => {
+                const nextDate = e.target.value || getKoreaToday();
+                setProfileAnchorDate(nextDate);
+                setMySelection((prev) => ({
+                  ...prev,
+                  anchorDate: nextDate,
+                }));
+              }}
             />
 
             <div className="help-text" style={{ marginTop: 10 }}>
@@ -2898,12 +2939,15 @@ function App() {
                   value={selectedTeam}
                   onChange={(e) => {
                     const nextTeam = e.target.value;
+                    const nextAnchorDate = profileAnchorDate || getKoreaToday();
+
                     setSelectedTeam(nextTeam);
                     setMySelection((prev) => ({
                       ...prev,
                       teamKey: nextTeam,
                       name: "",
                       code: "",
+                      anchorDate: nextAnchorDate,
                     }));
                   }}
                 >
@@ -2917,10 +2961,15 @@ function App() {
                   className="select"
                   value={mySelection?.teamKey === selectedTeam ? mySelection?.name || "" : ""}
                   onChange={(e) => {
+                    const nextName = e.target.value;
+                    const nextAnchorDate = profileAnchorDate || getKoreaToday();
+
                     setMySelection((prev) => ({
                       ...prev,
                       teamKey: selectedTeam,
-                      name: e.target.value,
+                      name: nextName,
+                      code: "",
+                      anchorDate: nextAnchorDate,
                     }));
                   }}
                 >
@@ -2947,10 +2996,14 @@ function App() {
                   className="select"
                   value={mySelection?.teamKey === selectedTeam ? mySelection?.code || "" : ""}
                   onChange={(e) => {
+                    const nextCode = e.target.value;
+                    const nextAnchorDate = profileAnchorDate || getKoreaToday();
+
                     setMySelection((prev) => ({
                       ...prev,
                       teamKey: selectedTeam,
-                      code: e.target.value,
+                      code: nextCode,
+                      anchorDate: nextAnchorDate,
                     }));
                   }}
                 >
@@ -2967,7 +3020,14 @@ function App() {
                   className="input"
                   type="date"
                   value={profileAnchorDate}
-                  onChange={(e) => setProfileAnchorDate(e.target.value)}
+                  onChange={(e) => {
+                    const nextDate = e.target.value || getKoreaToday();
+                    setProfileAnchorDate(nextDate);
+                    setMySelection((prev) => ({
+                      ...prev,
+                      anchorDate: nextDate,
+                    }));
+                  }}
                 />
 
                 <div className="modal-actions">
