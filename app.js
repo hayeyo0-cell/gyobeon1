@@ -2018,10 +2018,7 @@ function App() {
       teamKey,
       name,
       code,
-      anchorDate:
-        String(SHARED_REMOTE_BASE_DATE || "").trim() ||
-        profileAnchorDate ||
-        todayStr,
+      anchorDate: profileAnchorDate || getKoreaToday(),
     });
 
     setSelectedTeam(teamKey);
@@ -2032,11 +2029,7 @@ function App() {
   function startReconfigureProfile() {
     setAllowProfileEdit(true);
     setSelectedTeam(mySelection?.teamKey || selectedTeam || "ks");
-    setProfileAnchorDate(
-      String(SHARED_REMOTE_BASE_DATE || "").trim() ||
-      mySelection?.anchorDate ||
-      todayStr
-    );
+    setProfileAnchorDate(getKoreaToday());
   }
 
   function cancelReconfigureProfile() {
@@ -2049,14 +2042,16 @@ function App() {
   }
 
   function resetMyProfile() {
+    const today = getKoreaToday();
+
     clearMySelection();
     setMySelection({
       teamKey: "ks",
       name: "",
       code: "",
-      anchorDate: getKoreaToday(),
+      anchorDate: today,
     });
-    setProfileAnchorDate(getKoreaToday());
+    setProfileAnchorDate(today);
     setAllowProfileEdit(true);
     setSelectedTeam("ks");
     setViewTeam("ks");
