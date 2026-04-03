@@ -372,9 +372,7 @@ function loadWorktimeOverrides() {
 }
 
 function saveWorktimeOverrides(value) {
-  try {
-    localStorage.setItem(LS_WORKTIME_OVERRIDES, JSON.stringify(value || {}));
-  } catch (_) {}
+  localStorage.setItem(LS_WORKTIME_OVERRIDES, JSON.stringify(value || {}));
 }
 
 function getWorktimeOverrideKey(teamKey, code) {
@@ -382,13 +380,14 @@ function getWorktimeOverrideKey(teamKey, code) {
 }
 
 function getWorktimeOverrideValue(teamKey, code, dayType) {
-  const all = loadWorktimeOverrides();
+  const data = loadWorktimeOverrides();
   const key = getWorktimeOverrideKey(teamKey, code);
-  return String(all?.[key]?.[dayType] || "").trim();
+  return String(data?.[key]?.[dayType] || "").trim();
 }
 
 function parseTimeValueToParts(value) {
   const raw = String(value || "").trim();
+
   if (!raw || raw === "----") {
     return {
       enabled: false,
@@ -1431,7 +1430,9 @@ function App() {
 
   const currentEditDayType = guessDayType(browseDate);
   const currentEditDayLabel =
-    currentEditDayType === "nor" ? "평일" : currentEditDayType === "sat" ? "토요일" : "휴일";
+    currentEditDayType === "nor" ? "평일" :
+    currentEditDayType === "sat" ? "토요일" :
+    "휴일";
 
   useEffect(() => {
     activeTabRef.current = activeTab;
@@ -2231,7 +2232,6 @@ function App() {
 
   function openEditDialog(item) {
     setEditingCell(item);
-
     const key = getOverrideKey(viewTeam, item.name);
     const current = overrides[key] || {};
     setEditColor(current.color || "");
@@ -2280,7 +2280,6 @@ function App() {
       const dayType = guessDayType(browseDate);
       const allWorktimeOverrides = loadWorktimeOverrides();
       const wtKey = getWorktimeOverrideKey(viewTeam, editingCell.code);
-
       const currentEntry = { ...(allWorktimeOverrides[wtKey] || {}) };
 
       if (!editWorktimeEnabled) {
@@ -2308,7 +2307,6 @@ function App() {
 
     setOverrides(next);
     saveOverrides(next);
-
     setEditOpen(false);
     setEditingCell(null);
     setEditColor("");
@@ -3340,9 +3338,6 @@ function App() {
             <div className="modal-sub">
               {TEAM_LABELS[viewTeam]} {editingCell?.code} {editingCell?.name}
             </div>
-            <div className="help-text" style={{ marginTop: 6 }}>
-              {browseDate} {weekdayName(browseDate)}
-            </div>
 
             <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
             <input
@@ -3387,7 +3382,10 @@ function App() {
                 </div>
 
                 <label className="label" style={{ marginBottom: 8 }}>시간 입력 방식</label>
-                <div className="modal-actions" style={{ justifyContent: "flex-start", marginTop: 0, marginBottom: 12 }}>
+                <div
+                  className="modal-actions"
+                  style={{ justifyContent: "flex-start", marginTop: 0, marginBottom: 12 }}
+                >
                   <button
                     className={`modal-btn ${editWorktimeEnabled ? "primary" : ""}`}
                     onClick={() => setEditWorktimeEnabled(true)}
@@ -3454,7 +3452,7 @@ function App() {
               </div>
             )}
 
-            <div className="help-text" style={{ marginTop: 10 }}>
+            <div className="help-text" style={{ marginTop: 8 }}>
               계산과 현재배정 매칭은 원래 이름 기준으로 유지되고,
               화면에는 여기서 입력한 이름만 표시됩니다.
             </div>
