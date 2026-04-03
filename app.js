@@ -853,12 +853,24 @@ function getOverrideKey(teamKey, personName) {
   return `${teamKey}::${normalizeNameKey(personName)}`;
 }
 
+function hasRemoteRosterForTeam(teamKey, remoteRoster) {
+  return Array.isArray(remoteRoster?.[teamKey]) && remoteRoster[teamKey].length > 0;
+}
+
+function getZipBaseDate(team) {
+  return String(team?.info?.baseDate || "").trim() || getKoreaToday();
+}
+
 function getTeamBaseDate(team) {
-  return (
-    String(SHARED_REMOTE_BASE_DATE || "").trim() ||
-    String(team?.info?.baseDate || "").trim() ||
-    getKoreaToday()
-  );
+  return getZipBaseDate(team);
+}
+
+function getResolvedBaseDate(teamKey, team, remoteRoster) {
+  if (hasRemoteRosterForTeam(teamKey, remoteRoster)) {
+    const shared = String(SHARED_REMOTE_BASE_DATE || "").trim();
+    if (shared) return shared;
+  }
+  return getZipBaseDate(team);
 }
 
 function migrateLegacyOverrides(currentOverrides, data) {
@@ -943,7 +955,7 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
 function buildTeamAnchorFromZip(team) {
   const people = Array.isArray(team?.people) ? team.people : [];
   const fixedCodes = getGyobunOrder(team);
-  const baseDate = getTeamBaseDate(team);
+  const baseDate = getZipBaseDate(team);
 
   if (!people.length) {
     return {
@@ -1050,7 +1062,7 @@ function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
       return {
         name: found.name,
         code: normalizeToFixedCode(team, code),
-        anchorDate: String(SHARED_REMOTE_BASE_DATE || "").trim() || getKoreaToday(),
+        anchorDate: getResolvedBaseDate(teamKey, team, remoteRoster),
       };
     }
   }
@@ -1063,17 +1075,6 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
     return buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
   }
 
-  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
-  if (remoteRow?.code) {
-    return {
-      name,
-      code: normalizeToFixedCode(team, remoteRow.code),
-      anchorDate:
-        String(SHARED_REMOTE_BASE_DATE || "").trim() ||
-        getKoreaToday(),
-    };
-  }
-
   if (
     mySelection?.teamKey === teamKey &&
     samePersonName(mySelection?.name, name) &&
@@ -1084,8 +1085,16 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
       code: normalizeToFixedCode(team, mySelection.code),
       anchorDate:
         String(mySelection.anchorDate || "").trim() ||
-        String(SHARED_REMOTE_BASE_DATE || "").trim() ||
-        getTeamBaseDate(team),
+        getResolvedBaseDate(teamKey, team, remoteRoster),
+    };
+  }
+
+  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
+  if (remoteRow?.code) {
+    return {
+      name,
+      code: normalizeToFixedCode(team, remoteRow.code),
+      anchorDate: getResolvedBaseDate(teamKey, team, remoteRoster),
     };
   }
 
@@ -1094,9 +1103,7 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
     return {
       name,
       code: normalizeToFixedCode(team, zipPerson.baseCode),
-      anchorDate:
-        String(team?.info?.baseDate || "").trim() ||
-        getTeamBaseDate(team),
+      anchorDate: getZipBaseDate(team),
     };
   }
 
@@ -1449,10 +1456,6 @@ function App() {
   }, [mySelection?.anchorDate, todayStr]);
 
   useEffect(() => {
-  setProfileAnchorDate(mySelection?.anchorDate || todayStr);
-}, [mySelection?.anchorDate, todayStr]);
-
-  useEffect(() => {
     if (!data) return;
     const migrated = migrateLegacyOverrides(loadOverrides(), data);
     setOverrides(migrated);
@@ -1746,7 +1749,11 @@ function App() {
 
   const currentViewTeam = effectiveData?.[viewTeam] || null;
   const currentViewAnchor =
-    teamAnchors[viewTeam] || { name: "", code: "", anchorDate: getTeamBaseDate(currentViewTeam) };
+    teamAnchors[viewTeam] || {
+      name: "",
+      code: "",
+      anchorDate: getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster),
+    };
 
   const setupSourceData = effectiveData || data;
 
@@ -1767,7 +1774,7 @@ function App() {
     if (!anchor?.code) return null;
 
     const dayOffset = diffDays(
-      anchor.anchorDate || getTeamBaseDate(team),
+      anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster),
       homeDate
     );
 
@@ -1784,7 +1791,7 @@ function App() {
 
     let anchorName = "";
     let anchorCode = "";
-    let anchorDate = getTeamBaseDate(currentViewTeam);
+    let anchorDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
 
     if (
       mySelection?.teamKey === viewTeam &&
@@ -1793,7 +1800,9 @@ function App() {
     ) {
       anchorName = mySelection.name;
       anchorCode = normalizeToFixedCode(currentViewTeam, mySelection.code);
-      anchorDate = mySelection.anchorDate || getTeamBaseDate(currentViewTeam);
+      anchorDate =
+        mySelection.anchorDate ||
+        getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
     } else {
       const teamAnchor = buildTeamAnchorFromRemote(
         viewTeam,
@@ -1802,7 +1811,9 @@ function App() {
       );
       anchorName = teamAnchor?.name || "";
       anchorCode = normalizeToFixedCode(currentViewTeam, teamAnchor?.code || "");
-      anchorDate = teamAnchor?.anchorDate || getTeamBaseDate(currentViewTeam);
+      anchorDate =
+        teamAnchor?.anchorDate ||
+        getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
     }
 
     if (!anchorName || !anchorCode) {
@@ -1844,7 +1855,7 @@ function App() {
 
     const teamAnchor = currentViewAnchor;
     const dayOffset = diffDays(
-      teamAnchor.anchorDate || getTeamBaseDate(team),
+      teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster),
       browseDate
     );
 
@@ -1869,7 +1880,7 @@ function App() {
         displayName: found?.displayName || found?.name || "-",
       };
     });
-  }, [currentViewTeam, currentViewAnchor, browseDate, overrides]);
+  }, [currentViewTeam, currentViewAnchor, browseDate, overrides, remoteRoster, viewTeam]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthDate), [monthDate]);
   const monthHeaderDate = parseLocalDate(monthDate);
@@ -1886,6 +1897,7 @@ function App() {
   function switchTab(tabName) {
     const currentTab = activeTabRef.current;
     const today = getKoreaToday();
+    const myTeamKey = mySelection?.teamKey || selectedTeam || "ks";
 
     if (tabName === currentTab) {
       if (tabName === "home") {
@@ -1898,22 +1910,24 @@ function App() {
       setHomeDate(today);
     }
 
-   if (currentTab === "home" && tabName !== "home") {
-  if (tabName === "all" || tabName === "dia") {
-    setBrowseDate(homeDate);
-  } else if (tabName === "month") {
-    setMonthDate(today);
-  } else if (tabName === "group") {
-    setGroupBaseDate(today);
-    setSelectedGroupDate("");
-  }
-}
-    if (tabName === "all") {
-      setViewTeam(selectedTeam);
+    if (currentTab === "home" && tabName !== "home") {
+      if (tabName === "all" || tabName === "dia") {
+        setBrowseDate(homeDate);
+        setViewTeam(myTeamKey);
+      } else if (tabName === "month") {
+        setMonthDate(today);
+      } else if (tabName === "group") {
+        setGroupBaseDate(today);
+        setSelectedGroupDate("");
+      }
     }
 
-    if (tabName === "dia" && currentTab !== "all") {
-      setViewTeam(selectedTeam);
+    if (tabName === "all") {
+      setViewTeam(myTeamKey);
+    }
+
+    if (tabName === "dia") {
+      setViewTeam(myTeamKey);
     }
 
     setActiveTab(tabName);
@@ -3489,7 +3503,11 @@ function getPersonGyobunForDate(
   const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection);
   if (!anchor?.code) return null;
 
-  const dayOffset = diffDays(anchor.anchorDate || getTeamBaseDate(team), dateStr);
+  const dayOffset = diffDays(
+    anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster),
+    dateStr
+  );
+
   const code = shiftCodeByDays(team, anchor.code, dayOffset);
   const override = overrides[getOverrideKey(teamKey, name)] || {};
 
