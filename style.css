@@ -149,7 +149,7 @@ button:active {
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
 }
 
-/* 홈 상단 버튼 영역 */
+/* 홈 상단 버튼 */
 .settings-row {
   min-height: 52px;
   display: flex;
@@ -166,7 +166,6 @@ button:active {
   gap: 8px;
 }
 
-/* 상단 버튼 공통 통일 */
 .settings-btn,
 .install-btn,
 .group-add-btn,
@@ -182,7 +181,7 @@ button:active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
   white-space: nowrap;
   box-shadow:
     0 8px 18px rgba(15, 23, 42, 0.12),
@@ -210,8 +209,8 @@ button:active {
 }
 
 .quick-icon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
   display: block;
   flex-shrink: 0;
@@ -1160,8 +1159,8 @@ button:active {
   }
 
   .quick-icon {
-    width: 14px;
-    height: 14px;
+    width: 18px;
+    height: 18px;
   }
 
   .main-panel {
@@ -1386,4 +1385,4 @@ button:active {
   .modal-sub {
     font-size: 16px;
   }
-}
+                                }
