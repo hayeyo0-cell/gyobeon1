@@ -390,7 +390,6 @@ function parseTimeValueToParts(value) {
 
   if (!raw || raw === "----") {
     return {
-      enabled: false,
       sh: "",
       sm: "",
       eh: "",
@@ -401,7 +400,6 @@ function parseTimeValueToParts(value) {
   const match = raw.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);
   if (!match) {
     return {
-      enabled: true,
       sh: "",
       sm: "",
       eh: "",
@@ -410,7 +408,6 @@ function parseTimeValueToParts(value) {
   }
 
   return {
-    enabled: true,
     sh: match[1],
     sm: match[2],
     eh: match[3],
@@ -1389,7 +1386,6 @@ function App() {
   const [editColor, setEditColor] = useState("");
   const [editAlias, setEditAlias] = useState("");
   const [isWorktimeEditOpen, setIsWorktimeEditOpen] = useState(false);
-  const [editWorktimeEnabled, setEditWorktimeEnabled] = useState(true);
   const [editStartHour, setEditStartHour] = useState("");
   const [editStartMin, setEditStartMin] = useState("");
   const [editEndHour, setEditEndHour] = useState("");
@@ -2241,7 +2237,6 @@ function App() {
     const currentTime = team ? pickWorktime(team, item.code, browseDate) : "----";
     const parts = parseTimeValueToParts(currentTime);
 
-    setEditWorktimeEnabled(parts.enabled);
     setEditStartHour(parts.sh);
     setEditStartMin(parts.sm);
     setEditEndHour(parts.eh);
@@ -2277,30 +2272,26 @@ function App() {
     }
 
     if (isWorktimeEditOpen) {
+      const built = buildTimeValueFromParts(
+        editStartHour,
+        editStartMin,
+        editEndHour,
+        editEndMin
+      );
+
+      if (!built) {
+        alert("출퇴근시간 형식을 다시 확인해주세요.");
+        return;
+      }
+
       const dayType = guessDayType(browseDate);
       const allWorktimeOverrides = loadWorktimeOverrides();
       const wtKey = getWorktimeOverrideKey(viewTeam, editingCell.code);
       const currentEntry = { ...(allWorktimeOverrides[wtKey] || {}) };
 
-      if (!editWorktimeEnabled) {
-        currentEntry[dayType] = "----";
-      } else {
-        const built = buildTimeValueFromParts(
-          editStartHour,
-          editStartMin,
-          editEndHour,
-          editEndMin
-        );
-
-        if (!built) {
-          alert("출퇴근시간 형식을 다시 확인해주세요.");
-          return;
-        }
-
-        currentEntry[dayType] = built;
-      }
-
+      currentEntry[dayType] = built;
       allWorktimeOverrides[wtKey] = currentEntry;
+
       saveWorktimeOverrides(allWorktimeOverrides);
       setWorktimeVersion((v) => v + 1);
     }
@@ -2312,7 +2303,6 @@ function App() {
     setEditColor("");
     setEditAlias("");
     setIsWorktimeEditOpen(false);
-    setEditWorktimeEnabled(true);
     setEditStartHour("");
     setEditStartMin("");
     setEditEndHour("");
@@ -3346,6 +3336,9 @@ function App() {
               onChange={(e) => setEditAlias(e.target.value)}
               placeholder="비워두면 원래 이름 사용"
             />
+            <div className="help-text" style={{ marginTop: 6 }}>
+              ※ 사용자 화면 표시용에 저장됨
+            </div>
 
             <label className="label" style={{ marginTop: 12 }}>색상</label>
             <select
@@ -3374,88 +3367,56 @@ function App() {
             {isWorktimeEditOpen && (
               <div style={{ marginTop: 12 }}>
                 <div className="help-text" style={{ marginBottom: 10 }}>
-                  현재 보고 있는 날짜 기준의 출퇴근시간만 수정됩니다.
+                  ※ 현재 날짜 기준 출퇴근시간 수정
                 </div>
 
                 <div className="notice-box" style={{ marginBottom: 12 }}>
                   적용 기준: {currentEditDayLabel}
                 </div>
 
-                <label className="label" style={{ marginBottom: 8 }}>시간 입력 방식</label>
-                <div
-                  className="modal-actions"
-                  style={{ justifyContent: "flex-start", marginTop: 0, marginBottom: 12 }}
-                >
-                  <button
-                    className={`modal-btn ${editWorktimeEnabled ? "primary" : ""}`}
-                    onClick={() => setEditWorktimeEnabled(true)}
-                    type="button"
-                  >
-                    시간 입력
-                  </button>
-                  <button
-                    className={`modal-btn ${!editWorktimeEnabled ? "primary" : ""}`}
-                    onClick={() => setEditWorktimeEnabled(false)}
-                    type="button"
-                  >
-                    시간 없음(----)
-                  </button>
+                <label className="label">출근</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, marginBottom: 12 }}>
+                  <input
+                    className="input"
+                    inputMode="numeric"
+                    value={editStartHour}
+                    onChange={(e) => setEditStartHour(clamp2(e.target.value))}
+                    style={{ textAlign: "center" }}
+                    placeholder="06"
+                  />
+                  <div style={{ fontWeight: 700 }}>:</div>
+                  <input
+                    className="input"
+                    inputMode="numeric"
+                    value={editStartMin}
+                    onChange={(e) => setEditStartMin(clamp2(e.target.value))}
+                    style={{ textAlign: "center" }}
+                    placeholder="33"
+                  />
                 </div>
 
-                {editWorktimeEnabled ? (
-                  <div>
-                    <label className="label">출근</label>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, marginBottom: 12 }}>
-                      <input
-                        className="input"
-                        inputMode="numeric"
-                        value={editStartHour}
-                        onChange={(e) => setEditStartHour(clamp2(e.target.value))}
-                        style={{ textAlign: "center" }}
-                        placeholder="06"
-                      />
-                      <div style={{ fontWeight: 700 }}>:</div>
-                      <input
-                        className="input"
-                        inputMode="numeric"
-                        value={editStartMin}
-                        onChange={(e) => setEditStartMin(clamp2(e.target.value))}
-                        style={{ textAlign: "center" }}
-                        placeholder="33"
-                      />
-                    </div>
-
-                    <label className="label">퇴근</label>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
-                      <input
-                        className="input"
-                        inputMode="numeric"
-                        value={editEndHour}
-                        onChange={(e) => setEditEndHour(clamp2(e.target.value))}
-                        style={{ textAlign: "center" }}
-                        placeholder="15"
-                      />
-                      <div style={{ fontWeight: 700 }}>:</div>
-                      <input
-                        className="input"
-                        inputMode="numeric"
-                        value={editEndMin}
-                        onChange={(e) => setEditEndMin(clamp2(e.target.value))}
-                        style={{ textAlign: "center" }}
-                        placeholder="54"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="help-text">현재 날짜 기준 시간은 `----` 로 저장됩니다.</div>
-                )}
+                <label className="label">퇴근</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                  <input
+                    className="input"
+                    inputMode="numeric"
+                    value={editEndHour}
+                    onChange={(e) => setEditEndHour(clamp2(e.target.value))}
+                    style={{ textAlign: "center" }}
+                    placeholder="15"
+                  />
+                  <div style={{ fontWeight: 700 }}>:</div>
+                  <input
+                    className="input"
+                    inputMode="numeric"
+                    value={editEndMin}
+                    onChange={(e) => setEditEndMin(clamp2(e.target.value))}
+                    style={{ textAlign: "center" }}
+                    placeholder="54"
+                  />
+                </div>
               </div>
             )}
-
-            <div className="help-text" style={{ marginTop: 8 }}>
-              계산과 현재배정 매칭은 원래 이름 기준으로 유지되고,
-              화면에는 여기서 입력한 이름만 표시됩니다.
-            </div>
 
             <div className="modal-actions">
               <button className="modal-btn" onClick={closeEditDialog}>아니요</button>
