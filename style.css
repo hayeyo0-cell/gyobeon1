@@ -209,8 +209,8 @@ button:active {
 }
 
 .quick-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
   display: block;
   flex-shrink: 0;
@@ -1159,8 +1159,8 @@ button:active {
   }
 
   .quick-icon {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
   }
 
   .main-panel {
@@ -1385,4 +1385,4 @@ button:active {
   .modal-sub {
     font-size: 16px;
   }
-                                }
+}
