@@ -80,6 +80,7 @@ const LS_SHARED_CONFIG_CACHE = "gyobeon_shared_config_cache";
 const LS_REMOTE_ROSTER_CACHE = "gyobeon_remote_roster_cache";
 const LS_LAST_SEEN_PUBLISHED_AT = "gyobeon_last_seen_published_at";
 const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
+const LS_WORKTIME_OVERRIDES = "gyobeon_worktime_overrides";
 
 function normalizeNameKey(name) {
   return String(name || "").trim().toLowerCase().replace(/\s+/g, "");
@@ -362,8 +363,104 @@ function isDayShiftCode(teamKey, code) {
   return parsed.num >= 1 && parsed.num < range.start;
 }
 
+function loadWorktimeOverrides() {
+  try {
+    return JSON.parse(localStorage.getItem(LS_WORKTIME_OVERRIDES) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveWorktimeOverrides(value) {
+  try {
+    localStorage.setItem(LS_WORKTIME_OVERRIDES, JSON.stringify(value || {}));
+  } catch (_) {}
+}
+
+function getWorktimeOverrideKey(teamKey, code) {
+  return `${teamKey}::${normalizeCodeKey(code)}`;
+}
+
+function getWorktimeOverrideValue(teamKey, code, dayType) {
+  const all = loadWorktimeOverrides();
+  const key = getWorktimeOverrideKey(teamKey, code);
+  return String(all?.[key]?.[dayType] || "").trim();
+}
+
+function parseTimeValueToParts(value) {
+  const raw = String(value || "").trim();
+  if (!raw || raw === "----") {
+    return {
+      enabled: false,
+      sh: "",
+      sm: "",
+      eh: "",
+      em: "",
+    };
+  }
+
+  const match = raw.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);
+  if (!match) {
+    return {
+      enabled: true,
+      sh: "",
+      sm: "",
+      eh: "",
+      em: "",
+    };
+  }
+
+  return {
+    enabled: true,
+    sh: match[1],
+    sm: match[2],
+    eh: match[3],
+    em: match[4],
+  };
+}
+
+function clamp2(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 2);
+}
+
+function buildTimeValueFromParts(sh, sm, eh, em) {
+  const a = clamp2(sh);
+  const b = clamp2(sm);
+  const c = clamp2(eh);
+  const d = clamp2(em);
+
+  if (!a || !b || !c || !d) return null;
+
+  const shNum = Number(a);
+  const smNum = Number(b);
+  const ehNum = Number(c);
+  const emNum = Number(d);
+
+  if (
+    Number.isNaN(shNum) || Number.isNaN(smNum) ||
+    Number.isNaN(ehNum) || Number.isNaN(emNum)
+  ) {
+    return null;
+  }
+
+  if (
+    shNum < 0 || shNum > 23 ||
+    ehNum < 0 || ehNum > 23 ||
+    smNum < 0 || smNum > 59 ||
+    emNum < 0 || emNum > 59
+  ) {
+    return null;
+  }
+
+  return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`;
+}
+
 function pickWorktime(team, code, dateStr) {
   const kind = guessDayType(dateStr);
+
+  const overrideValue = getWorktimeOverrideValue(team?.key, code, kind);
+  if (overrideValue) return overrideValue;
+
   const key = normalizeCodeKey(code);
   const source = team?.worktimes?.[kind] || {};
   return source[key] || "----";
@@ -1249,6 +1346,7 @@ function App() {
     localStorage.getItem(LS_LAST_SEEN_PUBLISHED_AT) || ""
   );
   const [holidayVersion, setHolidayVersion] = useState(0);
+  const [worktimeVersion, setWorktimeVersion] = useState(0);
 
   const [activeTab, setActiveTab] = useState("home");
   const activeTabRef = useRef("home");
@@ -1291,6 +1389,12 @@ function App() {
   const [editingCell, setEditingCell] = useState(null);
   const [editColor, setEditColor] = useState("");
   const [editAlias, setEditAlias] = useState("");
+  const [isWorktimeEditOpen, setIsWorktimeEditOpen] = useState(false);
+  const [editWorktimeEnabled, setEditWorktimeEnabled] = useState(true);
+  const [editStartHour, setEditStartHour] = useState("");
+  const [editStartMin, setEditStartMin] = useState("");
+  const [editEndHour, setEditEndHour] = useState("");
+  const [editEndMin, setEditEndMin] = useState("");
 
   const [pathOpen, setPathOpen] = useState(false);
   const [pathTarget, setPathTarget] = useState(null);
@@ -1324,6 +1428,10 @@ function App() {
   }, [data, remoteRoster]);
 
   const isAdminUser = samePersonName(mySelection?.name, ADMIN_NAME);
+
+  const currentEditDayType = guessDayType(browseDate);
+  const currentEditDayLabel =
+    currentEditDayType === "nor" ? "평일" : currentEditDayType === "sat" ? "토요일" : "휴일";
 
   useEffect(() => {
     activeTabRef.current = activeTab;
@@ -1667,7 +1775,7 @@ function App() {
       code,
       time: pickWorktime(team, code, homeDate),
     };
-  }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion]);
+  }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, worktimeVersion]);
 
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
@@ -2123,10 +2231,23 @@ function App() {
 
   function openEditDialog(item) {
     setEditingCell(item);
+
     const key = getOverrideKey(viewTeam, item.name);
     const current = overrides[key] || {};
     setEditColor(current.color || "");
     setEditAlias(current.alias || "");
+
+    const team = effectiveData?.[viewTeam];
+    const currentTime = team ? pickWorktime(team, item.code, browseDate) : "----";
+    const parts = parseTimeValueToParts(currentTime);
+
+    setEditWorktimeEnabled(parts.enabled);
+    setEditStartHour(parts.sh);
+    setEditStartMin(parts.sm);
+    setEditEndHour(parts.eh);
+    setEditEndMin(parts.em);
+    setIsWorktimeEditOpen(false);
+
     setEditOpen(true);
   }
 
@@ -2155,12 +2276,49 @@ function App() {
       };
     }
 
+    if (isWorktimeEditOpen) {
+      const dayType = guessDayType(browseDate);
+      const allWorktimeOverrides = loadWorktimeOverrides();
+      const wtKey = getWorktimeOverrideKey(viewTeam, editingCell.code);
+
+      const currentEntry = { ...(allWorktimeOverrides[wtKey] || {}) };
+
+      if (!editWorktimeEnabled) {
+        currentEntry[dayType] = "----";
+      } else {
+        const built = buildTimeValueFromParts(
+          editStartHour,
+          editStartMin,
+          editEndHour,
+          editEndMin
+        );
+
+        if (!built) {
+          alert("출퇴근시간 형식을 다시 확인해주세요.");
+          return;
+        }
+
+        currentEntry[dayType] = built;
+      }
+
+      allWorktimeOverrides[wtKey] = currentEntry;
+      saveWorktimeOverrides(allWorktimeOverrides);
+      setWorktimeVersion((v) => v + 1);
+    }
+
     setOverrides(next);
     saveOverrides(next);
+
     setEditOpen(false);
     setEditingCell(null);
     setEditColor("");
     setEditAlias("");
+    setIsWorktimeEditOpen(false);
+    setEditWorktimeEnabled(true);
+    setEditStartHour("");
+    setEditStartMin("");
+    setEditEndHour("");
+    setEditEndMin("");
   }
 
   function openPathDialog(item, dateStr = todayStr) {
@@ -3182,6 +3340,9 @@ function App() {
             <div className="modal-sub">
               {TEAM_LABELS[viewTeam]} {editingCell?.code} {editingCell?.name}
             </div>
+            <div className="help-text" style={{ marginTop: 6 }}>
+              {browseDate} {weekdayName(browseDate)}
+            </div>
 
             <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
             <input
@@ -3207,7 +3368,93 @@ function App() {
 
             <div className="color-preview" style={{ backgroundColor: editColor || "#ffffff" }} />
 
-            <div className="help-text" style={{ marginTop: 8 }}>
+            <button
+              className="modal-btn"
+              style={{ width: "100%", marginTop: 12 }}
+              onClick={() => setIsWorktimeEditOpen((prev) => !prev)}
+            >
+              출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}
+            </button>
+
+            {isWorktimeEditOpen && (
+              <div style={{ marginTop: 12 }}>
+                <div className="help-text" style={{ marginBottom: 10 }}>
+                  현재 보고 있는 날짜 기준의 출퇴근시간만 수정됩니다.
+                </div>
+
+                <div className="notice-box" style={{ marginBottom: 12 }}>
+                  적용 기준: {currentEditDayLabel}
+                </div>
+
+                <label className="label" style={{ marginBottom: 8 }}>시간 입력 방식</label>
+                <div className="modal-actions" style={{ justifyContent: "flex-start", marginTop: 0, marginBottom: 12 }}>
+                  <button
+                    className={`modal-btn ${editWorktimeEnabled ? "primary" : ""}`}
+                    onClick={() => setEditWorktimeEnabled(true)}
+                    type="button"
+                  >
+                    시간 입력
+                  </button>
+                  <button
+                    className={`modal-btn ${!editWorktimeEnabled ? "primary" : ""}`}
+                    onClick={() => setEditWorktimeEnabled(false)}
+                    type="button"
+                  >
+                    시간 없음(----)
+                  </button>
+                </div>
+
+                {editWorktimeEnabled ? (
+                  <div>
+                    <label className="label">출근</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, marginBottom: 12 }}>
+                      <input
+                        className="input"
+                        inputMode="numeric"
+                        value={editStartHour}
+                        onChange={(e) => setEditStartHour(clamp2(e.target.value))}
+                        style={{ textAlign: "center" }}
+                        placeholder="06"
+                      />
+                      <div style={{ fontWeight: 700 }}>:</div>
+                      <input
+                        className="input"
+                        inputMode="numeric"
+                        value={editStartMin}
+                        onChange={(e) => setEditStartMin(clamp2(e.target.value))}
+                        style={{ textAlign: "center" }}
+                        placeholder="33"
+                      />
+                    </div>
+
+                    <label className="label">퇴근</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                      <input
+                        className="input"
+                        inputMode="numeric"
+                        value={editEndHour}
+                        onChange={(e) => setEditEndHour(clamp2(e.target.value))}
+                        style={{ textAlign: "center" }}
+                        placeholder="15"
+                      />
+                      <div style={{ fontWeight: 700 }}>:</div>
+                      <input
+                        className="input"
+                        inputMode="numeric"
+                        value={editEndMin}
+                        onChange={(e) => setEditEndMin(clamp2(e.target.value))}
+                        style={{ textAlign: "center" }}
+                        placeholder="54"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="help-text">현재 날짜 기준 시간은 `----` 로 저장됩니다.</div>
+                )}
+              </div>
+            )}
+
+            <div className="help-text" style={{ marginTop: 10 }}>
               계산과 현재배정 매칭은 원래 이름 기준으로 유지되고,
               화면에는 여기서 입력한 이름만 표시됩니다.
             </div>
