@@ -1346,3 +1346,43 @@ button:active {
     font-size: 16px;
   }
     }
+.quick-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 36px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #ffffff;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.quick-btn:active {
+  transform: scale(0.96);
+  opacity: 0.9;
+}
+
+.quick-btn.band {
+  background: #16a34a;
+}
+
+.quick-btn.vacation {
+  background: #22c55e;
+}
+
+.quick-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  display: block;
+}
