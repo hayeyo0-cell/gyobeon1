@@ -1907,16 +1907,17 @@ useEffect(() => {
       setHomeDate(today);
     }
 
-    if (currentTab === "home" && tabName !== "home") {
-      if (tabName === "all" || tabName === "dia") {
-        setBrowseDate(today);
-      } else if (tabName === "month") {
-        setMonthDate(today);
-      } else if (tabName === "group") {
-        setGroupBaseDate(today);
-        setSelectedGroupDate("");
-      }
-    }
+   if (currentTab === "home" && tabName !== "home") {
+    if (tabName === "all" || tabName === "dia") {
+    setBrowseDate(homeDate);
+    setViewTeam(mySelection?.teamKey || selectedTeam || "ks");
+  } else if (tabName === "month") {
+    setMonthDate(today);
+  } else if (tabName === "group") {
+    setGroupBaseDate(today);
+    setSelectedGroupDate("");
+  }
+}
 
     if (tabName === "all") {
       setViewTeam(selectedTeam);
