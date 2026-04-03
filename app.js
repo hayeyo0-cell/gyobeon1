@@ -1449,6 +1449,19 @@ function App() {
   }, [mySelection?.anchorDate, todayStr]);
 
   useEffect(() => {
+  setProfileAnchorDate(mySelection?.anchorDate || todayStr);
+}, [mySelection?.anchorDate, todayStr]);
+
+useEffect(() => {
+  if (allowProfileEdit) return;
+
+  const myTeamKey = mySelection?.teamKey || selectedTeam || "ks";
+
+  setViewTeam(myTeamKey);
+  setBrowseDate(homeDate);
+}, [homeDate, mySelection?.teamKey, selectedTeam, allowProfileEdit]);
+
+  useEffect(() => {
     if (!data) return;
     const migrated = migrateLegacyOverrides(loadOverrides(), data);
     setOverrides(migrated);
