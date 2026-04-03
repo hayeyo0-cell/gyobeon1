@@ -1435,6 +1435,8 @@ function App() {
 
   const isAdminUser = samePersonName(mySelection?.name, ADMIN_NAME);
 
+  const isKsUser = mySelection?.teamKey === "ks";
+
   const currentEditDayType = guessDayType(browseDate);
   const currentEditDayLabel =
     currentEditDayType === "nor" ? "평일" :
