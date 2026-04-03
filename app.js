@@ -22,6 +22,9 @@ const ADMIN_SCRIPT_URL =
 const ADMIN_NAME = "권재림";
 const ADMIN_PASSWORD = "7717tutu";
 
+const KS_BAND_URL = "https://band.us/band/51746678/chat/C4U1ay";
+const KS_VACATION_URL = "https://docs.google.com/spreadsheets/d/16ao5ogtUlILby9a7PjIoUpU9e-lLh8c_jHJGjtWAleM/edit?usp=drivesdk";
+
 let SHARED_REMOTE_BASE_DATE = "";
 
 function setGlobalBaseDate(value) {
