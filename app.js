@@ -1899,9 +1899,8 @@ function App() {
     }
 
    if (currentTab === "home" && tabName !== "home") {
-    if (tabName === "all" || tabName === "dia") {
+  if (tabName === "all" || tabName === "dia") {
     setBrowseDate(homeDate);
-    setViewTeam(mySelection?.teamKey || selectedTeam || "ks");
   } else if (tabName === "month") {
     setMonthDate(today);
   } else if (tabName === "group") {
@@ -1909,7 +1908,6 @@ function App() {
     setSelectedGroupDate("");
   }
 }
-
     if (tabName === "all") {
       setViewTeam(selectedTeam);
     }
