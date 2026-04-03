@@ -965,7 +965,6 @@ function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
   return buildTeamAnchorFromZip(team);
 }
 
-// 수정 핵심 1: 사용자가 저장한 기준 날짜/교번을 최우선으로 사용
 function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection = null) {
   if (!team || !name) {
     return buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
@@ -1566,7 +1565,6 @@ function App() {
     setTeamAnchors(nextAnchors);
   }, [effectiveData, remoteRoster, mySelection]);
 
-  // 수정 핵심 2: 자동 교번 채움은 code가 비어 있을 때만 1회
   useEffect(() => {
     if (!allowProfileEdit) return;
 
@@ -1640,9 +1638,7 @@ function App() {
   const currentViewAnchor =
     teamAnchors[viewTeam] || { name: "", code: "", anchorDate: getTeamBaseDate(currentViewTeam) };
 
-  const hasRemoteForSelectedTeam = (remoteRoster?.[selectedTeam] || []).length > 0;
-  const setupSourceData =
-    allowProfileEdit && hasRemoteForSelectedTeam && effectiveData ? effectiveData : data;
+  const setupSourceData = effectiveData || data;
 
   const myInfo = useMemo(() => {
     const myTeamKey = mySelection?.teamKey || selectedTeam;
@@ -2041,21 +2037,40 @@ function App() {
     }
   }
 
-  // 수정 핵심 3: 저장 시 기준 날짜는 현재 profileAnchorDate를 고정 사용
   function applyInitialSelection(teamKey, name, code) {
     if (!teamKey || !name || !code) return;
 
     const nextAnchorDate = profileAnchorDate || getKoreaToday();
 
-    setMySelection({
+    const nextSelection = {
       teamKey,
       name,
       code,
       anchorDate: nextAnchorDate,
-    });
+    };
 
+    setMySelection(nextSelection);
     setSelectedTeam(teamKey);
     setViewTeam(teamKey);
+
+    const today = getKoreaToday();
+    setHomeDate(today);
+    setBrowseDate(today);
+    setMonthDate(today);
+    setGroupBaseDate(today);
+    setSelectedGroupDate("");
+
+    if (effectiveData) {
+      const nextAnchors = buildAllTeamsAutoAnchorsFromIdentity(
+        effectiveData,
+        remoteRoster,
+        teamKey,
+        name,
+        nextSelection
+      );
+      setTeamAnchors(nextAnchors);
+    }
+
     setAllowProfileEdit(false);
   }
 
@@ -2074,7 +2089,6 @@ function App() {
     setAllowProfileEdit(false);
   }
 
-  // 수정 핵심 4: 초기화 후 기준 날짜는 무조건 오늘
   function resetMyProfile() {
     const today = getKoreaToday();
 
@@ -2091,6 +2105,12 @@ function App() {
     setAllowProfileEdit(true);
     setSelectedTeam("ks");
     setViewTeam("ks");
+
+    setHomeDate(today);
+    setBrowseDate(today);
+    setMonthDate(today);
+    setGroupBaseDate(today);
+    setSelectedGroupDate("");
   }
 
   function handleAllCellTap(item) {
