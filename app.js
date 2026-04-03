@@ -2612,12 +2612,35 @@ function App() {
           <>
             {activeTab === "home" && (
               <>
-                <div className="settings-row">
-                  {deferredPrompt && (
-                    <button className="install-btn" onClick={handleInstall}>설치</button>
-                  )}
-                  <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>
-                </div>
+               <div className="settings-row">
+  {deferredPrompt && (
+    <button className="install-btn" onClick={handleInstall}>설치</button>
+  )}
+
+  {isKsUser && (
+    <div className="quick-links">
+      <button
+        className="quick-btn band"
+        onClick={() => window.location.href = KS_BAND_URL}
+      >
+        <img src="./band.png" alt="밴드" className="quick-icon" />
+        <span>밴드</span>
+      </button>
+
+      <button
+        className="quick-btn vacation"
+        onClick={() => window.location.href = KS_VACATION_URL}
+      >
+        <img src="./vacation.png" alt="휴가" className="quick-icon" />
+        <span>휴가</span>
+      </button>
+    </div>
+  )}
+
+  <button className="settings-btn" onClick={() => setShowSettings(true)}>
+    설정
+  </button>
+</div>
 
                 <div className="date-grid">
                   <div className="date-box">
