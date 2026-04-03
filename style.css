@@ -149,27 +149,44 @@ button:active {
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
 }
 
+/* 홈 상단 버튼 영역 */
 .settings-row {
   min-height: 52px;
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
+  flex-wrap: wrap;
 }
 
+.quick-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 상단 버튼 공통 통일 */
 .settings-btn,
 .install-btn,
-.group-add-btn {
+.group-add-btn,
+.quick-btn {
   border: 0;
   color: white;
-  padding: 10px 16px;
-  border-radius: 18px;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 16px;
   cursor: pointer;
   font-weight: 800;
-  font-size: 15px;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
   box-shadow:
-    0 8px 18px rgba(47, 97, 220, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    0 8px 18px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .settings-btn {
@@ -178,12 +195,26 @@ button:active {
 
 .install-btn {
   background: linear-gradient(180deg, #2aa55d 0%, #197a42 100%);
-  margin-right: 8px;
 }
 
 .group-add-btn {
   background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%);
-  white-space: nowrap;
+}
+
+.quick-btn.band {
+  background: linear-gradient(180deg, #21b35a 0%, #169447 100%);
+}
+
+.quick-btn.vacation {
+  background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%);
+}
+
+.quick-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
 }
 
 .date-grid {
@@ -637,12 +668,10 @@ button:active {
   width: 100%;
 }
 
-/* 사용자 지정 색상 우선 */
 .all-cell-real[style] {
   background-image: none !important;
 }
 
-/* 내 셀 강조는 테두리/그림자만, 배경은 덮어쓰지 않음 */
 .cell-my {
   border: 2px solid #22c7d8 !important;
   background-image: none !important;
@@ -1019,7 +1048,6 @@ button:active {
   font-weight: 800;
 }
 
-/* 행로표 잘림 방지 */
 .viewer-body {
   padding: 16px;
   overflow: visible;
@@ -1113,14 +1141,27 @@ button:active {
   .settings-row {
     min-height: 46px;
     margin-bottom: 4px;
+    gap: 6px;
+  }
+
+  .quick-links {
+    gap: 6px;
   }
 
   .settings-btn,
   .install-btn,
-  .group-add-btn {
-    padding: 8px 13px;
-    font-size: 14px;
-    border-radius: 16px;
+  .group-add-btn,
+  .quick-btn {
+    height: 38px;
+    padding: 0 11px;
+    font-size: 13px;
+    border-radius: 14px;
+    gap: 5px;
+  }
+
+  .quick-icon {
+    width: 14px;
+    height: 14px;
   }
 
   .main-panel {
@@ -1345,44 +1386,4 @@ button:active {
   .modal-sub {
     font-size: 16px;
   }
-    }
-.quick-links {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.quick-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 36px;
-  padding: 0 10px;
-  border: none;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  color: #ffffff;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-}
-
-.quick-btn:active {
-  transform: scale(0.96);
-  opacity: 0.9;
-}
-
-.quick-btn.band {
-  background: #16a34a;
-}
-
-.quick-btn.vacation {
-  background: #22c55e;
-}
-
-.quick-icon {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-  display: block;
 }
