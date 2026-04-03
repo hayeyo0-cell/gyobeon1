@@ -1063,6 +1063,17 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
     return buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
   }
 
+  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
+  if (remoteRow?.code) {
+    return {
+      name,
+      code: normalizeToFixedCode(team, remoteRow.code),
+      anchorDate:
+        String(SHARED_REMOTE_BASE_DATE || "").trim() ||
+        getKoreaToday(),
+    };
+  }
+
   if (
     mySelection?.teamKey === teamKey &&
     samePersonName(mySelection?.name, name) &&
@@ -1073,18 +1084,8 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
       code: normalizeToFixedCode(team, mySelection.code),
       anchorDate:
         String(mySelection.anchorDate || "").trim() ||
-        getKoreaToday(),
-    };
-  }
-
-  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
-  if (remoteRow?.code) {
-    return {
-      name,
-      code: normalizeToFixedCode(team, remoteRow.code),
-      anchorDate:
         String(SHARED_REMOTE_BASE_DATE || "").trim() ||
-        getKoreaToday(),
+        getTeamBaseDate(team),
     };
   }
 
