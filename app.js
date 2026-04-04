@@ -1559,7 +1559,8 @@ function App() {
             if (!hasLocalCachedRoster) {
               shouldPrompt = true;
             } else if (serverPublishedAt) {
-              shouldPrompt = serverPublishedAt !== lastSeenPublishedAt;
+              shouldPrompt =
+                serverPublishedAt !== lastSeenPublishedAt && rosterChanged;
             } else {
               shouldPrompt = rosterChanged;
             }
@@ -1785,7 +1786,8 @@ function App() {
       if (!hasCachedRoster) {
         shouldPrompt = true;
       } else if (serverPublishedAt) {
-        shouldPrompt = serverPublishedAt !== lastSeenPublishedAt;
+        shouldPrompt =
+          serverPublishedAt !== lastSeenPublishedAt && rosterChanged;
       } else {
         shouldPrompt = rosterChanged;
       }
