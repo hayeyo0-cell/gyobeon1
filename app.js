@@ -170,6 +170,10 @@ function isSunday(dateStr) {
   return parseLocalDate(dateStr).getDay() === 0;
 }
 
+function isSameDateStr(a, b) {
+  return String(a || "").trim() === String(b || "").trim();
+}
+
 function getYearFromDateStr(dateStr) {
   return Number(String(dateStr || "").slice(0, 4));
 }
@@ -961,6 +965,41 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
     .filter((item) => item.name);
 }
 
+function buildRemoteExactGrid(teamKey, team, remoteRoster, overrides = {}) {
+  const fixedCodes = getGyobunOrder(team);
+  const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : [];
+  const originalPeople = Array.isArray(team?.people) ? team.people : [];
+
+  return fixedCodes
+    .map((slotCode, idx) => {
+      const found = rows.find(
+        (row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode)
+      );
+
+      const fallback =
+        originalPeople.find(
+          (p) => normalizeCodeKey(p.baseCode) === normalizeCodeKey(slotCode)
+        ) ||
+        originalPeople[idx] ||
+        null;
+
+      const name = String(found?.name || fallback?.name || "").trim();
+      if (!name || shouldHideName(name)) return null;
+
+      const override = overrides[getOverrideKey(teamKey, name)] || {};
+
+      return {
+        idx: fallback?.idx ?? idx,
+        name,
+        displayName: override.alias || name,
+        code: slotCode,
+        customColor: override.color || "",
+        employeeId: found?.employeeId || fallback?.employeeId || "",
+      };
+    })
+    .filter(Boolean);
+}
+
 function buildTeamAnchorFromZip(team) {
   const people = Array.isArray(team?.people) ? team.people : [];
   const fixedCodes = getGyobunOrder(team);
@@ -1020,23 +1059,37 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
     if (!rows.length) return;
 
     const fixedOrder = getGyobunOrder(team);
-    const mapped = [];
+    const originalPeople = Array.isArray(team.people) ? team.people : [];
 
-    fixedOrder.forEach((slotCode, idx) => {
-      const found = rows.find(
-        (row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode)
-      );
+    const mapped = fixedOrder
+      .map((slotCode, idx) => {
+        const found = rows.find(
+          (row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode)
+        );
 
-      if (!found) return;
-      if (shouldHideName(found.name)) return;
+        const fallback =
+          originalPeople.find(
+            (p) => normalizeCodeKey(p.baseCode) === normalizeCodeKey(slotCode)
+          ) ||
+          originalPeople[idx] ||
+          {
+            idx,
+            name: "",
+            baseCode: slotCode,
+            employeeId: "",
+          };
 
-      mapped.push({
-        idx,
-        name: found.name,
-        baseCode: slotCode,
-        employeeId: found.employeeId || "",
-      });
-    });
+        const name = String(found?.name || fallback?.name || "").trim();
+        if (!name || shouldHideName(name)) return null;
+
+        return {
+          idx: fallback?.idx ?? idx,
+          name,
+          baseCode: slotCode,
+          employeeId: found?.employeeId || fallback?.employeeId || "",
+        };
+      })
+      .filter(Boolean);
 
     if (mapped.length > 0) {
       team.people = mapped;
@@ -1338,10 +1391,10 @@ function App() {
   const cachedRemoteRoster = loadCachedRemoteRoster();
   const lastAckRosterSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
   const cachedRemoteSig = getRemoteRosterSignature(cachedRemoteRoster);
-  const initialAppliedRemoteRoster =
-    cachedRemoteSig && cachedRemoteSig === lastAckRosterSig
-      ? cachedRemoteRoster
-      : getEmptyRemoteRoster();
+
+  const initialAppliedRemoteRoster = hasAnyRemoteRoster(cachedRemoteRoster)
+    ? cachedRemoteRoster
+    : getEmptyRemoteRoster();
 
   if (cachedShared?.baseDate) {
     setGlobalBaseDate(cachedShared.baseDate);
@@ -1875,6 +1928,19 @@ function App() {
     const team = effectiveData?.[myTeamKey];
     if (!team || !myName) return null;
 
+    const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
+    const resolvedBaseDate = getResolvedBaseDate(myTeamKey, team, remoteRoster);
+    const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster);
+
+    if (remoteRow?.code && isSameDateStr(homeDate, resolvedBaseDate)) {
+      const code = normalizeToFixedCode(team, remoteRow.code);
+      return {
+        code,
+        time: pickWorktime(team, code, homeDate),
+        displayName: override.alias || myName,
+      };
+    }
+
     const anchor = buildAnchorForIdentity(
       myTeamKey,
       team,
@@ -1895,11 +1961,21 @@ function App() {
     return {
       code,
       time: pickWorktime(team, code, homeDate),
+      displayName: override.alias || myName,
     };
-  }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, worktimeVersion]);
+  }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, worktimeVersion, overrides]);
 
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
+
+    const resolvedBaseDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
+
+    if (
+      hasRemoteRosterForTeam(viewTeam, remoteRoster) &&
+      isSameDateStr(browseDate, resolvedBaseDate)
+    ) {
+      return buildRemoteExactGrid(viewTeam, currentViewTeam, remoteRoster, overrides);
+    }
 
     let anchorName = "";
     let anchorCode = "";
@@ -1965,19 +2041,30 @@ function App() {
     const team = currentViewTeam;
     if (!team) return [];
 
-    const teamAnchor = currentViewAnchor;
-    const dayOffset = diffDays(
-      teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster),
-      browseDate
-    );
+    const resolvedBaseDate = getResolvedBaseDate(viewTeam, team, remoteRoster);
 
-    const grid = buildAssignedGrid(
-      team,
-      teamAnchor.name,
-      teamAnchor.code,
-      dayOffset,
-      overrides
-    );
+    let grid = [];
+
+    if (
+      hasRemoteRosterForTeam(viewTeam, remoteRoster) &&
+      isSameDateStr(browseDate, resolvedBaseDate)
+    ) {
+      grid = buildRemoteExactGrid(viewTeam, team, remoteRoster, overrides);
+    } else {
+      const teamAnchor = currentViewAnchor;
+      const dayOffset = diffDays(
+        teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster),
+        browseDate
+      );
+
+      grid = buildAssignedGrid(
+        team,
+        teamAnchor.name,
+        teamAnchor.code,
+        dayOffset,
+        overrides
+      );
+    }
 
     const diaOrder = getDiaOrder(team);
     return diaOrder.map((code) => {
@@ -3617,6 +3704,18 @@ function getPersonGyobunForDate(
   const team = data?.[teamKey];
   if (!team) return null;
 
+  const override = overrides[getOverrideKey(teamKey, name)] || {};
+  const resolvedBaseDate = getResolvedBaseDate(teamKey, team, remoteRoster);
+  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
+
+  if (remoteRow?.code && isSameDateStr(dateStr, resolvedBaseDate)) {
+    return {
+      code: normalizeToFixedCode(team, remoteRow.code),
+      name,
+      displayName: override.alias || name,
+    };
+  }
+
   const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection);
   if (!anchor?.code) return null;
 
@@ -3626,7 +3725,6 @@ function getPersonGyobunForDate(
   );
 
   const code = shiftCodeByDays(team, anchor.code, dayOffset);
-  const override = overrides[getOverrideKey(teamKey, name)] || {};
 
   return {
     code,
