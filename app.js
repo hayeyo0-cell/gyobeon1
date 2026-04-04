@@ -85,6 +85,7 @@ const LS_REMOTE_ROSTER_CACHE = "gyobeon_remote_roster_cache";
 const LS_LAST_SEEN_PUBLISHED_AT = "gyobeon_last_seen_published_at";
 const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
 const LS_WORKTIME_OVERRIDES = "gyobeon_worktime_overrides";
+const LS_LAST_ACK_ROSTER_SIG = "gyobeon_last_ack_roster_sig";
 
 function normalizeNameKey(name) {
   return String(name || "").trim().toLowerCase().replace(/\s+/g, "");
@@ -858,6 +859,10 @@ function isSameRemoteRoster(a, b) {
   return JSON.stringify(normalizeRemoteRosterShape(a)) === JSON.stringify(normalizeRemoteRosterShape(b));
 }
 
+function getRemoteRosterSignature(remoteRoster) {
+  return JSON.stringify(normalizeRemoteRosterShape(remoteRoster));
+}
+
 function getOverrideKey(teamKey, personName) {
   return `${teamKey}::${normalizeNameKey(personName)}`;
 }
@@ -1549,27 +1554,24 @@ function App() {
           if (cancelled) return;
 
           const next = normalizeRemoteRosterShape(json);
-const hasAny = hasAnyRemoteRoster(next);
-const localCachedRoster = loadCachedRemoteRoster();
-const hasLocalCachedRoster = hasAnyRemoteRoster(localCachedRoster);
+          const hasAny = hasAnyRemoteRoster(next);
+          const nextSig = getRemoteRosterSignature(next);
+          const lastAckSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
 
-const nextSig = getRemoteRosterSignature(next);
-const lastAckSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
+          if (hasAny) {
+            let shouldPrompt = false;
 
-if (hasAny) {
-  let shouldPrompt = false;
+            if (!hasLocalCachedRoster) {
+              shouldPrompt = true;
+            } else {
+              shouldPrompt = nextSig !== lastAckSig;
+            }
 
-  if (!hasLocalCachedRoster) {
-    shouldPrompt = true;
-  } else {
-    shouldPrompt = nextSig !== lastAckSig;
-  }
-
-  if (shouldPrompt) {
-    setPendingRosterJson(json);
-    setShowUpdatePopup(true);
-  }
-}
+            if (shouldPrompt) {
+              setPendingRosterJson(json);
+              setShowUpdatePopup(true);
+            }
+          }
 
           setInitialRemoteChecked(true);
         }
@@ -1770,29 +1772,29 @@ if (hasAny) {
       setRemoteLoading(true);
 
       const json = await fetchRemoteRosterJsonp(8000);
-const next = normalizeRemoteRosterShape(json);
-const hasAny = hasAnyRemoteRoster(next);
+      const next = normalizeRemoteRosterShape(json);
+      const hasAny = hasAnyRemoteRoster(next);
 
-if (!hasAny) {
-  setInitialRemoteChecked(true);
-  return;
-}
+      if (!hasAny) {
+        setInitialRemoteChecked(true);
+        return;
+      }
 
-const nextSig = getRemoteRosterSignature(next);
-const lastAckSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
+      const nextSig = getRemoteRosterSignature(next);
+      const lastAckSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
 
-let shouldPrompt = false;
+      let shouldPrompt = false;
 
-if (!hasCachedRoster) {
-  shouldPrompt = true;
-} else {
-  shouldPrompt = nextSig !== lastAckSig;
-}
+      if (!hasCachedRoster) {
+        shouldPrompt = true;
+      } else {
+        shouldPrompt = nextSig !== lastAckSig;
+      }
 
-if (shouldPrompt) {
-  setPendingRosterJson(json);
-  setShowUpdatePopup(true);
-}
+      if (shouldPrompt) {
+        setPendingRosterJson(json);
+        setShowUpdatePopup(true);
+      }
 
       setInitialRemoteChecked(true);
     } catch (e) {
@@ -2102,23 +2104,28 @@ if (shouldPrompt) {
       setRefreshRosterMessage("");
 
       const json = await fetchRemoteRosterJsonp(8000);
-      const next = normalizeRemoteRosterShape(pendingRosterJson);
-const serverPublishedAt = String(pendingRosterJson?.publishedAt || "").trim();
-const nextSig = getRemoteRosterSignature(next);
+      const next = normalizeRemoteRosterShape(json);
+      const hasAny = hasAnyRemoteRoster(next);
+      const serverPublishedAt = String(json?.publishedAt || "").trim();
+      const nextSig = getRemoteRosterSignature(next);
 
-setRemoteRoster(next);
-saveCachedRemoteRoster(next);
-localStorage.setItem(LS_LAST_ACK_ROSTER_SIG, nextSig);
-setInitialRemoteChecked(true);
+      if (!hasAny) {
+        throw new Error("배포된 최신 현재배정 데이터가 없습니다.");
+      }
 
-if (serverPublishedAt) {
-  localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
-  setLastSeenPublishedAt(serverPublishedAt);
-} else {
-  const fallbackSeen = String(Date.now());
-  localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, fallbackSeen);
-  setLastSeenPublishedAt(fallbackSeen);
-}
+      setRemoteRoster(next);
+      saveCachedRemoteRoster(next);
+      localStorage.setItem(LS_LAST_ACK_ROSTER_SIG, nextSig);
+      setInitialRemoteChecked(true);
+
+      if (serverPublishedAt) {
+        localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
+        setLastSeenPublishedAt(serverPublishedAt);
+      } else {
+        const fallbackSeen = String(Date.now());
+        localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, fallbackSeen);
+        setLastSeenPublishedAt(fallbackSeen);
+      }
 
       setPendingRosterJson(null);
       setShowUpdatePopup(false);
@@ -2291,6 +2298,7 @@ if (serverPublishedAt) {
     const today = getKoreaToday();
 
     clearMySelection();
+    localStorage.removeItem(LS_LAST_ACK_ROSTER_SIG);
 
     setMySelection({
       teamKey: "ks",
@@ -2508,9 +2516,11 @@ if (serverPublishedAt) {
 
     const next = normalizeRemoteRosterShape(pendingRosterJson);
     const serverPublishedAt = String(pendingRosterJson?.publishedAt || "").trim();
+    const nextSig = getRemoteRosterSignature(next);
 
     setRemoteRoster(next);
     saveCachedRemoteRoster(next);
+    localStorage.setItem(LS_LAST_ACK_ROSTER_SIG, nextSig);
     setInitialRemoteChecked(true);
 
     if (serverPublishedAt) {
