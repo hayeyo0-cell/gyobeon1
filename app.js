@@ -798,27 +798,52 @@ function normalizeRemoteRosterShape(input) {
   const result = getEmptyRemoteRoster();
   if (!input || typeof input !== "object") return result;
 
-  const rows = Array.isArray(input.rows) ? input.rows : Array.isArray(input) ? input : [];
+  const looksLikeTeamMap = TEAM_ORDER.some((teamKey) => Array.isArray(input[teamKey]));
 
-  rows.forEach((row) => {
-    const teamKey =
-      normalizeTeamKey(row?.team) ||
-      normalizeTeamKey(row?.teamKey) ||
-      normalizeTeamKey(row?.teamLabel) ||
-      normalizeTeamKey(row?.소속);
+  if (looksLikeTeamMap) {
+    TEAM_ORDER.forEach((teamKey) => {
+      const rows = Array.isArray(input[teamKey]) ? input[teamKey] : [];
+      rows.forEach((row) => {
+        const gyobun = String(row?.gyobun || row?.교번 || row?.code || "").trim();
+        const employeeId = String(row?.employeeId || row?.직원ID || row?.id || "").trim();
+        const name = String(row?.name || row?.이름 || "").trim();
 
-    const gyobun = String(row?.gyobun || row?.교번 || row?.code || "").trim();
-    const employeeId = String(row?.employeeId || row?.직원ID || row?.id || "").trim();
-    const name = String(row?.name || row?.이름 || "").trim();
+        if (!gyobun || !name) return;
 
-    if (!teamKey || !gyobun || !name) return;
-
-    result[teamKey].push({
-      code: gyobun,
-      employeeId,
-      name,
+        result[teamKey].push({
+          code: gyobun,
+          employeeId,
+          name,
+        });
+      });
     });
-  });
+  } else {
+    const rows = Array.isArray(input.rows)
+      ? input.rows
+      : Array.isArray(input)
+      ? input
+      : [];
+
+    rows.forEach((row) => {
+      const teamKey =
+        normalizeTeamKey(row?.team) ||
+        normalizeTeamKey(row?.teamKey) ||
+        normalizeTeamKey(row?.teamLabel) ||
+        normalizeTeamKey(row?.소속);
+
+      const gyobun = String(row?.gyobun || row?.교번 || row?.code || "").trim();
+      const employeeId = String(row?.employeeId || row?.직원ID || row?.id || "").trim();
+      const name = String(row?.name || row?.이름 || "").trim();
+
+      if (!teamKey || !gyobun || !name) return;
+
+      result[teamKey].push({
+        code: gyobun,
+        employeeId,
+        name,
+      });
+    });
+  }
 
   TEAM_ORDER.forEach((teamKey) => {
     result[teamKey].sort((a, b) => {
