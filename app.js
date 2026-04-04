@@ -1549,18 +1549,21 @@ function App() {
           if (cancelled) return;
 
           const next = normalizeRemoteRosterShape(json);
-          const hasAny = hasAnyRemoteRoster(next);
-          const serverPublishedAt = String(json?.publishedAt || "").trim();
-          const rosterChanged = !isSameRemoteRoster(localCachedRoster, next);
+const hasAny = hasAnyRemoteRoster(next);
+const localCachedRoster = loadCachedRemoteRoster();
+const hasLocalCachedRoster = hasAnyRemoteRoster(localCachedRoster);
 
-          if (hasAny) {
+const nextSig = getRemoteRosterSignature(next);
+const lastAckSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
+
+if (hasAny) {
   let shouldPrompt = false;
 
-if (!hasCachedRoster) {
-  shouldPrompt = true;
-} else {
-  shouldPrompt = rosterChanged;
-}
+  if (!hasLocalCachedRoster) {
+    shouldPrompt = true;
+  } else {
+    shouldPrompt = nextSig !== lastAckSig;
+  }
 
   if (shouldPrompt) {
     setPendingRosterJson(json);
