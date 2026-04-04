@@ -23,7 +23,8 @@ const ADMIN_NAME = "권재림";
 const ADMIN_PASSWORD = "7717tutu";
 
 const KS_BAND_URL = "https://band.us/band/51746678/chat/C4U1ay";
-const KS_VACATION_URL = "https://docs.google.com/spreadsheets/d/16ao5ogtUlILby9a7PjIoUpU9e-lLh8c_jHJGjtWAleM/edit?usp=drivesdk";
+const KS_VACATION_URL =
+  "https://docs.google.com/spreadsheets/d/16ao5ogtUlILby9a7PjIoUpU9e-lLh8c_jHJGjtWAleM/edit?usp=drivesdk";
 
 let SHARED_REMOTE_BASE_DATE = "";
 
@@ -852,6 +853,14 @@ function saveCachedRemoteRoster(value) {
   } catch (_) {}
 }
 
+function hasAnyRemoteRoster(remoteRoster) {
+  return TEAM_ORDER.some((teamKey) => (remoteRoster?.[teamKey] || []).length > 0);
+}
+
+function isSameRemoteRoster(a, b) {
+  return JSON.stringify(normalizeRemoteRosterShape(a)) === JSON.stringify(normalizeRemoteRosterShape(b));
+}
+
 function getOverrideKey(teamKey, personName) {
   return `${teamKey}::${normalizeNameKey(personName)}`;
 }
@@ -1335,6 +1344,7 @@ function App() {
   const initialGroups = loadGroups();
   const todayStr = getKoreaToday();
   const cachedShared = loadCachedSharedConfig();
+  const initialRemoteRoster = loadCachedRemoteRoster();
 
   if (cachedShared?.baseDate) {
     setGlobalBaseDate(cachedShared.baseDate);
@@ -1344,7 +1354,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
-  const [remoteRoster, setRemoteRoster] = useState(loadCachedRemoteRoster());
+  const [remoteRoster, setRemoteRoster] = useState(initialRemoteRoster);
   const [remoteLoading, setRemoteLoading] = useState(false);
   const [refreshRosterMessage, setRefreshRosterMessage] = useState("");
   const [pendingRosterJson, setPendingRosterJson] = useState(null);
@@ -1434,7 +1444,6 @@ function App() {
   }, [data, remoteRoster]);
 
   const isAdminUser = samePersonName(mySelection?.name, ADMIN_NAME);
-
   const isKsUser = mySelection?.teamKey === "ks";
 
   const currentEditDayType = guessDayType(browseDate);
@@ -1548,29 +1557,36 @@ function App() {
 
       try {
         setRemoteLoading(true);
+
+        const localCachedRoster = loadCachedRemoteRoster();
+        const hasLocalCachedRoster = hasAnyRemoteRoster(localCachedRoster);
+
         const json = await fetchRemoteRosterJsonp(6000);
         if (cancelled) return;
 
         const next = normalizeRemoteRosterShape(json);
-        const hasAny = TEAM_ORDER.some((teamKey) => (next[teamKey] || []).length > 0);
+        const hasAny = hasAnyRemoteRoster(next);
         const serverPublishedAt = String(json?.publishedAt || "").trim();
+        const rosterChanged = !isSameRemoteRoster(localCachedRoster, next);
 
         if (hasAny) {
-          if (serverPublishedAt && lastSeenPublishedAt && serverPublishedAt !== lastSeenPublishedAt) {
+          let shouldPrompt = false;
+
+          if (!hasLocalCachedRoster) {
+            shouldPrompt = true;
+          } else if (serverPublishedAt && serverPublishedAt !== lastSeenPublishedAt) {
+            shouldPrompt = true;
+          } else if (!serverPublishedAt && rosterChanged) {
+            shouldPrompt = true;
+          }
+
+          if (shouldPrompt) {
             setPendingRosterJson(json);
             setShowUpdatePopup(true);
-          } else {
-            setRemoteRoster(next);
-            saveCachedRemoteRoster(next);
-
-            if (serverPublishedAt) {
-              localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
-              setLastSeenPublishedAt(serverPublishedAt);
-            }
           }
         }
       } catch (e) {
-        console.log("원격 현재배정 백그라운드 로드 실패", e);
+        console.log("원격 현재배정 백그라운드 체크 실패", e);
       } finally {
         if (!cancelled) {
           setRemoteLoading(false);
@@ -2035,7 +2051,7 @@ function App() {
 
       const json = await fetchRemoteRosterJsonp(8000);
       const next = normalizeRemoteRosterShape(json);
-      const hasAny = TEAM_ORDER.some((teamKey) => (next[teamKey] || []).length > 0);
+      const hasAny = hasAnyRemoteRoster(next);
       const serverPublishedAt = String(json?.publishedAt || "").trim();
 
       if (!hasAny) {
@@ -2048,6 +2064,9 @@ function App() {
       if (serverPublishedAt) {
         localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
         setLastSeenPublishedAt(serverPublishedAt);
+      } else {
+        localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, String(Date.now()));
+        setLastSeenPublishedAt(localStorage.getItem(LS_LAST_SEEN_PUBLISHED_AT) || "");
       }
 
       setPendingRosterJson(null);
@@ -2151,11 +2170,10 @@ function App() {
       }
 
       if (json?.publishedAt) {
-        localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, json.publishedAt);
-        setLastSeenPublishedAt(json.publishedAt);
+        localStorage.removeItem(LS_LAST_SEEN_PUBLISHED_AT);
+        setLastSeenPublishedAt("");
       }
 
-      await refreshLatestRoster(false);
       alert(`배포 완료 (${json?.publishedCount || 0}건)`);
     } catch (e) {
       console.error(e);
@@ -2444,6 +2462,10 @@ function App() {
     if (serverPublishedAt) {
       localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
       setLastSeenPublishedAt(serverPublishedAt);
+    } else {
+      const fallbackSeen = String(Date.now());
+      localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, fallbackSeen);
+      setLastSeenPublishedAt(fallbackSeen);
     }
 
     setPendingRosterJson(null);
@@ -2612,35 +2634,35 @@ function App() {
           <>
             {activeTab === "home" && (
               <>
-               <div className="settings-row">
-  {deferredPrompt && (
-    <button className="install-btn" onClick={handleInstall}>설치</button>
-  )}
+                <div className="settings-row">
+                  {deferredPrompt && (
+                    <button className="install-btn" onClick={handleInstall}>설치</button>
+                  )}
 
-  {isKsUser && (
-    <div className="quick-links">
-      <button
-        className="quick-btn band"
-        onClick={() => window.location.href = KS_BAND_URL}
-      >
-        <img src="./band.png" alt="밴드" className="quick-icon" />
-        <span>밴드</span>
-      </button>
+                  {isKsUser && (
+                    <div className="quick-links">
+                      <button
+                        className="quick-btn band"
+                        onClick={() => window.location.href = KS_BAND_URL}
+                      >
+                        <img src="./band.png" alt="밴드" className="quick-icon" />
+                        <span>밴드</span>
+                      </button>
 
-      <button
-        className="quick-btn vacation"
-        onClick={() => window.location.href = KS_VACATION_URL}
-      >
-        <img src="./vacation.png" alt="휴가" className="quick-icon" />
-        <span>휴가</span>
-      </button>
-    </div>
-  )}
+                      <button
+                        className="quick-btn vacation"
+                        onClick={() => window.location.href = KS_VACATION_URL}
+                      >
+                        <img src="./vacation.png" alt="휴가" className="quick-icon" />
+                        <span>휴가</span>
+                      </button>
+                    </div>
+                  )}
 
-  <button className="settings-btn" onClick={() => setShowSettings(true)}>
-    설정
-  </button>
-</div>
+                  <button className="settings-btn" onClick={() => setShowSettings(true)}>
+                    설정
+                  </button>
+                </div>
 
                 <div className="date-grid">
                   <div className="date-box">
@@ -2714,7 +2736,7 @@ function App() {
 
                     {remoteLoading && (
                       <div className="help-text" style={{ color: "#2563eb" }}>
-                        배포된 최신 현재배정 불러오는 중...
+                        최신 배포본 확인 중...
                       </div>
                     )}
                   </div>
@@ -3136,7 +3158,7 @@ function App() {
                 </div>
 
                 <div className="help-text" style={{ marginTop: 10 }}>
-                  앱은 먼저 ZIP/저장값으로 빠르게 열리고, 배포된 최신 현재배정은 뒤에서 자동 확인됩니다.
+                  앱은 저장된 ZIP/공용데이터로 빠르게 열리고, 최신 배포본은 뒤에서 확인 후 알림으로 안내됩니다.
                 </div>
 
                 <div className="modal-actions">
@@ -3501,7 +3523,7 @@ function App() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">업데이트 알림</div>
             <div className="help-text" style={{ marginTop: 8 }}>
-              새로운 교번 정보가 있습니다.<br />
+              최신 인원/교번 정보가 있습니다.<br />
               지금 업데이트하시겠습니까?
             </div>
 
