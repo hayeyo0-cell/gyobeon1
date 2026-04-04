@@ -5,19 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>교번 앱</title>
 
-  <link rel="manifest" href="manifest.json?v=20260404-1" />
+  <!-- 캐시 방지 (버전 올림) -->
+  <link rel="manifest" href="manifest.json?v=20260404-2" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <meta name="theme-color" content="#4b7dff" />
 
-  <link rel="stylesheet" href="style.css?v=20260404-1" />
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css?v=20260404-2" />
 
+  <!-- React -->
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+  <!-- 라이브러리 -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel" src="app.js?v=20260404-1"></script>
+
+  <!-- 🔥 핵심: app.js 버전 변경 -->
+  <script type="text/babel" src="app.js?v=20260404-2"></script>
 </body>
 </html>
