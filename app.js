@@ -1434,6 +1434,7 @@ function App() {
   const [groupAddTeam, setGroupAddTeam] = useState("ks");
   const [groupAddName, setGroupAddName] = useState("");
   const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
 
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
@@ -1768,6 +1769,54 @@ function App() {
     profileAnchorDate,
   ]);
 
+  async function checkRemoteRosterForFirstUser() {
+    try {
+      if (remoteLoading) return;
+      if (!data) return;
+      if (initialRemoteChecked) return;
+
+      const cachedRoster = loadCachedRemoteRoster();
+      const hasCachedRoster = hasAnyRemoteRoster(cachedRoster);
+
+      if (hasCachedRoster) {
+        setInitialRemoteChecked(true);
+        return;
+      }
+
+      setRemoteLoading(true);
+
+      const json = await fetchRemoteRosterJsonp(8000);
+      const next = normalizeRemoteRosterShape(json);
+      const hasAny = hasAnyRemoteRoster(next);
+
+      if (hasAny) {
+        setPendingRosterJson(json);
+        setShowUpdatePopup(true);
+      }
+
+      setInitialRemoteChecked(true);
+    } catch (e) {
+      console.log("최초 사용자 원격 체크 실패", e);
+      setInitialRemoteChecked(true);
+    } finally {
+      setRemoteLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!data) return;
+    if (initialRemoteChecked) return;
+
+    const cachedRoster = loadCachedRemoteRoster();
+    const hasCachedRoster = hasAnyRemoteRoster(cachedRoster);
+
+    if (!hasCachedRoster) {
+      checkRemoteRosterForFirstUser();
+    } else {
+      setInitialRemoteChecked(true);
+    }
+  }, [data, initialRemoteChecked]);
+
   const currentViewTeam = effectiveData?.[viewTeam] || null;
   const currentViewAnchor =
     teamAnchors[viewTeam] || {
@@ -2041,6 +2090,7 @@ function App() {
     const file = event.target.files?.[0];
     if (!file) return;
     setZipName(file.name);
+    setInitialRemoteChecked(false);
     await parseAndSetZip(file, true, false, remoteRoster, true);
   }
 
@@ -2060,6 +2110,7 @@ function App() {
 
       setRemoteRoster(next);
       saveCachedRemoteRoster(next);
+      setInitialRemoteChecked(true);
 
       if (serverPublishedAt) {
         localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
@@ -2251,6 +2302,7 @@ function App() {
     setAllowProfileEdit(true);
     setSelectedTeam("ks");
     setViewTeam("ks");
+    setInitialRemoteChecked(false);
 
     setHomeDate(today);
     setBrowseDate(today);
@@ -2458,6 +2510,7 @@ function App() {
 
     setRemoteRoster(next);
     saveCachedRemoteRoster(next);
+    setInitialRemoteChecked(true);
 
     if (serverPublishedAt) {
       localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
