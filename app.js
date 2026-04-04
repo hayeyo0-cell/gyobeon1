@@ -813,6 +813,32 @@ function normalizeRemoteRosterShape(input) {
   const result = getEmptyRemoteRoster();
   if (!input || typeof input !== "object") return result;
 
+  if (TEAM_ORDER.some((teamKey) => Array.isArray(input?.[teamKey]))) {
+    TEAM_ORDER.forEach((teamKey) => {
+      result[teamKey] = (Array.isArray(input?.[teamKey]) ? input[teamKey] : [])
+        .map((row) => ({
+          code: String(row?.code || row?.gyobun || row?.교번 || row?.shiftCode || "").trim(),
+          employeeId: String(row?.employeeId || row?.직원ID || row?.id || "").trim(),
+          name: String(row?.name || row?.이름 || "").trim(),
+        }))
+        .filter((row) => row.code && row.name);
+    });
+
+    TEAM_ORDER.forEach((teamKey) => {
+      result[teamKey].sort((a, b) => {
+        const codeCompare = normalizeCodeKey(a.code).localeCompare(normalizeCodeKey(b.code), "ko");
+        if (codeCompare !== 0) return codeCompare;
+
+        const nameCompare = String(a.name || "").localeCompare(String(b.name || ""), "ko");
+        if (nameCompare !== 0) return nameCompare;
+
+        return String(a.employeeId || "").localeCompare(String(b.employeeId || ""), "ko");
+      });
+    });
+
+    return result;
+  }
+
   const rows = Array.isArray(input.rows) ? input.rows : Array.isArray(input) ? input : [];
 
   rows.forEach((row) => {
@@ -822,7 +848,7 @@ function normalizeRemoteRosterShape(input) {
       normalizeTeamKey(row?.teamLabel) ||
       normalizeTeamKey(row?.소속);
 
-    const gyobun = String(row?.gyobun || row?.교번 || row?.code || "").trim();
+    const gyobun = String(row?.gyobun || row?.교번 || row?.code || row?.shiftCode || "").trim();
     const employeeId = String(row?.employeeId || row?.직원ID || row?.id || "").trim();
     const name = String(row?.name || row?.이름 || "").trim();
 
@@ -1533,9 +1559,12 @@ function App() {
     const nextSig = getRemoteRosterSignature(next);
 
     const effectiveDate = String(
-      json?.baseDate ||
       json?.effectiveDate ||
       json?.date ||
+      json?.rosterDate ||
+      json?.snapshotDate ||
+      json?.currentDate ||
+      json?.baseDate ||
       getKoreaToday()
     ).trim();
 
