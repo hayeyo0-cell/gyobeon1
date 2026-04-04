@@ -544,6 +544,13 @@ function normalizeToFixedCode(team, code) {
   );
 }
 
+function getCodeIndex(team, code) {
+  const order = getGyobunOrder(team);
+  return order.findIndex(
+    (item) => normalizeCodeKey(item) === normalizeCodeKey(code)
+  );
+}
+
 function shiftCodeByDays(team, baseCode, dayOffset) {
   const order = getGyobunOrder(team);
   const baseIdx = order.findIndex(
@@ -1099,6 +1106,36 @@ function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
   return buildTeamAnchorFromZip(team);
 }
 
+function getGlobalShiftFromSelection(data, remoteRoster, selectedTeamKey, mySelection) {
+  const team = data?.[selectedTeamKey];
+  if (!team || !mySelection?.code) return 0;
+
+  const refAnchor = buildTeamAnchorFromRemote(selectedTeamKey, team, remoteRoster);
+  if (!refAnchor?.code) return 0;
+
+  const order = getGyobunOrder(team);
+  if (!order.length) return 0;
+
+  const refDate =
+    String(refAnchor.anchorDate || "").trim() ||
+    getResolvedBaseDate(selectedTeamKey, team, remoteRoster);
+
+  const selDate =
+    String(mySelection.anchorDate || "").trim() ||
+    refDate;
+
+  const refIdx = getCodeIndex(team, refAnchor.code);
+  const selIdx = getCodeIndex(team, mySelection.code);
+
+  if (refIdx < 0 || selIdx < 0) return 0;
+
+  const dayDiff = diffDays(refDate, selDate);
+  const predictedIdx = positiveMod(refIdx + dayDiff, order.length);
+  const globalShift = positiveMod(selIdx - predictedIdx, order.length);
+
+  return globalShift;
+}
+
 function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection = null) {
   if (!team || !name) {
     return buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
@@ -1148,6 +1185,11 @@ function buildAllTeamsAutoAnchorsFromIdentity(
 ) {
   const result = {};
 
+  const globalShift =
+    mySelection?.teamKey === selectedTeamKey && mySelection?.code
+      ? getGlobalShiftFromSelection(data, remoteRoster, selectedTeamKey, mySelection)
+      : 0;
+
   TEAM_ORDER.forEach((teamKey) => {
     const team = data?.[teamKey];
     if (!team) return;
@@ -1163,7 +1205,20 @@ function buildAllTeamsAutoAnchorsFromIdentity(
       return;
     }
 
-    result[teamKey] = buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
+    const baseAnchor = buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
+
+    if (!baseAnchor?.code) {
+      result[teamKey] = baseAnchor;
+      return;
+    }
+
+    result[teamKey] = {
+      ...baseAnchor,
+      code:
+        globalShift !== 0
+          ? shiftCodeByDays(team, baseAnchor.code, globalShift)
+          : baseAnchor.code,
+    };
   });
 
   return result;
@@ -1881,52 +1936,36 @@ function App() {
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
 
-    let anchorName = "";
-    let anchorCode = "";
-    let anchorDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
+    const teamAnchor =
+      teamAnchors[viewTeam] || {
+        name: "",
+        code: "",
+        anchorDate: getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster),
+      };
 
-    if (
-      mySelection?.teamKey === viewTeam &&
-      mySelection?.name &&
-      mySelection?.code
-    ) {
-      anchorName = mySelection.name;
-      anchorCode = normalizeToFixedCode(currentViewTeam, mySelection.code);
-      anchorDate =
-        mySelection.anchorDate ||
-        getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
-    } else {
-      const teamAnchor = buildTeamAnchorFromRemote(
-        viewTeam,
-        currentViewTeam,
-        remoteRoster
-      );
-      anchorName = teamAnchor?.name || "";
-      anchorCode = normalizeToFixedCode(currentViewTeam, teamAnchor?.code || "");
-      anchorDate =
-        teamAnchor?.anchorDate ||
-        getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
-    }
-
-    if (!anchorName || !anchorCode) {
+    if (!teamAnchor?.name || !teamAnchor?.code) {
       return buildAssignedGrid(currentViewTeam, "", "", 0, overrides);
     }
 
-    const dayOffset = diffDays(anchorDate, browseDate);
+    const dayOffset = diffDays(
+      teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster),
+      browseDate
+    );
+
     return buildAssignedGrid(
       currentViewTeam,
-      anchorName,
-      anchorCode,
+      teamAnchor.name,
+      teamAnchor.code,
       dayOffset,
       overrides
     );
   }, [
     currentViewTeam,
     viewTeam,
+    teamAnchors,
     remoteRoster,
     overrides,
     browseDate,
-    mySelection,
   ]);
 
   const visibleAllGrid = useMemo(() => {
