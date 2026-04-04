@@ -2102,26 +2102,23 @@ if (shouldPrompt) {
       setRefreshRosterMessage("");
 
       const json = await fetchRemoteRosterJsonp(8000);
-      const next = normalizeRemoteRosterShape(json);
-      const hasAny = hasAnyRemoteRoster(next);
-      const serverPublishedAt = String(json?.publishedAt || "").trim();
+      const next = normalizeRemoteRosterShape(pendingRosterJson);
+const serverPublishedAt = String(pendingRosterJson?.publishedAt || "").trim();
+const nextSig = getRemoteRosterSignature(next);
 
-      if (!hasAny) {
-        throw new Error("배포된 최신 현재배정 데이터가 없습니다.");
-      }
+setRemoteRoster(next);
+saveCachedRemoteRoster(next);
+localStorage.setItem(LS_LAST_ACK_ROSTER_SIG, nextSig);
+setInitialRemoteChecked(true);
 
-      setRemoteRoster(next);
-      saveCachedRemoteRoster(next);
-      setInitialRemoteChecked(true);
-
-      if (serverPublishedAt) {
-        localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
-        setLastSeenPublishedAt(serverPublishedAt);
-      } else {
-        const fallbackSeen = String(Date.now());
-        localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, fallbackSeen);
-        setLastSeenPublishedAt(fallbackSeen);
-      }
+if (serverPublishedAt) {
+  localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
+  setLastSeenPublishedAt(serverPublishedAt);
+} else {
+  const fallbackSeen = String(Date.now());
+  localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, fallbackSeen);
+  setLastSeenPublishedAt(fallbackSeen);
+}
 
       setPendingRosterJson(null);
       setShowUpdatePopup(false);
