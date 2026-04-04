@@ -27,9 +27,18 @@ const KS_VACATION_URL =
   "https://docs.google.com/spreadsheets/d/16ao5ogtUlILby9a7PjIoUpU9e-lLh8c_jHJGjtWAleM/edit?usp=drivesdk";
 
 let SHARED_REMOTE_BASE_DATE = "";
+let CURRENT_REMOTE_ROSTER_DATE = "";
 
 function setGlobalBaseDate(value) {
   SHARED_REMOTE_BASE_DATE = String(value || "").trim();
+}
+
+function setGlobalRemoteRosterDate(value) {
+  CURRENT_REMOTE_ROSTER_DATE = String(value || "").trim();
+}
+
+function getGlobalRemoteRosterDate() {
+  return String(CURRENT_REMOTE_ROSTER_DATE || "").trim();
 }
 
 const COLOR_OPTIONS = [
@@ -82,6 +91,7 @@ const HIDDEN_NAME_KEYS = ["gb2601"];
 
 const LS_SHARED_CONFIG_CACHE = "gyobeon_shared_config_cache";
 const LS_REMOTE_ROSTER_CACHE = "gyobeon_remote_roster_cache";
+const LS_REMOTE_ROSTER_DATE = "gyobeon_remote_roster_date";
 const LS_LAST_SEEN_PUBLISHED_AT = "gyobeon_last_seen_published_at";
 const LS_LAST_ACK_ROSTER_SIG = "gyobeon_last_ack_roster_sig";
 const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
@@ -859,10 +869,6 @@ function hasAnyRemoteRoster(remoteRoster) {
   return TEAM_ORDER.some((teamKey) => (remoteRoster?.[teamKey] || []).length > 0);
 }
 
-function isSameRemoteRoster(a, b) {
-  return JSON.stringify(normalizeRemoteRosterShape(a)) === JSON.stringify(normalizeRemoteRosterShape(b));
-}
-
 function getRemoteRosterSignature(remoteRoster) {
   return JSON.stringify(normalizeRemoteRosterShape(remoteRoster || getEmptyRemoteRoster()));
 }
@@ -881,8 +887,9 @@ function getZipBaseDate(team) {
 
 function getResolvedBaseDate(teamKey, team, remoteRoster) {
   if (hasRemoteRosterForTeam(teamKey, remoteRoster)) {
-    const shared = String(SHARED_REMOTE_BASE_DATE || "").trim();
-    if (shared) return shared;
+    const remoteDate = getGlobalRemoteRosterDate();
+    if (remoteDate) return remoteDate;
+    return getKoreaToday();
   }
   return getZipBaseDate(team);
 }
@@ -1100,7 +1107,7 @@ function applyRemoteRosterToData(baseData, remoteRoster) {
         totalCount: mapped.length,
         baseName: mapped[0]?.name || team.info?.baseName || "",
         baseCode: fixedOrder[0] || team.info?.baseCode || "",
-        baseDate: String(SHARED_REMOTE_BASE_DATE || "").trim() || team.info?.baseDate || null,
+        baseDate: getGlobalRemoteRosterDate() || team.info?.baseDate || null,
       };
     }
   });
@@ -1389,22 +1396,26 @@ function App() {
   const todayStr = getKoreaToday();
   const cachedShared = loadCachedSharedConfig();
   const cachedRemoteRoster = loadCachedRemoteRoster();
+  const cachedRemoteRosterDate = localStorage.getItem(LS_REMOTE_ROSTER_DATE) || "";
   const lastAckRosterSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
-  const cachedRemoteSig = getRemoteRosterSignature(cachedRemoteRoster);
-
-  const initialAppliedRemoteRoster = hasAnyRemoteRoster(cachedRemoteRoster)
-    ? cachedRemoteRoster
-    : getEmptyRemoteRoster();
 
   if (cachedShared?.baseDate) {
     setGlobalBaseDate(cachedShared.baseDate);
   }
+  if (cachedRemoteRosterDate) {
+    setGlobalRemoteRosterDate(cachedRemoteRosterDate);
+  }
+
+  const initialAppliedRemoteRoster = hasAnyRemoteRoster(cachedRemoteRoster)
+    ? cachedRemoteRoster
+    : getEmptyRemoteRoster();
 
   const [zipName, setZipName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [remoteRoster, setRemoteRoster] = useState(initialAppliedRemoteRoster);
+  const [remoteRosterDate, setRemoteRosterDate] = useState(cachedRemoteRosterDate || "");
   const [remoteLoading, setRemoteLoading] = useState(false);
   const [refreshRosterMessage, setRefreshRosterMessage] = useState("");
   const [pendingRosterJson, setPendingRosterJson] = useState(null);
@@ -1488,6 +1499,10 @@ function App() {
       ? "토요일"
       : "휴일";
 
+  function getExactRemoteDate() {
+    return remoteRosterDate || getGlobalRemoteRosterDate() || getKoreaToday();
+  }
+
   useEffect(() => {
     activeTabRef.current = activeTab;
   }, [activeTab]);
@@ -1556,8 +1571,19 @@ function App() {
     const serverPublishedAt = String(json?.publishedAt || "").trim();
     const nextSig = getRemoteRosterSignature(next);
 
+    const effectiveDate = String(
+      json?.baseDate ||
+      json?.effectiveDate ||
+      json?.date ||
+      getKoreaToday()
+    ).trim();
+
     setRemoteRoster(next);
+    setRemoteRosterDate(effectiveDate);
+    setGlobalRemoteRosterDate(effectiveDate);
+
     saveCachedRemoteRoster(next);
+    localStorage.setItem(LS_REMOTE_ROSTER_DATE, effectiveDate);
     localStorage.setItem(LS_LAST_ACK_ROSTER_SIG, nextSig);
 
     if (serverPublishedAt) {
@@ -1594,6 +1620,12 @@ function App() {
         if (shared?.baseDate) {
           setGlobalBaseDate(shared.baseDate);
           setRemoteBaseDate(shared.baseDate);
+        }
+
+        const savedRemoteDate = localStorage.getItem(LS_REMOTE_ROSTER_DATE) || "";
+        if (savedRemoteDate) {
+          setGlobalRemoteRosterDate(savedRemoteDate);
+          setRemoteRosterDate(savedRemoteDate);
         }
 
         try {
@@ -1668,9 +1700,8 @@ function App() {
           const next = normalizeRemoteRosterShape(json);
           const hasAny = hasAnyRemoteRoster(next);
           const nextSig = getRemoteRosterSignature(next);
-          const lastAckSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
 
-          if (hasAny && nextSig !== lastAckSig) {
+          if (hasAny && nextSig !== lastAckRosterSig) {
             setPendingRosterJson(json);
             setShowUpdatePopup(true);
           }
@@ -1929,10 +1960,10 @@ function App() {
     if (!team || !myName) return null;
 
     const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
-    const resolvedBaseDate = getResolvedBaseDate(myTeamKey, team, remoteRoster);
+    const exactRemoteDate = remoteRosterDate || getGlobalRemoteRosterDate() || getKoreaToday();
     const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster);
 
-    if (remoteRow?.code && isSameDateStr(homeDate, resolvedBaseDate)) {
+    if (remoteRow?.code && isSameDateStr(homeDate, exactRemoteDate)) {
       const code = normalizeToFixedCode(team, remoteRow.code);
       return {
         code,
@@ -1963,16 +1994,16 @@ function App() {
       time: pickWorktime(team, code, homeDate),
       displayName: override.alias || myName,
     };
-  }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, worktimeVersion, overrides]);
+  }, [effectiveData, remoteRoster, remoteRosterDate, homeDate, selectedTeam, mySelection, holidayVersion, worktimeVersion, overrides]);
 
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
 
-    const resolvedBaseDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
+    const exactRemoteDate = getExactRemoteDate();
 
     if (
       hasRemoteRosterForTeam(viewTeam, remoteRoster) &&
-      isSameDateStr(browseDate, resolvedBaseDate)
+      isSameDateStr(browseDate, exactRemoteDate)
     ) {
       return buildRemoteExactGrid(viewTeam, currentViewTeam, remoteRoster, overrides);
     }
@@ -2020,6 +2051,7 @@ function App() {
     currentViewTeam,
     viewTeam,
     remoteRoster,
+    remoteRosterDate,
     overrides,
     browseDate,
     mySelection,
@@ -2041,13 +2073,13 @@ function App() {
     const team = currentViewTeam;
     if (!team) return [];
 
-    const resolvedBaseDate = getResolvedBaseDate(viewTeam, team, remoteRoster);
+    const exactRemoteDate = getExactRemoteDate();
 
     let grid = [];
 
     if (
       hasRemoteRosterForTeam(viewTeam, remoteRoster) &&
-      isSameDateStr(browseDate, resolvedBaseDate)
+      isSameDateStr(browseDate, exactRemoteDate)
     ) {
       grid = buildRemoteExactGrid(viewTeam, team, remoteRoster, overrides);
     } else {
@@ -2079,7 +2111,7 @@ function App() {
         displayName: found?.displayName || found?.name || "-",
       };
     });
-  }, [currentViewTeam, currentViewAnchor, browseDate, overrides, remoteRoster, viewTeam]);
+  }, [currentViewTeam, currentViewAnchor, browseDate, overrides, remoteRoster, remoteRosterDate, viewTeam]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthDate), [monthDate]);
   const monthHeaderDate = parseLocalDate(monthDate);
@@ -3705,10 +3737,10 @@ function getPersonGyobunForDate(
   if (!team) return null;
 
   const override = overrides[getOverrideKey(teamKey, name)] || {};
-  const resolvedBaseDate = getResolvedBaseDate(teamKey, team, remoteRoster);
+  const exactRemoteDate = getGlobalRemoteRosterDate() || getKoreaToday();
   const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
 
-  if (remoteRow?.code && isSameDateStr(dateStr, resolvedBaseDate)) {
+  if (remoteRow?.code && isSameDateStr(dateStr, exactRemoteDate)) {
     return {
       code: normalizeToFixedCode(team, remoteRow.code),
       name,
