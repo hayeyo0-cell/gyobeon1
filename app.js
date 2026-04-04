@@ -544,13 +544,6 @@ function normalizeToFixedCode(team, code) {
   );
 }
 
-function getCodeIndex(team, code) {
-  const order = getGyobunOrder(team);
-  return order.findIndex(
-    (item) => normalizeCodeKey(item) === normalizeCodeKey(code)
-  );
-}
-
 function shiftCodeByDays(team, baseCode, dayOffset) {
   const order = getGyobunOrder(team);
   const baseIdx = order.findIndex(
@@ -711,6 +704,7 @@ function mergeRemoteRosterIntoSelectionData(baseData, remoteRoster) {
 
     rows.forEach((row) => {
       if (!row?.name || shouldHideName(row.name)) return;
+
       const key = normalizeNameKey(row.name);
       if (existingNames.has(key)) return;
 
@@ -1062,38 +1056,10 @@ function findZipPersonByName(team, name) {
   return team.people.find((p) => samePersonName(p.name, name)) || null;
 }
 
-function getGlobalShiftFromSelection(data, selectedTeamKey, mySelection) {
-  const team = data?.[selectedTeamKey];
-  if (!team || !mySelection?.code) return 0;
-
-  const zipAnchor = buildTeamAnchorFromZip(team);
-  if (!zipAnchor?.code) return 0;
-
-  const order = getGyobunOrder(team);
-  if (!order.length) return 0;
-
-  const zipBaseDate = String(zipAnchor.anchorDate || "").trim() || getZipBaseDate(team);
-  const selectionDate = String(mySelection.anchorDate || "").trim() || zipBaseDate;
-
-  const zipBaseIdx = getCodeIndex(team, zipAnchor.code);
-  const selectedIdx = getCodeIndex(team, mySelection.code);
-
-  if (zipBaseIdx < 0 || selectedIdx < 0) return 0;
-
-  const dayDiff = diffDays(zipBaseDate, selectionDate);
-  const predictedIdx = positiveMod(zipBaseIdx + dayDiff, order.length);
-  return positiveMod(selectedIdx - predictedIdx, order.length);
-}
-
-function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection = null, allData = null) {
+function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection = null) {
   if (!team || !name) {
     return buildTeamAnchorFromZip(team);
   }
-
-  const globalShift =
-    mySelection?.teamKey && mySelection?.code && allData
-      ? getGlobalShiftFromSelection(allData, mySelection.teamKey, mySelection)
-      : 0;
 
   if (
     mySelection?.teamKey === teamKey &&
@@ -1111,10 +1077,9 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
 
   const zipPerson = findZipPersonByName(team, name);
   if (zipPerson?.baseCode) {
-    const baseCode = normalizeToFixedCode(team, zipPerson.baseCode);
     return {
       name,
-      code: globalShift ? shiftCodeByDays(team, baseCode, globalShift) : baseCode,
+      code: normalizeToFixedCode(team, zipPerson.baseCode),
       anchorDate: getZipBaseDate(team),
     };
   }
@@ -1130,11 +1095,7 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
     };
   }
 
-  const zipAnchor = buildTeamAnchorFromZip(team);
-  return {
-    ...zipAnchor,
-    code: globalShift ? shiftCodeByDays(team, zipAnchor.code, globalShift) : zipAnchor.code,
-  };
+  return buildTeamAnchorFromZip(team);
 }
 
 function buildAllTeamsAutoAnchorsFromIdentity(
@@ -1145,10 +1106,6 @@ function buildAllTeamsAutoAnchorsFromIdentity(
   mySelection = null
 ) {
   const result = {};
-  const globalShift =
-    mySelection?.teamKey && mySelection?.code
-      ? getGlobalShiftFromSelection(data, mySelection.teamKey, mySelection)
-      : 0;
 
   TEAM_ORDER.forEach((teamKey) => {
     const team = data?.[teamKey];
@@ -1160,17 +1117,12 @@ function buildAllTeamsAutoAnchorsFromIdentity(
         team,
         remoteRoster,
         selectedName,
-        mySelection,
-        data
+        mySelection
       );
       return;
     }
 
-    const zipAnchor = buildTeamAnchorFromZip(team);
-    result[teamKey] = {
-      ...zipAnchor,
-      code: globalShift ? shiftCodeByDays(team, zipAnchor.code, globalShift) : zipAnchor.code,
-    };
+    result[teamKey] = buildTeamAnchorFromZip(team);
   });
 
   return result;
@@ -1871,8 +1823,7 @@ function App() {
       team,
       remoteRoster,
       myName,
-      mySelection,
-      effectiveData
+      mySelection
     );
 
     if (!anchor?.code) return null;
@@ -3622,8 +3573,7 @@ function getPersonGyobunForDate(
     team,
     remoteRoster,
     name,
-    mySelection,
-    data
+    mySelection
   );
   if (!anchor?.code) return null;
 
