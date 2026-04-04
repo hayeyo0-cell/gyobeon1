@@ -247,7 +247,6 @@ async function ensureHolidayYear(year, onApplied) {
   }
 
   HOLIDAY_FETCHING_YEARS.add(y);
-
   try {
     const fetched = await fetchHolidayYear(y);
     if (fetched?.length) {
@@ -302,6 +301,7 @@ function parseInfo(text) {
   const lines = parseLines(text);
   const tokens = lines.join(" ").split(/\s+/).filter(Boolean);
   const [year, month, day, baseCode, baseName, total] = tokens;
+
   return {
     raw: lines,
     baseDate:
@@ -391,24 +391,13 @@ function getWorktimeOverrideValue(teamKey, code, dayType) {
 
 function parseTimeValueToParts(value) {
   const raw = String(value || "").trim();
-
   if (!raw || raw === "----") {
-    return {
-      sh: "",
-      sm: "",
-      eh: "",
-      em: "",
-    };
+    return { sh: "", sm: "", eh: "", em: "" };
   }
 
   const match = raw.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);
   if (!match) {
-    return {
-      sh: "",
-      sm: "",
-      eh: "",
-      em: "",
-    };
+    return { sh: "", sm: "", eh: "", em: "" };
   }
 
   return {
@@ -428,7 +417,6 @@ function buildTimeValueFromParts(sh, sm, eh, em) {
   const b = clamp2(sm);
   const c = clamp2(eh);
   const d = clamp2(em);
-
   if (!a || !b || !c || !d) return null;
 
   const shNum = Number(a);
@@ -457,10 +445,8 @@ function buildTimeValueFromParts(sh, sm, eh, em) {
 
 function pickWorktime(team, code, dateStr) {
   const kind = guessDayType(dateStr);
-
   const overrideValue = getWorktimeOverrideValue(team?.key, code, kind);
   if (overrideValue) return overrideValue;
-
   const key = normalizeCodeKey(code);
   const source = team?.worktimes?.[kind] || {};
   return source[key] || "----";
@@ -589,7 +575,6 @@ function createTeamBucket(teamKey) {
 
 function cloneTeamData(data) {
   const result = {};
-
   TEAM_ORDER.forEach((teamKey) => {
     const team = data?.[teamKey];
     if (!team) return;
@@ -618,7 +603,6 @@ function cloneTeamData(data) {
       },
     };
   });
-
   return result;
 }
 
@@ -815,6 +799,7 @@ function normalizeRemoteRosterShape(input) {
   if (!input || typeof input !== "object") return result;
 
   const rows = Array.isArray(input.rows) ? input.rows : Array.isArray(input) ? input : [];
+
   rows.forEach((row) => {
     const teamKey =
       normalizeTeamKey(row?.team) ||
@@ -895,7 +880,6 @@ function getResolvedBaseDate(teamKey, team, remoteRoster) {
 
 function migrateLegacyOverrides(currentOverrides, data) {
   if (!currentOverrides || !data) return currentOverrides || {};
-
   const next = { ...currentOverrides };
   let changed = false;
 
@@ -1167,8 +1151,8 @@ function getMonthMatrix(dateStr) {
   const first = new Date(year, month, 1);
   const firstDay = first.getDay();
   const start = new Date(year, month, 1 - firstDay);
-
   const matrix = [];
+
   for (let r = 0; r < 6; r++) {
     const row = [];
     for (let c = 0; c < 7; c++) {
@@ -1187,8 +1171,8 @@ function getWeekDates(baseDate) {
   const day = d.getDay();
   const sunday = new Date(d);
   sunday.setDate(d.getDate() - day);
-
   const dates = [];
+
   for (let i = 0; i < 7; i++) {
     const temp = new Date(sunday);
     temp.setDate(sunday.getDate() + i);
@@ -1285,7 +1269,6 @@ function openZipDB() {
 
 async function saveZipBlob(blob, name) {
   const db = await openZipDB();
-
   return new Promise((resolve, reject) => {
     const tx = db.transaction("files", "readwrite");
     const store = tx.objectStore("files");
@@ -1298,7 +1281,6 @@ async function saveZipBlob(blob, name) {
 
 async function loadZipBlob() {
   const db = await openZipDB();
-
   return new Promise((resolve, reject) => {
     const tx = db.transaction("files", "readonly");
     const store = tx.objectStore("files");
@@ -1311,7 +1293,6 @@ async function loadZipBlob() {
 
 async function saveParsedData(value) {
   const db = await openZipDB();
-
   return new Promise((resolve, reject) => {
     const tx = db.transaction("files", "readwrite");
     const store = tx.objectStore("files");
@@ -1324,7 +1305,6 @@ async function saveParsedData(value) {
 
 async function loadParsedData() {
   const db = await openZipDB();
-
   return new Promise((resolve, reject) => {
     const tx = db.transaction("files", "readonly");
     const store = tx.objectStore("files");
@@ -1338,12 +1318,10 @@ async function loadParsedData() {
 function promptAdminPassword() {
   const value = window.prompt("관리자 비밀번호를 입력하세요");
   if (value == null) return null;
-
   if (String(value).trim() !== ADMIN_PASSWORD) {
     alert("비밀번호가 올바르지 않습니다.");
     return null;
   }
-
   return String(value).trim();
 }
 
@@ -1372,17 +1350,13 @@ function App() {
   );
   const [holidayVersion, setHolidayVersion] = useState(0);
   const [worktimeVersion, setWorktimeVersion] = useState(0);
-
   const [activeTab, setActiveTab] = useState("home");
   const activeTabRef = useRef("home");
-
   const [selectedTeam, setSelectedTeam] = useState(initialSelection?.teamKey || "ks");
   const [viewTeam, setViewTeam] = useState(initialSelection?.teamKey || "ks");
-
   const [homeDate, setHomeDate] = useState(todayStr);
   const [browseDate, setBrowseDate] = useState(todayStr);
   const [monthDate, setMonthDate] = useState(todayStr);
-
   const [mySelection, setMySelection] = useState(
     initialSelection || {
       teamKey: "ks",
@@ -1391,22 +1365,18 @@ function App() {
       anchorDate: todayStr,
     }
   );
-
   const [profileAnchorDate, setProfileAnchorDate] = useState(
     initialSelection?.anchorDate || todayStr
   );
-
   const [teamAnchors, setTeamAnchors] = useState({
     ks: { name: "", code: "", anchorDate: todayStr },
     my: { name: "", code: "", anchorDate: todayStr },
     wb: { name: "", code: "", anchorDate: todayStr },
     as: { name: "", code: "", anchorDate: todayStr },
   });
-
   const [remoteBaseDate, setRemoteBaseDate] = useState(
     cachedShared?.baseDate || ""
   );
-
   const [savingSharedConfig, setSavingSharedConfig] = useState(false);
   const [overrides, setOverrides] = useState({});
   const [editMode, setEditMode] = useState(false);
@@ -1419,31 +1389,25 @@ function App() {
   const [editStartMin, setEditStartMin] = useState("");
   const [editEndHour, setEditEndHour] = useState("");
   const [editEndMin, setEditEndMin] = useState("");
-
   const [pathOpen, setPathOpen] = useState(false);
   const [pathTarget, setPathTarget] = useState(null);
   const [pathImage, setPathImage] = useState("");
   const [pathTeamKey, setPathTeamKey] = useState("");
   const [pathDate, setPathDate] = useState(todayStr);
-
   const [showSettings, setShowSettings] = useState(false);
-
   const [allowProfileEdit, setAllowProfileEdit] = useState(
     !initialSelection?.name || !initialSelection?.code
   );
-
   const [groups, setGroups] = useState(initialGroups);
   const [currentGroup, setCurrentGroup] = useState(Object.keys(initialGroups)[0] || "");
   const [groupBaseDate, setGroupBaseDate] = useState(todayStr);
   const [selectedGroupDate, setSelectedGroupDate] = useState("");
-
   const [showGroupAdd, setShowGroupAdd] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [groupAddTeam, setGroupAddTeam] = useState("ks");
   const [groupAddName, setGroupAddName] = useState("");
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
-
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
 
@@ -1454,12 +1418,13 @@ function App() {
 
   const isAdminUser = samePersonName(mySelection?.name, ADMIN_NAME);
   const isKsUser = mySelection?.teamKey === "ks";
-
   const currentEditDayType = guessDayType(browseDate);
   const currentEditDayLabel =
-    currentEditDayType === "nor" ? "평일" :
-    currentEditDayType === "sat" ? "토요일" :
-    "휴일";
+    currentEditDayType === "nor"
+      ? "평일"
+      : currentEditDayType === "sat"
+      ? "토요일"
+      : "휴일";
 
   useEffect(() => {
     activeTabRef.current = activeTab;
@@ -1569,8 +1534,12 @@ function App() {
 
       try {
         const hasLocalZipBase = !!parsedSaved?.data || !!savedZip?.blob;
+        const hasSavedProfile =
+          !!initialSelection?.teamKey &&
+          !!initialSelection?.name &&
+          !!initialSelection?.code;
 
-        if (hasLocalZipBase) {
+        if (hasLocalZipBase && hasSavedProfile) {
           setRemoteLoading(true);
 
           const localCachedRoster = loadCachedRemoteRoster();
@@ -1786,19 +1755,16 @@ function App() {
     profileAnchorDate,
   ]);
 
-  async function checkRemoteRosterForFirstUser() {
+  async function checkRemoteRosterAfterEnter() {
     try {
       if (remoteLoading) return;
       if (!data) return;
       if (initialRemoteChecked) return;
+      if (allowProfileEdit) return;
+      if (!mySelection?.teamKey || !mySelection?.name || !mySelection?.code) return;
 
       const cachedRoster = loadCachedRemoteRoster();
       const hasCachedRoster = hasAnyRemoteRoster(cachedRoster);
-
-      if (hasCachedRoster) {
-        setInitialRemoteChecked(true);
-        return;
-      }
 
       setRemoteLoading(true);
 
@@ -1806,14 +1772,32 @@ function App() {
       const next = normalizeRemoteRosterShape(json);
       const hasAny = hasAnyRemoteRoster(next);
 
-      if (hasAny) {
+      if (!hasAny) {
+        setInitialRemoteChecked(true);
+        return;
+      }
+
+      const serverPublishedAt = String(json?.publishedAt || "").trim();
+      const rosterChanged = !isSameRemoteRoster(cachedRoster, next);
+
+      let shouldPrompt = false;
+
+      if (!hasCachedRoster) {
+        shouldPrompt = true;
+      } else if (serverPublishedAt) {
+        shouldPrompt = serverPublishedAt !== lastSeenPublishedAt;
+      } else {
+        shouldPrompt = rosterChanged;
+      }
+
+      if (shouldPrompt) {
         setPendingRosterJson(json);
         setShowUpdatePopup(true);
       }
 
       setInitialRemoteChecked(true);
     } catch (e) {
-      console.log("최초 사용자 원격 체크 실패", e);
+      console.log("앱 진입 후 원격 체크 실패", e);
       setInitialRemoteChecked(true);
     } finally {
       setRemoteLoading(false);
@@ -1823,16 +1807,18 @@ function App() {
   useEffect(() => {
     if (!data) return;
     if (initialRemoteChecked) return;
+    if (allowProfileEdit) return;
+    if (!mySelection?.teamKey || !mySelection?.name || !mySelection?.code) return;
 
-    const cachedRoster = loadCachedRemoteRoster();
-    const hasCachedRoster = hasAnyRemoteRoster(cachedRoster);
-
-    if (!hasCachedRoster) {
-      checkRemoteRosterForFirstUser();
-    } else {
-      setInitialRemoteChecked(true);
-    }
-  }, [data, initialRemoteChecked]);
+    checkRemoteRosterAfterEnter();
+  }, [
+    data,
+    initialRemoteChecked,
+    allowProfileEdit,
+    mySelection?.teamKey,
+    mySelection?.name,
+    mySelection?.code,
+  ]);
 
   const currentViewTeam = effectiveData?.[viewTeam] || null;
   const currentViewAnchor =
@@ -2287,6 +2273,7 @@ function App() {
     }
 
     setAllowProfileEdit(false);
+    setInitialRemoteChecked(false);
   }
 
   function startReconfigureProfile() {
@@ -2714,7 +2701,7 @@ function App() {
                     <div className="quick-links">
                       <button
                         className="quick-btn band"
-                        onClick={() => window.location.href = KS_BAND_URL}
+                        onClick={() => (window.location.href = KS_BAND_URL)}
                       >
                         <img src="./band.png" alt="밴드" className="quick-icon" />
                         <span>밴드</span>
@@ -2722,7 +2709,7 @@ function App() {
 
                       <button
                         className="quick-btn vacation"
-                        onClick={() => window.location.href = KS_VACATION_URL}
+                        onClick={() => (window.location.href = KS_VACATION_URL)}
                       >
                         <img src="./vacation.png" alt="휴가" className="quick-icon" />
                         <span>휴가</span>
