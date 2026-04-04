@@ -71,11 +71,11 @@ let RUNTIME_HOLIDAYS_BY_YEAR = { ...DEFAULT_HOLIDAYS_BY_YEAR };
 const HOLIDAY_FETCHING_YEARS = new Set();
 
 const DEFAULT_GYOBUN = [
-  "2d","대3","16d","휴1","휴2","대2","14d","24d","24~","휴3","5d","17d",
-  "27d","27~","휴4","3d","13d","23d","23~","휴5","휴6","대1","15d","22d","22~",
-  "휴7","9d","10d","28d","28~","휴8","4d","20d","25d","25~","휴9","1d","11d",
-  "대4","대4~","휴10","휴11","7d","18d","29d","29~","휴12","8d","12d","26d",
-  "26~","휴13","휴14","6d","19d","21d","21~","휴15"
+  "2d", "대3", "16d", "휴1", "휴2", "대2", "14d", "24d", "24~", "휴3", "5d", "17d",
+  "27d", "27~", "휴4", "3d", "13d", "23d", "23~", "휴5", "휴6", "대1", "15d", "22d", "22~",
+  "휴7", "9d", "10d", "28d", "28~", "휴8", "4d", "20d", "25d", "25~", "휴9", "1d", "11d",
+  "대4", "대4~", "휴10", "휴11", "7d", "18d", "29d", "29~", "휴12", "8d", "12d", "26d",
+  "26~", "휴13", "휴14", "6d", "19d", "21d", "21~", "휴15"
 ];
 
 const HIDDEN_NAME_KEYS = ["gb2601"];
@@ -83,6 +83,7 @@ const HIDDEN_NAME_KEYS = ["gb2601"];
 const LS_SHARED_CONFIG_CACHE = "gyobeon_shared_config_cache";
 const LS_REMOTE_ROSTER_CACHE = "gyobeon_remote_roster_cache";
 const LS_LAST_SEEN_PUBLISHED_AT = "gyobeon_last_seen_published_at";
+const LS_LAST_ACK_ROSTER_SIG = "gyobeon_last_ack_roster_sig";
 const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
 const LS_WORKTIME_OVERRIDES = "gyobeon_worktime_overrides";
 
@@ -687,47 +688,6 @@ function parseZipToData(parsedFiles) {
   return result;
 }
 
-function mergeRemoteRosterIntoSelectionData(baseData, remoteRoster) {
-  if (!baseData) return null;
-
-  const next = cloneTeamData(baseData);
-
-  TEAM_ORDER.forEach((teamKey) => {
-    const team = next[teamKey];
-    if (!team) return;
-
-    const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : [];
-    if (!rows.length) return;
-
-    const existingNames = new Set(team.people.map((p) => normalizeNameKey(p.name)));
-    let nextIdx = team.people.length;
-
-    rows.forEach((row) => {
-      if (!row?.name || shouldHideName(row.name)) return;
-
-      const key = normalizeNameKey(row.name);
-      if (existingNames.has(key)) return;
-
-      existingNames.add(key);
-      team.people.push({
-        idx: nextIdx++,
-        name: row.name,
-        baseCode: row.code || "",
-        employeeId: row.employeeId || "",
-        remoteOnly: true,
-      });
-      team.names.push(row.name);
-    });
-
-    team.info = {
-      ...team.info,
-      totalCount: Math.max(team.info.totalCount || 0, team.people.length),
-    };
-  });
-
-  return next;
-}
-
 function loadOverrides() {
   try {
     return JSON.parse(localStorage.getItem("gyobeon_overrides") || "{}");
@@ -839,52 +799,27 @@ function normalizeRemoteRosterShape(input) {
   const result = getEmptyRemoteRoster();
   if (!input || typeof input !== "object") return result;
 
-  const looksLikeTeamMap = TEAM_ORDER.some((teamKey) => Array.isArray(input[teamKey]));
+  const rows = Array.isArray(input.rows) ? input.rows : Array.isArray(input) ? input : [];
 
-  if (looksLikeTeamMap) {
-    TEAM_ORDER.forEach((teamKey) => {
-      const rows = Array.isArray(input[teamKey]) ? input[teamKey] : [];
-      rows.forEach((row) => {
-        const gyobun = String(row?.gyobun || row?.교번 || row?.code || "").trim();
-        const employeeId = String(row?.employeeId || row?.직원ID || row?.id || "").trim();
-        const name = String(row?.name || row?.이름 || "").trim();
+  rows.forEach((row) => {
+    const teamKey =
+      normalizeTeamKey(row?.team) ||
+      normalizeTeamKey(row?.teamKey) ||
+      normalizeTeamKey(row?.teamLabel) ||
+      normalizeTeamKey(row?.소속);
 
-        if (!gyobun || !name) return;
+    const gyobun = String(row?.gyobun || row?.교번 || row?.code || "").trim();
+    const employeeId = String(row?.employeeId || row?.직원ID || row?.id || "").trim();
+    const name = String(row?.name || row?.이름 || "").trim();
 
-        result[teamKey].push({
-          code: gyobun,
-          employeeId,
-          name,
-        });
-      });
+    if (!teamKey || !gyobun || !name) return;
+
+    result[teamKey].push({
+      code: gyobun,
+      employeeId,
+      name,
     });
-  } else {
-    const rows = Array.isArray(input.rows)
-      ? input.rows
-      : Array.isArray(input)
-      ? input
-      : [];
-
-    rows.forEach((row) => {
-      const teamKey =
-        normalizeTeamKey(row?.team) ||
-        normalizeTeamKey(row?.teamKey) ||
-        normalizeTeamKey(row?.teamLabel) ||
-        normalizeTeamKey(row?.소속);
-
-      const gyobun = String(row?.gyobun || row?.교번 || row?.code || "").trim();
-      const employeeId = String(row?.employeeId || row?.직원ID || row?.id || "").trim();
-      const name = String(row?.name || row?.이름 || "").trim();
-
-      if (!teamKey || !gyobun || !name) return;
-
-      result[teamKey].push({
-        code: gyobun,
-        employeeId,
-        name,
-      });
-    });
-  }
+  });
 
   TEAM_ORDER.forEach((teamKey) => {
     result[teamKey].sort((a, b) => {
@@ -924,6 +859,10 @@ function isSameRemoteRoster(a, b) {
   return JSON.stringify(normalizeRemoteRosterShape(a)) === JSON.stringify(normalizeRemoteRosterShape(b));
 }
 
+function getRemoteRosterSignature(remoteRoster) {
+  return JSON.stringify(normalizeRemoteRosterShape(remoteRoster || getEmptyRemoteRoster()));
+}
+
 function getOverrideKey(teamKey, personName) {
   return `${teamKey}::${normalizeNameKey(personName)}`;
 }
@@ -940,7 +879,6 @@ function getResolvedBaseDate(teamKey, team, remoteRoster) {
   if (hasRemoteRosterForTeam(teamKey, remoteRoster)) {
     const shared = String(SHARED_REMOTE_BASE_DATE || "").trim();
     if (shared) return shared;
-    return getKoreaToday();
   }
   return getZipBaseDate(team);
 }
@@ -1059,6 +997,64 @@ function buildTeamAnchorFromZip(team) {
   };
 }
 
+function findRemoteRowByName(teamKey, name, remoteRoster) {
+  const rows = remoteRoster?.[teamKey] || [];
+  return rows.find((row) => samePersonName(row.name, name)) || null;
+}
+
+function findZipPersonByName(team, name) {
+  if (!team?.people?.length) return null;
+  return team.people.find((p) => samePersonName(p.name, name)) || null;
+}
+
+function applyRemoteRosterToData(baseData, remoteRoster) {
+  if (!baseData) return null;
+
+  const next = cloneTeamData(baseData);
+
+  TEAM_ORDER.forEach((teamKey) => {
+    const team = next[teamKey];
+    if (!team) return;
+
+    const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : [];
+    if (!rows.length) return;
+
+    const fixedOrder = getGyobunOrder(team);
+    const mapped = [];
+
+    fixedOrder.forEach((slotCode, idx) => {
+      const found = rows.find(
+        (row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode)
+      );
+
+      if (!found) return;
+      if (shouldHideName(found.name)) return;
+
+      mapped.push({
+        idx,
+        name: found.name,
+        baseCode: slotCode,
+        employeeId: found.employeeId || "",
+      });
+    });
+
+    if (mapped.length > 0) {
+      team.people = mapped;
+      team.names = mapped.map((p) => p.name);
+      team.gyobun = fixedOrder.slice();
+      team.info = {
+        ...team.info,
+        totalCount: mapped.length,
+        baseName: mapped[0]?.name || team.info?.baseName || "",
+        baseCode: fixedOrder[0] || team.info?.baseCode || "",
+        baseDate: String(SHARED_REMOTE_BASE_DATE || "").trim() || team.info?.baseDate || null,
+      };
+    }
+  });
+
+  return next;
+}
+
 function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
   const rows = remoteRoster?.[teamKey] || [];
   const gyobunOrder = getGyobunOrder(team);
@@ -1083,24 +1079,24 @@ function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
   return buildTeamAnchorFromZip(team);
 }
 
-function findRemoteRowByName(teamKey, name, remoteRoster) {
-  const rows = remoteRoster?.[teamKey] || [];
-  return rows.find((row) => samePersonName(row.name, name)) || null;
-}
-
-function findZipPersonByName(team, name) {
-  if (!team?.people?.length) return null;
-  return team.people.find((p) => samePersonName(p.name, name)) || null;
-}
-
 function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection = null) {
   if (!team || !name) {
     return buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
   }
 
-  const isMe =
+  if (
     mySelection?.teamKey === teamKey &&
-    samePersonName(mySelection?.name, name);
+    samePersonName(mySelection?.name, name) &&
+    mySelection?.code
+  ) {
+    return {
+      name,
+      code: normalizeToFixedCode(team, mySelection.code),
+      anchorDate:
+        String(mySelection.anchorDate || "").trim() ||
+        getResolvedBaseDate(teamKey, team, remoteRoster),
+    };
+  }
 
   const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
   if (remoteRow?.code) {
@@ -1108,16 +1104,6 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
       name,
       code: normalizeToFixedCode(team, remoteRow.code),
       anchorDate: getResolvedBaseDate(teamKey, team, remoteRoster),
-    };
-  }
-
-  if (isMe && mySelection?.code) {
-    return {
-      name,
-      code: normalizeToFixedCode(team, mySelection.code),
-      anchorDate:
-        String(mySelection.anchorDate || "").trim() ||
-        getZipBaseDate(team),
     };
   }
 
@@ -1349,7 +1335,13 @@ function App() {
   const initialGroups = loadGroups();
   const todayStr = getKoreaToday();
   const cachedShared = loadCachedSharedConfig();
-  const initialRemoteRoster = loadCachedRemoteRoster();
+  const cachedRemoteRoster = loadCachedRemoteRoster();
+  const lastAckRosterSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
+  const cachedRemoteSig = getRemoteRosterSignature(cachedRemoteRoster);
+  const initialAppliedRemoteRoster =
+    cachedRemoteSig && cachedRemoteSig === lastAckRosterSig
+      ? cachedRemoteRoster
+      : getEmptyRemoteRoster();
 
   if (cachedShared?.baseDate) {
     setGlobalBaseDate(cachedShared.baseDate);
@@ -1359,7 +1351,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
-  const [remoteRoster, setRemoteRoster] = useState(initialRemoteRoster);
+  const [remoteRoster, setRemoteRoster] = useState(initialAppliedRemoteRoster);
   const [remoteLoading, setRemoteLoading] = useState(false);
   const [refreshRosterMessage, setRefreshRosterMessage] = useState("");
   const [pendingRosterJson, setPendingRosterJson] = useState(null);
@@ -1393,9 +1385,7 @@ function App() {
     wb: { name: "", code: "", anchorDate: todayStr },
     as: { name: "", code: "", anchorDate: todayStr },
   });
-  const [remoteBaseDate, setRemoteBaseDate] = useState(
-    cachedShared?.baseDate || ""
-  );
+  const [remoteBaseDate, setRemoteBaseDate] = useState(cachedShared?.baseDate || "");
   const [savingSharedConfig, setSavingSharedConfig] = useState(false);
   const [overrides, setOverrides] = useState({});
   const [editMode, setEditMode] = useState(false);
@@ -1431,12 +1421,8 @@ function App() {
   const editOpenRef = useRef(false);
 
   const effectiveData = useMemo(() => {
-    return data || null;
-  }, [data]);
-
-  const selectionData = useMemo(() => {
     if (!data) return null;
-    return mergeRemoteRosterIntoSelectionData(data, remoteRoster);
+    return applyRemoteRosterToData(data, remoteRoster);
   }, [data, remoteRoster]);
 
   const isAdminUser = samePersonName(mySelection?.name, ADMIN_NAME);
@@ -1485,6 +1471,61 @@ function App() {
     });
   }, [homeDate, browseDate, monthDate, groupBaseDate]);
 
+  function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
+    const currentTeamKey = mySelection?.teamKey || "";
+    const currentName = mySelection?.name || "";
+    if (!currentTeamKey || !currentName) return;
+
+    const teamSource = nextDataOverride?.[currentTeamKey] || data?.[currentTeamKey] || effectiveData?.[currentTeamKey];
+    if (!teamSource) return;
+
+    const remoteRow = findRemoteRowByName(currentTeamKey, currentName, nextRemoteRoster);
+    if (!remoteRow?.code) return;
+
+    const nextAnchorDate = getResolvedBaseDate(currentTeamKey, teamSource, nextRemoteRoster);
+    const nextCode = normalizeToFixedCode(teamSource, remoteRow.code);
+
+    setMySelection((prev) => ({
+      ...prev,
+      teamKey: currentTeamKey,
+      name: currentName,
+      code: nextCode,
+      anchorDate: nextAnchorDate || prev.anchorDate || getKoreaToday(),
+    }));
+  }
+
+  function acceptRemoteRoster(json, options = {}) {
+    const { alertMessage = "", nextDataOverride = null, syncMine = true } = options;
+    const next = normalizeRemoteRosterShape(json);
+    const serverPublishedAt = String(json?.publishedAt || "").trim();
+    const nextSig = getRemoteRosterSignature(next);
+
+    setRemoteRoster(next);
+    saveCachedRemoteRoster(next);
+    localStorage.setItem(LS_LAST_ACK_ROSTER_SIG, nextSig);
+
+    if (serverPublishedAt) {
+      localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
+      setLastSeenPublishedAt(serverPublishedAt);
+    } else {
+      const fallbackSeen = String(Date.now());
+      localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, fallbackSeen);
+      setLastSeenPublishedAt(fallbackSeen);
+    }
+
+    if (syncMine) {
+      syncMySelectionFromRemote(next, nextDataOverride);
+    }
+
+    setPendingRosterJson(null);
+    setShowUpdatePopup(false);
+    setInitialRemoteChecked(true);
+
+    if (alertMessage) {
+      alert(alertMessage);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -1516,7 +1557,7 @@ function App() {
               savedZip.blob,
               false,
               true,
-              loadCachedRemoteRoster(),
+              initialAppliedRemoteRoster,
               false
             );
           }
@@ -1565,32 +1606,17 @@ function App() {
         if (hasLocalZipBase && hasSavedProfile) {
           setRemoteLoading(true);
 
-          const localCachedRoster = loadCachedRemoteRoster();
-          const hasLocalCachedRoster = hasAnyRemoteRoster(localCachedRoster);
-
           const json = await fetchRemoteRosterJsonp(6000);
           if (cancelled) return;
 
           const next = normalizeRemoteRosterShape(json);
           const hasAny = hasAnyRemoteRoster(next);
-          const serverPublishedAt = String(json?.publishedAt || "").trim();
-          const rosterChanged = !isSameRemoteRoster(localCachedRoster, next);
+          const nextSig = getRemoteRosterSignature(next);
+          const lastAckSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
 
-          if (hasAny) {
-            let shouldPrompt = false;
-
-            if (!hasLocalCachedRoster) {
-              shouldPrompt = true;
-            } else if (serverPublishedAt) {
-              shouldPrompt = serverPublishedAt !== lastSeenPublishedAt;
-            } else {
-              shouldPrompt = rosterChanged;
-            }
-
-            if (shouldPrompt) {
-              setPendingRosterJson(json);
-              setShowUpdatePopup(true);
-            }
+          if (hasAny && nextSig !== lastAckSig) {
+            setPendingRosterJson(json);
+            setShowUpdatePopup(true);
           }
 
           setInitialRemoteChecked(true);
@@ -1786,9 +1812,6 @@ function App() {
       if (allowProfileEdit) return;
       if (!mySelection?.teamKey || !mySelection?.name || !mySelection?.code) return;
 
-      const cachedRoster = loadCachedRemoteRoster();
-      const hasCachedRoster = hasAnyRemoteRoster(cachedRoster);
-
       setRemoteLoading(true);
 
       const json = await fetchRemoteRosterJsonp(8000);
@@ -1800,20 +1823,10 @@ function App() {
         return;
       }
 
-      const serverPublishedAt = String(json?.publishedAt || "").trim();
-      const rosterChanged = !isSameRemoteRoster(cachedRoster, next);
+      const nextSig = getRemoteRosterSignature(next);
+      const lastAckSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
 
-      let shouldPrompt = false;
-
-      if (!hasCachedRoster) {
-        shouldPrompt = true;
-      } else if (serverPublishedAt) {
-        shouldPrompt = serverPublishedAt !== lastSeenPublishedAt;
-      } else {
-        shouldPrompt = rosterChanged;
-      }
-
-      if (shouldPrompt) {
+      if (nextSig !== lastAckSig) {
         setPendingRosterJson(json);
         setShowUpdatePopup(true);
       }
@@ -1851,7 +1864,7 @@ function App() {
       anchorDate: getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster),
     };
 
-  const setupSourceData = selectionData || effectiveData || data;
+  const setupSourceData = effectiveData || data;
 
   const myInfo = useMemo(() => {
     const myTeamKey = mySelection?.teamKey || selectedTeam;
@@ -1885,36 +1898,52 @@ function App() {
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
 
-    const teamAnchor =
-      teamAnchors[viewTeam] || {
-        name: "",
-        code: "",
-        anchorDate: getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster),
-      };
+    let anchorName = "";
+    let anchorCode = "";
+    let anchorDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
 
-    if (!teamAnchor?.name || !teamAnchor?.code) {
+    if (
+      mySelection?.teamKey === viewTeam &&
+      mySelection?.name &&
+      mySelection?.code
+    ) {
+      anchorName = mySelection.name;
+      anchorCode = normalizeToFixedCode(currentViewTeam, mySelection.code);
+      anchorDate =
+        mySelection.anchorDate ||
+        getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
+    } else {
+      const teamAnchor = buildTeamAnchorFromRemote(
+        viewTeam,
+        currentViewTeam,
+        remoteRoster
+      );
+      anchorName = teamAnchor?.name || "";
+      anchorCode = normalizeToFixedCode(currentViewTeam, teamAnchor?.code || "");
+      anchorDate =
+        teamAnchor?.anchorDate ||
+        getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
+    }
+
+    if (!anchorName || !anchorCode) {
       return buildAssignedGrid(currentViewTeam, "", "", 0, overrides);
     }
 
-    const dayOffset = diffDays(
-      teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster),
-      browseDate
-    );
-
+    const dayOffset = diffDays(anchorDate, browseDate);
     return buildAssignedGrid(
       currentViewTeam,
-      teamAnchor.name,
-      teamAnchor.code,
+      anchorName,
+      anchorCode,
       dayOffset,
       overrides
     );
   }, [
     currentViewTeam,
     viewTeam,
-    teamAnchors,
+    remoteRoster,
     overrides,
     browseDate,
-    remoteRoster,
+    mySelection,
   ]);
 
   const visibleAllGrid = useMemo(() => {
@@ -2064,18 +2093,23 @@ function App() {
       await saveParsedData(nextData);
       setData(nextData);
 
+      const nextEffectiveData = applyRemoteRosterToData(
+        nextData,
+        rosterForApply || getEmptyRemoteRoster()
+      );
+
       if (!keepSavedSelection) {
         setAllowProfileEdit(true);
 
         const defaultTeam = mySelection?.teamKey || selectedTeam || "ks";
         const defaultName =
           mySelection?.name ||
-          nextData?.[defaultTeam]?.info?.baseName ||
-          nextData?.[defaultTeam]?.people?.[0]?.name ||
+          nextEffectiveData?.[defaultTeam]?.info?.baseName ||
+          nextEffectiveData?.[defaultTeam]?.people?.[0]?.name ||
           "";
 
         const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(
-          nextData,
+          nextEffectiveData,
           rosterForApply || getEmptyRemoteRoster(),
           defaultTeam,
           defaultName,
@@ -2107,40 +2141,18 @@ function App() {
       const json = await fetchRemoteRosterJsonp(8000);
       const next = normalizeRemoteRosterShape(json);
       const hasAny = hasAnyRemoteRoster(next);
-      const serverPublishedAt = String(json?.publishedAt || "").trim();
 
       if (!hasAny) {
         throw new Error("배포된 최신 현재배정 데이터가 없습니다.");
       }
 
-      setRemoteRoster(next);
-      saveCachedRemoteRoster(next);
-      setInitialRemoteChecked(true);
+      acceptRemoteRoster(json, {
+        alertMessage: showAlert ? "배포된 최신 인원이 반영되었습니다." : "",
+        nextDataOverride: data,
+        syncMine: !!mySelection?.name,
+      });
 
-      if (serverPublishedAt) {
-        localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
-        setLastSeenPublishedAt(serverPublishedAt);
-      } else {
-        const fallbackSeen = String(Date.now());
-        localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, fallbackSeen);
-        setLastSeenPublishedAt(fallbackSeen);
-      }
-
-      setMySelection((prev) => ({
-        ...prev,
-        teamKey: prev?.teamKey || selectedTeam || "ks",
-        name: prev?.name || "",
-        code: prev?.code || "",
-        anchorDate: prev?.anchorDate || profileAnchorDate || getKoreaToday(),
-      }));
-
-      setPendingRosterJson(null);
-      setShowUpdatePopup(false);
       setRefreshRosterMessage("배포된 최신 인원이 반영되었습니다.");
-
-      if (showAlert) {
-        alert("배포된 최신 인원이 반영되었습니다.");
-      }
     } catch (e) {
       console.error(e);
       setRefreshRosterMessage("최신 인원 불러오기에 실패했습니다.");
@@ -2234,10 +2246,8 @@ function App() {
         saveCachedSharedConfig({ baseDate: json.baseDate });
       }
 
-      if (json?.publishedAt) {
-        localStorage.removeItem(LS_LAST_SEEN_PUBLISHED_AT);
-        setLastSeenPublishedAt("");
-      }
+      localStorage.removeItem(LS_LAST_SEEN_PUBLISHED_AT);
+      localStorage.removeItem(LS_LAST_ACK_ROSTER_SIG);
 
       alert(`배포 완료 (${json?.publishedCount || 0}건)`);
     } catch (e) {
@@ -2520,25 +2530,11 @@ function App() {
       return;
     }
 
-    const next = normalizeRemoteRosterShape(pendingRosterJson);
-    const serverPublishedAt = String(pendingRosterJson?.publishedAt || "").trim();
-
-    setRemoteRoster(next);
-    saveCachedRemoteRoster(next);
-    setInitialRemoteChecked(true);
-
-    if (serverPublishedAt) {
-      localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
-      setLastSeenPublishedAt(serverPublishedAt);
-    } else {
-      const fallbackSeen = String(Date.now());
-      localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, fallbackSeen);
-      setLastSeenPublishedAt(fallbackSeen);
-    }
-
-    setPendingRosterJson(null);
-    setShowUpdatePopup(false);
-    alert("최신 교번 정보가 반영되었습니다.");
+    acceptRemoteRoster(pendingRosterJson, {
+      alertMessage: "최신 교번 정보가 반영되었습니다.",
+      nextDataOverride: data,
+      syncMine: true,
+    });
   }
 
   function closeUpdatePopup() {
@@ -2656,7 +2652,7 @@ function App() {
               }}
             >
               <option value="">선택</option>
-              {(effectiveData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
+              {(setupSourceData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
                 <option key={`${code}-${idx}`} value={code}>
                   {code}
                 </option>
@@ -3310,7 +3306,7 @@ function App() {
                   }}
                 >
                   <option value="">선택</option>
-                  {(effectiveData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
+                  {(setupSourceData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
                     <option key={`${code}-${idx}`} value={code}>
                       {code}
                     </option>
@@ -3442,7 +3438,7 @@ function App() {
             <label className="label" style={{ marginTop: 12 }}>이름</label>
             <select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}>
               <option value="">선택</option>
-              {(setupSourceData?.[groupAddTeam]?.people || []).map((person) => (
+              {(effectiveData?.[groupAddTeam]?.people || []).map((person) => (
                 <option key={`${groupAddTeam}-${person.name}`} value={person.name}>
                   {person.name}
                 </option>
