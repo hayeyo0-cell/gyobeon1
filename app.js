@@ -704,6 +704,7 @@ function mergeRemoteRosterIntoSelectionData(baseData, remoteRoster) {
 
     rows.forEach((row) => {
       if (!row?.name || shouldHideName(row.name)) return;
+
       const key = normalizeNameKey(row.name);
       if (existingNames.has(key)) return;
 
@@ -1097,19 +1098,9 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
     return buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
   }
 
-  if (
+  const isMe =
     mySelection?.teamKey === teamKey &&
-    samePersonName(mySelection?.name, name) &&
-    mySelection?.code
-  ) {
-    return {
-      name,
-      code: normalizeToFixedCode(team, mySelection.code),
-      anchorDate:
-        String(mySelection.anchorDate || "").trim() ||
-        getResolvedBaseDate(teamKey, team, remoteRoster),
-    };
-  }
+    samePersonName(mySelection?.name, name);
 
   const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
   if (remoteRow?.code) {
@@ -1117,6 +1108,16 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
       name,
       code: normalizeToFixedCode(team, remoteRow.code),
       anchorDate: getResolvedBaseDate(teamKey, team, remoteRoster),
+    };
+  }
+
+  if (isMe && mySelection?.code) {
+    return {
+      name,
+      code: normalizeToFixedCode(team, mySelection.code),
+      anchorDate:
+        String(mySelection.anchorDate || "").trim() ||
+        getZipBaseDate(team),
     };
   }
 
@@ -2125,6 +2126,14 @@ function App() {
         setLastSeenPublishedAt(fallbackSeen);
       }
 
+      setMySelection((prev) => ({
+        ...prev,
+        teamKey: prev?.teamKey || selectedTeam || "ks",
+        name: prev?.name || "",
+        code: prev?.code || "",
+        anchorDate: prev?.anchorDate || profileAnchorDate || getKoreaToday(),
+      }));
+
       setPendingRosterJson(null);
       setShowUpdatePopup(false);
       setRefreshRosterMessage("배포된 최신 인원이 반영되었습니다.");
@@ -2647,7 +2656,7 @@ function App() {
               }}
             >
               <option value="">선택</option>
-              {(setupSourceData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
+              {(effectiveData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
                 <option key={`${code}-${idx}`} value={code}>
                   {code}
                 </option>
@@ -3301,7 +3310,7 @@ function App() {
                   }}
                 >
                   <option value="">선택</option>
-                  {(setupSourceData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
+                  {(effectiveData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
                     <option key={`${code}-${idx}`} value={code}>
                       {code}
                     </option>
