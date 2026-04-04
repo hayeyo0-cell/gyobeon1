@@ -1556,11 +1556,11 @@ function App() {
           if (hasAny) {
   let shouldPrompt = false;
 
-  if (!hasLocalCachedRoster) {
-    shouldPrompt = true;
-  } else {
-    shouldPrompt = rosterChanged;
-  }
+if (!hasCachedRoster) {
+  shouldPrompt = true;
+} else {
+  shouldPrompt = rosterChanged;
+}
 
   if (shouldPrompt) {
     setPendingRosterJson(json);
