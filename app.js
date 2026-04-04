@@ -1558,15 +1558,18 @@ function App() {
     const serverPublishedAt = String(json?.publishedAt || "").trim();
     const nextSig = getRemoteRosterSignature(next);
 
-    const effectiveDate = String(
+    let effectiveDate = String(
       json?.effectiveDate ||
       json?.date ||
       json?.rosterDate ||
       json?.snapshotDate ||
       json?.currentDate ||
-      json?.baseDate ||
-      getKoreaToday()
+      ""
     ).trim();
+
+    if (!effectiveDate) {
+      effectiveDate = getKoreaToday();
+    }
 
     setRemoteRoster(next);
     setRemoteRosterDate(effectiveDate);
