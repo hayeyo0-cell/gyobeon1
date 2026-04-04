@@ -1770,32 +1770,29 @@ if (hasAny) {
       setRemoteLoading(true);
 
       const json = await fetchRemoteRosterJsonp(8000);
-      const next = normalizeRemoteRosterShape(json);
-      const hasAny = hasAnyRemoteRoster(next);
+const next = normalizeRemoteRosterShape(json);
+const hasAny = hasAnyRemoteRoster(next);
 
-      if (!hasAny) {
-        setInitialRemoteChecked(true);
-        return;
-      }
+if (!hasAny) {
+  setInitialRemoteChecked(true);
+  return;
+}
 
-      const serverPublishedAt = String(json?.publishedAt || "").trim();
-      const rosterChanged = !isSameRemoteRoster(cachedRoster, next);
+const nextSig = getRemoteRosterSignature(next);
+const lastAckSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
 
-      let shouldPrompt = false;
+let shouldPrompt = false;
 
-      if (!hasCachedRoster) {
-        shouldPrompt = true;
-      } else if (serverPublishedAt) {
-        shouldPrompt =
-          serverPublishedAt !== lastSeenPublishedAt && rosterChanged;
-      } else {
-        shouldPrompt = rosterChanged;
-      }
+if (!hasCachedRoster) {
+  shouldPrompt = true;
+} else {
+  shouldPrompt = nextSig !== lastAckSig;
+}
 
-      if (shouldPrompt) {
-        setPendingRosterJson(json);
-        setShowUpdatePopup(true);
-      }
+if (shouldPrompt) {
+  setPendingRosterJson(json);
+  setShowUpdatePopup(true);
+}
 
       setInitialRemoteChecked(true);
     } catch (e) {
