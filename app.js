@@ -873,10 +873,6 @@ function getZipBaseDate(team) {
   return String(team?.info?.baseDate || "").trim() || getKoreaToday();
 }
 
-function getTeamBaseDate(team) {
-  return getZipBaseDate(team);
-}
-
 function getResolvedBaseDate(teamKey, team, remoteRoster) {
   if (hasRemoteRosterForTeam(teamKey, remoteRoster)) {
     const shared = String(SHARED_REMOTE_BASE_DATE || "").trim();
@@ -1493,6 +1489,9 @@ function App() {
     let cancelled = false;
 
     async function initAppFast() {
+      let parsedSaved = null;
+      let savedZip = null;
+
       try {
         const shared = loadCachedSharedConfig();
         if (shared?.baseDate) {
@@ -1501,12 +1500,12 @@ function App() {
         }
 
         try {
-          const parsedSaved = await loadParsedData();
+          parsedSaved = await loadParsedData();
           if (!cancelled && parsedSaved?.data) {
             setData(parsedSaved.data);
           }
 
-          const savedZip = await loadZipBlob();
+          savedZip = await loadZipBlob();
           if (!cancelled && savedZip?.name) {
             setZipName(savedZip.name || "저장된 ZIP");
           }
@@ -1557,34 +1556,39 @@ function App() {
       }
 
       try {
-        setRemoteLoading(true);
+        const hasLocalZipBase = !!parsedSaved?.data || !!savedZip?.blob;
 
-        const localCachedRoster = loadCachedRemoteRoster();
-        const hasLocalCachedRoster = hasAnyRemoteRoster(localCachedRoster);
+        if (hasLocalZipBase) {
+          setRemoteLoading(true);
 
-        const json = await fetchRemoteRosterJsonp(6000);
-        if (cancelled) return;
+          const localCachedRoster = loadCachedRemoteRoster();
+          const hasLocalCachedRoster = hasAnyRemoteRoster(localCachedRoster);
 
-        const next = normalizeRemoteRosterShape(json);
-        const hasAny = hasAnyRemoteRoster(next);
-        const serverPublishedAt = String(json?.publishedAt || "").trim();
-        const rosterChanged = !isSameRemoteRoster(localCachedRoster, next);
+          const json = await fetchRemoteRosterJsonp(6000);
+          if (cancelled) return;
 
-        if (hasAny) {
-          let shouldPrompt = false;
+          const next = normalizeRemoteRosterShape(json);
+          const hasAny = hasAnyRemoteRoster(next);
+          const serverPublishedAt = String(json?.publishedAt || "").trim();
+          const rosterChanged = !isSameRemoteRoster(localCachedRoster, next);
 
-          if (!hasLocalCachedRoster) {
-            shouldPrompt = true;
-          } else if (serverPublishedAt && serverPublishedAt !== lastSeenPublishedAt) {
-            shouldPrompt = true;
-          } else if (!serverPublishedAt && rosterChanged) {
-            shouldPrompt = true;
+          if (hasAny) {
+            let shouldPrompt = false;
+
+            if (!hasLocalCachedRoster) {
+              shouldPrompt = true;
+            } else if (serverPublishedAt && serverPublishedAt !== lastSeenPublishedAt) {
+              shouldPrompt = true;
+            } else if (!serverPublishedAt && rosterChanged) {
+              shouldPrompt = true;
+            }
+
+            if (shouldPrompt) {
+              setPendingRosterJson(json);
+              setShowUpdatePopup(true);
+            }
           }
-
-          if (shouldPrompt) {
-            setPendingRosterJson(json);
-            setShowUpdatePopup(true);
-          }
+          setInitialRemoteChecked(true);
         }
       } catch (e) {
         console.log("원격 현재배정 백그라운드 체크 실패", e);
