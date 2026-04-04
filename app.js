@@ -1554,22 +1554,19 @@ function App() {
           const rosterChanged = !isSameRemoteRoster(localCachedRoster, next);
 
           if (hasAny) {
-            let shouldPrompt = false;
+  let shouldPrompt = false;
 
-            if (!hasLocalCachedRoster) {
-              shouldPrompt = true;
-            } else if (serverPublishedAt) {
-              shouldPrompt =
-                serverPublishedAt !== lastSeenPublishedAt && rosterChanged;
-            } else {
-              shouldPrompt = rosterChanged;
-            }
+  if (!hasLocalCachedRoster) {
+    shouldPrompt = true;
+  } else {
+    shouldPrompt = rosterChanged;
+  }
 
-            if (shouldPrompt) {
-              setPendingRosterJson(json);
-              setShowUpdatePopup(true);
-            }
-          }
+  if (shouldPrompt) {
+    setPendingRosterJson(json);
+    setShowUpdatePopup(true);
+  }
+}
 
           setInitialRemoteChecked(true);
         }
