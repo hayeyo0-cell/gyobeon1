@@ -1476,7 +1476,10 @@ function App() {
     const currentName = mySelection?.name || "";
     if (!currentTeamKey || !currentName) return;
 
-    const teamSource = nextDataOverride?.[currentTeamKey] || data?.[currentTeamKey] || effectiveData?.[currentTeamKey];
+    const teamSource =
+      nextDataOverride?.[currentTeamKey] ||
+      data?.[currentTeamKey] ||
+      effectiveData?.[currentTeamKey];
     if (!teamSource) return;
 
     const remoteRow = findRemoteRowByName(currentTeamKey, currentName, nextRemoteRoster);
@@ -2149,7 +2152,7 @@ function App() {
       acceptRemoteRoster(json, {
         alertMessage: showAlert ? "배포된 최신 인원이 반영되었습니다." : "",
         nextDataOverride: data,
-        syncMine: !!mySelection?.name,
+        syncMine: false,
       });
 
       setRefreshRosterMessage("배포된 최신 인원이 반영되었습니다.");
@@ -2533,7 +2536,7 @@ function App() {
     acceptRemoteRoster(pendingRosterJson, {
       alertMessage: "최신 교번 정보가 반영되었습니다.",
       nextDataOverride: data,
-      syncMine: true,
+      syncMine: false,
     });
   }
 
