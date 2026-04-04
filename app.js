@@ -83,9 +83,9 @@ const HIDDEN_NAME_KEYS = ["gb2601"];
 const LS_SHARED_CONFIG_CACHE = "gyobeon_shared_config_cache";
 const LS_REMOTE_ROSTER_CACHE = "gyobeon_remote_roster_cache";
 const LS_LAST_SEEN_PUBLISHED_AT = "gyobeon_last_seen_published_at";
+const LS_LAST_ACK_ROSTER_SIG = "gyobeon_last_ack_roster_sig";
 const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
 const LS_WORKTIME_OVERRIDES = "gyobeon_worktime_overrides";
-const LS_LAST_ACK_ROSTER_SIG = "gyobeon_last_ack_roster_sig";
 
 function normalizeNameKey(name) {
   return String(name || "").trim().toLowerCase().replace(/\s+/g, "");
@@ -2232,6 +2232,8 @@ function App() {
         setLastSeenPublishedAt("");
       }
 
+      localStorage.removeItem(LS_LAST_ACK_ROSTER_SIG);
+
       alert(`배포 완료 (${json?.publishedCount || 0}건)`);
     } catch (e) {
       console.error(e);
@@ -2298,7 +2300,6 @@ function App() {
     const today = getKoreaToday();
 
     clearMySelection();
-    localStorage.removeItem(LS_LAST_ACK_ROSTER_SIG);
 
     setMySelection({
       teamKey: "ks",
