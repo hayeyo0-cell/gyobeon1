@@ -704,7 +704,6 @@ function mergeRemoteRosterIntoSelectionData(baseData, remoteRoster) {
 
     rows.forEach((row) => {
       if (!row?.name || shouldHideName(row.name)) return;
-
       const key = normalizeNameKey(row.name);
       if (existingNames.has(key)) return;
 
@@ -928,8 +927,21 @@ function getOverrideKey(teamKey, personName) {
   return `${teamKey}::${normalizeNameKey(personName)}`;
 }
 
+function hasRemoteRosterForTeam(teamKey, remoteRoster) {
+  return Array.isArray(remoteRoster?.[teamKey]) && remoteRoster[teamKey].length > 0;
+}
+
 function getZipBaseDate(team) {
   return String(team?.info?.baseDate || "").trim() || getKoreaToday();
+}
+
+function getResolvedBaseDate(teamKey, team, remoteRoster) {
+  if (hasRemoteRosterForTeam(teamKey, remoteRoster)) {
+    const shared = String(SHARED_REMOTE_BASE_DATE || "").trim();
+    if (shared) return shared;
+    return getKoreaToday();
+  }
+  return getZipBaseDate(team);
 }
 
 function migrateLegacyOverrides(currentOverrides, data) {
@@ -1046,6 +1058,30 @@ function buildTeamAnchorFromZip(team) {
   };
 }
 
+function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
+  const rows = remoteRoster?.[teamKey] || [];
+  const gyobunOrder = getGyobunOrder(team);
+
+  if (!rows.length) {
+    return buildTeamAnchorFromZip(team);
+  }
+
+  for (const code of gyobunOrder) {
+    const found = rows.find(
+      (row) => normalizeCodeKey(row.code) === normalizeCodeKey(code)
+    );
+    if (found?.name) {
+      return {
+        name: found.name,
+        code: normalizeToFixedCode(team, code),
+        anchorDate: getResolvedBaseDate(teamKey, team, remoteRoster),
+      };
+    }
+  }
+
+  return buildTeamAnchorFromZip(team);
+}
+
 function findRemoteRowByName(teamKey, name, remoteRoster) {
   const rows = remoteRoster?.[teamKey] || [];
   return rows.find((row) => samePersonName(row.name, name)) || null;
@@ -1058,7 +1094,7 @@ function findZipPersonByName(team, name) {
 
 function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection = null) {
   if (!team || !name) {
-    return buildTeamAnchorFromZip(team);
+    return buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
   }
 
   if (
@@ -1071,7 +1107,16 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
       code: normalizeToFixedCode(team, mySelection.code),
       anchorDate:
         String(mySelection.anchorDate || "").trim() ||
-        getKoreaToday(),
+        getResolvedBaseDate(teamKey, team, remoteRoster),
+    };
+  }
+
+  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
+  if (remoteRow?.code) {
+    return {
+      name,
+      code: normalizeToFixedCode(team, remoteRow.code),
+      anchorDate: getResolvedBaseDate(teamKey, team, remoteRoster),
     };
   }
 
@@ -1084,18 +1129,7 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
     };
   }
 
-  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
-  if (remoteRow?.code) {
-    return {
-      name,
-      code: normalizeToFixedCode(team, remoteRow.code),
-      anchorDate:
-        String(mySelection?.anchorDate || "").trim() ||
-        getKoreaToday(),
-    };
-  }
-
-  return buildTeamAnchorFromZip(team);
+  return buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
 }
 
 function buildAllTeamsAutoAnchorsFromIdentity(
@@ -1122,7 +1156,7 @@ function buildAllTeamsAutoAnchorsFromIdentity(
       return;
     }
 
-    result[teamKey] = buildTeamAnchorFromZip(team);
+    result[teamKey] = buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
   });
 
   return result;
@@ -1538,6 +1572,7 @@ function App() {
 
           const next = normalizeRemoteRosterShape(json);
           const hasAny = hasAnyRemoteRoster(next);
+          const serverPublishedAt = String(json?.publishedAt || "").trim();
           const rosterChanged = !isSameRemoteRoster(localCachedRoster, next);
 
           if (hasAny) {
@@ -1545,6 +1580,8 @@ function App() {
 
             if (!hasLocalCachedRoster) {
               shouldPrompt = true;
+            } else if (serverPublishedAt) {
+              shouldPrompt = serverPublishedAt !== lastSeenPublishedAt;
             } else {
               shouldPrompt = rosterChanged;
             }
@@ -1666,7 +1703,7 @@ function App() {
     const nextAnchors = {};
     TEAM_ORDER.forEach((teamKey) => {
       const team = effectiveData[teamKey];
-      nextAnchors[teamKey] = buildTeamAnchorFromZip(team);
+      nextAnchors[teamKey] = buildTeamAnchorFromRemote(teamKey, team, remoteRoster);
     });
     setTeamAnchors(nextAnchors);
   }, [effectiveData, remoteRoster, mySelection]);
@@ -1700,13 +1737,13 @@ function App() {
 
     let nextCode = "";
 
-    const zipPerson = findZipPersonByName(team, currentName);
-    if (zipPerson?.baseCode) {
-      nextCode = normalizeToFixedCode(team, zipPerson.baseCode);
+    const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster);
+    if (remoteRow?.code) {
+      nextCode = normalizeToFixedCode(team, remoteRow.code);
     } else {
-      const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster);
-      if (remoteRow?.code) {
-        nextCode = normalizeToFixedCode(team, remoteRow.code);
+      const zipPerson = findZipPersonByName(team, currentName);
+      if (zipPerson?.baseCode) {
+        nextCode = normalizeToFixedCode(team, zipPerson.baseCode);
       }
     }
 
@@ -1762,12 +1799,15 @@ function App() {
         return;
       }
 
+      const serverPublishedAt = String(json?.publishedAt || "").trim();
       const rosterChanged = !isSameRemoteRoster(cachedRoster, next);
 
       let shouldPrompt = false;
 
       if (!hasCachedRoster) {
         shouldPrompt = true;
+      } else if (serverPublishedAt) {
+        shouldPrompt = serverPublishedAt !== lastSeenPublishedAt;
       } else {
         shouldPrompt = rosterChanged;
       }
@@ -1807,7 +1847,7 @@ function App() {
     teamAnchors[viewTeam] || {
       name: "",
       code: "",
-      anchorDate: getZipBaseDate(currentViewTeam),
+      anchorDate: getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster),
     };
 
   const setupSourceData = selectionData || effectiveData || data;
@@ -1829,7 +1869,7 @@ function App() {
     if (!anchor?.code) return null;
 
     const dayOffset = diffDays(
-      anchor.anchorDate || getZipBaseDate(team),
+      anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster),
       homeDate
     );
 
@@ -1848,7 +1888,7 @@ function App() {
       teamAnchors[viewTeam] || {
         name: "",
         code: "",
-        anchorDate: getZipBaseDate(currentViewTeam),
+        anchorDate: getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster),
       };
 
     if (!teamAnchor?.name || !teamAnchor?.code) {
@@ -1856,7 +1896,7 @@ function App() {
     }
 
     const dayOffset = diffDays(
-      teamAnchor.anchorDate || getZipBaseDate(currentViewTeam),
+      teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster),
       browseDate
     );
 
@@ -1873,6 +1913,7 @@ function App() {
     teamAnchors,
     overrides,
     browseDate,
+    remoteRoster,
   ]);
 
   const visibleAllGrid = useMemo(() => {
@@ -1893,7 +1934,7 @@ function App() {
 
     const teamAnchor = currentViewAnchor;
     const dayOffset = diffDays(
-      teamAnchor.anchorDate || getZipBaseDate(team),
+      teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster),
       browseDate
     );
 
@@ -1918,7 +1959,7 @@ function App() {
         displayName: found?.displayName || found?.name || "-",
       };
     });
-  }, [currentViewTeam, currentViewAnchor, browseDate, overrides, viewTeam]);
+  }, [currentViewTeam, currentViewAnchor, browseDate, overrides, remoteRoster, viewTeam]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthDate), [monthDate]);
   const monthHeaderDate = parseLocalDate(monthDate);
@@ -2606,7 +2647,7 @@ function App() {
               }}
             >
               <option value="">선택</option>
-              {(effectiveData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
+              {(setupSourceData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
                 <option key={`${code}-${idx}`} value={code}>
                   {code}
                 </option>
@@ -3260,7 +3301,7 @@ function App() {
                   }}
                 >
                   <option value="">선택</option>
-                  {(effectiveData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
+                  {(setupSourceData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
                     <option key={`${code}-${idx}`} value={code}>
                       {code}
                     </option>
@@ -3568,17 +3609,11 @@ function getPersonGyobunForDate(
   const team = data?.[teamKey];
   if (!team) return null;
 
-  const anchor = buildAnchorForIdentity(
-    teamKey,
-    team,
-    remoteRoster,
-    name,
-    mySelection
-  );
+  const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection);
   if (!anchor?.code) return null;
 
   const dayOffset = diffDays(
-    anchor.anchorDate || getZipBaseDate(team),
+    anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster),
     dateStr
   );
 
