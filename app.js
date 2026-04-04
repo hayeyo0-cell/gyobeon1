@@ -33,6 +33,10 @@ function setGlobalBaseDate(value) {
   SHARED_REMOTE_BASE_DATE = String(value || "").trim();
 }
 
+function getGlobalBaseDate() {
+  return String(SHARED_REMOTE_BASE_DATE || "").trim();
+}
+
 function setGlobalRemoteRosterDate(value) {
   CURRENT_REMOTE_ROSTER_DATE = String(value || "").trim();
 }
@@ -912,7 +916,7 @@ function getZipBaseDate(team) {
 }
 
 function getResolvedBaseDate(teamKey, team, remoteRoster) {
-  return getZipBaseDate(team);
+  return getGlobalBaseDate() || getZipBaseDate(team);
 }
 
 function migrateLegacyOverrides(currentOverrides, data) {
@@ -1007,6 +1011,61 @@ function buildRemoteExactGrid(teamKey, team, remoteRoster, overrides = {}) {
       const fallback =
         originalPeople.find(
           (p) => normalizeCodeKey(p.baseCode) === normalizeCodeKey(slotCode)
+        ) ||
+        originalPeople[idx] ||
+        null;
+
+      const name = String(found?.name || fallback?.name || "").trim();
+      if (!name || shouldHideName(name)) return null;
+
+      const override = overrides[getOverrideKey(teamKey, name)] || {};
+
+      return {
+        idx: fallback?.idx ?? idx,
+        name,
+        displayName: override.alias || name,
+        code: slotCode,
+        customColor: override.color || "",
+        employeeId: found?.employeeId || fallback?.employeeId || "",
+      };
+    })
+    .filter(Boolean);
+}
+
+function getRemoteAnchorBaseDate(team) {
+  return getGlobalBaseDate() || getZipBaseDate(team);
+}
+
+function buildRemoteShiftedGrid(
+  teamKey,
+  team,
+  remoteRoster,
+  targetDate,
+  overrides = {}
+) {
+  const fixedCodes = getGyobunOrder(team);
+  const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : [];
+  const originalPeople = Array.isArray(team?.people) ? team.people : [];
+  const anchorDate = getRemoteAnchorBaseDate(team);
+  const dayOffset = diffDays(anchorDate, targetDate);
+
+  const shiftedRows = rows.map((row) => ({
+    ...row,
+    shiftedCode: shiftCodeByDays(team, row.code, dayOffset),
+  }));
+
+  return fixedCodes
+    .map((slotCode, idx) => {
+      const found = shiftedRows.find(
+        (row) => normalizeCodeKey(row.shiftedCode) === normalizeCodeKey(slotCode)
+      );
+
+      const fallback =
+        originalPeople.find(
+          (p) =>
+            normalizeCodeKey(
+              shiftCodeByDays(team, p.baseCode || "", dayOffset)
+            ) === normalizeCodeKey(slotCode)
         ) ||
         originalPeople[idx] ||
         null;
@@ -1135,6 +1194,15 @@ function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
 function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection = null) {
   if (!team || !name) {
     return buildTeamAnchorFromZip(team);
+  }
+
+  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
+  if (remoteRow?.code) {
+    return {
+      name,
+      code: normalizeToFixedCode(team, remoteRow.code),
+      anchorDate: getRemoteAnchorBaseDate(team),
+    };
   }
 
   if (
@@ -1937,12 +2005,6 @@ function App() {
   ]);
 
   const currentViewTeam = effectiveData?.[viewTeam] || null;
-  const currentViewAnchor =
-    teamAnchors[viewTeam] || {
-      name: "",
-      code: "",
-      anchorDate: getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster),
-    };
 
   const myInfo = useMemo(() => {
     const myTeamKey = mySelection?.teamKey || selectedTeam;
@@ -1951,11 +2013,13 @@ function App() {
     if (!team || !myName) return null;
 
     const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
-    const exactRemoteDate = remoteRosterDate || getGlobalRemoteRosterDate() || getKoreaToday();
     const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster);
 
-    if (remoteRow?.code && isSameDateStr(homeDate, exactRemoteDate)) {
-      const code = normalizeToFixedCode(team, remoteRow.code);
+    if (remoteRow?.code) {
+      const anchorDate = getRemoteAnchorBaseDate(team);
+      const dayOffset = diffDays(anchorDate, homeDate);
+      const code = shiftCodeByDays(team, remoteRow.code, dayOffset);
+
       return {
         code,
         time: pickWorktime(team, code, homeDate),
@@ -1985,18 +2049,28 @@ function App() {
       time: pickWorktime(team, code, homeDate),
       displayName: override.alias || myName,
     };
-  }, [effectiveData, remoteRoster, remoteRosterDate, homeDate, selectedTeam, mySelection, holidayVersion, worktimeVersion, overrides]);
+  }, [
+    effectiveData,
+    remoteRoster,
+    homeDate,
+    selectedTeam,
+    mySelection,
+    holidayVersion,
+    worktimeVersion,
+    overrides,
+  ]);
 
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
 
-    const exactRemoteDate = getExactRemoteDate();
-
-    if (
-      hasRemoteRosterForTeam(viewTeam, remoteRoster) &&
-      isSameDateStr(browseDate, exactRemoteDate)
-    ) {
-      return buildRemoteExactGrid(viewTeam, currentViewTeam, remoteRoster, overrides);
+    if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
+      return buildRemoteShiftedGrid(
+        viewTeam,
+        currentViewTeam,
+        remoteRoster,
+        browseDate,
+        overrides
+      );
     }
 
     let anchorName = "";
@@ -2038,7 +2112,6 @@ function App() {
     currentViewTeam,
     viewTeam,
     remoteRoster,
-    remoteRosterDate,
     overrides,
     browseDate,
     mySelection,
@@ -2060,15 +2133,16 @@ function App() {
     const team = currentViewTeam;
     if (!team) return [];
 
-    const exactRemoteDate = getExactRemoteDate();
-
     let grid = [];
 
-    if (
-      hasRemoteRosterForTeam(viewTeam, remoteRoster) &&
-      isSameDateStr(browseDate, exactRemoteDate)
-    ) {
-      grid = buildRemoteExactGrid(viewTeam, team, remoteRoster, overrides);
+    if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
+      grid = buildRemoteShiftedGrid(
+        viewTeam,
+        team,
+        remoteRoster,
+        browseDate,
+        overrides
+      );
     } else {
       const teamAnchor = buildTeamAnchorFromZip(team);
       const dayOffset = diffDays(
@@ -2098,7 +2172,7 @@ function App() {
         displayName: found?.displayName || found?.name || "-",
       };
     });
-  }, [currentViewTeam, browseDate, overrides, remoteRoster, remoteRosterDate, viewTeam]);
+  }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthDate), [monthDate]);
   const monthHeaderDate = parseLocalDate(monthDate);
