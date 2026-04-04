@@ -835,6 +835,18 @@ function normalizeRemoteRosterShape(input) {
     });
   });
 
+  TEAM_ORDER.forEach((teamKey) => {
+    result[teamKey].sort((a, b) => {
+      const codeCompare = normalizeCodeKey(a.code).localeCompare(normalizeCodeKey(b.code), "ko");
+      if (codeCompare !== 0) return codeCompare;
+
+      const nameCompare = String(a.name || "").localeCompare(String(b.name || ""), "ko");
+      if (nameCompare !== 0) return nameCompare;
+
+      return String(a.employeeId || "").localeCompare(String(b.employeeId || ""), "ko");
+    });
+  });
+
   return result;
 }
 
@@ -1577,10 +1589,10 @@ function App() {
 
             if (!hasLocalCachedRoster) {
               shouldPrompt = true;
-            } else if (serverPublishedAt && serverPublishedAt !== lastSeenPublishedAt) {
-              shouldPrompt = true;
-            } else if (!serverPublishedAt && rosterChanged) {
-              shouldPrompt = true;
+            } else if (serverPublishedAt) {
+              shouldPrompt = serverPublishedAt !== lastSeenPublishedAt;
+            } else {
+              shouldPrompt = rosterChanged;
             }
 
             if (shouldPrompt) {
@@ -1588,6 +1600,7 @@ function App() {
               setShowUpdatePopup(true);
             }
           }
+
           setInitialRemoteChecked(true);
         }
       } catch (e) {
@@ -2120,8 +2133,9 @@ function App() {
         localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt);
         setLastSeenPublishedAt(serverPublishedAt);
       } else {
-        localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, String(Date.now()));
-        setLastSeenPublishedAt(localStorage.getItem(LS_LAST_SEEN_PUBLISHED_AT) || "");
+        const fallbackSeen = String(Date.now());
+        localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, fallbackSeen);
+        setLastSeenPublishedAt(fallbackSeen);
       }
 
       setPendingRosterJson(null);
