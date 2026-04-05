@@ -1503,15 +1503,20 @@ function App() {
   const [allowProfileEdit, setAllowProfileEdit] = useState(
     !initialSelection?.name || !initialSelection?.code
   );
+  
+  // -- 그룹 관리 관련 State --
   const [groups, setGroups] = useState(initialGroups);
   const [currentGroup, setCurrentGroup] = useState(Object.keys(initialGroups)[0] || "");
   const [groupBaseDate, setGroupBaseDate] = useState(todayStr);
   const [groupMonth, setGroupMonth] = useState(getDisplayMonthValue(todayStr));
   const [selectedGroupDate, setSelectedGroupDate] = useState("");
   const [showGroupAdd, setShowGroupAdd] = useState(false);
+  const [isEditGroupMode, setIsEditGroupMode] = useState(false); // 새로 추가됨
   const [newGroupName, setNewGroupName] = useState("");
   const [groupAddTeam, setGroupAddTeam] = useState("ks");
   const [groupAddName, setGroupAddName] = useState("");
+  // -------------------------
+
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
   const [postSetupRemoteCheckNeeded, setPostSetupRemoteCheckNeeded] = useState(false);
@@ -2215,16 +2220,6 @@ function App() {
   const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
   const groupMembers = groups[currentGroup] || [];
   const groupMonthOptions = useMemo(() => getMonthOptions(todayStr, 12), [todayStr]);
-  const groupHeaderMonthLabel = useMemo(() => {
-    const [y, m] = String(groupMonth || "").split("-");
-    if (!y || !m) return "";
-    return `${Number(m)}월`;
-  }, [groupMonth]);
-
-  const groupHeaderTitle = useMemo(() => {
-    const groupLabel = currentGroup || "그룹 없음";
-    return `${groupHeaderMonthLabel} / ${groupLabel}`;
-  }, [groupHeaderMonthLabel, currentGroup]);
 
   useEffect(() => {
     if (!weekDates.length) return;
@@ -2233,6 +2228,7 @@ function App() {
     }
   }, [weekDates, selectedGroupDate]);
 
+  // -- 1. 그룹 날짜 이동 개선 로직 --
   function handleGroupMonthChange(nextMonthValue) {
     const today = getKoreaToday();
     const todayMonth = getDisplayMonthValue(today);
@@ -2240,12 +2236,12 @@ function App() {
     setGroupMonth(nextMonthValue);
 
     if (nextMonthValue === todayMonth) {
-      setGroupBaseDate(today);
-      return;
+      setGroupBaseDate(today); // 현재 월 선택 시 무조건 오늘 포함 주로 설정
+    } else {
+      setGroupBaseDate(getMonthStartDate(nextMonthValue)); // 다른 월 선택 시 1일 기준
     }
-
-    setGroupBaseDate(getMonthStartDate(nextMonthValue));
   }
+  // --------------------------------
 
   function switchTab(tabName) {
     const currentTab = activeTabRef.current;
@@ -2689,7 +2685,8 @@ function App() {
     }
   }
 
-  function createGroup() {
+  // -- 2. 그룹 수정/추가 통합 핸들러 --
+  function handleGroupSubmit() {
     const name = newGroupName.trim();
     if (!name) {
       alert("그룹 이름을 입력해주세요.");
@@ -2697,12 +2694,32 @@ function App() {
     }
 
     const next = { ...groups };
-    if (!next[name]) next[name] = [];
+
+    if (isEditGroupMode && currentGroup) {
+      if (currentGroup !== name) {
+        if (next[name]) {
+          alert("이미 존재하는 그룹 이름입니다.");
+          return;
+        }
+        next[name] = next[currentGroup];
+        delete next[currentGroup];
+      }
+      alert("그룹 설정이 변경되었습니다.");
+    } else {
+      if (next[name]) {
+        alert("이미 존재하는 그룹 이름입니다.");
+        return;
+      }
+      next[name] = [];
+      alert("새 그룹이 생성되었습니다. 아래에서 인원을 추가하세요.");
+    }
+
     setGroups(next);
     saveGroups(next);
     setCurrentGroup(name);
-    setNewGroupName("");
+    setIsEditGroupMode(false);
   }
+  // ------------------------------------
 
   function addToGroup() {
     const typedGroupName = newGroupName.trim();
@@ -2735,9 +2752,7 @@ function App() {
     setGroups(next);
     saveGroups(next);
     setCurrentGroup(targetGroup);
-    setNewGroupName("");
-    setGroupAddName("");
-    setShowGroupAdd(false);
+    setGroupAddName(""); // 연속 추가를 위해 이름만 초기화
   }
 
   function removeFromGroup(teamKey, name) {
@@ -3253,90 +3268,91 @@ function App() {
               </div>
             )}
 
+            {/* --- 3. 디자인 및 구조가 개선된 그룹 탭 영역 --- */}
             {activeTab === "group" && (
               <div className="group-page tab-page">
-                <div className="group-topbar">
-                  <button
-                    className="group-nav-btn"
-                    onClick={() => setGroupBaseDate(addDays(groupBaseDate, -7))}
-                  >
-                    -
-                  </button>
-
-                  <div className="group-header-title">
-                    {groupHeaderTitle}
+                <div className="group-header-v3">
+                  <div className="group-row-primary">
+                    <select
+                      className="group-month-picker"
+                      value={groupMonth}
+                      onChange={(e) => handleGroupMonthChange(e.target.value)}
+                    >
+                      {groupMonthOptions.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                    
+                    <div className="group-selector-wrap">
+                      <select
+                        className="group-main-select"
+                        value={currentGroup}
+                        onChange={(e) => setCurrentGroup(e.target.value)}
+                      >
+                        {Object.keys(groups).length === 0 ? (
+                          <option value="">그룹 없음</option>
+                        ) : (
+                          Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>)
+                        )}
+                      </select>
+                      <button 
+                        className="group-edit-trigger" 
+                        onClick={() => {
+                          if(!currentGroup) return alert("수정할 그룹이 없습니다.");
+                          setNewGroupName(currentGroup);
+                          setIsEditGroupMode(true);
+                          setShowGroupAdd(true);
+                        }}
+                      >
+                        관리
+                      </button>
+                    </div>
                   </div>
 
-                  <button
-                    className="group-add-btn"
-                    onClick={() => setShowGroupAdd(true)}
-                  >
-                    + 그룹추가
-                  </button>
-
-                  <button
-                    className="group-nav-btn"
-                    onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}
-                  >
-                    +
-                  </button>
-                </div>
-
-                <div className="group-toolbar">
-                  <select
-                    className="group-select"
-                    value={groupMonth}
-                    onChange={(e) => handleGroupMonthChange(e.target.value)}
-                  >
-                    {groupMonthOptions.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    className="group-select"
-                    value={currentGroup}
-                    onChange={(e) => setCurrentGroup(e.target.value)}
-                  >
-                    {Object.keys(groups).length === 0 ? (
-                      <option value="">그룹 없음</option>
-                    ) : (
-                      Object.keys(groups).map((g) => (
-                        <option key={g} value={g}>{g}</option>
-                      ))
-                    )}
-                  </select>
+                  <div className="group-row-nav">
+                    <div className="week-nav-controls">
+                      <button className="nav-btn-arrow" onClick={() => setGroupBaseDate(addDays(groupBaseDate, -7))}>◀</button>
+                      <button className="nav-btn-today" onClick={() => handleGroupMonthChange(getDisplayMonthValue(getKoreaToday()))}>오늘</button>
+                      <button className="nav-btn-arrow" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>▶</button>
+                    </div>
+                    <button className="group-create-btn" onClick={() => {
+                      setNewGroupName("");
+                      setIsEditGroupMode(false);
+                      setShowGroupAdd(true);
+                    }}>
+                      + 그룹추가
+                    </button>
+                  </div>
                 </div>
 
                 <div className="group-table-wrap">
                   <table className="group-table">
                     <thead>
                       <tr>
-                        <th>이름</th>
+                        <th className="sticky-col">이름</th>
                         {weekDates.map((date) => {
                           const isSelectedCol = selectedGroupDate === date;
-
+                          const isToday = date === getKoreaToday();
                           return (
                             <th
                               key={date}
                               onClick={() => setSelectedGroupDate(date)}
+                              className={`${isSelectedCol ? "active-col" : ""} ${isToday ? "today-col" : ""}`}
                               style={{
                                 cursor: "pointer",
-                                background: isSelectedCol ? "#ede9fe" : "",
-                                borderBottom: isSelectedCol ? "3px solid #7c3aed" : "",
                                 transition: "all 0.18s ease",
                               }}
                             >
                               <div
-                                className={`${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${
+                                className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${
                                   isSaturday(date) ? "sat" : ""
                                 }`}
                               >
                                 {weekdayShort(date)}
                               </div>
-                              <div>{formatMonthDay(date)}</div>
+                              <div className="day-date">{formatMonthDay(date)}</div>
                             </th>
                           );
                         })}
@@ -3346,19 +3362,20 @@ function App() {
                     <tbody>
                       {groupMembers.length === 0 ? (
                         <tr>
-                          <td colSpan={8}>그룹 인원이 없습니다.</td>
+                          <td colSpan={8} className="empty-msg" style={{padding: '20px', textAlign: 'center'}}>그룹 인원을 추가해주세요.</td>
                         </tr>
                       ) : (
                         groupMembers.map((member, idx) => (
                           <tr key={`${member.team}-${member.name}-${idx}`}>
-                            <td className="group-name-cell">
-                              <div>{member.name}</div>
-                              <div className="group-team-label">{TEAM_LABELS[member.team]}</div>
+                            <td className="group-name-cell sticky-col" style={{position: 'relative'}}>
+                              <div className="name-txt">{member.name}</div>
+                              <div className="team-badge" style={{fontSize: '10px', color: '#9ca3af'}}>{TEAM_LABELS[member.team]}</div>
                               <button
-                                className="group-remove-btn"
+                                className="row-del-btn"
                                 onClick={() => removeFromGroup(member.team, member.name)}
+                                style={{position: 'absolute', top: 4, right: 4, background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 4}}
                               >
-                                삭제
+                                ×
                               </button>
                             </td>
 
@@ -3595,59 +3612,68 @@ function App() {
         </div>
       )}
 
+      {/* --- 4. 통합된 그룹 추가/수정 모달 --- */}
       {showGroupAdd && (
         <div className="modal-backdrop" onClick={() => setShowGroupAdd(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">그룹 추가</div>
+            <div className="modal-title">{isEditGroupMode ? "그룹 설정 변경" : "새 그룹 생성"}</div>
 
-            <label className="label">새 그룹 이름</label>
-            <input
-              className="input"
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-              placeholder="예: 낚시"
-            />
+            <label className="label">그룹 이름</label>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <input
+                className="input"
+                style={{ flex: 1 }}
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                placeholder="예: 1조, 낚시모임"
+              />
+              <button className="modal-btn primary" style={{ width: 'auto', padding: '0 16px' }} onClick={handleGroupSubmit}>
+                {isEditGroupMode ? "이름변경" : "생성"}
+              </button>
+            </div>
 
-            <button className="modal-btn primary" style={{ marginTop: 10 }} onClick={createGroup}>그룹 생성</button>
+            <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
 
-            <label className="label" style={{ marginTop: 16 }}>현재 그룹</label>
-            <select className="select" value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
-              {Object.keys(groups).length === 0 ? (
-                <option value="">그룹 없음</option>
-              ) : (
-                Object.keys(groups).map((g) => (
-                  <option key={g} value={g}>{g}</option>
-                ))
-              )}
-            </select>
+            <div className="label">인원 추가 (현재 그룹: {currentGroup || "없음"})</div>
+            <div className="notice-box" style={{ padding: '8px', marginTop: '6px', fontSize: '13px' }}>
+              아래에서 소속과 이름을 선택하고 인원 추가를 누르세요.
+            </div>
 
-            <label className="label" style={{ marginTop: 12 }}>소속</label>
-            <select
-              className="select"
-              value={groupAddTeam}
-              onChange={(e) => {
-                setGroupAddTeam(e.target.value);
-                setGroupAddName("");
-              }}
-            >
-              {TEAM_ORDER.map((key) => (
-                <option key={key} value={key}>{TEAM_LABELS[key]}</option>
-              ))}
-            </select>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px' }}>
+              <div>
+                <label className="label" style={{ fontSize: '12px', marginBottom: '4px' }}>소속</label>
+                <select
+                  className="select"
+                  value={groupAddTeam}
+                  onChange={(e) => {
+                    setGroupAddTeam(e.target.value);
+                    setGroupAddName("");
+                  }}
+                >
+                  {TEAM_ORDER.map((key) => (
+                    <option key={key} value={key}>{TEAM_LABELS[key]}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="label" style={{ fontSize: '12px', marginBottom: '4px' }}>이름</label>
+                <select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}>
+                  <option value="">선택</option>
+                  {(effectiveData?.[groupAddTeam]?.people || []).map((person) => (
+                    <option key={`${groupAddTeam}-${person.name}`} value={person.name}>
+                      {person.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-            <label className="label" style={{ marginTop: 12 }}>이름</label>
-            <select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}>
-              <option value="">선택</option>
-              {(effectiveData?.[groupAddTeam]?.people || []).map((person) => (
-                <option key={`${groupAddTeam}-${person.name}`} value={person.name}>
-                  {person.name}
-                </option>
-              ))}
-            </select>
-
-            <div className="modal-actions">
-              <button className="modal-btn" onClick={() => setShowGroupAdd(false)}>취소</button>
-              <button className="modal-btn primary" onClick={addToGroup}>추가</button>
+            <div className="modal-actions" style={{ marginTop: '20px' }}>
+              <button className="modal-btn" onClick={() => setShowGroupAdd(false)}>닫기</button>
+              <button className="modal-btn primary" onClick={addToGroup} disabled={!currentGroup || !groupAddName}>
+                인원 추가
+              </button>
             </div>
           </div>
         </div>
