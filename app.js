@@ -1239,6 +1239,37 @@ function getWeekDates(baseDate) {
   return dates;
 }
 
+function getMonthOptions(centerDateStr, range = 12) {
+  const base = parseLocalDate(centerDateStr);
+  const list = [];
+
+  for (let i = -range; i <= range; i++) {
+    const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    list.push({
+      value,
+      label: `${d.getFullYear()}년 ${d.getMonth() + 1}월`,
+    });
+  }
+
+  return list;
+}
+
+function getDisplayMonthValue(dateStr) {
+  return String(dateStr || "").slice(0, 7);
+}
+
+function getMonthStartDate(monthValue) {
+  const [y, m] = String(monthValue || "").split("-").map(Number);
+  if (!y || !m) return getKoreaToday();
+  return `${y}-${String(m).padStart(2, "0")}-01`;
+}
+
+function formatMonthDay(dateStr) {
+  const d = parseLocalDate(dateStr);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
 function splitWorktime(worktime) {
   const raw = String(worktime || "").trim();
   if (!raw || raw === "----") {
@@ -1475,6 +1506,7 @@ function App() {
   const [groups, setGroups] = useState(initialGroups);
   const [currentGroup, setCurrentGroup] = useState(Object.keys(initialGroups)[0] || "");
   const [groupBaseDate, setGroupBaseDate] = useState(todayStr);
+  const [groupMonth, setGroupMonth] = useState(getDisplayMonthValue(todayStr));
   const [selectedGroupDate, setSelectedGroupDate] = useState("");
   const [showGroupAdd, setShowGroupAdd] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
@@ -1546,7 +1578,7 @@ function App() {
     setDraftTeam(selectedTeam || mySelection?.teamKey || "ks");
     setDraftName(String(mySelection?.name || "").trim());
     setDraftCode(String(mySelection?.code || "").trim());
-  }, [allowProfileEdit]);
+  }, [allowProfileEdit, selectedTeam, mySelection]);
 
   useEffect(() => {
     if (!allowProfileEdit) return;
@@ -1583,6 +1615,13 @@ function App() {
     setupSourceData,
     data,
   ]);
+
+  useEffect(() => {
+    const nextMonth = getDisplayMonthValue(groupBaseDate);
+    if (groupMonth !== nextMonth) {
+      setGroupMonth(nextMonth);
+    }
+  }, [groupBaseDate, groupMonth]);
 
   function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
     const currentTeamKey = mySelection?.teamKey || "";
@@ -1773,7 +1812,6 @@ function App() {
     };
   }, []);
 
-  // 초기 설정 직후에만 추가 원격 체크
   useEffect(() => {
     let cancelled = false;
 
@@ -2044,9 +2082,13 @@ function App() {
     if (
       mySelection?.teamKey === viewTeam &&
       mySelection?.code &&
-      String(mySelection?.name || "").trim()
+      String(mySelection?.name || "").trim() &&
+      !hasRemoteRosterForTeam(viewTeam, remoteRoster)
     ) {
-      const myCode = normalizeToFixedCode(currentViewTeam, mySelection.code);
+      const myCode = normalizeToFixedCode(
+        currentViewTeam,
+        getMyCodeForDate(currentViewTeam, browseDate, mySelection)
+      );
 
       grid = grid.map((cell) => {
         if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) {
@@ -2133,9 +2175,13 @@ function App() {
     if (
       viewTeam === mySelection?.teamKey &&
       mySelection?.code &&
-      String(mySelection?.name || "").trim()
+      String(mySelection?.name || "").trim() &&
+      !hasRemoteRosterForTeam(viewTeam, remoteRoster)
     ) {
-      const myCode = normalizeToFixedCode(team, mySelection.code);
+      const myCode = normalizeToFixedCode(
+        team,
+        getMyCodeForDate(team, browseDate, mySelection)
+      );
 
       grid = grid.map((cell) => {
         if (normalizeToFixedCode(team, cell.code) === myCode) {
@@ -2168,6 +2214,17 @@ function App() {
   const monthHeaderDate = parseLocalDate(monthDate);
   const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
   const groupMembers = groups[currentGroup] || [];
+  const groupMonthOptions = useMemo(() => getMonthOptions(todayStr, 12), [todayStr]);
+  const groupHeaderMonthLabel = useMemo(() => {
+    const [y, m] = String(groupMonth || "").split("-");
+    if (!y || !m) return "";
+    return `${Number(m)}월`;
+  }, [groupMonth]);
+
+  const groupHeaderTitle = useMemo(() => {
+    const groupLabel = currentGroup || "그룹 없음";
+    return `${groupHeaderMonthLabel} / ${groupLabel}`;
+  }, [groupHeaderMonthLabel, currentGroup]);
 
   useEffect(() => {
     if (!weekDates.length) return;
@@ -2175,6 +2232,20 @@ function App() {
       setSelectedGroupDate(weekDates[0]);
     }
   }, [weekDates, selectedGroupDate]);
+
+  function handleGroupMonthChange(nextMonthValue) {
+    const today = getKoreaToday();
+    const todayMonth = getDisplayMonthValue(today);
+
+    setGroupMonth(nextMonthValue);
+
+    if (nextMonthValue === todayMonth) {
+      setGroupBaseDate(today);
+      return;
+    }
+
+    setGroupBaseDate(getMonthStartDate(nextMonthValue));
+  }
 
   function switchTab(tabName) {
     const currentTab = activeTabRef.current;
@@ -2199,6 +2270,7 @@ function App() {
       } else if (tabName === "month") {
         setMonthDate(today);
       } else if (tabName === "group") {
+        setGroupMonth(getDisplayMonthValue(today));
         setGroupBaseDate(today);
         setSelectedGroupDate("");
       }
@@ -2425,6 +2497,7 @@ function App() {
     setBrowseDate(today);
     setMonthDate(today);
     setGroupBaseDate(today);
+    setGroupMonth(getDisplayMonthValue(today));
     setSelectedGroupDate("");
 
     if (effectiveData) {
@@ -2489,6 +2562,7 @@ function App() {
     setBrowseDate(today);
     setMonthDate(today);
     setGroupBaseDate(today);
+    setGroupMonth(getDisplayMonthValue(today));
     setSelectedGroupDate("");
   }
 
@@ -2627,6 +2701,7 @@ function App() {
     setGroups(next);
     saveGroups(next);
     setCurrentGroup(name);
+    setNewGroupName("");
   }
 
   function addToGroup() {
@@ -2661,6 +2736,7 @@ function App() {
     saveGroups(next);
     setCurrentGroup(targetGroup);
     setNewGroupName("");
+    setGroupAddName("");
     setShowGroupAdd(false);
   }
 
@@ -3180,7 +3256,44 @@ function App() {
             {activeTab === "group" && (
               <div className="group-page tab-page">
                 <div className="group-topbar">
-                  <button className="group-nav-btn" onClick={() => setGroupBaseDate(addDays(groupBaseDate, -7))}>-</button>
+                  <button
+                    className="group-nav-btn"
+                    onClick={() => setGroupBaseDate(addDays(groupBaseDate, -7))}
+                  >
+                    -
+                  </button>
+
+                  <div className="group-header-title">
+                    {groupHeaderTitle}
+                  </div>
+
+                  <button
+                    className="group-add-btn"
+                    onClick={() => setShowGroupAdd(true)}
+                  >
+                    + 그룹추가
+                  </button>
+
+                  <button
+                    className="group-nav-btn"
+                    onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}
+                  >
+                    +
+                  </button>
+                </div>
+
+                <div className="group-toolbar">
+                  <select
+                    className="group-select"
+                    value={groupMonth}
+                    onChange={(e) => handleGroupMonthChange(e.target.value)}
+                  >
+                    {groupMonthOptions.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
 
                   <select
                     className="group-select"
@@ -3195,9 +3308,6 @@ function App() {
                       ))
                     )}
                   </select>
-
-                  <button className="group-add-btn" onClick={() => setShowGroupAdd(true)}>추가하기</button>
-                  <button className="group-nav-btn" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>+</button>
                 </div>
 
                 <div className="group-table-wrap">
@@ -3226,7 +3336,7 @@ function App() {
                               >
                                 {weekdayShort(date)}
                               </div>
-                              <div>{parseLocalDate(date).getDate()}</div>
+                              <div>{formatMonthDay(date)}</div>
                             </th>
                           );
                         })}
@@ -3512,7 +3622,14 @@ function App() {
             </select>
 
             <label className="label" style={{ marginTop: 12 }}>소속</label>
-            <select className="select" value={groupAddTeam} onChange={(e) => setGroupAddTeam(e.target.value)}>
+            <select
+              className="select"
+              value={groupAddTeam}
+              onChange={(e) => {
+                setGroupAddTeam(e.target.value);
+                setGroupAddName("");
+              }}
+            >
               {TEAM_ORDER.map((key) => (
                 <option key={key} value={key}>{TEAM_LABELS[key]}</option>
               ))}
