@@ -827,19 +827,6 @@ function normalizeRemoteRosterShape(input) {
         }))
         .filter((row) => row.code && row.name);
     });
-
-    TEAM_ORDER.forEach((teamKey) => {
-      result[teamKey].sort((a, b) => {
-        const codeCompare = normalizeCodeKey(a.code).localeCompare(normalizeCodeKey(b.code), "ko");
-        if (codeCompare !== 0) return codeCompare;
-
-        const nameCompare = String(a.name || "").localeCompare(String(b.name || ""), "ko");
-        if (nameCompare !== 0) return nameCompare;
-
-        return String(a.employeeId || "").localeCompare(String(b.employeeId || ""), "ko");
-      });
-    });
-
     return result;
   }
 
@@ -862,18 +849,6 @@ function normalizeRemoteRosterShape(input) {
       code: gyobun,
       employeeId,
       name,
-    });
-  });
-
-  TEAM_ORDER.forEach((teamKey) => {
-    result[teamKey].sort((a, b) => {
-      const codeCompare = normalizeCodeKey(a.code).localeCompare(normalizeCodeKey(b.code), "ko");
-      if (codeCompare !== 0) return codeCompare;
-
-      const nameCompare = String(a.name || "").localeCompare(String(b.name || ""), "ko");
-      if (nameCompare !== 0) return nameCompare;
-
-      return String(a.employeeId || "").localeCompare(String(b.employeeId || ""), "ko");
     });
   });
 
@@ -995,41 +970,6 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
       };
     })
     .filter((item) => item.name);
-}
-
-function buildRemoteExactGrid(teamKey, team, remoteRoster, overrides = {}) {
-  const fixedCodes = getGyobunOrder(team);
-  const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : [];
-  const originalPeople = Array.isArray(team?.people) ? team.people : [];
-
-  return fixedCodes
-    .map((slotCode, idx) => {
-      const found = rows.find(
-        (row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode)
-      );
-
-      const fallback =
-        originalPeople.find(
-          (p) => normalizeCodeKey(p.baseCode) === normalizeCodeKey(slotCode)
-        ) ||
-        originalPeople[idx] ||
-        null;
-
-      const name = String(found?.name || fallback?.name || "").trim();
-      if (!name || shouldHideName(name)) return null;
-
-      const override = overrides[getOverrideKey(teamKey, name)] || {};
-
-      return {
-        idx: fallback?.idx ?? idx,
-        name,
-        displayName: override.alias || name,
-        code: slotCode,
-        customColor: override.color || "",
-        employeeId: found?.employeeId || fallback?.employeeId || "",
-      };
-    })
-    .filter(Boolean);
 }
 
 function getRemoteAnchorBaseDate(team) {
@@ -1185,10 +1125,6 @@ function applyRemoteRosterNamesForSetup(baseData, remoteRoster) {
   });
 
   return next;
-}
-
-function buildTeamAnchorFromRemote(teamKey, team, remoteRoster) {
-  return buildTeamAnchorFromZip(team);
 }
 
 function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection = null) {
@@ -1553,10 +1489,6 @@ function App() {
       : currentEditDayType === "sat"
       ? "토요일"
       : "휴일";
-
-  function getExactRemoteDate() {
-    return remoteRosterDate || getGlobalRemoteRosterDate() || getKoreaToday();
-  }
 
   useEffect(() => {
     activeTabRef.current = activeTab;
@@ -1950,58 +1882,6 @@ function App() {
     setupSourceData,
     data,
     profileAnchorDate,
-  ]);
-
-  async function checkRemoteRosterAfterEnter() {
-    try {
-      if (remoteLoading) return;
-      if (!data) return;
-      if (initialRemoteChecked) return;
-      if (allowProfileEdit) return;
-      if (!mySelection?.teamKey || !mySelection?.name || !mySelection?.code) return;
-
-      setRemoteLoading(true);
-
-      const json = await fetchRemoteRosterJsonp(8000);
-      const next = normalizeRemoteRosterShape(json);
-      const hasAny = hasAnyRemoteRoster(next);
-
-      if (!hasAny) {
-        setInitialRemoteChecked(true);
-        return;
-      }
-
-      const nextSig = getRemoteRosterSignature(next);
-      const lastAckSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
-
-      if (nextSig !== lastAckSig) {
-        setPendingRosterJson(json);
-        setShowUpdatePopup(true);
-      }
-
-      setInitialRemoteChecked(true);
-    } catch (e) {
-      console.log("앱 진입 후 원격 체크 실패", e);
-      setInitialRemoteChecked(true);
-    } finally {
-      setRemoteLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    if (!data) return;
-    if (initialRemoteChecked) return;
-    if (allowProfileEdit) return;
-    if (!mySelection?.teamKey || !mySelection?.name || !mySelection?.code) return;
-
-    checkRemoteRosterAfterEnter();
-  }, [
-    data,
-    initialRemoteChecked,
-    allowProfileEdit,
-    mySelection?.teamKey,
-    mySelection?.name,
-    mySelection?.code,
   ]);
 
   const currentViewTeam = effectiveData?.[viewTeam] || null;
