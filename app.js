@@ -976,13 +976,7 @@ function getRemoteAnchorBaseDate(team) {
   return getGlobalBaseDate() || getZipBaseDate(team);
 }
 
-function buildRemoteShiftedGrid(
-  teamKey,
-  team,
-  remoteRoster,
-  targetDate,
-  overrides = {}
-) {
+function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrides = {}) {
   const fixedCodes = getGyobunOrder(team);
   const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : [];
   const originalPeople = Array.isArray(team?.people) ? team.people : [];
@@ -1132,15 +1126,7 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
     return buildTeamAnchorFromZip(team);
   }
 
-  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
-  if (remoteRow?.code) {
-    return {
-      name,
-      code: normalizeToFixedCode(team, remoteRow.code),
-      anchorDate: getRemoteAnchorBaseDate(team),
-    };
-  }
-
+  // 1순위: 사용자가 직접 입력해서 저장한 내 정보
   if (
     mySelection?.teamKey === teamKey &&
     samePersonName(mySelection?.name, name) &&
@@ -1155,6 +1141,17 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
     };
   }
 
+  // 2순위: 공용데이터
+  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
+  if (remoteRow?.code) {
+    return {
+      name,
+      code: normalizeToFixedCode(team, remoteRow.code),
+      anchorDate: getRemoteAnchorBaseDate(team),
+    };
+  }
+
+  // 3순위: ZIP 기본데이터
   const zipPerson = findZipPersonByName(team, name);
   if (zipPerson?.baseCode) {
     return {
@@ -1528,7 +1525,7 @@ function App() {
 
   function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
     const currentTeamKey = mySelection?.teamKey || "";
-    const currentName = mySelection?.name || "";
+    const currentName = String(mySelection?.name || "").trim();
     if (!currentTeamKey || !currentName) return;
 
     const teamSource =
@@ -1536,6 +1533,11 @@ function App() {
       data?.[currentTeamKey] ||
       effectiveData?.[currentTeamKey];
     if (!teamSource) return;
+
+    // 사용자가 직접 입력한 이름은 최우선. 공용데이터 이름이 달라도 덮어쓰지 않음.
+    if (mySelection?.code) {
+      return;
+    }
 
     const remoteRow = findRemoteRowByName(currentTeamKey, currentName, nextRemoteRoster);
     if (!remoteRow?.code) return;
@@ -1681,7 +1683,7 @@ function App() {
         const hasLocalZipBase = !!parsedSaved?.data || !!savedZip?.blob;
         const hasSavedProfile =
           !!initialSelection?.teamKey &&
-          !!initialSelection?.name &&
+          !!String(initialSelection?.name || "").trim() &&
           !!initialSelection?.code;
 
         if (hasLocalZipBase && hasSavedProfile) {
@@ -1789,7 +1791,7 @@ function App() {
   useEffect(() => {
     if (!effectiveData) return;
 
-    if (mySelection?.teamKey && mySelection?.name) {
+    if (mySelection?.teamKey && String(mySelection?.name || "").trim()) {
       const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(
         effectiveData,
         remoteRoster,
@@ -1820,7 +1822,7 @@ function App() {
 
     const teamKey = selectedTeam;
     const currentName =
-      mySelection?.teamKey === teamKey ? mySelection?.name || "" : "";
+      mySelection?.teamKey === teamKey ? String(mySelection?.name || "").trim() : "";
     if (!currentName) return;
 
     const team = setupSourceData?.[teamKey] || data?.[teamKey];
@@ -1844,6 +1846,7 @@ function App() {
 
     let nextCode = "";
 
+    // 이름이 기존 데이터에 있을 때만 자동 채움
     const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster);
     if (remoteRow?.code) {
       nextCode = normalizeToFixedCode(team, remoteRow.code);
@@ -1888,13 +1891,23 @@ function App() {
 
   const myInfo = useMemo(() => {
     const myTeamKey = mySelection?.teamKey || selectedTeam;
-    const myName = mySelection?.name || "";
+    const myName = String(mySelection?.name || "").trim();
     const team = effectiveData?.[myTeamKey];
     if (!team || !myName) return null;
 
     const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
-    const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster);
 
+    // 내 입력 이름은 항상 최우선: code는 mySelection 기준
+    if (mySelection?.teamKey === myTeamKey && mySelection?.code) {
+      const code = getMyCodeForDate(team, homeDate, mySelection);
+      return {
+        code,
+        time: pickWorktime(team, code, homeDate),
+        displayName: override.alias || myName,
+      };
+    }
+
+    const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster);
     if (remoteRow?.code) {
       const anchorDate = getRemoteAnchorBaseDate(team);
       const dayOffset = diffDays(anchorDate, homeDate);
@@ -1943,51 +1956,76 @@ function App() {
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return [];
 
+    let grid = [];
+
     if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
-      return buildRemoteShiftedGrid(
+      grid = buildRemoteShiftedGrid(
         viewTeam,
         currentViewTeam,
         remoteRoster,
         browseDate,
         overrides
       );
+    } else {
+      let anchorName = "";
+      let anchorCode = "";
+      let anchorDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
+
+      if (
+        mySelection?.teamKey === viewTeam &&
+        String(mySelection?.name || "").trim() &&
+        mySelection?.code
+      ) {
+        anchorName = mySelection.name;
+        anchorCode = normalizeToFixedCode(currentViewTeam, mySelection.code);
+        anchorDate =
+          mySelection.anchorDate ||
+          getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
+      } else {
+        const teamAnchor = buildTeamAnchorFromZip(currentViewTeam);
+        anchorName = teamAnchor?.name || "";
+        anchorCode = normalizeToFixedCode(currentViewTeam, teamAnchor?.code || "");
+        anchorDate =
+          teamAnchor?.anchorDate ||
+          getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
+      }
+
+      if (!anchorName || !anchorCode) {
+        grid = buildAssignedGrid(currentViewTeam, "", "", 0, overrides);
+      } else {
+        const dayOffset = diffDays(anchorDate, browseDate);
+        grid = buildAssignedGrid(
+          currentViewTeam,
+          anchorName,
+          anchorCode,
+          dayOffset,
+          overrides
+        );
+      }
     }
 
-    let anchorName = "";
-    let anchorCode = "";
-    let anchorDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
-
+    // 내 입력 이름은 항상 최우선
     if (
-      mySelection?.teamKey === viewTeam &&
-      mySelection?.name &&
+      viewTeam === mySelection?.teamKey &&
+      String(mySelection?.name || "").trim() &&
       mySelection?.code
     ) {
-      anchorName = mySelection.name;
-      anchorCode = normalizeToFixedCode(currentViewTeam, mySelection.code);
-      anchorDate =
-        mySelection.anchorDate ||
-        getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
-    } else {
-      const teamAnchor = buildTeamAnchorFromZip(currentViewTeam);
-      anchorName = teamAnchor?.name || "";
-      anchorCode = normalizeToFixedCode(currentViewTeam, teamAnchor?.code || "");
-      anchorDate =
-        teamAnchor?.anchorDate ||
-        getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
+      const myCodeForDate = getMyCodeForDate(currentViewTeam, browseDate, mySelection);
+
+      grid = grid.map((item) => {
+        if (normalizeCodeKey(item.code) !== normalizeCodeKey(myCodeForDate)) {
+          return item;
+        }
+
+        return {
+          ...item,
+          name: mySelection.name,
+          displayName: mySelection.name,
+        };
+      });
     }
 
-    if (!anchorName || !anchorCode) {
-      return buildAssignedGrid(currentViewTeam, "", "", 0, overrides);
-    }
-
-    const dayOffset = diffDays(anchorDate, browseDate);
-    return buildAssignedGrid(
-      currentViewTeam,
-      anchorName,
-      anchorCode,
-      dayOffset,
-      overrides
-    );
+    return grid;
   }, [
     currentViewTeam,
     viewTeam,
@@ -2039,6 +2077,27 @@ function App() {
       );
     }
 
+    // 내 입력 이름은 항상 최우선
+    if (
+      viewTeam === mySelection?.teamKey &&
+      String(mySelection?.name || "").trim() &&
+      mySelection?.code
+    ) {
+      const myCodeForDate = getMyCodeForDate(team, browseDate, mySelection);
+
+      grid = grid.map((item) => {
+        if (normalizeCodeKey(item.code) !== normalizeCodeKey(myCodeForDate)) {
+          return item;
+        }
+
+        return {
+          ...item,
+          name: mySelection.name,
+          displayName: mySelection.name,
+        };
+      });
+    }
+
     const diaOrder = getDiaOrder(team);
     return diaOrder.map((code) => {
       const found = grid.find(
@@ -2052,7 +2111,7 @@ function App() {
         displayName: found?.displayName || found?.name || "-",
       };
     });
-  }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam]);
+  }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthDate), [monthDate]);
   const monthHeaderDate = parseLocalDate(monthDate);
@@ -2166,7 +2225,7 @@ function App() {
 
         const defaultTeam = mySelection?.teamKey || selectedTeam || "ks";
         const defaultName =
-          mySelection?.name ||
+          String(mySelection?.name || "").trim() ||
           nextSetupData?.[defaultTeam]?.info?.baseName ||
           nextSetupData?.[defaultTeam]?.people?.[0]?.name ||
           "";
@@ -2322,13 +2381,14 @@ function App() {
   }
 
   function applyInitialSelection(teamKey, name, code) {
-    if (!teamKey || !name || !code) return;
+    const cleanName = String(name || "").trim();
+    if (!teamKey || !cleanName || !code) return;
 
     const nextAnchorDate = profileAnchorDate || getKoreaToday();
 
     const nextSelection = {
       teamKey,
-      name,
+      name: cleanName,
       code,
       anchorDate: nextAnchorDate,
     };
@@ -2349,7 +2409,7 @@ function App() {
         effectiveData,
         remoteRoster,
         teamKey,
-        name,
+        cleanName,
         nextSelection
       );
       setTeamAnchors(nextAnchors);
@@ -2607,7 +2667,7 @@ function App() {
   const canEnterApp =
     !!effectiveData &&
     !!mySelection?.teamKey &&
-    !!mySelection?.name &&
+    !!String(mySelection?.name || "").trim() &&
     !!mySelection?.code &&
     !allowProfileEdit;
 
@@ -2658,8 +2718,10 @@ function App() {
             </select>
 
             <label className="label" style={{ marginTop: 12 }}>내 이름</label>
-            <select
-              className="select"
+            <input
+              className="input"
+              type="text"
+              placeholder="이름 직접 입력 (없으면 새로 등록됩니다)"
               value={mySelection?.teamKey === selectedTeam ? mySelection?.name || "" : ""}
               onChange={(e) => {
                 const nextName = e.target.value;
@@ -2673,14 +2735,10 @@ function App() {
                   anchorDate: nextAnchorDate,
                 }));
               }}
-            >
-              <option value="">선택</option>
-              {(setupSourceData?.[selectedTeam]?.people || []).map((person) => (
-                <option key={`${person.idx}-${person.name}`} value={person.name}>
-                  {person.name}
-                </option>
-              ))}
-            </select>
+            />
+            <div className="help-text" style={{ marginTop: 6 }}>
+              기본데이터에 이름이 없으면 선택한 교번 기준으로 사용됩니다.
+            </div>
 
             <div className="modal-actions" style={{ justifyContent: "flex-start", marginTop: 10 }}>
               <button
@@ -2738,7 +2796,7 @@ function App() {
             />
 
             <div className="help-text" style={{ marginTop: 10 }}>
-              이름이 최신 현재배정에 있으면 오늘 교번은 자동으로 채워집니다.
+              기존 이름이면 자동으로 교번이 채워지고, 없으면 교번을 직접 선택해서 사용합니다.
             </div>
 
             <div className="modal-actions">
@@ -2751,7 +2809,7 @@ function App() {
                     mySelection?.code
                   )
                 }
-                disabled={!mySelection?.name || !mySelection?.code}
+                disabled={!String(mySelection?.name || "").trim() || !mySelection?.code}
               >
                 시작하기
               </button>
@@ -2858,7 +2916,7 @@ function App() {
                     </div>
 
                     <div className="main-subinfo">
-                      {TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {mySelection?.name || "-"}
+                      {TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}
                     </div>
 
                     {remoteLoading && (
@@ -2921,9 +2979,17 @@ function App() {
                     }}
                   >
                     {visibleAllGrid.map((item) => {
+                      const myCodeForDate =
+                        viewTeam === mySelection?.teamKey && mySelection?.code
+                          ? getMyCodeForDate(currentViewTeam, browseDate, mySelection)
+                          : "";
+
                       const isMine =
                         viewTeam === (mySelection?.teamKey || selectedTeam) &&
-                        samePersonName(item.name, mySelection?.name);
+                        (
+                          samePersonName(item.name, mySelection?.name) ||
+                          (myCodeForDate && normalizeCodeKey(item.code) === normalizeCodeKey(myCodeForDate))
+                        );
 
                       const isToday = browseDate === getKoreaToday();
 
@@ -2936,7 +3002,7 @@ function App() {
 
                       return (
                         <div
-                          key={`${item.idx}-${item.name}`}
+                          key={`${item.idx}-${item.code}-${item.displayName}`}
                           className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`}
                           style={customStyle}
                           onClick={() => handleAllCellTap(item)}
@@ -2998,7 +3064,16 @@ function App() {
                         borderBottom: idx === diaList.length - 1 ? "none" : "1px solid #e5e7eb",
                         fontSize: 18,
                         background:
-                          viewTeam === selectedTeam && samePersonName(item.name, mySelection?.name)
+                          viewTeam === selectedTeam &&
+                          (
+                            samePersonName(item.name, mySelection?.name) ||
+                            (
+                              mySelection?.teamKey === viewTeam &&
+                              mySelection?.code &&
+                              normalizeCodeKey(item.code) ===
+                                normalizeCodeKey(getMyCodeForDate(currentViewTeam, browseDate, mySelection))
+                            )
+                          )
                             ? "#eef6ff"
                             : "#ffffff",
                         cursor: "pointer",
@@ -3318,8 +3393,10 @@ function App() {
                 </select>
 
                 <label className="label" style={{ marginTop: 12 }}>내 이름</label>
-                <select
-                  className="select"
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="이름 직접 입력 (없으면 새로 등록됩니다)"
                   value={mySelection?.teamKey === selectedTeam ? mySelection?.name || "" : ""}
                   onChange={(e) => {
                     const nextName = e.target.value;
@@ -3333,14 +3410,10 @@ function App() {
                       anchorDate: nextAnchorDate,
                     }));
                   }}
-                >
-                  <option value="">선택</option>
-                  {(setupSourceData?.[selectedTeam]?.people || []).map((person) => (
-                    <option key={`${person.idx}-${person.name}`} value={person.name}>
-                      {person.name}
-                    </option>
-                  ))}
-                </select>
+                />
+                <div className="help-text" style={{ marginTop: 6 }}>
+                  기본데이터에 이름이 없으면 선택한 교번 기준으로 저장됩니다.
+                </div>
 
                 <div className="modal-actions" style={{ justifyContent: "flex-start", marginTop: 10 }}>
                   <button
@@ -3402,7 +3475,7 @@ function App() {
                         mySelection?.code
                       )
                     }
-                    disabled={!mySelection?.name || !mySelection?.code}
+                    disabled={!String(mySelection?.name || "").trim() || !mySelection?.code}
                   >
                     저장
                   </button>
