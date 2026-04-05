@@ -506,12 +506,15 @@ button:active {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 0 4px;
-  font-size: 16px;
+  padding: 0 6px;
+  font-size: 17px;
   line-height: 1.08;
   font-weight: 800;
   word-break: keep-all;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .all-edit-btn {
@@ -541,12 +544,15 @@ button:active {
   border: 0;
   background: linear-gradient(180deg, #8db1ff 0%, #6d93ef 100%);
   color: #0f172a;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
   padding: 11px 0;
   border-radius: 18px;
   cursor: pointer;
   line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   box-shadow:
     0 8px 16px rgba(90, 130, 235, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
@@ -656,7 +662,7 @@ button:active {
 
 .all-name {
   margin-top: 3px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.2;
   font-weight: 700;
   color: #374151;
@@ -693,7 +699,7 @@ button:active {
 }
 
 .all-grid-real.density-6 .all-name {
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .all-grid-real.density-5 .all-code {
@@ -701,7 +707,7 @@ button:active {
 }
 
 .all-grid-real.density-5 .all-name {
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .all-grid-real.density-4 .all-code {
@@ -709,7 +715,7 @@ button:active {
 }
 
 .all-grid-real.density-4 .all-name {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .month-calendar {
@@ -1272,8 +1278,12 @@ button:active {
   }
 
   .all-header-title {
-    font-size: 13px;
-    padding: 0 4px;
+    font-size: 14px;
+    padding: 0 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
 
   .all-team-tabs {
@@ -1283,9 +1293,12 @@ button:active {
   }
 
   .all-team-tab {
-    font-size: 12px;
+    font-size: 13px;
     padding: 9px 0;
     border-radius: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .view-dot {
@@ -1316,7 +1329,7 @@ button:active {
   }
 
   .all-name {
-    font-size: 8px;
+    font-size: 9px;
     margin-top: 2px;
   }
 
@@ -1325,7 +1338,7 @@ button:active {
   }
 
   .all-grid-real.density-6 .all-name {
-    font-size: 8px;
+    font-size: 9px;
     margin-top: 2px;
   }
 
@@ -1334,7 +1347,7 @@ button:active {
   }
 
   .all-grid-real.density-5 .all-name {
-    font-size: 8px;
+    font-size: 9px;
     margin-top: 2px;
   }
 
@@ -1343,7 +1356,7 @@ button:active {
   }
 
   .all-grid-real.density-4 .all-name {
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 2px;
   }
 
