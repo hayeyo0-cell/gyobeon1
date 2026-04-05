@@ -116,6 +116,10 @@ function samePersonName(a, b) {
   );
 }
 
+function hasPersonInTeam(team, name) {
+  return !!team?.people?.some((p) => samePersonName(p.name, name));
+}
+
 function parseLocalDate(dateStr) {
   const [y, m, d] = String(dateStr).split("-").map(Number);
   return new Date(y, (m || 1) - 1, d || 1);
@@ -1768,6 +1772,50 @@ function App() {
     };
   }, []);
 
+  // 초기 설정 완료 직후에도 한 번 더 업데이트 체크
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkRemoteAfterSetup() {
+      if (allowProfileEdit) return;
+      if (!effectiveData) return;
+      if (initialRemoteChecked) return;
+      if (showUpdatePopup) return;
+
+      try {
+        setRemoteLoading(true);
+
+        const json = await fetchRemoteRosterJsonp(6000);
+        if (cancelled) return;
+
+        const next = normalizeRemoteRosterShape(json);
+        const hasAny = hasAnyRemoteRoster(next);
+        const nextSig = getRemoteRosterSignature(next);
+        const currentAckSig =
+          localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || "";
+
+        if (hasAny && nextSig !== currentAckSig) {
+          setPendingRosterJson(json);
+          setShowUpdatePopup(true);
+        }
+
+        setInitialRemoteChecked(true);
+      } catch (e) {
+        console.log("초기 설정 후 원격 체크 실패", e);
+      } finally {
+        if (!cancelled) {
+          setRemoteLoading(false);
+        }
+      }
+    }
+
+    checkRemoteAfterSetup();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [allowProfileEdit, effectiveData, initialRemoteChecked, showUpdatePopup]);
+
   useEffect(() => {
     pathOpenRef.current = pathOpen;
   }, [pathOpen]);
@@ -1949,11 +1997,13 @@ function App() {
       let anchorCode = "";
       let anchorDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
 
-      if (
+      const canUseMyAnchorForTeam =
         mySelection?.teamKey === viewTeam &&
         String(mySelection?.name || "").trim() &&
-        mySelection?.code
-      ) {
+        mySelection?.code &&
+        hasPersonInTeam(currentViewTeam, mySelection.name);
+
+      if (canUseMyAnchorForTeam) {
         anchorName = mySelection.name;
         anchorCode = normalizeToFixedCode(currentViewTeam, mySelection.code);
         anchorDate =
@@ -1983,22 +2033,21 @@ function App() {
     }
 
     if (
-      viewTeam === mySelection?.teamKey &&
-      String(mySelection?.name || "").trim() &&
-      mySelection?.code
+      mySelection?.teamKey === viewTeam &&
+      mySelection?.code &&
+      String(mySelection?.name || "").trim()
     ) {
-      const myCodeForDate = getMyCodeForDate(currentViewTeam, browseDate, mySelection);
+      const myCode = normalizeToFixedCode(currentViewTeam, mySelection.code);
 
-      grid = grid.map((item) => {
-        if (normalizeCodeKey(item.code) !== normalizeCodeKey(myCodeForDate)) {
-          return item;
+      grid = grid.map((cell) => {
+        if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) {
+          return {
+            ...cell,
+            name: mySelection.name,
+            displayName: mySelection.name,
+          };
         }
-
-        return {
-          ...item,
-          name: mySelection.name,
-          displayName: mySelection.name,
-        };
+        return cell;
       });
     }
 
@@ -2030,6 +2079,12 @@ function App() {
 
     let grid = [];
 
+    const canUseMyAnchorForTeam =
+      viewTeam === mySelection?.teamKey &&
+      String(mySelection?.name || "").trim() &&
+      mySelection?.code &&
+      hasPersonInTeam(team, mySelection.name);
+
     if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
       grid = buildRemoteShiftedGrid(
         viewTeam,
@@ -2038,39 +2093,50 @@ function App() {
         browseDate,
         overrides
       );
+    } else if (canUseMyAnchorForTeam) {
+      grid = buildAssignedGrid(
+        team,
+        mySelection.name,
+        normalizeToFixedCode(team, mySelection.code),
+        diffDays(
+          mySelection.anchorDate ||
+            getResolvedBaseDate(viewTeam, team, remoteRoster),
+          browseDate
+        ),
+        overrides
+      );
     } else {
       const teamAnchor = buildTeamAnchorFromZip(team);
-      const dayOffset = diffDays(
-        teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster),
-        browseDate
-      );
 
       grid = buildAssignedGrid(
         team,
         teamAnchor.name,
         teamAnchor.code,
-        dayOffset,
+        diffDays(
+          teamAnchor.anchorDate ||
+            getResolvedBaseDate(viewTeam, team, remoteRoster),
+          browseDate
+        ),
         overrides
       );
     }
 
     if (
       viewTeam === mySelection?.teamKey &&
-      String(mySelection?.name || "").trim() &&
-      mySelection?.code
+      mySelection?.code &&
+      String(mySelection?.name || "").trim()
     ) {
-      const myCodeForDate = getMyCodeForDate(team, browseDate, mySelection);
+      const myCode = normalizeToFixedCode(team, mySelection.code);
 
-      grid = grid.map((item) => {
-        if (normalizeCodeKey(item.code) !== normalizeCodeKey(myCodeForDate)) {
-          return item;
+      grid = grid.map((cell) => {
+        if (normalizeToFixedCode(team, cell.code) === myCode) {
+          return {
+            ...cell,
+            name: mySelection.name,
+            displayName: mySelection.name,
+          };
         }
-
-        return {
-          ...item,
-          name: mySelection.name,
-          displayName: mySelection.name,
-        };
+        return cell;
       });
     }
 
