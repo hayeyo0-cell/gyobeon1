@@ -1128,14 +1128,13 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
 
   if (
     mySelection?.teamKey === teamKey &&
-    samePersonName(mySelection?.name, name) &&
-    mySelection?.code
+    samePersonName(mySelection?.name, name)
   ) {
     return {
       name,
-      code: normalizeToFixedCode(team, mySelection.code),
+      code: normalizeToFixedCode(team, mySelection?.code || ""),
       anchorDate:
-        String(mySelection.anchorDate || "").trim() ||
+        String(mySelection?.anchorDate || "").trim() ||
         getZipBaseDate(team),
     };
   }
@@ -1406,7 +1405,6 @@ function App() {
   const [remoteRoster, setRemoteRoster] = useState(initialAppliedRemoteRoster);
   const [remoteRosterDate, setRemoteRosterDate] = useState(cachedRemoteRosterDate || "");
   const [remoteLoading, setRemoteLoading] = useState(false);
-  const [refreshRosterMessage, setRefreshRosterMessage] = useState("");
   const [pendingRosterJson, setPendingRosterJson] = useState(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
   const [lastSeenPublishedAt, setLastSeenPublishedAt] = useState(
@@ -1736,12 +1734,8 @@ function App() {
 
       try {
         const hasLocalZipBase = !!parsedSaved?.data || !!savedZip?.blob;
-        const hasSavedProfile =
-          !!initialSelection?.teamKey &&
-          !!String(initialSelection?.name || "").trim() &&
-          !!initialSelection?.code;
 
-        if (hasLocalZipBase && hasSavedProfile) {
+        if (hasLocalZipBase) {
           setRemoteLoading(true);
 
           const json = await fetchRemoteRosterJsonp(6000);
@@ -2242,39 +2236,6 @@ function App() {
     await parseAndSetZip(file, true, false, remoteRoster, true);
   }
 
-  async function refreshLatestRoster(showAlert = true) {
-    try {
-      setRemoteLoading(true);
-      setRefreshRosterMessage("");
-
-      const json = await fetchRemoteRosterJsonp(8000);
-      const next = normalizeRemoteRosterShape(json);
-      const hasAny = hasAnyRemoteRoster(next);
-
-      if (!hasAny) {
-        throw new Error("배포된 최신 현재배정 데이터가 없습니다.");
-      }
-
-      acceptRemoteRoster(json, {
-        alertMessage: showAlert ? "배포된 최신 인원이 반영되었습니다." : "",
-        nextDataOverride: data,
-        syncMine: false,
-      });
-
-      setRefreshRosterMessage("배포된 최신 인원이 반영되었습니다.");
-    } catch (e) {
-      console.error(e);
-      setRefreshRosterMessage("최신 인원 불러오기에 실패했습니다.");
-
-      if (showAlert) {
-        alert(`최신 인원 불러오기 실패: ${e.message || e}`);
-      }
-    } finally {
-      setRemoteLoading(false);
-      setTimeout(() => setRefreshRosterMessage(""), 1800);
-    }
-  }
-
   async function saveSharedConfig() {
     if (!isAdminUser) {
       alert("관리자만 저장할 수 있습니다.");
@@ -2721,22 +2682,6 @@ function App() {
             <div className="help-text" style={{ marginTop: 6 }}>
               기본데이터에 이름이 없으면 선택한 교번 기준으로 사용됩니다.
             </div>
-
-            <div className="modal-actions" style={{ justifyContent: "flex-start", marginTop: 10 }}>
-              <button
-                className="modal-btn"
-                onClick={() => refreshLatestRoster(true)}
-                disabled={remoteLoading}
-              >
-                {remoteLoading ? "불러오는 중..." : "이름이 없나요? 최신 인원 불러오기"}
-              </button>
-            </div>
-
-            {!!refreshRosterMessage && (
-              <div className="help-text" style={{ color: "#2563eb", marginTop: 6 }}>
-                {refreshRosterMessage}
-              </div>
-            )}
 
             <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
             <select
@@ -3371,16 +3316,6 @@ function App() {
                   기본데이터에 이름이 없으면 선택한 교번 기준으로 저장됩니다.
                 </div>
 
-                <div className="modal-actions" style={{ justifyContent: "flex-start", marginTop: 10 }}>
-                  <button
-                    className="modal-btn"
-                    onClick={() => refreshLatestRoster(true)}
-                    disabled={remoteLoading}
-                  >
-                    {remoteLoading ? "불러오는 중..." : "이름이 없나요? 최신 인원 불러오기"}
-                  </button>
-                </div>
-
                 <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
                 <select
                   className="select"
@@ -3447,14 +3382,6 @@ function App() {
                 </div>
 
                 <div className="modal-actions">
-                  <button
-                    className="modal-btn"
-                    onClick={() => refreshLatestRoster(true)}
-                    disabled={remoteLoading || savingSharedConfig}
-                  >
-                    {remoteLoading ? "불러오는 중..." : "배포된 최신 인원 새로고침"}
-                  </button>
-
                   <button
                     className="modal-btn"
                     onClick={publishRoster}
