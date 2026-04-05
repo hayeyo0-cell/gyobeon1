@@ -75,6 +75,7 @@ button:active {
 .all-tab-grid-wrap,
 .group-page,
 .group-topbar,
+.group-toolbar,
 .group-table-wrap {
   width: 100%;
   margin-left: auto;
@@ -196,8 +197,19 @@ button:active {
   background: linear-gradient(180deg, #2aa55d 0%, #197a42 100%);
 }
 
+/* 그룹 추가 버튼은 가장 돋보이게 */
 .group-add-btn {
-  background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%);
+  background: linear-gradient(180deg, #7c3aed 0%, #6d28d9 100%);
+  box-shadow:
+    0 10px 22px rgba(109, 40, 217, 0.28),
+    0 4px 10px rgba(109, 40, 217, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  position: relative;
+  z-index: 2;
+}
+
+.group-add-btn:hover {
+  background: linear-gradient(180deg, #8751f1 0%, #7333de 100%);
 }
 
 .quick-btn.band {
@@ -414,14 +426,17 @@ button:active {
 .month-header-bar,
 .group-topbar {
   display: grid;
-  grid-template-columns: 48px 1fr 48px;
   gap: 8px;
   align-items: center;
   margin-bottom: 10px;
 }
 
+.month-header-bar {
+  grid-template-columns: 48px 1fr 48px;
+}
+
 .group-topbar {
-  grid-template-columns: 48px 1fr 112px 48px;
+  grid-template-columns: 48px minmax(0, 1fr) 120px 48px;
 }
 
 .month-nav-btn,
@@ -450,6 +465,36 @@ button:active {
   font-weight: 800;
   border: 1px solid #d7dce5;
   box-shadow: none;
+}
+
+.group-header-title {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 10px;
+  background: linear-gradient(180deg, #8db0ff 0%, #6f97f5 100%);
+  color: #0f172a;
+  border-radius: 18px;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.05;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid rgba(160, 185, 240, 0.9);
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.group-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .all-page {
@@ -1361,8 +1406,20 @@ button:active {
   }
 
   .group-topbar {
-    grid-template-columns: 42px 1fr 92px 42px;
+    grid-template-columns: 42px minmax(0, 1fr) 98px 42px;
     gap: 6px;
+  }
+
+  .group-header-title {
+    height: 44px;
+    font-size: 14px;
+    padding: 0 8px;
+    border-radius: 14px;
+  }
+
+  .group-toolbar {
+    gap: 6px;
+    margin-bottom: 8px;
   }
 
   .group-table {
