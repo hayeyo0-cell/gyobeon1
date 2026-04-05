@@ -1126,7 +1126,6 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
     return buildTeamAnchorFromZip(team);
   }
 
-  // 1순위: 사용자가 직접 입력해서 저장한 내 정보
   if (
     mySelection?.teamKey === teamKey &&
     samePersonName(mySelection?.name, name) &&
@@ -1141,7 +1140,6 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
     };
   }
 
-  // 2순위: 공용데이터
   const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster);
   if (remoteRow?.code) {
     return {
@@ -1151,7 +1149,6 @@ function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection =
     };
   }
 
-  // 3순위: ZIP 기본데이터
   const zipPerson = findZipPersonByName(team, name);
   if (zipPerson?.baseCode) {
     return {
@@ -1192,6 +1189,13 @@ function buildAllTeamsAutoAnchorsFromIdentity(
   });
 
   return result;
+}
+
+function getMyCodeForDate(team, dateStr, mySelection) {
+  if (!team || !mySelection?.code) return "";
+  const anchorDate = String(mySelection.anchorDate || "").trim() || getZipBaseDate(team);
+  const dayOffset = diffDays(anchorDate, dateStr);
+  return shiftCodeByDays(team, mySelection.code, dayOffset);
 }
 
 function getMonthMatrix(dateStr) {
@@ -1412,11 +1416,14 @@ function App() {
   const [worktimeVersion, setWorktimeVersion] = useState(0);
   const [activeTab, setActiveTab] = useState("home");
   const activeTabRef = useRef("home");
+
   const [selectedTeam, setSelectedTeam] = useState(initialSelection?.teamKey || "ks");
   const [viewTeam, setViewTeam] = useState(initialSelection?.teamKey || "ks");
+
   const [homeDate, setHomeDate] = useState(todayStr);
   const [browseDate, setBrowseDate] = useState(todayStr);
   const [monthDate, setMonthDate] = useState(todayStr);
+
   const [mySelection, setMySelection] = useState(
     initialSelection || {
       teamKey: "ks",
@@ -1425,15 +1432,22 @@ function App() {
       anchorDate: todayStr,
     }
   );
+
+  const [draftTeam, setDraftTeam] = useState(initialSelection?.teamKey || "ks");
+  const [draftName, setDraftName] = useState(String(initialSelection?.name || "").trim());
+  const [draftCode, setDraftCode] = useState(String(initialSelection?.code || "").trim());
+
   const [profileAnchorDate, setProfileAnchorDate] = useState(
     initialSelection?.anchorDate || todayStr
   );
+
   const [teamAnchors, setTeamAnchors] = useState({
     ks: { name: "", code: "", anchorDate: todayStr },
     my: { name: "", code: "", anchorDate: todayStr },
     wb: { name: "", code: "", anchorDate: todayStr },
     as: { name: "", code: "", anchorDate: todayStr },
   });
+
   const [remoteBaseDate, setRemoteBaseDate] = useState(cachedShared?.baseDate || "");
   const [savingSharedConfig, setSavingSharedConfig] = useState(false);
   const [overrides, setOverrides] = useState({});
@@ -1466,6 +1480,7 @@ function App() {
   const [groupAddName, setGroupAddName] = useState("");
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
+
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
 
@@ -1523,6 +1538,49 @@ function App() {
     });
   }, [homeDate, browseDate, monthDate, groupBaseDate]);
 
+  useEffect(() => {
+    if (!allowProfileEdit) return;
+    setDraftTeam(selectedTeam || mySelection?.teamKey || "ks");
+    setDraftName(String(mySelection?.name || "").trim());
+    setDraftCode(String(mySelection?.code || "").trim());
+  }, [allowProfileEdit]);
+
+  useEffect(() => {
+    if (!allowProfileEdit) return;
+
+    const teamKey = draftTeam || "ks";
+    const currentName = String(draftName || "").trim();
+    if (!currentName) return;
+
+    const team = setupSourceData?.[teamKey] || data?.[teamKey];
+    if (!team) return;
+
+    if (String(draftCode || "").trim()) return;
+
+    let nextCode = "";
+
+    const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster);
+    if (remoteRow?.code) {
+      nextCode = normalizeToFixedCode(team, remoteRow.code);
+    } else {
+      const zipPerson = findZipPersonByName(team, currentName);
+      if (zipPerson?.baseCode) {
+        nextCode = normalizeToFixedCode(team, zipPerson.baseCode);
+      }
+    }
+
+    if (!nextCode) return;
+    setDraftCode(nextCode);
+  }, [
+    allowProfileEdit,
+    draftTeam,
+    draftName,
+    draftCode,
+    remoteRoster,
+    setupSourceData,
+    data,
+  ]);
+
   function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
     const currentTeamKey = mySelection?.teamKey || "";
     const currentName = String(mySelection?.name || "").trim();
@@ -1534,10 +1592,7 @@ function App() {
       effectiveData?.[currentTeamKey];
     if (!teamSource) return;
 
-    // 사용자가 직접 입력한 이름은 최우선. 공용데이터 이름이 달라도 덮어쓰지 않음.
-    if (mySelection?.code) {
-      return;
-    }
+    if (mySelection?.code) return;
 
     const remoteRow = findRemoteRowByName(currentTeamKey, currentName, nextRemoteRoster);
     if (!remoteRow?.code) return;
@@ -1817,76 +1872,6 @@ function App() {
     setTeamAnchors(nextAnchors);
   }, [effectiveData, remoteRoster, mySelection]);
 
-  useEffect(() => {
-    if (!allowProfileEdit) return;
-
-    const teamKey = selectedTeam;
-    const currentName =
-      mySelection?.teamKey === teamKey ? String(mySelection?.name || "").trim() : "";
-    if (!currentName) return;
-
-    const team = setupSourceData?.[teamKey] || data?.[teamKey];
-    if (!team) return;
-
-    const currentCode =
-      mySelection?.teamKey === teamKey ? String(mySelection?.code || "").trim() : "";
-
-    const nextAnchorDate = profileAnchorDate || getKoreaToday();
-
-    if (currentCode) {
-      if (String(mySelection?.anchorDate || "") !== String(nextAnchorDate)) {
-        setMySelection((prev) => ({
-          ...prev,
-          teamKey,
-          anchorDate: nextAnchorDate,
-        }));
-      }
-      return;
-    }
-
-    let nextCode = "";
-
-    // 이름이 기존 데이터에 있을 때만 자동 채움
-    const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster);
-    if (remoteRow?.code) {
-      nextCode = normalizeToFixedCode(team, remoteRow.code);
-    } else {
-      const zipPerson = findZipPersonByName(team, currentName);
-      if (zipPerson?.baseCode) {
-        nextCode = normalizeToFixedCode(team, zipPerson.baseCode);
-      }
-    }
-
-    if (!nextCode) {
-      if (String(mySelection?.anchorDate || "") !== String(nextAnchorDate)) {
-        setMySelection((prev) => ({
-          ...prev,
-          teamKey,
-          anchorDate: nextAnchorDate,
-        }));
-      }
-      return;
-    }
-
-    setMySelection((prev) => ({
-      ...prev,
-      teamKey,
-      code: nextCode,
-      anchorDate: nextAnchorDate,
-    }));
-  }, [
-    allowProfileEdit,
-    selectedTeam,
-    mySelection?.teamKey,
-    mySelection?.name,
-    mySelection?.code,
-    mySelection?.anchorDate,
-    remoteRoster,
-    setupSourceData,
-    data,
-    profileAnchorDate,
-  ]);
-
   const currentViewTeam = effectiveData?.[viewTeam] || null;
 
   const myInfo = useMemo(() => {
@@ -1897,7 +1882,6 @@ function App() {
 
     const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
 
-    // 내 입력 이름은 항상 최우선: code는 mySelection 기준
     if (mySelection?.teamKey === myTeamKey && mySelection?.code) {
       const code = getMyCodeForDate(team, homeDate, mySelection);
       return {
@@ -2004,7 +1988,6 @@ function App() {
       }
     }
 
-    // 내 입력 이름은 항상 최우선
     if (
       viewTeam === mySelection?.teamKey &&
       String(mySelection?.name || "").trim() &&
@@ -2077,7 +2060,6 @@ function App() {
       );
     }
 
-    // 내 입력 이름은 항상 최우선
     if (
       viewTeam === mySelection?.teamKey &&
       String(mySelection?.name || "").trim() &&
@@ -2238,6 +2220,11 @@ function App() {
           mySelection
         );
         setTeamAnchors(autoAnchors);
+
+        setDraftTeam(defaultTeam);
+        setDraftName("");
+        setDraftCode("");
+        setSelectedTeam(defaultTeam);
       }
     } catch (e) {
       console.error(e);
@@ -2421,7 +2408,12 @@ function App() {
 
   function startReconfigureProfile() {
     setAllowProfileEdit(true);
-    setSelectedTeam(mySelection?.teamKey || selectedTeam || "ks");
+
+    const nextTeam = mySelection?.teamKey || selectedTeam || "ks";
+    setSelectedTeam(nextTeam);
+    setDraftTeam(nextTeam);
+    setDraftName(String(mySelection?.name || "").trim());
+    setDraftCode(String(mySelection?.code || "").trim());
     setProfileAnchorDate(getKoreaToday());
   }
 
@@ -2445,6 +2437,10 @@ function App() {
       code: "",
       anchorDate: today,
     });
+
+    setDraftTeam("ks");
+    setDraftName("");
+    setDraftCode("");
 
     setProfileAnchorDate(today);
     setAllowProfileEdit(true);
@@ -2695,19 +2691,13 @@ function App() {
             <label className="label">내 소속</label>
             <select
               className="select"
-              value={selectedTeam}
+              value={draftTeam}
               onChange={(e) => {
                 const nextTeam = e.target.value;
-                const nextAnchorDate = profileAnchorDate || getKoreaToday();
-
+                setDraftTeam(nextTeam);
                 setSelectedTeam(nextTeam);
-                setMySelection((prev) => ({
-                  ...prev,
-                  teamKey: nextTeam,
-                  name: "",
-                  code: "",
-                  anchorDate: nextAnchorDate,
-                }));
+                setDraftName("");
+                setDraftCode("");
               }}
             >
               {TEAM_ORDER.map((key) => (
@@ -2722,18 +2712,10 @@ function App() {
               className="input"
               type="text"
               placeholder="이름 직접 입력 (없으면 새로 등록됩니다)"
-              value={mySelection?.teamKey === selectedTeam ? mySelection?.name || "" : ""}
+              value={draftName}
               onChange={(e) => {
-                const nextName = e.target.value;
-                const nextAnchorDate = profileAnchorDate || getKoreaToday();
-
-                setMySelection((prev) => ({
-                  ...prev,
-                  teamKey: selectedTeam,
-                  name: nextName,
-                  code: "",
-                  anchorDate: nextAnchorDate,
-                }));
+                setDraftName(e.target.value);
+                setDraftCode("");
               }}
             />
             <div className="help-text" style={{ marginTop: 6 }}>
@@ -2759,21 +2741,13 @@ function App() {
             <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
             <select
               className="select"
-              value={mySelection?.teamKey === selectedTeam ? mySelection?.code || "" : ""}
+              value={draftCode}
               onChange={(e) => {
-                const nextCode = e.target.value;
-                const nextAnchorDate = profileAnchorDate || getKoreaToday();
-
-                setMySelection((prev) => ({
-                  ...prev,
-                  teamKey: selectedTeam,
-                  code: nextCode,
-                  anchorDate: nextAnchorDate,
-                }));
+                setDraftCode(e.target.value);
               }}
             >
               <option value="">선택</option>
-              {(setupSourceData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
+              {(setupSourceData?.[draftTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
                 <option key={`${code}-${idx}`} value={code}>
                   {code}
                 </option>
@@ -2788,10 +2762,6 @@ function App() {
               onChange={(e) => {
                 const nextDate = e.target.value || getKoreaToday();
                 setProfileAnchorDate(nextDate);
-                setMySelection((prev) => ({
-                  ...prev,
-                  anchorDate: nextDate,
-                }));
               }}
             />
 
@@ -2804,12 +2774,12 @@ function App() {
                 className="modal-btn primary"
                 onClick={() =>
                   applyInitialSelection(
-                    selectedTeam,
-                    mySelection?.name,
-                    mySelection?.code
+                    draftTeam,
+                    draftName,
+                    draftCode
                   )
                 }
-                disabled={!String(mySelection?.name || "").trim() || !mySelection?.code}
+                disabled={!String(draftName || "").trim() || !draftCode}
               >
                 시작하기
               </button>
@@ -3372,19 +3342,13 @@ function App() {
                 <label className="label" style={{ marginTop: 12 }}>내 소속</label>
                 <select
                   className="select"
-                  value={selectedTeam}
+                  value={draftTeam}
                   onChange={(e) => {
                     const nextTeam = e.target.value;
-                    const nextAnchorDate = profileAnchorDate || getKoreaToday();
-
+                    setDraftTeam(nextTeam);
                     setSelectedTeam(nextTeam);
-                    setMySelection((prev) => ({
-                      ...prev,
-                      teamKey: nextTeam,
-                      name: "",
-                      code: "",
-                      anchorDate: nextAnchorDate,
-                    }));
+                    setDraftName("");
+                    setDraftCode("");
                   }}
                 >
                   {TEAM_ORDER.map((key) => (
@@ -3397,18 +3361,10 @@ function App() {
                   className="input"
                   type="text"
                   placeholder="이름 직접 입력 (없으면 새로 등록됩니다)"
-                  value={mySelection?.teamKey === selectedTeam ? mySelection?.name || "" : ""}
+                  value={draftName}
                   onChange={(e) => {
-                    const nextName = e.target.value;
-                    const nextAnchorDate = profileAnchorDate || getKoreaToday();
-
-                    setMySelection((prev) => ({
-                      ...prev,
-                      teamKey: selectedTeam,
-                      name: nextName,
-                      code: "",
-                      anchorDate: nextAnchorDate,
-                    }));
+                    setDraftName(e.target.value);
+                    setDraftCode("");
                   }}
                 />
                 <div className="help-text" style={{ marginTop: 6 }}>
@@ -3428,21 +3384,13 @@ function App() {
                 <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
                 <select
                   className="select"
-                  value={mySelection?.teamKey === selectedTeam ? mySelection?.code || "" : ""}
+                  value={draftCode}
                   onChange={(e) => {
-                    const nextCode = e.target.value;
-                    const nextAnchorDate = profileAnchorDate || getKoreaToday();
-
-                    setMySelection((prev) => ({
-                      ...prev,
-                      teamKey: selectedTeam,
-                      code: nextCode,
-                      anchorDate: nextAnchorDate,
-                    }));
+                    setDraftCode(e.target.value);
                   }}
                 >
                   <option value="">선택</option>
-                  {(setupSourceData?.[selectedTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
+                  {(setupSourceData?.[draftTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (
                     <option key={`${code}-${idx}`} value={code}>
                       {code}
                     </option>
@@ -3457,10 +3405,6 @@ function App() {
                   onChange={(e) => {
                     const nextDate = e.target.value || getKoreaToday();
                     setProfileAnchorDate(nextDate);
-                    setMySelection((prev) => ({
-                      ...prev,
-                      anchorDate: nextDate,
-                    }));
                   }}
                 />
 
@@ -3470,12 +3414,12 @@ function App() {
                     className="modal-btn primary"
                     onClick={() =>
                       applyInitialSelection(
-                        selectedTeam,
-                        mySelection?.name,
-                        mySelection?.code
+                        draftTeam,
+                        draftName,
+                        draftCode
                       )
                     }
-                    disabled={!String(mySelection?.name || "").trim() || !mySelection?.code}
+                    disabled={!String(draftName || "").trim() || !draftCode}
                   >
                     저장
                   </button>
