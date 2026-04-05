@@ -1482,6 +1482,7 @@ function App() {
   const [groupAddName, setGroupAddName] = useState("");
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
+  const [postSetupRemoteCheckNeeded, setPostSetupRemoteCheckNeeded] = useState(false);
 
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
@@ -1772,11 +1773,12 @@ function App() {
     };
   }, []);
 
-  // 초기 설정 완료 직후에도 한 번 더 업데이트 체크
+  // 초기 설정 직후에만 추가 원격 체크
   useEffect(() => {
     let cancelled = false;
 
     async function checkRemoteAfterSetup() {
+      if (!postSetupRemoteCheckNeeded) return;
       if (allowProfileEdit) return;
       if (!effectiveData) return;
       if (initialRemoteChecked) return;
@@ -1805,6 +1807,7 @@ function App() {
       } finally {
         if (!cancelled) {
           setRemoteLoading(false);
+          setPostSetupRemoteCheckNeeded(false);
         }
       }
     }
@@ -1814,7 +1817,13 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [allowProfileEdit, effectiveData, initialRemoteChecked, showUpdatePopup]);
+  }, [
+    postSetupRemoteCheckNeeded,
+    allowProfileEdit,
+    effectiveData,
+    initialRemoteChecked,
+    showUpdatePopup,
+  ]);
 
   useEffect(() => {
     pathOpenRef.current = pathOpen;
@@ -2431,6 +2440,7 @@ function App() {
 
     setAllowProfileEdit(false);
     setInitialRemoteChecked(false);
+    setPostSetupRemoteCheckNeeded(true);
   }
 
   function startReconfigureProfile() {
