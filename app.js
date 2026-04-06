@@ -1,30 +1,14 @@
 const { useEffect, useMemo, useRef, useState } = React;
 
-const TEAM_LABELS = {
-  ks: "경산",
-  my: "문양",
-  wb: "월배",
-  as: "안심",
-};
-
+const TEAM_LABELS = { ks: "경산", my: "문양", wb: "월배", as: "안심" };
 const TEAM_ORDER = ["ks", "my", "wb", "as"];
+const NIGHT_RANGE_BY_TEAM = { ks: { start: 21, end: 29 }, my: { start: 24, end: 34 }, wb: { start: 25, end: 37 }, as: { start: 25, end: 37 } };
 
-const NIGHT_RANGE_BY_TEAM = {
-  ks: { start: 21, end: 29 },
-  my: { start: 24, end: 34 },
-  wb: { start: 25, end: 37 },
-  as: { start: 25, end: 37 },
-};
-
-const ADMIN_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbw8NMVjH3J_Mt7SBymWOg44zvD4gd4GXkQB3r95QTl63M3aWqtf-OglLrG2rQPH7J6UjA/exec";
-
+const ADMIN_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw8NMVjH3J_Mt7SBymWOg44zvD4gd4GXkQB3r95QTl63M3aWqtf-OglLrG2rQPH7J6UjA/exec";
 const ADMIN_NAME = "권재림";
 const ADMIN_PASSWORD = "7717tutu";
-
 const KS_BAND_URL = "https://band.us/band/51746678/chat/C4U1ay";
-const KS_VACATION_URL =
-  "https://docs.google.com/spreadsheets/d/16ao5ogtUlILby9a7PjIoUpU9e-lLh8c_jHJGjtWAleM/edit?usp=drivesdk";
+const KS_VACATION_URL = "https://docs.google.com/spreadsheets/d/16ao5ogtUlILby9a7PjIoUpU9e-lLh8c_jHJGjtWAleM/edit?usp=drivesdk";
 
 let SHARED_REMOTE_BASE_DATE = "";
 let CURRENT_REMOTE_ROSTER_DATE = "";
@@ -35,13 +19,8 @@ function setGlobalRemoteRosterDate(value) { CURRENT_REMOTE_ROSTER_DATE = String(
 function getGlobalRemoteRosterDate() { return String(CURRENT_REMOTE_ROSTER_DATE || "").trim(); }
 
 const COLOR_OPTIONS = [
-  { value: "", label: "기본" },
-  { value: "#dbeafe", label: "하늘" },
-  { value: "#bbf7d0", label: "연두" },
-  { value: "#fde68a", label: "노랑" },
-  { value: "#fecaca", label: "분홍" },
-  { value: "#e9d5ff", label: "보라" },
-  { value: "#e5e7eb", label: "회색" },
+  { value: "", label: "기본" }, { value: "#dbeafe", label: "하늘" }, { value: "#bbf7d0", label: "연두" },
+  { value: "#fde68a", label: "노랑" }, { value: "#fecaca", label: "분홍" }, { value: "#e9d5ff", label: "보라" }, { value: "#e5e7eb", label: "회색" }
 ];
 
 const DEFAULT_HOLIDAYS_BY_YEAR = {
@@ -50,9 +29,7 @@ const DEFAULT_HOLIDAYS_BY_YEAR = {
 
 let RUNTIME_HOLIDAYS_BY_YEAR = { ...DEFAULT_HOLIDAYS_BY_YEAR };
 const HOLIDAY_FETCHING_YEARS = new Set();
-
 const DEFAULT_GYOBUN = ["2d", "대3", "16d", "휴1", "휴2", "대2", "14d", "24d", "24~", "휴3", "5d", "17d", "27d", "27~", "휴4", "3d", "13d", "23d", "23~", "휴5", "휴6", "대1", "15d", "22d", "22~", "휴7", "9d", "10d", "28d", "28~", "휴8", "4d", "20d", "25d", "25~", "휴9", "1d", "11d", "대4", "대4~", "휴10", "휴11", "7d", "18d", "29d", "29~", "휴12", "8d", "12d", "26d", "26~", "휴13", "휴14", "6d", "19d", "21d", "21~", "휴15"];
-
 const HIDDEN_NAME_KEYS = ["gb2601"];
 
 const LS_SHARED_CONFIG_CACHE = "gyobeon_shared_config_cache";
@@ -118,10 +95,7 @@ function parseLines(text) { return String(text || "").replace(/\r/g, "").split("
 function parseInfo(text) {
   const lines = parseLines(text); const tokens = lines.join(" ").split(/\s+/).filter(Boolean);
   const [year, month, day, baseCode, baseName, total] = tokens;
-  return {
-    raw: lines, baseDate: year && month && day ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null,
-    baseCode: baseCode || null, baseName: baseName || null, totalCount: total && !Number.isNaN(Number(total)) ? Number(total) : 0,
-  };
+  return { raw: lines, baseDate: year && month && day ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null, baseCode: baseCode || null, baseName: baseName || null, totalCount: total && !Number.isNaN(Number(total)) ? Number(total) : 0 };
 }
 
 function normalizeWorktimeLine(line) { return String(line || "").replace(/\s+/g, " ").trim().toLowerCase(); }
@@ -207,13 +181,7 @@ function parseZipToData(parsedFiles) {
 
 function loadOverrides() { try { return JSON.parse(localStorage.getItem("gyobeon_overrides") || "{}"); } catch { return {}; } }
 function saveOverrides(value) { localStorage.setItem("gyobeon_overrides", JSON.stringify(value)); }
-function cleanupNameOverrides() {
-  try {
-    const raw = localStorage.getItem("gyobeon_overrides"); if (!raw) return; const data = JSON.parse(raw); let changed = false;
-    Object.keys(data).forEach((key) => { const item = data[key]; if (item && typeof item === "object" && "name" in item) { delete item.name; changed = true; } });
-    if (changed) localStorage.setItem("gyobeon_overrides", JSON.stringify(data));
-  } catch (err) {}
-}
+function cleanupNameOverrides() { try { const raw = localStorage.getItem("gyobeon_overrides"); if (!raw) return; const data = JSON.parse(raw); let changed = false; Object.keys(data).forEach((key) => { const item = data[key]; if (item && typeof item === "object" && "name" in item) { delete item.name; changed = true; } }); if (changed) localStorage.setItem("gyobeon_overrides", JSON.stringify(data)); } catch (err) {} }
 
 function loadMySelection() { try { const raw = JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null"); if (!raw) return null; return { teamKey: raw.teamKey || "ks", name: raw.name || "", code: raw.code || "", anchorDate: raw.anchorDate || getKoreaToday() }; } catch { return null; } }
 function saveMySelection(value) { const next = { teamKey: value?.teamKey || "ks", name: value?.name || "", code: value?.code || "", anchorDate: value?.anchorDate || getKoreaToday() }; localStorage.setItem("gyobeon_my_selection", JSON.stringify(next)); }
@@ -448,8 +416,10 @@ function App() {
   // 🟢 다크 모드 State
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(LS_DARK_MODE) === 'true');
 
-  // 🟢 부드러운 스와이프 애니메이션 State
-  const [slideAnim, setSlideAnim] = useState("");
+  // 🟢 부드러운 스와이프 애니메이션 State (네이티브 앱처럼 쫀득하게)
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const [swipeTransition, setSwipeTransition] = useState("");
 
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
@@ -464,61 +434,85 @@ function App() {
   const currentEditDayType = guessDayType(browseDate);
   const currentEditDayLabel = currentEditDayType === "nor" ? "평일" : currentEditDayType === "sat" ? "토요일" : "휴일";
 
-  // 🟢 스와이프 제어 센서 State (이동 거리/속도 조절됨)
+  // 🟢 진짜 쫀득하고 부드러운 스와이프 제어 로직
   const [touchStart, setTouchStart] = useState(null);
-  const [touchEnd, setTouchEnd] = useState(null);
   const [touchStartY, setTouchStartY] = useState(null);
-  const [touchEndY, setTouchEndY] = useState(null);
 
   const onTouchStart = (e) => {
-    setTouchEnd(null);
-    setTouchEndY(null);
     setTouchStart(e.targetTouches[0].clientX);
     setTouchStartY(e.targetTouches[0].clientY);
+    setIsSwiping(false);
+    setSwipeTransition("none");
   };
 
   const onTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-    setTouchEndY(e.targetTouches[0].clientY);
+    if (!touchStart || !touchStartY) return;
+    const currentX = e.targetTouches[0].clientX;
+    const currentY = e.targetTouches[0].clientY;
+    const diffX = currentX - touchStart;
+    const diffY = currentY - touchStartY;
+
+    if (!isSwiping) {
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+        setIsSwiping(true);
+      } else if (Math.abs(diffY) > 10) {
+        setTouchStart(null); // 수직 스크롤일 경우 스와이프 취소
+        return;
+      }
+    }
+
+    if (isSwiping) {
+      setSwipeOffset(diffX * 0.85); // 0.85를 곱해서 살짝 묵직하게 손가락을 따라오도록 조절
+    }
   };
 
   const onTouchEndHandler = () => {
-    if (!touchStart || !touchEnd) return;
-    const distanceX = touchStart - touchEnd;
-    const distanceY = touchStartY - touchEndY;
-
-    // 위아래 스크롤이 더 크면 스와이프 무시 (수직 스크롤 보호)
-    if (Math.abs(distanceY) > Math.abs(distanceX)) return;
-
-    const isLeftSwipe = distanceX > 40; // 조금 더 민감하게(부드럽게) 반응
-    const isRightSwipe = distanceX < -40;
-
-    if (isLeftSwipe || isRightSwipe) {
-      const direction = isLeftSwipe ? 1 : -1;
-      
-      // 스와이프 방향에 맞춰 애니메이션 클래스 적용
-      setSlideAnim(isLeftSwipe ? "slide-left" : "slide-right");
-
-      if (activeTabRef.current === 'home') {
-        setHomeDate(prev => addDays(prev, direction));
-      } 
-      else if (activeTabRef.current === 'all' || activeTabRef.current === 'dia') {
-        setViewTeam(prev => {
-          const currentIdx = TEAM_ORDER.indexOf(prev);
-          if (currentIdx === -1) return prev;
-          return TEAM_ORDER[(currentIdx + direction + TEAM_ORDER.length) % TEAM_ORDER.length];
-        });
-      } 
-      else if (activeTabRef.current === 'month') {
-        setMonthDate(prev => addMonths(prev, direction));
-      } 
-      else if (activeTabRef.current === 'group') {
-        setGroupBaseDate(prev => addDays(prev, direction * 7));
-      }
+    if (!isSwiping) {
+      setTouchStart(null);
+      return;
     }
     
+    setIsSwiping(false);
+
+    if (swipeOffset > 70) {
+      // 오른쪽으로 확 밀었을 때 (이전)
+      setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
+      setSwipeOffset(window.innerWidth);
+      setTimeout(() => {
+        changeData(-1);
+        setSwipeTransition("none");
+        setSwipeOffset(-window.innerWidth);
+        setTimeout(() => {
+          setSwipeTransition("transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)");
+          setSwipeOffset(0);
+        }, 30);
+      }, 250);
+    } else if (swipeOffset < -70) {
+      // 왼쪽으로 확 밀었을 때 (다음)
+      setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
+      setSwipeOffset(-window.innerWidth);
+      setTimeout(() => {
+        changeData(1);
+        setSwipeTransition("none");
+        setSwipeOffset(window.innerWidth);
+        setTimeout(() => {
+          setSwipeTransition("transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)");
+          setSwipeOffset(0);
+        }, 30);
+      }, 250);
+    } else {
+      // 조금만 밀다 말았을 때 원래 자리로 튕겨서 복귀
+      setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
+      setSwipeOffset(0);
+    }
     setTouchStart(null);
-    setTouchEnd(null);
+  };
+
+  const changeData = (direction) => {
+    if (activeTabRef.current === 'home') setHomeDate(prev => addDays(prev, direction));
+    else if (activeTabRef.current === 'all' || activeTabRef.current === 'dia') setViewTeam(prev => { const idx = TEAM_ORDER.indexOf(prev); if(idx===-1)return prev; return TEAM_ORDER[(idx+direction+TEAM_ORDER.length)%TEAM_ORDER.length]; });
+    else if (activeTabRef.current === 'month') setMonthDate(prev => addMonths(prev, direction));
+    else if (activeTabRef.current === 'group') setGroupBaseDate(prev => addDays(prev, direction * 7));
   };
 
   // --- 다크 모드 및 캡처 스크립트 로드 ---
@@ -603,15 +597,15 @@ function App() {
       if (editOpenRef.current) { setEditOpen(false); return; }
       if (pathOpenRef.current) { setPathOpen(false); return; }
       if (showUpdatePopup) { setShowUpdatePopup(false); return; }
-      if (showGroupAddRef.current) { setShowGroupAdd(false); return; } // 뒤로가기 누르면 그룹창 닫힘
-      if (showSettingsRef.current) { setShowSettings(false); return; } // 뒤로가기 누르면 설정창 닫힘
+      if (showGroupAddRef.current) { setShowGroupAdd(false); return; } // 뒤로가기로 닫기 추가
+      if (showSettingsRef.current) { setShowSettings(false); return; } // 뒤로가기로 닫기 추가
       if (activeTabRef.current !== "home") { setActiveTab("home"); setHomeDate(getKoreaToday()); return; }
       window.history.pushState({ __gyobeon: true, layer: "root" }, "");
     }
     window.addEventListener("popstate", handlePopState); return () => window.removeEventListener("popstate", handlePopState);
   }, [showUpdatePopup]);
 
-  // 뒤로가기를 위한 History State 밀어넣기
+  // 설정/그룹추가 모달 열릴 때 history state 추가
   useEffect(() => { if (pathOpen && (!window.history.state || window.history.state.layer !== "path")) window.history.pushState({ __gyobeon: true, layer: "path" }, ""); }, [pathOpen]);
   useEffect(() => { if (editOpen && (!window.history.state || window.history.state.layer !== "edit")) window.history.pushState({ __gyobeon: true, layer: "edit" }, ""); }, [editOpen]);
   useEffect(() => { if (showUpdatePopup && (!window.history.state || window.history.state.layer !== "update")) window.history.pushState({ __gyobeon: true, layer: "update" }, ""); }, [showUpdatePopup]);
@@ -753,17 +747,15 @@ function App() {
         next[name] = next[currentGroup]; 
         delete next[currentGroup]; 
       } 
-      alert("그룹 설정이 변경되었습니다."); 
     } else { 
       if (next[name]) return alert("이미 존재하는 그룹 이름입니다."); 
       next[name] = []; 
-      alert("새 그룹이 생성되었습니다. 아래에서 인원을 추가하세요."); 
     } 
     setGroups(next); 
     saveGroups(next); 
     setCurrentGroup(name); 
     setIsEditGroupMode(false); 
-    // 🟢 모달을 닫지 않고 창 유지
+    // 🟢 모달을 닫지 않고 유지
   }
   
   function addToGroup() { 
@@ -779,10 +771,23 @@ function App() {
     saveGroups(next); 
     setCurrentGroup(targetGroup); 
     setGroupAddName(""); 
-    // 🟢 인원을 추가해도 창을 닫지 않고 계속 추가할 수 있게 유지
+    // 🟢 모달 유지
   }
   
   function removeFromGroup(teamKey, name) { const next = { ...groups }; next[currentGroup] = (next[currentGroup] || []).filter((item) => !(item.team === teamKey && samePersonName(item.name, name))); setGroups(next); saveGroups(next); }
+  
+  // 🟢 현재 그룹 삭제 함수
+  function deleteCurrentGroup() {
+    if (!currentGroup) return;
+    if (!window.confirm(`정말 '${currentGroup}' 그룹 전체를 삭제하시겠습니까?\n(삭제 후 복구할 수 없습니다)`)) return;
+    const next = { ...groups };
+    delete next[currentGroup];
+    setGroups(next);
+    saveGroups(next);
+    setCurrentGroup(Object.keys(next)[0] || "");
+    if (showGroupAddRef.current) window.history.back(); else setShowGroupAdd(false);
+  }
+
   async function handleInstall() { if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; setDeferredPrompt(null); }
   function applyPendingRosterUpdate() { if (!pendingRosterJson) { setShowUpdatePopup(false); return; } acceptRemoteRoster(pendingRosterJson, { alertMessage: "최신 교번 정보가 반영되었습니다.", nextDataOverride: data, syncMine: false }); }
   function closeUpdatePopup() { setShowUpdatePopup(false); }
@@ -830,7 +835,7 @@ function App() {
             </div>
           </div>
         ) : (
-          <>
+          <div className="swipe-wrapper" style={{ transform: `translateX(${swipeOffset}px)`, transition: swipeTransition }}>
             {activeTab === "home" && (
               <>
                 <div className="settings-row">
@@ -848,7 +853,7 @@ function App() {
                   <div className="date-box"><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() + 1); setHomeDate(formatDate(d)); }}>+</button><div className="date-value">{parseLocalDate(homeDate).getMonth() + 1}월</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
                   <div className="date-box"><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, 1))}>+</button><div className="date-value">{parseLocalDate(homeDate).getDate()}일</div><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, -1))}>-</button></div>
                 </div>
-                <div className={`card main-panel ${slideAnim}`} onAnimationEnd={() => setSlideAnim("")}>
+                <div className="card main-panel">
                   <div className="center-view">
                     <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
                     <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
@@ -872,7 +877,7 @@ function App() {
                 <div className="all-team-tabs">
                   {TEAM_ORDER.map((key) => { const isActive = viewTeam === key; const isMyTeam = selectedTeam === key; return (<button key={key} className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`} onClick={() => setViewTeam(key)}>{TEAM_LABELS[key]}{isActive && <span className="view-dot" />}</button>); })}
                 </div>
-                <div className={`all-tab-grid-wrap ${slideAnim}`} onAnimationEnd={() => setSlideAnim("")}>
+                <div className="all-tab-grid-wrap">
                   <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
                     {visibleAllGrid.map((item) => {
                       const myCodeForDate = viewTeam === mySelection?.teamKey && mySelection?.code ? getMyCodeForDate(currentViewTeam, browseDate, mySelection) : "";
@@ -903,7 +908,7 @@ function App() {
                 <div className="all-team-tabs">
                   {TEAM_ORDER.map((key) => { const isActive = viewTeam === key; const isMyTeam = selectedTeam === key; return (<button key={key} className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`} onClick={() => setViewTeam(key)}>{TEAM_LABELS[key]}{isActive && <span className="view-dot" />}</button>); })}
                 </div>
-                <div className={`card ${slideAnim}`} style={{ padding: 0, overflow: "hidden" }} onAnimationEnd={() => setSlideAnim("")}>
+                <div className="card" style={{ padding: 0, overflow: "hidden" }}>
                   {diaList.map((item, idx) => (
                     <div key={`${item.code}-${idx}`} onClick={() => openPathDialog(item, browseDate)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 16px", borderBottom: idx === diaList.length - 1 ? "none" : "1px solid #e5e7eb", fontSize: 18, background: viewTeam === selectedTeam && (samePersonName(item.name, mySelection?.name) || (mySelection?.teamKey === viewTeam && mySelection?.code && normalizeCodeKey(item.code) === normalizeCodeKey(getMyCodeForDate(currentViewTeam, browseDate, mySelection)))) ? (isDarkMode ? "#374151" : "#eef6ff") : "transparent", cursor: "pointer" }}>
                       <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
@@ -919,12 +924,11 @@ function App() {
                 <div className="month-header-bar" style={{ display: 'flex', gap: '8px' }}>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, -1))}>-</button>
                   <div className="month-header-title" style={{ flex: 1 }}>{monthHeaderDate.getFullYear()}년 {monthHeaderDate.getMonth() + 1}월</div>
-                  {/* 🟢 사진 캡처 버튼 (월교번) */}
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', fontSize: '20px' }} onClick={() => captureAndSave('capture-month-area', `월교번_${monthHeaderDate.getFullYear()}_${monthHeaderDate.getMonth() + 1}`, isDarkMode)}>📷</button>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, 1))}>+</button>
                 </div>
 
-                <div className={`month-calendar ${slideAnim}`} onAnimationEnd={() => setSlideAnim("")}>
+                <div className="month-calendar">
                   <div className="month-weekdays">
                     <div className="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="sat">토</div>
                   </div>
@@ -955,20 +959,33 @@ function App() {
 
             {activeTab === "group" && (
               <div className="group-page tab-page">
-                {/* 캡처 버튼이 제거된 깨끗한 상단바 */}
                 <div className="group-top-bar-v4">
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, -7))}>◀</button>
-                  <select className="group-select-month" value={groupMonth} onChange={(e) => handleGroupMonthChange(e.target.value)}>
-                    {groupMonthOptions.map((item) => (<option key={item.value} value={item.value}>{item.label}</option>))}
-                  </select>
-                  <select className="group-select-name" value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
-                    {Object.keys(groups).length === 0 ? (<option value="">그룹 없음</option>) : (Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
-                  </select>
-                  <button className="group-add-btn-v4" onClick={() => { setNewGroupName(""); setIsEditGroupMode(false); setShowGroupAdd(true); }}>+ 그룹추가</button>
+                  
+                  {/* 🟢 투명 셀렉트를 활용하여 화면에는 '4월 ▾'만 보이고 드롭다운엔 연도가 보이게 수정 */}
+                  <div className="group-select-wrap">
+                    <div className="group-select-display">
+                      {groupMonth ? `${parseInt(groupMonth.split('-')[1], 10)}월 ▾` : "월 ▾"}
+                    </div>
+                    <select className="group-select-overlay" value={groupMonth} onChange={(e) => handleGroupMonthChange(e.target.value)}>
+                      {groupMonthOptions.map((item) => (<option key={item.value} value={item.value}>{item.label}</option>))}
+                    </select>
+                  </div>
+
+                  <div className="group-select-wrap">
+                    <div className="group-select-display">
+                      {currentGroup ? `${currentGroup} ▾` : "그룹 없음 ▾"}
+                    </div>
+                    <select className="group-select-overlay" value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
+                      {Object.keys(groups).length === 0 ? (<option value="">그룹 없음</option>) : (Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
+                    </select>
+                  </div>
+
+                  <button className="group-add-btn-v4" onClick={() => { setNewGroupName(""); setIsEditGroupMode(false); setShowGroupAdd(true); }}>+ 그룹 관리</button>
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>▶</button>
                 </div>
 
-                <div className={`group-table-wrap ${slideAnim}`} onAnimationEnd={() => setSlideAnim("")}>
+                <div className="group-table-wrap">
                   <table className="group-table">
                     <thead>
                       <tr>
@@ -1014,7 +1031,7 @@ function App() {
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 
@@ -1029,11 +1046,10 @@ function App() {
       )}
 
       {showSettings && (
-        <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
+        <div className="modal-backdrop" onClick={() => { if (showSettingsRef.current) window.history.back(); else setShowSettings(false); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">설정</div>
 
-            {/* 🟢 다크모드 스위치 추가 */}
             <label className="label" style={{ marginTop: 6 }}>화면 테마</label>
             <button
               className="modal-btn"
@@ -1096,22 +1112,24 @@ function App() {
             )}
             <div className="modal-actions">
               <button className="modal-btn" onClick={resetMyProfile}>내 정보 초기화</button>
-              <button className="modal-btn primary" onClick={() => setShowSettings(false)}>닫기</button>
+              <button className="modal-btn primary" onClick={() => { if (showSettingsRef.current) window.history.back(); else setShowSettings(false); }}>닫기</button>
             </div>
           </div>
         </div>
       )}
 
       {showGroupAdd && (
-        <div className="modal-backdrop" onClick={() => setShowGroupAdd(false)}>
+        <div className="modal-backdrop" onClick={() => { if (showGroupAddRef.current) window.history.back(); else setShowGroupAdd(false); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">{isEditGroupMode ? "그룹 수정" : "새 그룹 생성"}</div>
+            <div className="modal-title">그룹 관리</div>
             <label className="label">그룹 이름</label>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-              <input className="input" style={{ flex: 1 }} value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="예: 1조, 낚시모임" />
-              <button className="modal-btn primary" style={{ width: 'auto', padding: '0 16px' }} onClick={handleGroupSubmit}>{isEditGroupMode ? "이름변경" : "생성"}</button>
+              <input className="input" style={{ flex: 1 }} value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="새 그룹 이름 입력..." />
+              <button className="modal-btn primary" style={{ width: 'auto', padding: '0 16px' }} onClick={handleGroupSubmit}>생성</button>
             </div>
+            
             <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
+            
             <div className="label">인원 추가 (현재 그룹: {currentGroup || "없음"})</div>
             <div className="notice-box" style={{ padding: '8px', marginTop: '6px', fontSize: '13px' }}>아래에서 소속과 이름을 선택하고 인원 추가를 누르세요.</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px' }}>
@@ -1130,8 +1148,29 @@ function App() {
               </div>
             </div>
             <div className="modal-actions" style={{ marginTop: '20px' }}>
-              <button className="modal-btn" onClick={() => setShowGroupAdd(false)}>닫기</button>
-              <button className="modal-btn primary" onClick={addToGroup} disabled={!currentGroup || !groupAddName}>인원 추가</button>
+              <button className="modal-btn primary" style={{ width: '100%' }} onClick={addToGroup} disabled={!currentGroup || !groupAddName}>+ 인원 추가</button>
+            </div>
+
+            {/* 🟢 그룹 전체 삭제 버튼 */}
+            {currentGroup && (
+              <>
+                <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
+                <div className="label" style={{ color: '#ef4444' }}>위험 구역 (현재 그룹 삭제)</div>
+                <div className="notice-box" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#b91c1c', marginTop: '6px' }}>
+                  '{currentGroup}' 그룹 전체를 삭제합니다. 복구할 수 없습니다.
+                </div>
+                <button 
+                  className="modal-btn" 
+                  style={{ width: '100%', marginTop: '12px', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}
+                  onClick={deleteCurrentGroup}
+                >
+                  🗑️ 현재 그룹 삭제
+                </button>
+              </>
+            )}
+            
+            <div className="modal-actions" style={{ marginTop: '20px' }}>
+              <button className="modal-btn" onClick={() => { if (showGroupAddRef.current) window.history.back(); else setShowGroupAdd(false); }}>닫기</button>
             </div>
           </div>
         </div>
