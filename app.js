@@ -293,7 +293,6 @@ function getMyCodeForDate(team, dateStr, mySelection) { if (!team || !mySelectio
 function getMonthMatrix(dateStr) { const d = parseLocalDate(dateStr); const year = d.getFullYear(); const month = d.getMonth(); const first = new Date(year, month, 1); const firstDay = first.getDay(); const start = new Date(year, month, 1 - firstDay); const matrix = []; for (let r = 0; r < 6; r++) { const row = []; for (let c = 0; c < 7; c++) { const temp = new Date(start); temp.setDate(start.getDate() + r * 7 + c); row.push(formatDate(temp)); } matrix.push(row); } return matrix; }
 function getWeekDates(baseDate) { const d = parseLocalDate(baseDate); const day = d.getDay(); const sunday = new Date(d); sunday.setDate(d.getDate() - day); const dates = []; for (let i = 0; i < 7; i++) { const temp = new Date(sunday); temp.setDate(sunday.getDate() + i); dates.push(formatDate(temp)); } return dates; }
 
-// 🟢 현재 월에 "📍 이번 달" 텍스트를 붙여서 언제든지 쉽게 돌아올 수 있게 시각적 안내
 function getMonthOptions(centerDateStr, range = 12) { 
   const base = parseLocalDate(centerDateStr); 
   const currentMonthVal = getDisplayMonthValue(getKoreaToday());
@@ -425,7 +424,6 @@ function App() {
 
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(LS_DARK_MODE) === 'true');
 
-  // 🟢 부분 스와이프 제어 State
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [swipeOpacity, setSwipeOpacity] = useState(1);
   const [swipeTransition, setSwipeTransition] = useState("");
@@ -443,13 +441,11 @@ function App() {
   const currentEditDayType = guessDayType(browseDate);
   const currentEditDayLabel = currentEditDayType === "nor" ? "평일" : currentEditDayType === "sat" ? "토요일" : "휴일";
 
-  // 🟢 쫀득한 부분 스와이프 & 터치 씹힘 완벽 방지
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const isSwipingRef = useRef(false);
 
   const onTouchStart = (e) => {
-    // 💡 핵심: 버튼이나 셀렉트는 건드리지 않고, 스와이프 가능한 탭 영역만 골라서 반응하게 처리
     const target = e.target.closest('.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4, .month-header-bar, .all-header, .date-grid');
     if (target) return;
 
@@ -481,7 +477,7 @@ function App() {
     }
 
     if (isSwipingRef.current) {
-      setSwipeOffset(diffX * 0.7); // 쫀득하게 따라오도록 감도 조절
+      setSwipeOffset(diffX * 0.7); 
     }
   };
 
@@ -495,7 +491,6 @@ function App() {
     isSwipingRef.current = false;
 
     if (swipeOffset > 40) {
-      // 오른쪽 스와이프 (이전)
       setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease");
       setSwipeOffset(80);
       setSwipeOpacity(0);
@@ -510,7 +505,6 @@ function App() {
         }, 30);
       }, 200);
     } else if (swipeOffset < -40) {
-      // 왼쪽 스와이프 (다음)
       setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease");
       setSwipeOffset(-80);
       setSwipeOpacity(0);
@@ -525,7 +519,6 @@ function App() {
         }, 30);
       }, 200);
     } else {
-      // 제자리 복귀
       setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
       setSwipeOffset(0);
     }
@@ -533,17 +526,16 @@ function App() {
     touchStartY.current = null;
   };
 
+  // 🟢 전체 및 DIA 탭 스와이프 시 '팀'이 아니라 '날짜'가 변경되도록 완벽 적용!
   const changeData = (direction) => {
     if (activeTabRef.current === 'home') setHomeDate(prev => addDays(prev, direction));
-    else if (activeTabRef.current === 'all' || activeTabRef.current === 'dia') setViewTeam(prev => { const idx = TEAM_ORDER.indexOf(prev); if(idx===-1)return prev; return TEAM_ORDER[(idx+direction+TEAM_ORDER.length)%TEAM_ORDER.length]; });
+    else if (activeTabRef.current === 'all' || activeTabRef.current === 'dia') setBrowseDate(prev => addDays(prev, direction));
     else if (activeTabRef.current === 'month') setMonthDate(prev => addMonths(prev, direction));
     else if (activeTabRef.current === 'group') setGroupBaseDate(prev => addDays(prev, direction * 7));
   };
 
-  // 부분 애니메이션 전용 스타일
   const swipeStyle = { transform: `translateX(${swipeOffset}px)`, opacity: swipeOpacity, transition: swipeTransition, willChange: 'transform, opacity' };
 
-  // 🟢 [추가] 관리자가 공용 기준일을 텍스트로 입력하면 즉시 로컬에 자동 저장
   useEffect(() => {
     if (remoteBaseDate) {
       setGlobalBaseDate(remoteBaseDate);
@@ -704,22 +696,45 @@ function App() {
     if (nextMonthValue === todayMonth) setGroupBaseDate(today); else setGroupBaseDate(getMonthStartDate(nextMonthValue));
   }
 
-  // 🟢 탭 버튼 두 번 누르면 무조건 오늘로 복귀! (숨겨진 프로 기능)
+  // 🟢 하단 탭 한 번 더 누르면 오늘 + 내 소속으로 완벽 복귀
   function switchTab(tabName) {
-    const currentTab = activeTabRef.current; const today = getKoreaToday(); const myTeamKey = mySelection?.teamKey || selectedTeam || "ks";
-    if (tabName === currentTab) { 
-      if (tabName === "home") setHomeDate(today); 
-      else if (tabName === "all" || tabName === "dia") setBrowseDate(today);
-      else if (tabName === "month") setMonthDate(today);
-      else if (tabName === "group") { setGroupMonth(getDisplayMonthValue(today)); setGroupBaseDate(today); setSelectedGroupDate(""); }
-      return; 
+    const currentTab = activeTabRef.current;
+    const today = getKoreaToday();
+    const myTeamKey = mySelection?.teamKey || selectedTeam || "ks";
+
+    if (tabName === currentTab) {
+      if (tabName === "home") {
+        setHomeDate(today);
+      } else if (tabName === "all" || tabName === "dia") {
+        setBrowseDate(today);
+        setViewTeam(myTeamKey);
+      } else if (tabName === "month") {
+        setMonthDate(today);
+      } else if (tabName === "group") {
+        setGroupMonth(getDisplayMonthValue(today));
+        setGroupBaseDate(today);
+        setSelectedGroupDate("");
+      }
+      return;
     }
-    if (tabName === "home") setHomeDate(today);
-    if (currentTab === "home" && tabName !== "home") { if (tabName === "all" || tabName === "dia") { setBrowseDate(homeDate); setViewTeam(myTeamKey); } else if (tabName === "month") { setMonthDate(today); } else if (tabName === "group") { setGroupMonth(getDisplayMonthValue(today)); setGroupBaseDate(today); setSelectedGroupDate(""); } }
-    if (tabName === "all") setViewTeam(myTeamKey);
-    if (tabName === "dia") setViewTeam(myTeamKey);
+
+    if (tabName === "home") {
+      setHomeDate(today);
+    } else if (tabName === "all" || tabName === "dia") {
+      if (currentTab === "home") setBrowseDate(homeDate);
+      else setBrowseDate(today);
+      setViewTeam(myTeamKey);
+    } else if (tabName === "month") {
+      setMonthDate(today);
+    } else if (tabName === "group") {
+      setGroupMonth(getDisplayMonthValue(today));
+      setGroupBaseDate(today);
+      setSelectedGroupDate("");
+    }
+
     setActiveTab(tabName);
-    if (tabName === "home") window.history.pushState({ __gyobeon: true, layer: "root" }, ""); else window.history.pushState({ __gyobeon: true, layer: `tab-${tabName}` }, "");
+    if (tabName === "home") window.history.pushState({ __gyobeon: true, layer: "root" }, "");
+    else window.history.pushState({ __gyobeon: true, layer: `tab-${tabName}` }, "");
   }
 
   async function parseAndSetZip(fileOrBlob, saveToIdb = true, keepSavedSelection = false, rosterForApply = remoteRoster, showBusy = true) {
@@ -740,7 +755,6 @@ function App() {
 
   async function handleZipUpload(event) { const file = event.target.files?.[0]; if (!file) return; setZipName(file.name); setInitialRemoteChecked(false); await parseAndSetZip(file, true, false, remoteRoster, true); }
   
-  // 🟢 비번 창 정상 작동 복구 완료
   async function saveSharedConfig() {
     if (!isAdminUser) return alert("관리자만 저장할 수 있습니다."); 
     const adminKey = promptAdminPassword(); 
@@ -817,7 +831,6 @@ function App() {
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { const team = effectiveData?.[teamKey]; if (!team || !item?.code) return; const image = findPathImage(team, dateStr, item.code); setViewTeam(teamKey); setPathTeamKey(teamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
-  // 🟢 그룹창 개편: 생성 (입력창 비움)
   function handleGroupSubmit() { 
     const name = newGroupName.trim(); 
     if (!name) return alert("그룹 이름을 입력해주세요."); 
@@ -830,7 +843,6 @@ function App() {
     setNewGroupName(""); 
   }
   
-  // 🟢 그룹창 개편: 인원 추가
   function addToGroup() { 
     const typedGroupName = newGroupName.trim(); 
     const targetGroup = currentGroup || typedGroupName; 
@@ -848,7 +860,6 @@ function App() {
   
   function removeFromGroup(teamKey, name) { const next = { ...groups }; next[currentGroup] = (next[currentGroup] || []).filter((item) => !(item.team === teamKey && samePersonName(item.name, name))); setGroups(next); saveGroups(next); }
   
-  // 🟢 그룹창 개편: 휴지통 삭제
   function deleteCurrentGroup() {
     if (!currentGroup) return;
     if (!window.confirm(`정말 '${currentGroup}' 그룹 전체를 삭제하시겠습니까?\n(삭제 후 복구할 수 없습니다)`)) return;
@@ -1158,7 +1169,6 @@ function App() {
               </>
             )}
             
-            {/* 🟢 공용 기준일 (관리자만 비번 묻도록) */}
             {isAdminUser && (
               <div className="card" style={{ marginTop: 14, padding: 12 }}>
                 <div className="label" style={{ marginBottom: 10 }}>관리자</div>
@@ -1185,7 +1195,6 @@ function App() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">그룹 관리</div>
             
-            {/* 🟢 1. 새 그룹 생성 */}
             <label className="label">1. 새 그룹 만들기</label>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
               <input className="input" style={{ flex: 1 }} value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="예: 1조, 낚시모임" />
@@ -1194,7 +1203,6 @@ function App() {
             
             <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
             
-            {/* 🟢 2. 그룹 선택 + 바로 삭제 버튼 */}
             <label className="label">2. 관리할 그룹 선택</label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
               <select className="select" style={{ flex: 1, margin: 0 }} value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
@@ -1207,7 +1215,6 @@ function App() {
             
             <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
 
-            {/* 🟢 3. 인원 추가 */}
             <label className="label">3. 선택된 그룹에 인원 추가</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
               <div>
