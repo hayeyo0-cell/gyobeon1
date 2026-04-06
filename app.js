@@ -512,6 +512,7 @@ function App() {
     }
   };
 
+  // 🟢 무중력 스와이프: 표 전체가 아닌 내용물만 화면 밖으로 시원하게 넘김 (깜빡임 완벽 제거)
   const onTouchEndHandler = () => {
     if (!isSwipingRef.current) {
       touchStartX.current = null;
@@ -561,15 +562,8 @@ function App() {
     else if (activeTabRef.current === 'group') setGroupBaseDate(prev => addDays(prev, direction * 7));
   };
 
+  // 🟢 3D 가속을 사용하여 갤러리 앱처럼 부드럽게 날아가는 스와이프 효과 (테두리 제외)
   const swipeStyle = { transform: `translate3d(${swipeOffset}px, 0, 0)`, transition: swipeTransition, willChange: 'transform' };
-
-  // 🟢 반작용의 마법: 왼쪽 이름표를 역으로 밀어내어 고정시키는 특수 스타일
-  const stickySwipeTransition = swipeTransition === "none" ? "none" : (swipeTransition ? `${swipeTransition}, background-color 0.2s ease, border-color 0.2s ease` : "background-color 0.2s ease, border-color 0.2s ease");
-  const stickySwipeStyle = {
-    transform: `translate3d(${-swipeOffset}px, 0, 0)`,
-    transition: stickySwipeTransition,
-    willChange: 'transform'
-  };
 
   useEffect(() => {
     if (remoteBaseDate) {
@@ -585,6 +579,7 @@ function App() {
     else document.body.classList.remove('dark-mode');
   }, [isDarkMode]);
 
+  // 🟢 무한로딩 방지 초고속 캡처 스크립트 장착
   useEffect(() => {
     if (!window.html2canvas) {
       const script = document.createElement("script");
@@ -905,6 +900,7 @@ function App() {
     setCurrentGroup(Object.keys(next)[0] || "");
   }
 
+  // 🟢 캡처 시 내부 스와이프 값들을 임시로 해제하여 잘림/오류를 완벽 차단하는 고화질 캡처
   const handleShareGroupImage = async () => {
     if (!currentGroup || groupMembers.length === 0) return alert("공유할 그룹 인원이 없습니다.");
     if (!window.html2canvas) {
@@ -920,6 +916,14 @@ function App() {
     element.style.transform = 'none';
     element.style.overflow = 'visible'; 
     
+    // 알맹이(날짜)들의 변형값 임시 제거
+    const innerDivs = element.querySelectorAll('th > div[style*="translate3d"], td > div[style*="translate3d"]');
+    const origTransforms = [];
+    innerDivs.forEach((div, i) => {
+      origTransforms[i] = div.style.transform;
+      div.style.transform = 'none';
+    });
+
     await new Promise(res => setTimeout(res, 50));
 
     try {
@@ -959,6 +963,9 @@ function App() {
     } finally {
       element.style.transform = originalTransform;
       element.style.overflow = originalOverflow;
+      innerDivs.forEach((div, i) => {
+        div.style.transform = origTransforms[i];
+      });
     }
   };
 
@@ -994,8 +1001,7 @@ function App() {
               {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
             </select>
             <label className="label" style={{ marginTop: 12 }}>내 이름</label>
-            <input className="input" type="text" placeholder="이름 직접 입력 (없으면 새로 등록됩니다)" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
-            <div className="help-text" style={{ marginTop: 6 }}>기본데이터에 이름이 없으면 선택한 교번 기준으로 사용됩니다.</div>
+            <input className="input" type="text" placeholder="이름 직접 입력" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
             <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
             <select className="select" value={draftCode} onChange={(e) => { setDraftCode(e.target.value); }}>
               <option value="">선택</option>
@@ -1003,7 +1009,6 @@ function App() {
             </select>
             <label className="label" style={{ marginTop: 12 }}>기준 날짜</label>
             <input className="input" type="date" value={profileAnchorDate} onChange={(e) => { const nextDate = e.target.value || getKoreaToday(); setProfileAnchorDate(nextDate); }} />
-            <div className="help-text" style={{ marginTop: 10 }}>기존 이름이면 자동으로 교번이 채워지고, 없으면 교번을 직접 선택해서 사용합니다.</div>
             <div className="modal-actions">
               <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() || !draftCode}>시작하기</button>
             </div>
@@ -1032,7 +1037,6 @@ function App() {
                     <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
                     <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
                     <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
-                    {remoteLoading && <div className="help-text" style={{ color: "#2563eb" }}>최신 배포본 확인 중...</div>}
                   </div>
                 </div>
               </>
@@ -1156,18 +1160,22 @@ function App() {
                   </div>
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>▶</button>
                 </div>
-                <div className="group-table-wrap" style={swipeStyle} id="capture-group-area">
+                
+                {/* 🟢 표 뼈대는 고정하고 날짜 알맹이만 스와이프 되도록 구조 변경 */}
+                <div className="group-table-wrap" id="capture-group-area">
                   <table className="group-table">
                     <thead>
                       <tr>
-                        {/* 🟢 반작용의 마법: 왼쪽 이름표만 역방향으로 밀어내어 고정시킴 */}
-                        <th className="sticky-col" style={stickySwipeStyle}>이름</th>
+                        <th className="sticky-col">이름</th>
                         {weekDates.map((date) => {
                           const isSelectedCol = selectedGroupDate === date; const isToday = date === getKoreaToday();
                           return (
-                            <th key={date} onClick={() => setSelectedGroupDate(date)} className={`${isSelectedCol ? "active-col" : ""} ${isToday ? "today-col" : ""}`} style={{ cursor: "pointer", transition: "all 0.18s ease" }}>
-                              <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
-                              <div className="day-date">{formatMonthDay(date)}</div>
+                            <th key={date} onClick={() => setSelectedGroupDate(date)} className={`${isSelectedCol ? "active-col" : ""} ${isToday ? "today-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
+                              {/* 🟢 날짜(알맹이)에만 swipeStyle 적용 */}
+                              <div style={{ ...swipeStyle, padding: '8px 4px', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
+                                <div className="day-date">{formatMonthDay(date)}</div>
+                              </div>
                             </th>
                           );
                         })}
@@ -1175,12 +1183,11 @@ function App() {
                     </thead>
                     <tbody>
                       {groupMembers.length === 0 ? (
-                        <tr><td colSpan={8} className="empty-msg" style={{padding: '20px', textAlign: 'center'}}>그룹 인원을 추가해주세요.</td></tr>
+                        <tr><td colSpan={8} className="empty-msg">그룹 인원을 추가해주세요.</td></tr>
                       ) : (
                         groupMembers.map((member, idx) => (
                           <tr key={`${member.team}-${member.name}-${idx}`}>
-                            {/* 🟢 반작용의 마법: 왼쪽 이름표만 역방향으로 밀어내어 고정시킴 */}
-                            <td className="group-name-cell sticky-col" style={stickySwipeStyle}>
+                            <td className="group-name-cell sticky-col">
                               <div className="group-name-cell-inner">
                                 <div className="name-txt">{member.name}</div>
                                 <div className="team-badge">{TEAM_LABELS[member.team]}</div>
@@ -1191,8 +1198,11 @@ function App() {
                               const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
                               const isSelectedCol = selectedGroupDate === date;
                               return (
-                                <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: item.name || member.name, displayName: item.displayName || member.name, idx: -1 }, date); } }} style={{ cursor: "pointer", background: isSelectedCol ? (isDarkMode ? "#374151" : "#f5f3ff") : "", fontWeight: isSelectedCol ? 700 : 600, color: isSelectedCol ? (isDarkMode ? "#a78bfa" : "#4c1d95") : "inherit", transition: "all 0.18s ease" }}>
-                                  {item?.code || "-"}
+                                <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: member.name, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', background: isSelectedCol ? (isDarkMode ? "#374151" : "#f5f3ff") : "", transition: "background-color 0.18s ease" }}>
+                                  {/* 🟢 교번(알맹이)에만 swipeStyle 적용 */}
+                                  <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: isSelectedCol ? 700 : 600, color: isSelectedCol ? (isDarkMode ? "#a78bfa" : "#4c1d95") : "inherit" }}>
+                                    {item?.code || "-"}
+                                  </div>
                                 </td>
                               );
                             })}
