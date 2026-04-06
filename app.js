@@ -311,10 +311,10 @@ function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "")
 function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
 function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: end || "-" }; } return { startTime: raw, endTime: "" }; }
 
-// 🟢 최고 해상도(scale: 3) & 중복 파일명 방지 & 무한로딩 대기열 처리 완벽 적용 (월교번)
+// 🟢 최고 해상도(scale: 3) 유지 & 중복 다운로드 경고창 완벽 방지 캡처 함수 (월교번용)
 const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
   if (!window.html2canvas) {
-    await new Promise(r => setTimeout(r, 500)); // 너무 급하게 뜨는 창 방지 (0.5초 대기)
+    await new Promise(r => setTimeout(r, 500));
     if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
   }
   
@@ -341,7 +341,7 @@ const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
       useCORS: true
     });
     
-    // 🟢 파일명 중복 경고창 방지를 위해 '현재 시간'을 파일명 뒤에 부착
+    // 🟢 파일명 중복 경고창이 뜨지 않도록 초단위 꼬리표 부착
     const timestamp = new Date().toLocaleTimeString('ko-KR', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '');
     const filename = `${filenamePrefix}_${timestamp}.png`;
 
@@ -460,7 +460,6 @@ function App() {
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(LS_DARK_MODE) === 'true');
 
   const [swipeOffset, setSwipeOffset] = useState(0);
-  const [swipeOpacity, setSwipeOpacity] = useState(1);
   const [swipeTransition, setSwipeTransition] = useState("");
 
   const pathOpenRef = useRef(false);
@@ -488,9 +487,9 @@ function App() {
     touchStartY.current = e.targetTouches[0].clientY;
     isSwipingRef.current = false;
     
+    // 🟢 투명해지는 깜빡임 삭제
     if (swipeOffset !== 0) {
       setSwipeOffset(0);
-      setSwipeOpacity(1);
       setSwipeTransition("none");
     }
   };
@@ -516,6 +515,7 @@ function App() {
     }
   };
 
+  // 🟢 투명해지는(깜빡이는) 효과를 완전히 제거하고 쫀득한 슬라이딩 액션만 남김
   const onTouchEndHandler = () => {
     if (!isSwipingRef.current) {
       touchStartX.current = null;
@@ -526,31 +526,27 @@ function App() {
     isSwipingRef.current = false;
 
     if (swipeOffset > 40) {
-      setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease");
-      setSwipeOffset(80);
-      setSwipeOpacity(0);
+      setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)");
+      setSwipeOffset(200); // 넉넉하게 우측으로 밀기
       setTimeout(() => {
         changeData(-1);
         setSwipeTransition("none");
-        setSwipeOffset(-80);
+        setSwipeOffset(-200); // 즉시 쌩쌩하게 좌측 끝으로 대기
         setTimeout(() => {
-          setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.25s ease");
-          setSwipeOffset(0);
-          setSwipeOpacity(1);
+          setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
+          setSwipeOffset(0); // 중앙으로 깔끔하게 슬라이딩 인
         }, 30);
       }, 200);
     } else if (swipeOffset < -40) {
-      setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease");
-      setSwipeOffset(-80);
-      setSwipeOpacity(0);
+      setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)");
+      setSwipeOffset(-200); // 넉넉하게 좌측으로 밀기
       setTimeout(() => {
         changeData(1);
         setSwipeTransition("none");
-        setSwipeOffset(80);
+        setSwipeOffset(200); // 즉시 쌩쌩하게 우측 끝으로 대기
         setTimeout(() => {
-          setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.25s ease");
-          setSwipeOffset(0);
-          setSwipeOpacity(1);
+          setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
+          setSwipeOffset(0); // 중앙으로 깔끔하게 슬라이딩 인
         }, 30);
       }, 200);
     } else {
@@ -568,7 +564,8 @@ function App() {
     else if (activeTabRef.current === 'group') setGroupBaseDate(prev => addDays(prev, direction * 7));
   };
 
-  const swipeStyle = { transform: `translateX(${swipeOffset}px)`, opacity: swipeOpacity, transition: swipeTransition, willChange: 'transform, opacity' };
+  // 🟢 투명도(opacity) 속성 제거
+  const swipeStyle = { transform: `translateX(${swipeOffset}px)`, transition: swipeTransition, willChange: 'transform' };
 
   useEffect(() => {
     if (remoteBaseDate) {
@@ -594,7 +591,6 @@ function App() {
     }
   }, []);
 
-  // --- 기존 useEffect 모음 ---
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
   useEffect(() => { cleanupNameOverrides(); setOverrides(loadOverrides()); }, []);
   useEffect(() => { saveMySelection(mySelection); }, [mySelection]);
@@ -906,7 +902,7 @@ function App() {
     setCurrentGroup(Object.keys(next)[0] || "");
   }
 
-  // 🟢 새롭게 추가된 그룹 고화질 캡처 & 네이티브 공유 기능 (타임스탬프 파일명 적용)
+  // 🟢 그룹 고화질 캡처 & 스마트폰 기본 카톡/밴드 공유 기능 (타임스탬프 적용)
   const handleShareGroupImage = async () => {
     if (!currentGroup || groupMembers.length === 0) return alert("공유할 그룹 인원이 없습니다.");
     if (!window.html2canvas) {
@@ -917,7 +913,6 @@ function App() {
     const element = document.getElementById('capture-group-area');
     if (!element) return;
 
-    // 캡처하는 찰나의 순간 표 전체가 잘리지 않게 설정하고, 애니메이션/투명도 효과 차단
     const originalTransform = element.style.transform;
     const originalOverflow = element.style.overflow;
     element.style.transform = 'none';
@@ -927,7 +922,7 @@ function App() {
 
     try {
       const canvas = await window.html2canvas(element, {
-        scale: 3, // 🔥 3배수 최고 화질로 렌더링
+        scale: 3, 
         backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
         useCORS: true
       });
@@ -940,7 +935,6 @@ function App() {
         const filename = `${currentGroup}_스케줄_${timestamp}.png`;
         const file = new File([blob], filename, { type: 'image/png' });
 
-        // 기기가 파일 공유를 지원하면 네이티브 공유창(카톡, 밴드 등) 띄우기
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({
@@ -948,10 +942,9 @@ function App() {
               files: [file]
             });
           } catch (shareErr) {
-            console.log('공유가 취소되었습니다.', shareErr);
+            console.log('공유 취소', shareErr);
           }
         } else {
-          // 공유를 지원하지 않는 기기면 갤러리에 고화질로 바로 다운로드
           const link = document.createElement("a");
           link.download = filename;
           link.href = URL.createObjectURL(blob);
@@ -962,7 +955,6 @@ function App() {
     } catch (e) {
       alert("캡처에 실패했습니다.");
     } finally {
-      // 캡처 후 화면 원래대로 복구
       element.style.transform = originalTransform;
       element.style.overflow = originalOverflow;
     }
@@ -1066,7 +1058,7 @@ function App() {
                       
                       const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
                       const customTextColorCode = item.customColor ? { color: "#0f172a" } : undefined;
-                      const customTextColorName = item.customColor ? { color: "#111827" } : undefined;
+                      const customTextColorName = item.customColor ? { color: "#374151" } : undefined;
                       
                       return (
                         <div key={`${item.idx}-${item.code}-${item.displayName}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
@@ -1108,7 +1100,7 @@ function App() {
                 <div className="month-header-bar" style={{ display: 'flex', gap: '8px' }}>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, -1))}>-</button>
                   <div className="month-header-title" style={{ flex: 1 }}>{monthHeaderDate.getFullYear()}년 {monthHeaderDate.getMonth() + 1}월</div>
-                  <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', fontSize: '20px' }} onClick={() => captureAndSave('capture-month-area', `월교번_${monthHeaderDate.getFullYear()}_${monthHeaderDate.getMonth() + 1}`, isDarkMode)}>📷</button>
+                  <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', fontSize: '20px' }} onClick={() => captureAndSave('capture-month-area', `월교번`, isDarkMode)}>📷</button>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, 1))}>+</button>
                 </div>
                 <div className="month-calendar" style={swipeStyle}>
