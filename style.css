@@ -162,6 +162,27 @@ button:active { transform: scale(0.97); }
 @keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(34, 199, 216, 0.18), 0 8px 16px rgba(34, 199, 216, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.76); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 3px rgba(34, 199, 216, 0.28), 0 12px 24px rgba(34, 199, 216, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.82); } }
 
 /* =========================================
+   📖 스와이프 슬라이드 애니메이션 (책장 넘기기)
+========================================== */
+.slide-left {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+.slide-right {
+  animation: slideInLeft 0.3s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  0% { transform: translateX(25px); opacity: 0.6; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  0% { transform: translateX(-25px); opacity: 0.6; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+/* =========================================
    🌙 다크 모드 전용 스타일 오버라이드
 ========================================== */
 body.dark-mode { background: #0f172a; color: #f8fafc; }
@@ -178,17 +199,24 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .group-table th, .dark-mode .group-table td { border-color: #334155; color: #f8fafc; }
 .dark-mode .group-table th { background: #1e293b; color: #f8fafc; }
 
+/* 🟢 다크모드 고정열(이름 칸) 배경색 및 글씨색 강력 픽스 */
+.dark-mode .group-table th.sticky-col,
+.dark-mode .group-table td.sticky-col,
+.dark-mode .group-name-cell {
+  background-color: #1e293b !important;
+  border-right-color: #475569 !important;
+}
+.dark-mode .group-table th.sticky-col { background-color: #0f172a !important; }
+
 /* 🟢 다크모드 요일 배경색 및 글자색 완벽 픽스 */
 .dark-mode .group-table th.active-col { background: #374151 !important; border-bottom: 3px solid #a78bfa !important; }
 .dark-mode .group-table th.today-col { background: #334155 !important; }
-.dark-mode .day-name.sun { color: #f87171; }
-.dark-mode .day-name.sat { color: #60a5fa; }
+.dark-mode .day-name.sun { color: #f87171 !important; }
+.dark-mode .day-name.sat { color: #60a5fa !important; }
+.dark-mode .name-txt { color: #f8fafc !important; }
+.dark-mode .team-badge { color: #94a3b8 !important; }
+.dark-mode .day-date { color: #94a3b8 !important; }
 
-.dark-mode .sticky-col { background: #1e293b; border-right-color: #475569 !important; }
-.dark-mode .group-table th.sticky-col { background: #0f172a; }
-.dark-mode .name-txt { color: #f8fafc; }
-.dark-mode .team-badge { color: #94a3b8; }
-.dark-mode .day-date { color: #94a3b8; }
 .dark-mode .nav-btn-v4, .dark-mode .month-header-title { background: #1e293b; color: #f8fafc; border-color: #475569; }
 .dark-mode .month-cell { background: #1e293b; border-color: #334155; }
 .dark-mode .month-day, .dark-mode .month-code-line, .dark-mode .month-time-line, .dark-mode .tone-normal { color: #f8fafc !important; }
