@@ -453,6 +453,8 @@ function App() {
 
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
+  const showGroupAddRef = useRef(false);
+  const showSettingsRef = useRef(false);
 
   const effectiveData = data;
   const setupSourceData = useMemo(() => { if (!data) return null; if (!allowProfileEdit) return data; return applyRemoteRosterNamesForSetup(data, remoteRoster); }, [data, remoteRoster, allowProfileEdit]);
@@ -462,7 +464,7 @@ function App() {
   const currentEditDayType = guessDayType(browseDate);
   const currentEditDayLabel = currentEditDayType === "nor" ? "평일" : currentEditDayType === "sat" ? "토요일" : "휴일";
 
-  // 🟢 스와이프 제어 센서 State (탭마다 다르게 이동 & 애니메이션 적용)
+  // 🟢 스와이프 제어 센서 State (이동 거리/속도 조절됨)
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const [touchStartY, setTouchStartY] = useState(null);
@@ -488,8 +490,8 @@ function App() {
     // 위아래 스크롤이 더 크면 스와이프 무시 (수직 스크롤 보호)
     if (Math.abs(distanceY) > Math.abs(distanceX)) return;
 
-    const isLeftSwipe = distanceX > 50; // 왼쪽으로 넘김 (다음)
-    const isRightSwipe = distanceX < -50; // 오른쪽으로 넘김 (이전)
+    const isLeftSwipe = distanceX > 40; // 조금 더 민감하게(부드럽게) 반응
+    const isRightSwipe = distanceX < -40;
 
     if (isLeftSwipe || isRightSwipe) {
       const direction = isLeftSwipe ? 1 : -1;
@@ -591,22 +593,30 @@ function App() {
 
   useEffect(() => { pathOpenRef.current = pathOpen; }, [pathOpen]);
   useEffect(() => { editOpenRef.current = editOpen; }, [editOpen]);
+  useEffect(() => { showGroupAddRef.current = showGroupAdd; }, [showGroupAdd]);
+  useEffect(() => { showSettingsRef.current = showSettings; }, [showSettings]);
   useEffect(() => { function handler(e) { e.preventDefault(); setDeferredPrompt(e); } window.addEventListener("beforeinstallprompt", handler); return () => window.removeEventListener("beforeinstallprompt", handler); }, []);
+  
   useEffect(() => {
     if (!window.history.state || !window.history.state.__gyobeon) window.history.replaceState({ __gyobeon: true, layer: "root" }, "");
     function handlePopState() {
       if (editOpenRef.current) { setEditOpen(false); return; }
       if (pathOpenRef.current) { setPathOpen(false); return; }
       if (showUpdatePopup) { setShowUpdatePopup(false); return; }
+      if (showGroupAddRef.current) { setShowGroupAdd(false); return; } // 뒤로가기 누르면 그룹창 닫힘
+      if (showSettingsRef.current) { setShowSettings(false); return; } // 뒤로가기 누르면 설정창 닫힘
       if (activeTabRef.current !== "home") { setActiveTab("home"); setHomeDate(getKoreaToday()); return; }
       window.history.pushState({ __gyobeon: true, layer: "root" }, "");
     }
     window.addEventListener("popstate", handlePopState); return () => window.removeEventListener("popstate", handlePopState);
   }, [showUpdatePopup]);
 
+  // 뒤로가기를 위한 History State 밀어넣기
   useEffect(() => { if (pathOpen && (!window.history.state || window.history.state.layer !== "path")) window.history.pushState({ __gyobeon: true, layer: "path" }, ""); }, [pathOpen]);
   useEffect(() => { if (editOpen && (!window.history.state || window.history.state.layer !== "edit")) window.history.pushState({ __gyobeon: true, layer: "edit" }, ""); }, [editOpen]);
   useEffect(() => { if (showUpdatePopup && (!window.history.state || window.history.state.layer !== "update")) window.history.pushState({ __gyobeon: true, layer: "update" }, ""); }, [showUpdatePopup]);
+  useEffect(() => { if (showGroupAdd && (!window.history.state || window.history.state.layer !== "groupAdd")) window.history.pushState({ __gyobeon: true, layer: "groupAdd" }, ""); }, [showGroupAdd]);
+  useEffect(() => { if (showSettings && (!window.history.state || window.history.state.layer !== "settings")) window.history.pushState({ __gyobeon: true, layer: "settings" }, ""); }, [showSettings]);
 
   useEffect(() => {
     if (!effectiveData) return;
@@ -733,8 +743,45 @@ function App() {
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { const team = effectiveData?.[teamKey]; if (!team || !item?.code) return; const image = findPathImage(team, dateStr, item.code); setViewTeam(teamKey); setPathTeamKey(teamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
-  function handleGroupSubmit() { const name = newGroupName.trim(); if (!name) return alert("그룹 이름을 입력해주세요."); const next = { ...groups }; if (isEditGroupMode && currentGroup) { if (currentGroup !== name) { if (next[name]) return alert("이미 존재하는 그룹 이름입니다."); next[name] = next[currentGroup]; delete next[currentGroup]; } alert("그룹 설정이 변경되었습니다."); } else { if (next[name]) return alert("이미 존재하는 그룹 이름입니다."); next[name] = []; alert("새 그룹이 생성되었습니다. 아래에서 인원을 추가하세요."); } setGroups(next); saveGroups(next); setCurrentGroup(name); setIsEditGroupMode(false); setShowGroupAdd(false); }
-  function addToGroup() { const typedGroupName = newGroupName.trim(); const targetGroup = currentGroup || typedGroupName; if (!targetGroup) return alert("그룹 이름을 입력하거나 현재 그룹을 선택해주세요."); if (!groupAddTeam || !groupAddName) return alert("소속과 이름을 선택해주세요."); const next = { ...groups }; if (!next[targetGroup]) next[targetGroup] = []; const exists = next[targetGroup].some((item) => item.team === groupAddTeam && samePersonName(item.name, groupAddName)); if (!exists) next[targetGroup].push({ team: groupAddTeam, name: groupAddName }); setGroups(next); saveGroups(next); setCurrentGroup(targetGroup); setGroupAddName(""); setShowGroupAdd(false); }
+  function handleGroupSubmit() { 
+    const name = newGroupName.trim(); 
+    if (!name) return alert("그룹 이름을 입력해주세요."); 
+    const next = { ...groups }; 
+    if (isEditGroupMode && currentGroup) { 
+      if (currentGroup !== name) { 
+        if (next[name]) return alert("이미 존재하는 그룹 이름입니다."); 
+        next[name] = next[currentGroup]; 
+        delete next[currentGroup]; 
+      } 
+      alert("그룹 설정이 변경되었습니다."); 
+    } else { 
+      if (next[name]) return alert("이미 존재하는 그룹 이름입니다."); 
+      next[name] = []; 
+      alert("새 그룹이 생성되었습니다. 아래에서 인원을 추가하세요."); 
+    } 
+    setGroups(next); 
+    saveGroups(next); 
+    setCurrentGroup(name); 
+    setIsEditGroupMode(false); 
+    // 🟢 모달을 닫지 않고 창 유지
+  }
+  
+  function addToGroup() { 
+    const typedGroupName = newGroupName.trim(); 
+    const targetGroup = currentGroup || typedGroupName; 
+    if (!targetGroup) return alert("그룹 이름을 입력하거나 현재 그룹을 선택해주세요."); 
+    if (!groupAddTeam || !groupAddName) return alert("소속과 이름을 선택해주세요."); 
+    const next = { ...groups }; 
+    if (!next[targetGroup]) next[targetGroup] = []; 
+    const exists = next[targetGroup].some((item) => item.team === groupAddTeam && samePersonName(item.name, groupAddName)); 
+    if (!exists) next[targetGroup].push({ team: groupAddTeam, name: groupAddName }); 
+    setGroups(next); 
+    saveGroups(next); 
+    setCurrentGroup(targetGroup); 
+    setGroupAddName(""); 
+    // 🟢 인원을 추가해도 창을 닫지 않고 계속 추가할 수 있게 유지
+  }
+  
   function removeFromGroup(teamKey, name) { const next = { ...groups }; next[currentGroup] = (next[currentGroup] || []).filter((item) => !(item.team === teamKey && samePersonName(item.name, name))); setGroups(next); saveGroups(next); }
   async function handleInstall() { if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; setDeferredPrompt(null); }
   function applyPendingRosterUpdate() { if (!pendingRosterJson) { setShowUpdatePopup(false); return; } acceptRemoteRoster(pendingRosterJson, { alertMessage: "최신 교번 정보가 반영되었습니다.", nextDataOverride: data, syncMine: false }); }
