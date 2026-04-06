@@ -346,7 +346,6 @@ function App() {
   if (cachedRemoteRosterDate) setGlobalRemoteRosterDate(cachedRemoteRosterDate);
   const initialAppliedRemoteRoster = hasAnyRemoteRoster(cachedRemoteRoster) ? cachedRemoteRoster : getEmptyRemoteRoster();
 
-  // 기본 상태들
   const [zipName, setZipName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -409,11 +408,11 @@ function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
   const [postSetupRemoteCheckNeeded, setPostSetupRemoteCheckNeeded] = useState(false);
-
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(LS_DARK_MODE) === 'true');
 
-  // 🟢 120Hz급 쫀득한 터치 애니메이션 State
+  // 🟢 120Hz급 쫀득한 부분 스와이프 제어 State
   const [swipeOffset, setSwipeOffset] = useState(0);
+  const [swipeOpacity, setSwipeOpacity] = useState(1);
   const [swipeTransition, setSwipeTransition] = useState("");
 
   const pathOpenRef = useRef(false);
@@ -429,17 +428,22 @@ function App() {
   const currentEditDayType = guessDayType(browseDate);
   const currentEditDayLabel = currentEditDayType === "nor" ? "평일" : currentEditDayType === "sat" ? "토요일" : "휴일";
 
-  // 🟢 컴포넌트 전체 렌더링 렉을 싹 없애주는 useRef 스와이프 제어 센서 (클릭 씹힘 완벽 해결)
+  // 🟢 쫀득한 부분 스와이프 로직 (버튼 클릭 씹힘 100% 방지 장치 추가)
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const isSwipingRef = useRef(false);
 
   const onTouchStart = (e) => {
+    // 💡 핵심: 버튼이나 인풋, 탭 등을 누를 땐 스와이프가 켜지지 않도록 막습니다!
+    if (e.target.closest('button, select, input, .bottom-tabs, .all-team-tabs')) return;
+
     touchStartX.current = e.targetTouches[0].clientX;
     touchStartY.current = e.targetTouches[0].clientY;
     isSwipingRef.current = false;
+    
     if (swipeOffset !== 0) {
       setSwipeOffset(0);
+      setSwipeOpacity(1);
       setSwipeTransition("none");
     }
   };
@@ -461,7 +465,7 @@ function App() {
     }
 
     if (isSwipingRef.current) {
-      setSwipeOffset(diffX * 0.85); // 0.85를 곱해서 살짝 묵직하고 쫀득하게 손가락을 따라오도록 조절
+      setSwipeOffset(diffX * 0.7); // 내용물만 쫀득하게 따라오게 감도 0.7
     }
   };
 
@@ -474,31 +478,38 @@ function App() {
     
     isSwipingRef.current = false;
 
-    if (swipeOffset > 60) {
-      setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
-      setSwipeOffset(window.innerWidth);
+    if (swipeOffset > 40) {
+      // 오른쪽 스와이프 (스르륵 사라지며 이동)
+      setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease");
+      setSwipeOffset(80);
+      setSwipeOpacity(0);
       setTimeout(() => {
         changeData(-1);
         setSwipeTransition("none");
-        setSwipeOffset(-window.innerWidth);
+        setSwipeOffset(-80);
         setTimeout(() => {
-          setSwipeTransition("transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)");
+          setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.25s ease");
           setSwipeOffset(0);
+          setSwipeOpacity(1);
         }, 30);
-      }, 250);
-    } else if (swipeOffset < -60) {
-      setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
-      setSwipeOffset(-window.innerWidth);
+      }, 200);
+    } else if (swipeOffset < -40) {
+      // 왼쪽 스와이프
+      setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease");
+      setSwipeOffset(-80);
+      setSwipeOpacity(0);
       setTimeout(() => {
         changeData(1);
         setSwipeTransition("none");
-        setSwipeOffset(window.innerWidth);
+        setSwipeOffset(80);
         setTimeout(() => {
-          setSwipeTransition("transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)");
+          setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.25s ease");
           setSwipeOffset(0);
+          setSwipeOpacity(1);
         }, 30);
-      }, 250);
+      }, 200);
     } else {
+      // 제자리로 쫀득하게 복귀
       setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
       setSwipeOffset(0);
     }
@@ -513,8 +524,17 @@ function App() {
     else if (activeTabRef.current === 'group') setGroupBaseDate(prev => addDays(prev, direction * 7));
   };
 
-  // 부분 애니메이션을 위한 인라인 스타일 객체 (컨텐츠 내용물만 부드럽게 움직임)
-  const swipeStyle = { transform: `translateX(${swipeOffset}px)`, transition: swipeTransition, willChange: 'transform' };
+  // 부분 애니메이션 전용 스타일
+  const swipeStyle = { transform: `translateX(${swipeOffset}px)`, opacity: swipeOpacity, transition: swipeTransition, willChange: 'transform, opacity' };
+
+  // 🟢 [추가] 관리자가 공용 기준일을 선택하면 즉시 기기에 자동 저장되도록 복구
+  useEffect(() => {
+    if (remoteBaseDate) {
+      setGlobalBaseDate(remoteBaseDate);
+      const prevConfig = loadCachedSharedConfig() || {};
+      saveCachedSharedConfig({ ...prevConfig, baseDate: remoteBaseDate });
+    }
+  }, [remoteBaseDate]);
 
   useEffect(() => {
     localStorage.setItem(LS_DARK_MODE, isDarkMode);
@@ -567,7 +587,7 @@ function App() {
       try {
         const shared = loadCachedSharedConfig(); if (shared?.baseDate) { setGlobalBaseDate(shared.baseDate); setRemoteBaseDate(shared.baseDate); }
         const savedRemoteDate = localStorage.getItem(LS_REMOTE_ROSTER_DATE) || ""; if (savedRemoteDate) { setGlobalRemoteRosterDate(savedRemoteDate); setRemoteRosterDate(savedRemoteDate); }
-        try { parsedSaved = await loadParsedData(); if (!cancelled && parsedSaved?.data) setData(parsedSaved.data); savedZip = await loadZipBlob(); if (!cancelled && savedZip?.name) setZipName(savedZip.name || "저장된 ZIP"); if (!cancelled && !parsedSaved?.data && savedZip?.blob) { setZipName(savedZip.name || "저장된 ZIP"); await parseAndSetZip(savedZip.blob, false, true, initialAppliedRemoteRoster, false); } } catch (e) { console.log("로컬 복원 실패", e); }
+        try { parsedSaved = await loadParsedData(); if (!cancelled && parsedSaved?.data) setData(parsedSaved.data); savedZip = await loadZipBlob(); if (!cancelled && !parsedSaved?.data && savedZip?.blob) { setZipName(savedZip.name || "저장된 ZIP"); await parseAndSetZip(savedZip.blob, false, true, initialAppliedRemoteRoster, false); } } catch (e) { console.log("로컬 복원 실패", e); }
       } catch (e) {}
       try { const thisYear = getYearFromDateStr(getKoreaToday()); const preloadYears = [thisYear - 1, thisYear, thisYear + 1]; await Promise.all(preloadYears.map((year) => ensureHolidayYear(year, () => { if (!cancelled) setHolidayVersion((v) => v + 1); }))); } catch (e) {}
       try { const shared = await fetchSharedConfigJsonp(4000); if (cancelled) return; if (shared?.baseDate) { saveCachedSharedConfig(shared); setGlobalBaseDate(shared.baseDate); setRemoteBaseDate(shared.baseDate); } } catch (e) {}
@@ -597,15 +617,14 @@ function App() {
       if (editOpenRef.current) { setEditOpen(false); return; }
       if (pathOpenRef.current) { setPathOpen(false); return; }
       if (showUpdatePopup) { setShowUpdatePopup(false); return; }
-      if (showGroupAddRef.current) { setShowGroupAdd(false); return; }
-      if (showSettingsRef.current) { setShowSettings(false); return; }
+      if (showGroupAddRef.current) { setShowGroupAdd(false); return; } 
+      if (showSettingsRef.current) { setShowSettings(false); return; } 
       if (activeTabRef.current !== "home") { setActiveTab("home"); setHomeDate(getKoreaToday()); return; }
       window.history.pushState({ __gyobeon: true, layer: "root" }, "");
     }
     window.addEventListener("popstate", handlePopState); return () => window.removeEventListener("popstate", handlePopState);
   }, [showUpdatePopup]);
 
-  // 설정/그룹추가 모달 열릴 때 history state 추가
   useEffect(() => { if (pathOpen && (!window.history.state || window.history.state.layer !== "path")) window.history.pushState({ __gyobeon: true, layer: "path" }, ""); }, [pathOpen]);
   useEffect(() => { if (editOpen && (!window.history.state || window.history.state.layer !== "edit")) window.history.pushState({ __gyobeon: true, layer: "edit" }, ""); }, [editOpen]);
   useEffect(() => { if (showUpdatePopup && (!window.history.state || window.history.state.layer !== "update")) window.history.pushState({ __gyobeon: true, layer: "update" }, ""); }, [showUpdatePopup]);
@@ -737,7 +756,7 @@ function App() {
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { const team = effectiveData?.[teamKey]; if (!team || !item?.code) return; const image = findPathImage(team, dateStr, item.code); setViewTeam(teamKey); setPathTeamKey(teamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
-  // 🟢 그룹 생성 시 입력칸 깔끔하게 비우기 (창은 유지)
+  // 🟢 그룹 생성 (성공 시 입력칸을 즉시 지움)
   function handleGroupSubmit() { 
     const name = newGroupName.trim(); 
     if (!name) return alert("그룹 이름을 입력해주세요."); 
@@ -747,7 +766,7 @@ function App() {
     setGroups(next); 
     saveGroups(next); 
     setCurrentGroup(name); 
-    setNewGroupName(""); // 성공적으로 만들면 이름을 싹 비워줍니다.
+    setNewGroupName(""); // 입력칸 초기화
   }
   
   function addToGroup() { 
@@ -767,7 +786,7 @@ function App() {
   
   function removeFromGroup(teamKey, name) { const next = { ...groups }; next[currentGroup] = (next[currentGroup] || []).filter((item) => !(item.team === teamKey && samePersonName(item.name, name))); setGroups(next); saveGroups(next); }
   
-  // 🟢 그룹 전체 삭제
+  // 🟢 현재 그룹 통째로 삭제
   function deleteCurrentGroup() {
     if (!currentGroup) return;
     if (!window.confirm(`정말 '${currentGroup}' 그룹 전체를 삭제하시겠습니까?\n(삭제 후 복구할 수 없습니다)`)) return;
@@ -971,7 +990,7 @@ function App() {
                       {Object.keys(groups).length === 0 ? (<option value="">그룹 없음</option>) : (Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
                     </select>
                   </div>
-                  <button className="group-add-btn-v4" onClick={() => { setNewGroupName(""); setIsEditGroupMode(false); setShowGroupAdd(true); }}>+ 그룹 관리</button>
+                  <button className="group-add-btn-v4" onClick={() => setShowGroupAdd(true)}>+ 그룹 관리</button>
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>▶</button>
                 </div>
 
@@ -1087,11 +1106,11 @@ function App() {
               <div className="card" style={{ marginTop: 14, padding: 12 }}>
                 <div className="label" style={{ marginBottom: 10 }}>관리자</div>
                 <label className="label">공용 기준일</label>
-                <input className="input" type="date" value={remoteBaseDate} onChange={(e) => { setRemoteBaseDate(e.target.value); setGlobalBaseDate(e.target.value); }} />
-                <div className="help-text" style={{ marginTop: 10 }}>관리자에서 저장 또는 배포하면 공용 기준일과 배포본이 반영됩니다.</div>
+                {/* 🟢 입력창에서 날짜 변경 시 바로 기기에 자동 저장됨 */}
+                <input className="input" type="date" value={remoteBaseDate} onChange={(e) => setRemoteBaseDate(e.target.value)} />
+                <div className="help-text" style={{ marginTop: 10 }}>관리자에서 '현재배정 배포'를 누르면 다른 사람들에게도 공용 기준일과 배포본이 강제 반영됩니다.</div>
                 <div className="modal-actions">
-                  <button className="modal-btn" onClick={publishRoster} disabled={savingSharedConfig}>{savingSharedConfig ? "처리중..." : "현재배정 배포"}</button>
-                  <button className="modal-btn primary" onClick={saveSharedConfig} disabled={savingSharedConfig}>{savingSharedConfig ? "저장중..." : "공용 기준일 저장"}</button>
+                  <button className="modal-btn primary" onClick={publishRoster} disabled={savingSharedConfig}>{savingSharedConfig ? "처리중..." : "현재배정 배포"}</button>
                 </div>
               </div>
             )}
@@ -1117,7 +1136,7 @@ function App() {
             
             <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
             
-            {/* 🟢 기존 그룹 선택 및 인원 추가 구역 (안내문 삭제됨) */}
+            {/* 🟢 기존 그룹 선택 및 인원 추가 구역 (파란색 안내문구 삭제 완료) */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <label className="label" style={{ margin: 0 }}>그룹 인원 편집</label>
               <select className="select" style={{ width: 'auto', padding: '6px 12px', fontSize: '13px', background: '#f8fafc' }} value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
