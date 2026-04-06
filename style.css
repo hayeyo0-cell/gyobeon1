@@ -6,7 +6,7 @@ button { transition: transform 0.14s ease, opacity 0.18s ease, background-color 
 button:active { transform: scale(0.97); }
 #root { width: 100%; height: 100%; overflow-x: hidden; }
 .topbar { display: none !important; }
-.container { width: 100%; min-height: 100dvh; padding: 24px 8px 24px; overflow-y: auto; overflow-x: hidden; }
+.container { width: 100%; min-height: 100dvh; padding: 24px 8px 24px; overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
 .container::after { content: ""; display: block; height: calc(86px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; }
 .card, .main-panel, .month-header-bar, .month-calendar, .all-tab-header, .all-team-tabs, .all-tab-grid-wrap, .group-page, .group-table-wrap { width: 100%; margin-left: auto; margin-right: auto; }
 .card { background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 24px; padding: 14px; margin-bottom: 10px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.78); transition: background-color 0.2s ease, border-color 0.2s ease; }
@@ -16,6 +16,7 @@ button:active { transform: scale(0.97); }
 .label { display: block; margin-bottom: 6px; color: #4b5563; font-size: 14px; font-weight: 700; }
 .input, .select { width: 100%; padding: 11px 12px; border-radius: 16px; border: 1px solid rgba(203, 213, 225, 0.95); background: rgba(255, 255, 255, 0.95); outline: none; box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.02); transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease; }
 .input:focus, .select:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12); }
+
 .settings-row { min-height: 52px; display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .quick-links { display: flex; align-items: center; gap: 8px; }
 .settings-btn, .install-btn, .quick-btn { border: 0; color: white; height: 42px; padding: 0 14px; border-radius: 16px; cursor: pointer; font-weight: 800; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
@@ -24,24 +25,20 @@ button:active { transform: scale(0.97); }
 .quick-btn.band { background: linear-gradient(180deg, #21b35a 0%, #169447 100%); }
 .quick-btn.vacation { background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%); }
 .quick-icon { width: 20px; height: 20px; object-fit: contain; display: block; flex-shrink: 0; }
+
 .date-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; height: 168px; }
-.date-box { background: rgba(255, 255, 255, 0.78); display: grid; grid-template-rows: 46px 1fr 46px; overflow: hidden; border-radius: 22px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.7); border: 1px solid rgba(255, 255, 255, 0.8); }
-.date-btn { width: 100%; height: 46px; border: 0; background: rgba(215, 220, 230, 0.55); font-size: 26px; font-weight: 800; cursor: pointer; color: inherit; }
-.date-value { background: rgba(255, 255, 255, 0.95); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 23px; line-height: 1.15; padding: 4px; white-space: nowrap; word-break: keep-all; transition: background-color 0.2s ease; }
-.main-panel { min-height: 210px; background: rgba(255, 255, 255, 0.84); border-radius: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: 0; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72); border: 1px solid rgba(255, 255, 255, 0.8); }
+.date-box { background: rgba(255, 255, 255, 0.78); display: grid; grid-template-rows: 46px 1fr 46px; overflow: hidden; border-radius: 22px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.7); border: 1px solid rgba(255, 255, 255, 0.8); transition: background-color 0.2s ease, border-color 0.2s ease; }
+.date-btn { width: 100%; height: 46px; border: 0; background: rgba(215, 220, 230, 0.55); font-size: 26px; font-weight: 800; cursor: pointer; color: inherit; transition: background-color 0.2s ease; }
+.date-value { background: rgba(255, 255, 255, 0.95); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 23px; line-height: 1.15; padding: 4px; white-space: nowrap; word-break: keep-all; transition: background-color 0.2s ease, color 0.2s ease; }
+
+.main-panel { min-height: 210px; background: rgba(255, 255, 255, 0.84); border-radius: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: 0; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72); border: 1px solid rgba(255, 255, 255, 0.8); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .center-view { text-align: center; padding: 0; width: 100%; }
 .main-code { font-size: clamp(40px, 9vw, 56px); line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
 .main-time { margin-top: 14px; font-size: clamp(24px, 6vw, 36px); line-height: 1.15; font-weight: 700; }
-.main-subinfo { margin-top: 12px; font-size: 15px; font-weight: 700; color: #64748b; letter-spacing: -0.01em; }
+.main-subinfo { margin-top: 12px; font-size: 15px; font-weight: 700; color: #64748b; letter-spacing: -0.01em; transition: color 0.2s ease; }
+
 .tab-page { min-height: 100%; animation: pageFadeIn 0.18s ease; }
 @keyframes pageFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-
-/* 스와이프 관련 래퍼 설정 */
-.swipe-wrapper {
-  width: 100%;
-  height: 100%;
-  /* 자바스크립트에서 style={transform: ...} 로 제어됨 */
-}
 
 .bottom-tabs { position: fixed; left: 0; right: 0; bottom: 0; height: calc(60px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); background: rgba(39, 82, 191, 0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid rgba(255, 255, 255, 0.16); box-shadow: 0 -6px 22px rgba(15, 23, 42, 0.12); z-index: 50; overflow: hidden; }
 .bottom-tabs.tabs-5 { display: flex !important; width: 100%; }
@@ -54,9 +51,7 @@ button:active { transform: scale(0.97); }
 .bottom-tab.active { color: #ffffff; background: rgba(255, 255, 255, 0.08); font-size: 16px; font-weight: 700; }
 .bottom-tab.active::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: 5px; height: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.95); }
 
-/* =========================================
-   새로 도입된 그룹 헤더 UI (1:1:1 공평한 크기)
-========================================== */
+/* 그룹 UI */
 .group-page { background: transparent; border-radius: 0; padding: 0; box-shadow: none; border: none; }
 .group-top-bar-v4 { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 10px; background: rgba(255, 255, 255, 0.95); border-radius: 20px; border: 1px solid rgba(203, 213, 225, 0.8); box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8); margin-bottom: 12px; width: 100%; transition: background-color 0.2s ease, border-color 0.2s ease; }
 .nav-btn-v4 { flex: 0 0 auto; padding: 8px 12px; background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); border: none; border-radius: 12px; font-size: 16px; color: white; cursor: pointer; font-weight: 800; box-shadow: 0 4px 10px rgba(47, 97, 220, 0.2); }
@@ -108,7 +103,6 @@ button:active { transform: scale(0.97); }
   text-overflow: ellipsis;
 }
 
-/* 그룹 테이블 */
 .group-table-wrap { overflow: auto; border-radius: 18px; background: #ffffff; border: 1px solid rgba(203, 213, 225, 0.9); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .group-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
 .group-table th, .group-table td { border-bottom: 1px solid rgba(203, 213, 225, 0.6); border-right: 1px solid rgba(203, 213, 225, 0.6); padding: 8px 4px; text-align: center; vertical-align: middle; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
@@ -206,27 +200,6 @@ button:active { transform: scale(0.97); }
 @keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(34, 199, 216, 0.18), 0 8px 16px rgba(34, 199, 216, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.76); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 3px rgba(34, 199, 216, 0.28), 0 12px 24px rgba(34, 199, 216, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.82); } }
 
 /* =========================================
-   📖 스와이프 슬라이드 애니메이션 (책장 넘기기)
-========================================== */
-.slide-left {
-  animation: slideInRight 0.3s ease-out forwards;
-}
-
-.slide-right {
-  animation: slideInLeft 0.3s ease-out forwards;
-}
-
-@keyframes slideInRight {
-  0% { transform: translateX(25px); opacity: 0.6; }
-  100% { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes slideInLeft {
-  0% { transform: translateX(-25px); opacity: 0.6; }
-  100% { transform: translateX(0); opacity: 1; }
-}
-
-/* =========================================
    🌙 다크 모드 전용 스타일 오버라이드
 ========================================== */
 body.dark-mode { background: #0f172a; color: #f8fafc; }
@@ -259,7 +232,7 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
    📱 모바일 최적화 (@media)
 ========================================== */
 @media (max-width: 420px) {
-  .container { padding: 22px 6px 20px; }
+  .container { padding: 22px 6px 20px; touch-action: pan-y; }
   .container::after { height: calc(92px + env(safe-area-inset-bottom, 0px)); }
 
   .date-grid { gap: 6px; height: 154px; margin-bottom: 6px; }
@@ -311,7 +284,6 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
   .nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
   
-  /* 🟢 모바일에서 글씨가 더 쾌적하게 보이도록 크기 조절 */
   .group-select-display { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
   .group-add-btn-v4 { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
   
