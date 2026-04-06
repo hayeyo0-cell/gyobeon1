@@ -311,7 +311,6 @@ function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "")
 function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
 function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: end || "-" }; } return { startTime: raw, endTime: "" }; }
 
-// 🟢 최고 해상도(scale: 3) & 중복 파일명 방지(시간 꼬리표) 및 무한로딩 해결 캡처 (월교번)
 const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
   if (!window.html2canvas) {
     await new Promise(r => setTimeout(r, 500));
@@ -341,8 +340,7 @@ const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
       useCORS: true
     });
     
-    const d = new Date();
-    const timestamp = `${d.getHours()}${d.getMinutes()}${d.getSeconds()}`;
+    const timestamp = new Date().toLocaleTimeString('ko-KR', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '');
     const filename = `${filenamePrefix}_${timestamp}.png`;
 
     const link = document.createElement("a");
@@ -514,7 +512,6 @@ function App() {
     }
   };
 
-  // 🟢 틱틱 걸리는 현상 및 깜빡임 해결 (3D GPU 가속 & 화면 밖 슬라이딩)
   const onTouchEndHandler = () => {
     if (!isSwipingRef.current) {
       touchStartX.current = null;
@@ -523,30 +520,30 @@ function App() {
     }
     
     isSwipingRef.current = false;
-    const viewportWidth = window.innerWidth || 400; // 화면 전체 너비 활용
+    const viewportWidth = window.innerWidth || 400; 
 
     if (swipeOffset > 40) {
       setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)");
-      setSwipeOffset(viewportWidth); // 우측 화면 밖으로 완전히 날림
+      setSwipeOffset(viewportWidth); 
       setTimeout(() => {
         changeData(-1);
         setSwipeTransition("none");
-        setSwipeOffset(-viewportWidth); // 보이지 않는 좌측 끝으로 순간이동 (버퍼링 감춤)
+        setSwipeOffset(-viewportWidth); 
         setTimeout(() => {
           setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
-          setSwipeOffset(0); // 부드럽게 중앙으로 복귀
+          setSwipeOffset(0); 
         }, 30);
       }, 200);
     } else if (swipeOffset < -40) {
       setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)");
-      setSwipeOffset(-viewportWidth); // 좌측 화면 밖으로 완전히 날림
+      setSwipeOffset(-viewportWidth); 
       setTimeout(() => {
         changeData(1);
         setSwipeTransition("none");
-        setSwipeOffset(viewportWidth); // 보이지 않는 우측 끝으로 순간이동
+        setSwipeOffset(viewportWidth); 
         setTimeout(() => {
           setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
-          setSwipeOffset(0); // 부드럽게 중앙으로 복귀
+          setSwipeOffset(0); 
         }, 30);
       }, 200);
     } else {
@@ -564,8 +561,15 @@ function App() {
     else if (activeTabRef.current === 'group') setGroupBaseDate(prev => addDays(prev, direction * 7));
   };
 
-  // 🟢 투명도 제거 및 3D 가속(GPU) 사용으로 갤러리 앱 수준의 쫀득함 확보
   const swipeStyle = { transform: `translate3d(${swipeOffset}px, 0, 0)`, transition: swipeTransition, willChange: 'transform' };
+
+  // 🟢 반작용의 마법: 왼쪽 이름표를 역으로 밀어내어 고정시키는 특수 스타일
+  const stickySwipeTransition = swipeTransition === "none" ? "none" : (swipeTransition ? `${swipeTransition}, background-color 0.2s ease, border-color 0.2s ease` : "background-color 0.2s ease, border-color 0.2s ease");
+  const stickySwipeStyle = {
+    transform: `translate3d(${-swipeOffset}px, 0, 0)`,
+    transition: stickySwipeTransition,
+    willChange: 'transform'
+  };
 
   useEffect(() => {
     if (remoteBaseDate) {
@@ -581,7 +585,6 @@ function App() {
     else document.body.classList.remove('dark-mode');
   }, [isDarkMode]);
 
-  // 🟢 가장 안정적인 글로벌 CDN 망으로 캡처 스크립트 연결
   useEffect(() => {
     if (!window.html2canvas) {
       const script = document.createElement("script");
@@ -902,7 +905,6 @@ function App() {
     setCurrentGroup(Object.keys(next)[0] || "");
   }
 
-  // 🟢 그룹 캡처 (스마트 시간 꼬리표 적용으로 중복 알림창 완전 차단)
   const handleShareGroupImage = async () => {
     if (!currentGroup || groupMembers.length === 0) return alert("공유할 그룹 인원이 없습니다.");
     if (!window.html2canvas) {
@@ -1137,19 +1139,15 @@ function App() {
                 <div className="group-top-bar-v4">
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, -7))}>◀</button>
                   <div className="group-select-wrap">
-                    <div className="group-select-display">
-                      {groupMonth ? `${parseInt(groupMonth.split('-')[1], 10)}월 ▾` : "월 ▾"}
-                    </div>
+                    <div className="group-select-display">{groupMonth ? `${parseInt(groupMonth.split('-')[1], 10)}월 ▾` : "월 ▾"}</div>
                     <select className="group-select-overlay" value={groupMonth} onChange={(e) => handleGroupMonthChange(e.target.value)}>
                       {groupMonthOptions.map((item) => (<option key={item.value} value={item.value}>{item.label}</option>))}
                     </select>
                   </div>
                   <div className="group-select-wrap">
-                    <div className="group-select-display">
-                      {currentGroup ? `${currentGroup} ▾` : "그룹 없음 ▾"}
-                    </div>
+                    <div className="group-select-display">{currentGroup ? `${currentGroup} ▾` : "그룹 없음 ▾"}</div>
                     <select className="group-select-overlay" value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
-                      {Object.keys(groups).length === 0 ? (<option value="">그룹 없음</option>) : (Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
+                      {Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>)}
                     </select>
                   </div>
                   <div style={{ flex: 1, display: 'flex', gap: '4px', minWidth: 0, height: '100%' }}>
@@ -1162,7 +1160,8 @@ function App() {
                   <table className="group-table">
                     <thead>
                       <tr>
-                        <th className="sticky-col">이름</th>
+                        {/* 🟢 반작용의 마법: 왼쪽 이름표만 역방향으로 밀어내어 고정시킴 */}
+                        <th className="sticky-col" style={stickySwipeStyle}>이름</th>
                         {weekDates.map((date) => {
                           const isSelectedCol = selectedGroupDate === date; const isToday = date === getKoreaToday();
                           return (
@@ -1180,7 +1179,8 @@ function App() {
                       ) : (
                         groupMembers.map((member, idx) => (
                           <tr key={`${member.team}-${member.name}-${idx}`}>
-                            <td className="group-name-cell sticky-col">
+                            {/* 🟢 반작용의 마법: 왼쪽 이름표만 역방향으로 밀어내어 고정시킴 */}
+                            <td className="group-name-cell sticky-col" style={stickySwipeStyle}>
                               <div className="group-name-cell-inner">
                                 <div className="name-txt">{member.name}</div>
                                 <div className="team-badge">{TEAM_LABELS[member.team]}</div>
