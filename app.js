@@ -311,7 +311,7 @@ function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "")
 function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
 function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: end || "-" }; } return { startTime: raw, endTime: "" }; }
 
-// 🟢 최고 해상도(scale: 3) 유지 & 중복 다운로드 경고창 완벽 방지 캡처 함수 (월교번용)
+// 🟢 최고 해상도(scale: 3) & 중복 파일명 방지(시간 꼬리표) 및 무한로딩 해결 캡처 (월교번)
 const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
   if (!window.html2canvas) {
     await new Promise(r => setTimeout(r, 500));
@@ -341,8 +341,8 @@ const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
       useCORS: true
     });
     
-    // 🟢 파일명 중복 경고창이 뜨지 않도록 초단위 꼬리표 부착
-    const timestamp = new Date().toLocaleTimeString('ko-KR', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '');
+    const d = new Date();
+    const timestamp = `${d.getHours()}${d.getMinutes()}${d.getSeconds()}`;
     const filename = `${filenamePrefix}_${timestamp}.png`;
 
     const link = document.createElement("a");
@@ -487,7 +487,6 @@ function App() {
     touchStartY.current = e.targetTouches[0].clientY;
     isSwipingRef.current = false;
     
-    // 🟢 투명해지는 깜빡임 삭제
     if (swipeOffset !== 0) {
       setSwipeOffset(0);
       setSwipeTransition("none");
@@ -515,7 +514,7 @@ function App() {
     }
   };
 
-  // 🟢 투명해지는(깜빡이는) 효과를 완전히 제거하고 쫀득한 슬라이딩 액션만 남김
+  // 🟢 틱틱 걸리는 현상 및 깜빡임 해결 (3D GPU 가속 & 화면 밖 슬라이딩)
   const onTouchEndHandler = () => {
     if (!isSwipingRef.current) {
       touchStartX.current = null;
@@ -524,29 +523,30 @@ function App() {
     }
     
     isSwipingRef.current = false;
+    const viewportWidth = window.innerWidth || 400; // 화면 전체 너비 활용
 
     if (swipeOffset > 40) {
       setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)");
-      setSwipeOffset(200); // 넉넉하게 우측으로 밀기
+      setSwipeOffset(viewportWidth); // 우측 화면 밖으로 완전히 날림
       setTimeout(() => {
         changeData(-1);
         setSwipeTransition("none");
-        setSwipeOffset(-200); // 즉시 쌩쌩하게 좌측 끝으로 대기
+        setSwipeOffset(-viewportWidth); // 보이지 않는 좌측 끝으로 순간이동 (버퍼링 감춤)
         setTimeout(() => {
           setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
-          setSwipeOffset(0); // 중앙으로 깔끔하게 슬라이딩 인
+          setSwipeOffset(0); // 부드럽게 중앙으로 복귀
         }, 30);
       }, 200);
     } else if (swipeOffset < -40) {
       setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)");
-      setSwipeOffset(-200); // 넉넉하게 좌측으로 밀기
+      setSwipeOffset(-viewportWidth); // 좌측 화면 밖으로 완전히 날림
       setTimeout(() => {
         changeData(1);
         setSwipeTransition("none");
-        setSwipeOffset(200); // 즉시 쌩쌩하게 우측 끝으로 대기
+        setSwipeOffset(viewportWidth); // 보이지 않는 우측 끝으로 순간이동
         setTimeout(() => {
           setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
-          setSwipeOffset(0); // 중앙으로 깔끔하게 슬라이딩 인
+          setSwipeOffset(0); // 부드럽게 중앙으로 복귀
         }, 30);
       }, 200);
     } else {
@@ -564,8 +564,8 @@ function App() {
     else if (activeTabRef.current === 'group') setGroupBaseDate(prev => addDays(prev, direction * 7));
   };
 
-  // 🟢 투명도(opacity) 속성 제거
-  const swipeStyle = { transform: `translateX(${swipeOffset}px)`, transition: swipeTransition, willChange: 'transform' };
+  // 🟢 투명도 제거 및 3D 가속(GPU) 사용으로 갤러리 앱 수준의 쫀득함 확보
+  const swipeStyle = { transform: `translate3d(${swipeOffset}px, 0, 0)`, transition: swipeTransition, willChange: 'transform' };
 
   useEffect(() => {
     if (remoteBaseDate) {
@@ -581,7 +581,7 @@ function App() {
     else document.body.classList.remove('dark-mode');
   }, [isDarkMode]);
 
-  // 🟢 캡처 도구 (html2canvas) 로딩 오류 완벽 해결 (글로벌 안정 CDN 사용)
+  // 🟢 가장 안정적인 글로벌 CDN 망으로 캡처 스크립트 연결
   useEffect(() => {
     if (!window.html2canvas) {
       const script = document.createElement("script");
@@ -902,7 +902,7 @@ function App() {
     setCurrentGroup(Object.keys(next)[0] || "");
   }
 
-  // 🟢 그룹 고화질 캡처 & 스마트폰 기본 카톡/밴드 공유 기능 (타임스탬프 적용)
+  // 🟢 그룹 캡처 (스마트 시간 꼬리표 적용으로 중복 알림창 완전 차단)
   const handleShareGroupImage = async () => {
     if (!currentGroup || groupMembers.length === 0) return alert("공유할 그룹 인원이 없습니다.");
     if (!window.html2canvas) {
@@ -930,8 +930,8 @@ function App() {
       canvas.toBlob(async (blob) => {
         if (!blob) return alert("이미지 생성에 실패했습니다.");
         
-        // 🟢 중복 파일명 방지를 위한 타임스탬프 적용
-        const timestamp = new Date().toLocaleTimeString('ko-KR', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '');
+        const d = new Date();
+        const timestamp = `${d.getHours()}${d.getMinutes()}${d.getSeconds()}`;
         const filename = `${currentGroup}_스케줄_${timestamp}.png`;
         const file = new File([blob], filename, { type: 'image/png' });
 
@@ -1057,8 +1057,8 @@ function App() {
                       const isToday = browseDate === getKoreaToday();
                       
                       const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
-                      const customTextColorCode = item.customColor ? { color: "#0f172a" } : undefined;
-                      const customTextColorName = item.customColor ? { color: "#374151" } : undefined;
+                      const customTextColorCode = item.customColor ? { color: "#000000" } : undefined;
+                      const customTextColorName = item.customColor ? { color: "#000000" } : undefined;
                       
                       return (
                         <div key={`${item.idx}-${item.code}-${item.displayName}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
@@ -1154,12 +1154,10 @@ function App() {
                   </div>
                   <div style={{ flex: 1, display: 'flex', gap: '4px', minWidth: 0, height: '100%' }}>
                     <button className="group-add-btn-v4" onClick={() => setShowGroupAdd(true)}>관리</button>
-                    {/* 🟢 공유 버튼 클릭 시 고화질 캡처 및 공유창 자동 실행 */}
                     <button className="group-add-btn-v4" style={{ background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2)' }} onClick={handleShareGroupImage}>공유</button>
                   </div>
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>▶</button>
                 </div>
-                {/* 🟢 캡처 시 잘림 방지를 위해 id 지정 */}
                 <div className="group-table-wrap" style={swipeStyle} id="capture-group-area">
                   <table className="group-table">
                     <thead>
