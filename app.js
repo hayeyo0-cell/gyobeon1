@@ -311,9 +311,13 @@ function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "")
 function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
 function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: end || "-" }; } return { startTime: raw, endTime: "" }; }
 
-// 🟢 캡처 기능 (월교번)
-const captureAndSave = async (elementId, filename, isDarkMode) => {
-  if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+// 🟢 최고 해상도(scale: 3) & 중복 파일명 방지 & 무한로딩 대기열 처리 완벽 적용 (월교번)
+const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
+  if (!window.html2canvas) {
+    await new Promise(r => setTimeout(r, 500)); // 너무 급하게 뜨는 창 방지 (0.5초 대기)
+    if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+  }
+  
   const element = document.getElementById(elementId);
   if (!element) return;
 
@@ -336,8 +340,13 @@ const captureAndSave = async (elementId, filename, isDarkMode) => {
       backgroundColor: isDarkMode ? '#0f172a' : '#eef1f6',
       useCORS: true
     });
+    
+    // 🟢 파일명 중복 경고창 방지를 위해 '현재 시간'을 파일명 뒤에 부착
+    const timestamp = new Date().toLocaleTimeString('ko-KR', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '');
+    const filename = `${filenamePrefix}_${timestamp}.png`;
+
     const link = document.createElement("a");
-    link.download = filename + ".png";
+    link.download = filename;
     link.href = canvas.toDataURL("image/png");
     link.click();
   } catch (e) {
@@ -585,6 +594,7 @@ function App() {
     }
   }, []);
 
+  // --- 기존 useEffect 모음 ---
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
   useEffect(() => { cleanupNameOverrides(); setOverrides(loadOverrides()); }, []);
   useEffect(() => { saveMySelection(mySelection); }, [mySelection]);
@@ -896,14 +906,18 @@ function App() {
     setCurrentGroup(Object.keys(next)[0] || "");
   }
 
-  // 🟢 그룹 고화질 캡처 & 스마트폰 기본 카톡/밴드 공유 기능
+  // 🟢 새롭게 추가된 그룹 고화질 캡처 & 네이티브 공유 기능 (타임스탬프 파일명 적용)
   const handleShareGroupImage = async () => {
     if (!currentGroup || groupMembers.length === 0) return alert("공유할 그룹 인원이 없습니다.");
-    if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+    if (!window.html2canvas) {
+      await new Promise(r => setTimeout(r, 500));
+      if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+    }
     
     const element = document.getElementById('capture-group-area');
     if (!element) return;
 
+    // 캡처하는 찰나의 순간 표 전체가 잘리지 않게 설정하고, 애니메이션/투명도 효과 차단
     const originalTransform = element.style.transform;
     const originalOverflow = element.style.overflow;
     element.style.transform = 'none';
@@ -913,15 +927,20 @@ function App() {
 
     try {
       const canvas = await window.html2canvas(element, {
-        scale: 3, 
+        scale: 3, // 🔥 3배수 최고 화질로 렌더링
         backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
         useCORS: true
       });
 
       canvas.toBlob(async (blob) => {
         if (!blob) return alert("이미지 생성에 실패했습니다.");
-        const file = new File([blob], `${currentGroup}_스케줄.png`, { type: 'image/png' });
+        
+        // 🟢 중복 파일명 방지를 위한 타임스탬프 적용
+        const timestamp = new Date().toLocaleTimeString('ko-KR', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '');
+        const filename = `${currentGroup}_스케줄_${timestamp}.png`;
+        const file = new File([blob], filename, { type: 'image/png' });
 
+        // 기기가 파일 공유를 지원하면 네이티브 공유창(카톡, 밴드 등) 띄우기
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({
@@ -929,11 +948,12 @@ function App() {
               files: [file]
             });
           } catch (shareErr) {
-            console.log('공유 취소', shareErr);
+            console.log('공유가 취소되었습니다.', shareErr);
           }
         } else {
+          // 공유를 지원하지 않는 기기면 갤러리에 고화질로 바로 다운로드
           const link = document.createElement("a");
-          link.download = `${currentGroup}_스케줄.png`;
+          link.download = filename;
           link.href = URL.createObjectURL(blob);
           link.click();
           alert("기기가 바로 공유를 지원하지 않아 앨범에 사진으로 저장했습니다.");
@@ -942,6 +962,7 @@ function App() {
     } catch (e) {
       alert("캡처에 실패했습니다.");
     } finally {
+      // 캡처 후 화면 원래대로 복구
       element.style.transform = originalTransform;
       element.style.overflow = originalOverflow;
     }
@@ -1045,7 +1066,7 @@ function App() {
                       
                       const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
                       const customTextColorCode = item.customColor ? { color: "#0f172a" } : undefined;
-                      const customTextColorName = item.customColor ? { color: "#374151" } : undefined;
+                      const customTextColorName = item.customColor ? { color: "#111827" } : undefined;
                       
                       return (
                         <div key={`${item.idx}-${item.code}-${item.displayName}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
