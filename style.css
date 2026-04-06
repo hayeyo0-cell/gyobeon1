@@ -6,8 +6,11 @@ button { transition: transform 0.14s ease, opacity 0.18s ease, background-color 
 button:active { transform: scale(0.97); }
 #root { width: 100%; height: 100%; overflow-x: hidden; }
 .topbar { display: none !important; }
+
+/* 🟢 스와이프와 스크롤이 충돌하지 않도록 touch-action 설정 */
 .container { width: 100%; min-height: 100dvh; padding: 24px 8px 24px; overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
 .container::after { content: ""; display: block; height: calc(86px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; }
+
 .card, .main-panel, .month-header-bar, .month-calendar, .all-tab-header, .all-team-tabs, .all-tab-grid-wrap, .group-page, .group-table-wrap { width: 100%; margin-left: auto; margin-right: auto; }
 .card { background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 24px; padding: 14px; margin-bottom: 10px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.78); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .card-title { font-size: 20px; font-weight: 800; margin-bottom: 10px; }
@@ -51,57 +54,16 @@ button:active { transform: scale(0.97); }
 .bottom-tab.active { color: #ffffff; background: rgba(255, 255, 255, 0.08); font-size: 16px; font-weight: 700; }
 .bottom-tab.active::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: 5px; height: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.95); }
 
-/* 그룹 UI */
+/* 그룹 UI (가운데 3칸 동일 비율) */
 .group-page { background: transparent; border-radius: 0; padding: 0; box-shadow: none; border: none; }
 .group-top-bar-v4 { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 10px; background: rgba(255, 255, 255, 0.95); border-radius: 20px; border: 1px solid rgba(203, 213, 225, 0.8); box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8); margin-bottom: 12px; width: 100%; transition: background-color 0.2s ease, border-color 0.2s ease; }
 .nav-btn-v4 { flex: 0 0 auto; padding: 8px 12px; background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); border: none; border-radius: 12px; font-size: 16px; color: white; cursor: pointer; font-weight: 800; box-shadow: 0 4px 10px rgba(47, 97, 220, 0.2); }
 
-/* 🟢 투명 셀렉트 래퍼 (가운데 3칸 동일 비율) */
-.group-select-wrap {
-  flex: 1 1 0; /* 1:1 비율 분배 */
-  min-width: 0; /* 글씨 넘침 방지 */
-  position: relative;
-}
-.group-select-display {
-  width: 100%;
-  padding: 8px 4px;
-  border-radius: 12px;
-  border: 1px solid #cbd5e1;
-  font-size: 13px;
-  font-weight: 800;
-  background: #f8fafc;
-  color: #0f172a;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
-.group-select-overlay {
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  opacity: 0; /* 투명하게 만들어서 위를 덮음 */
-  cursor: pointer;
-}
+.group-select-wrap { flex: 1 1 0; min-width: 0; position: relative; }
+.group-select-display { width: 100%; padding: 8px 4px; border-radius: 12px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: 800; background: #f8fafc; color: #0f172a; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+.group-select-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 
-/* 🟢 그룹 추가 버튼 (가운데 3칸 동일 비율) */
-.group-add-btn-v4 { 
-  flex: 1 1 0; /* 1:1 비율 분배 */
-  min-width: 0; 
-  background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%); 
-  color: #fff; 
-  border: none; 
-  padding: 8px 4px; 
-  border-radius: 12px; 
-  font-weight: 800; 
-  font-size: 13px; 
-  text-align: center;
-  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2); 
-  cursor: pointer; 
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+.group-add-btn-v4 { flex: 1 1 0; min-width: 0; background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%); color: #fff; border: none; padding: 8px 4px; border-radius: 12px; font-weight: 800; font-size: 13px; text-align: center; box-shadow: 0 4px 10px rgba(124, 58, 237, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .group-table-wrap { overflow: auto; border-radius: 18px; background: #ffffff; border: 1px solid rgba(203, 213, 225, 0.9); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .group-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
