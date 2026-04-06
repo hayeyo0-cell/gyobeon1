@@ -1000,6 +1000,27 @@ button:active {
 }
 
 /* =========================================
+   📖 스와이프 슬라이드 애니메이션 (책장 넘기기)
+========================================== */
+.slide-left {
+  animation: slideFromRight 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.slide-right {
+  animation: slideFromLeft 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes slideFromRight {
+  0% { transform: translateX(40px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideFromLeft {
+  0% { transform: translateX(-40px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+/* =========================================
    🌙 다크 모드 전용 스타일 오버라이드
 ========================================== */
 body.dark-mode {
@@ -1095,7 +1116,7 @@ body.dark-mode {
 .dark-mode .label { color: #e2e8f0; }
 
 /* =========================================
-   모바일 최적화 (@media)
+   📱 모바일 최적화 (@media)
 ========================================== */
 @media (max-width: 420px) {
   .container { padding: 22px 6px 20px; }
@@ -1146,7 +1167,7 @@ body.dark-mode {
   .all-code { font-size: 12.5px; }
   .all-name { font-size: 9px; margin-top: 2px; }
 
-  /* 모바일 그룹 탭 디자인 */
+  /* 그룹 모바일 디자인 */
   .group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
   .nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
   .group-select-month, .group-select-name { padding: 6px 4px; font-size: 13px; border-radius: 10px; }
