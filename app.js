@@ -311,7 +311,7 @@ function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "")
 function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
 function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: end || "-" }; } return { startTime: raw, endTime: "" }; }
 
-// 🟢 최고 해상도(scale: 3) 적용 & 흐림/투명 버그 완벽 차단 캡처 기능
+// 🟢 최고 해상도(scale: 3) 유지 & 흐림/투명 버그 완벽 차단 캡처 함수 (월교번용)
 const captureAndSave = async (elementId, filename, isDarkMode) => {
   if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
   const element = document.getElementById(elementId);
@@ -333,7 +333,7 @@ const captureAndSave = async (elementId, filename, isDarkMode) => {
 
   try {
     const canvas = await window.html2canvas(element, {
-      scale: 3, // 🔥 화질을 최고치인 3배수로 올려서 사진처럼 쨍하게 만듦!
+      scale: 3,
       backgroundColor: isDarkMode ? '#0f172a' : '#eef1f6',
       useCORS: true
     });
@@ -576,15 +576,6 @@ function App() {
     if (isDarkMode) document.body.classList.add('dark-mode');
     else document.body.classList.remove('dark-mode');
   }, [isDarkMode]);
-
-  useEffect(() => {
-    if (!window.html2canvas) {
-      const script = document.createElement("script");
-      script.src = "https://html2canvas.hertzen.com/dist/html2canvas.min.js";
-      script.id = "html2canvas-script";
-      document.body.appendChild(script);
-    }
-  }, []);
 
   // --- 기존 useEffect 모음 ---
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
@@ -898,42 +889,60 @@ function App() {
     setCurrentGroup(Object.keys(next)[0] || "");
   }
 
-  // 🟢 새롭게 추가된 그룹 '공유' (카톡 복사) 기능
-  function handleShareGroup() {
+  // 🟢 새롭게 추가된 그룹 고화질 캡처 & 네이티브 공유 기능
+  const handleShareGroupImage = async () => {
     if (!currentGroup || groupMembers.length === 0) return alert("공유할 그룹 인원이 없습니다.");
+    if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
     
-    const weekStart = parseLocalDate(weekDates[0]);
-    const weekEnd = parseLocalDate(weekDates[6]);
-    const dateRange = `${weekStart.getMonth()+1}/${weekStart.getDate()} ~ ${weekEnd.getMonth()+1}/${weekEnd.getDate()}`;
+    const element = document.getElementById('capture-group-area');
+    if (!element) return;
+
+    // 캡처하는 찰나의 순간 표 전체가 잘리지 않게 설정하고, 애니메이션/투명도 효과 차단
+    const originalTransform = element.style.transform;
+    const originalOverflow = element.style.overflow;
+    element.style.transform = 'none';
+    element.style.overflow = 'visible'; 
     
-    let text = `🗓️ [${currentGroup}] 주간 스케줄\n(${dateRange})\n\n`;
+    await new Promise(res => setTimeout(res, 50));
 
-    groupMembers.forEach(member => {
-      text += `👤 ${member.name} (${TEAM_LABELS[member.team]})\n`;
-      weekDates.forEach(date => {
-        const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
-        const dayStr = weekdayShort(date);
-        const dateStr = formatMonthDay(date);
-        text += ` • ${dateStr}(${dayStr}): ${item?.code || "-"}\n`;
+    try {
+      const canvas = await window.html2canvas(element, {
+        scale: 3, // 🔥 3배수 최고 화질로 렌더링
+        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+        useCORS: true
       });
-      text += `\n`;
-    });
 
-    if (navigator.share) {
-      navigator.share({
-        title: `${currentGroup} 스케줄`,
-        text: text
-      }).catch(err => {
-          console.log("공유 취소 또는 에러", err);
+      canvas.toBlob(async (blob) => {
+        if (!blob) return alert("이미지 생성에 실패했습니다.");
+        const file = new File([blob], `${currentGroup}_스케줄.png`, { type: 'image/png' });
+
+        // 기기가 파일 공유를 지원하면 네이티브 공유창(카톡, 밴드 등) 띄우기
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              title: `${currentGroup} 스케줄`,
+              files: [file]
+            });
+          } catch (shareErr) {
+            console.log('공유가 취소되었습니다.', shareErr);
+          }
+        } else {
+          // 공유를 지원하지 않는 기기면 갤러리에 고화질로 바로 다운로드
+          const link = document.createElement("a");
+          link.download = `${currentGroup}_스케줄.png`;
+          link.href = URL.createObjectURL(blob);
+          link.click();
+          alert("기기가 바로 공유를 지원하지 않아 앨범에 사진으로 저장했습니다.");
+        }
       });
-    } else {
-      navigator.clipboard.writeText(text).then(() => {
-        alert("스케줄이 복사되었습니다. 카톡 등에 붙여넣기 하세요!");
-      }).catch(() => {
-        alert("복사 기능이 지원되지 않는 기기입니다.");
-      });
+    } catch (e) {
+      alert("캡처에 실패했습니다.");
+    } finally {
+      // 캡처 후 화면 원래대로 복구
+      element.style.transform = originalTransform;
+      element.style.overflow = originalOverflow;
     }
-  }
+  };
 
   async function handleInstall() { if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; setDeferredPrompt(null); }
   function applyPendingRosterUpdate() { if (!pendingRosterJson) { setShowUpdatePopup(false); return; } acceptRemoteRoster(pendingRosterJson, { alertMessage: "최신 교번 정보가 반영되었습니다.", nextDataOverride: data, syncMine: false }); }
@@ -1127,14 +1136,15 @@ function App() {
                       {Object.keys(groups).length === 0 ? (<option value="">그룹 없음</option>) : (Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
                     </select>
                   </div>
-                  {/* 🟢 우측 상단 관리 / 공유 분할 버튼 */}
                   <div style={{ flex: 1, display: 'flex', gap: '4px', minWidth: 0, height: '100%' }}>
                     <button className="group-add-btn-v4" onClick={() => setShowGroupAdd(true)}>관리</button>
-                    <button className="group-add-btn-v4" style={{ background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2)' }} onClick={handleShareGroup}>공유</button>
+                    {/* 🟢 공유 버튼 클릭 시 고화질 캡처 및 공유창 자동 실행 */}
+                    <button className="group-add-btn-v4" style={{ background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2)' }} onClick={handleShareGroupImage}>공유</button>
                   </div>
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>▶</button>
                 </div>
-                <div className="group-table-wrap" style={swipeStyle}>
+                {/* 🟢 캡처 시 잘림 방지를 위해 id 지정 */}
+                <div className="group-table-wrap" style={swipeStyle} id="capture-group-area">
                   <table className="group-table">
                     <thead>
                       <tr>
