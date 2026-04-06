@@ -408,9 +408,10 @@ function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
   const [postSetupRemoteCheckNeeded, setPostSetupRemoteCheckNeeded] = useState(false);
+
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(LS_DARK_MODE) === 'true');
 
-  // 🟢 120Hz급 쫀득한 부분 스와이프 제어 State
+  // 🟢 부분 스와이프 제어 State
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [swipeOpacity, setSwipeOpacity] = useState(1);
   const [swipeTransition, setSwipeTransition] = useState("");
@@ -428,14 +429,16 @@ function App() {
   const currentEditDayType = guessDayType(browseDate);
   const currentEditDayLabel = currentEditDayType === "nor" ? "평일" : currentEditDayType === "sat" ? "토요일" : "휴일";
 
-  // 🟢 쫀득한 부분 스와이프 로직 (버튼 클릭 씹힘 100% 방지 장치 추가)
+  // 🟢 쫀득한 부분 스와이프 & 터치 씹힘 완벽 방지
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const isSwipingRef = useRef(false);
 
   const onTouchStart = (e) => {
-    // 💡 핵심: 버튼이나 인풋, 탭 등을 누를 땐 스와이프가 켜지지 않도록 막습니다!
-    if (e.target.closest('button, select, input, .bottom-tabs, .all-team-tabs')) return;
+    // 💡 핵심: 버튼, 셀렉트, 인풋 등 상단 메뉴나 버튼을 건드릴 땐 스와이프 작동 금지!
+    // 월교번 셀은 스와이프가 되도록 특정 영역(.month-cell)은 예외 처리
+    const target = e.target.closest('.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4, .month-header-bar, .all-header, .date-grid');
+    if (target) return;
 
     touchStartX.current = e.targetTouches[0].clientX;
     touchStartY.current = e.targetTouches[0].clientY;
@@ -465,7 +468,7 @@ function App() {
     }
 
     if (isSwipingRef.current) {
-      setSwipeOffset(diffX * 0.7); // 내용물만 쫀득하게 따라오게 감도 0.7
+      setSwipeOffset(diffX * 0.7); // 쫀득하게 따라오도록 감도 0.7 적용
     }
   };
 
@@ -479,7 +482,7 @@ function App() {
     isSwipingRef.current = false;
 
     if (swipeOffset > 40) {
-      // 오른쪽 스와이프 (스르륵 사라지며 이동)
+      // 오른쪽 스와이프 (이전)
       setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease");
       setSwipeOffset(80);
       setSwipeOpacity(0);
@@ -494,7 +497,7 @@ function App() {
         }, 30);
       }, 200);
     } else if (swipeOffset < -40) {
-      // 왼쪽 스와이프
+      // 왼쪽 스와이프 (다음)
       setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease");
       setSwipeOffset(-80);
       setSwipeOpacity(0);
@@ -509,7 +512,7 @@ function App() {
         }, 30);
       }, 200);
     } else {
-      // 제자리로 쫀득하게 복귀
+      // 제자리 복귀
       setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)");
       setSwipeOffset(0);
     }
@@ -524,17 +527,8 @@ function App() {
     else if (activeTabRef.current === 'group') setGroupBaseDate(prev => addDays(prev, direction * 7));
   };
 
-  // 부분 애니메이션 전용 스타일
+  // 🟢 부분 애니메이션 전용 스타일
   const swipeStyle = { transform: `translateX(${swipeOffset}px)`, opacity: swipeOpacity, transition: swipeTransition, willChange: 'transform, opacity' };
-
-  // 🟢 [추가] 관리자가 공용 기준일을 선택하면 즉시 기기에 자동 저장되도록 복구
-  useEffect(() => {
-    if (remoteBaseDate) {
-      setGlobalBaseDate(remoteBaseDate);
-      const prevConfig = loadCachedSharedConfig() || {};
-      saveCachedSharedConfig({ ...prevConfig, baseDate: remoteBaseDate });
-    }
-  }, [remoteBaseDate]);
 
   useEffect(() => {
     localStorage.setItem(LS_DARK_MODE, isDarkMode);
@@ -716,13 +710,51 @@ function App() {
   }
 
   async function handleZipUpload(event) { const file = event.target.files?.[0]; if (!file) return; setZipName(file.name); setInitialRemoteChecked(false); await parseAndSetZip(file, true, false, remoteRoster, true); }
+  
+  // 🟢 비번 창 복구된 공용 기준일 서버 저장 기능
   async function saveSharedConfig() {
-    if (!isAdminUser) return alert("관리자만 저장할 수 있습니다."); const adminKey = promptAdminPassword(); if (!adminKey) return;
-    try { setSavingSharedConfig(true); const payload = { action: "saveConfig", adminKey, baseDate: remoteBaseDate, zipBase64: "" }; const res = await fetch(ADMIN_SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }); const json = await res.json(); if (!json?.ok) throw new Error(json?.error || "공용 기준일 저장 실패"); setGlobalBaseDate(remoteBaseDate); saveCachedSharedConfig({ baseDate: remoteBaseDate }); alert("공용 기준일 저장 완료"); } catch (e) { alert(`저장 실패: ${e.message || e}`); } finally { setSavingSharedConfig(false); }
+    if (!isAdminUser) return alert("관리자만 저장할 수 있습니다."); 
+    const adminKey = promptAdminPassword(); 
+    if (!adminKey) return;
+    try { 
+      setSavingSharedConfig(true); 
+      const payload = { action: "saveConfig", adminKey, baseDate: remoteBaseDate, zipBase64: "" }; 
+      const res = await fetch(ADMIN_SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }); 
+      const json = await res.json(); 
+      if (!json?.ok) throw new Error(json?.error || "공용 기준일 저장 실패"); 
+      setGlobalBaseDate(remoteBaseDate); 
+      saveCachedSharedConfig({ baseDate: remoteBaseDate }); 
+      alert("공용 기준일 저장 완료"); 
+    } catch (e) { 
+      alert(`저장 실패: ${e.message || e}`); 
+    } finally { 
+      setSavingSharedConfig(false); 
+    }
   }
+
   async function publishRoster() {
-    if (!isAdminUser) return alert("관리자만 배포할 수 있습니다."); const adminKey = promptAdminPassword(); if (!adminKey) return;
-    try { setSavingSharedConfig(true); const payload = { action: "publishRoster", adminKey, baseDate: remoteBaseDate }; const res = await fetch(ADMIN_SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }); const json = await res.json(); if (!json?.ok) throw new Error(json?.error || "배포 실패"); if (json?.baseDate) { setGlobalBaseDate(json.baseDate); setRemoteBaseDate(json.baseDate); saveCachedSharedConfig({ baseDate: json.baseDate }); } localStorage.removeItem(LS_LAST_SEEN_PUBLISHED_AT); localStorage.removeItem(LS_LAST_ACK_ROSTER_SIG); alert(`배포 완료 (${json?.publishedCount || 0}건)`); } catch (e) { alert(`배포 실패: ${e.message || e}`); } finally { setSavingSharedConfig(false); }
+    if (!isAdminUser) return alert("관리자만 배포할 수 있습니다."); 
+    const adminKey = promptAdminPassword(); 
+    if (!adminKey) return;
+    try { 
+      setSavingSharedConfig(true); 
+      const payload = { action: "publishRoster", adminKey, baseDate: remoteBaseDate }; 
+      const res = await fetch(ADMIN_SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }); 
+      const json = await res.json(); 
+      if (!json?.ok) throw new Error(json?.error || "배포 실패"); 
+      if (json?.baseDate) { 
+        setGlobalBaseDate(json.baseDate); 
+        setRemoteBaseDate(json.baseDate); 
+        saveCachedSharedConfig({ baseDate: json.baseDate }); 
+      } 
+      localStorage.removeItem(LS_LAST_SEEN_PUBLISHED_AT); 
+      localStorage.removeItem(LS_LAST_ACK_ROSTER_SIG); 
+      alert(`배포 완료 (${json?.publishedCount || 0}건)`); 
+    } catch (e) { 
+      alert(`배포 실패: ${e.message || e}`); 
+    } finally { 
+      setSavingSharedConfig(false); 
+    }
   }
 
   function applyInitialSelection(teamKey, name, code) {
@@ -756,7 +788,7 @@ function App() {
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { const team = effectiveData?.[teamKey]; if (!team || !item?.code) return; const image = findPathImage(team, dateStr, item.code); setViewTeam(teamKey); setPathTeamKey(teamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
-  // 🟢 그룹 생성 (성공 시 입력칸을 즉시 지움)
+  // 🟢 그룹 1단계: 생성 (생성 후 이름 비우기)
   function handleGroupSubmit() { 
     const name = newGroupName.trim(); 
     if (!name) return alert("그룹 이름을 입력해주세요."); 
@@ -766,13 +798,13 @@ function App() {
     setGroups(next); 
     saveGroups(next); 
     setCurrentGroup(name); 
-    setNewGroupName(""); // 입력칸 초기화
+    setNewGroupName(""); // 입력창 깔끔하게 비우기
   }
   
+  // 🟢 그룹 3단계: 인원 추가
   function addToGroup() { 
-    const typedGroupName = newGroupName.trim(); 
-    const targetGroup = currentGroup || typedGroupName; 
-    if (!targetGroup) return alert("그룹 이름을 입력하거나 현재 그룹을 선택해주세요."); 
+    const targetGroup = currentGroup; 
+    if (!targetGroup) return alert("먼저 관리할 그룹을 선택해주세요."); 
     if (!groupAddTeam || !groupAddName) return alert("소속과 이름을 선택해주세요."); 
     const next = { ...groups }; 
     if (!next[targetGroup]) next[targetGroup] = []; 
@@ -786,10 +818,10 @@ function App() {
   
   function removeFromGroup(teamKey, name) { const next = { ...groups }; next[currentGroup] = (next[currentGroup] || []).filter((item) => !(item.team === teamKey && samePersonName(item.name, name))); setGroups(next); saveGroups(next); }
   
-  // 🟢 현재 그룹 통째로 삭제
+  // 🟢 그룹 2단계: 선택된 그룹 바로 삭제
   function deleteCurrentGroup() {
     if (!currentGroup) return;
-    if (!window.confirm(`정말 '${currentGroup}' 그룹 전체를 삭제하시겠습니까?\n(삭제 후 복구할 수 없습니다)`)) return;
+    if (!window.confirm(`정말 '${currentGroup}' 그룹을 삭제하시겠습니까?`)) return;
     const next = { ...groups };
     delete next[currentGroup];
     setGroups(next);
@@ -1102,18 +1134,21 @@ function App() {
                 </div>
               </>
             )}
+            
+            {/* 🟢 공용 기준일 (저장 버튼 누르면 비번 물어봄) */}
             {isAdminUser && (
               <div className="card" style={{ marginTop: 14, padding: 12 }}>
                 <div className="label" style={{ marginBottom: 10 }}>관리자</div>
                 <label className="label">공용 기준일</label>
-                {/* 🟢 입력창에서 날짜 변경 시 바로 기기에 자동 저장됨 */}
                 <input className="input" type="date" value={remoteBaseDate} onChange={(e) => setRemoteBaseDate(e.target.value)} />
-                <div className="help-text" style={{ marginTop: 10 }}>관리자에서 '현재배정 배포'를 누르면 다른 사람들에게도 공용 기준일과 배포본이 강제 반영됩니다.</div>
+                <div className="help-text" style={{ marginTop: 10 }}>관리자에서 저장 또는 배포하면 공용 기준일과 배포본이 반영됩니다.</div>
                 <div className="modal-actions">
-                  <button className="modal-btn primary" onClick={publishRoster} disabled={savingSharedConfig}>{savingSharedConfig ? "처리중..." : "현재배정 배포"}</button>
+                  <button className="modal-btn" onClick={publishRoster} disabled={savingSharedConfig}>{savingSharedConfig ? "처리중..." : "현재배정 배포"}</button>
+                  <button className="modal-btn primary" onClick={saveSharedConfig} disabled={savingSharedConfig}>{savingSharedConfig ? "저장중..." : "공용 기준일 저장"}</button>
                 </div>
               </div>
             )}
+            
             <div className="modal-actions">
               <button className="modal-btn" onClick={resetMyProfile}>내 정보 초기화</button>
               <button className="modal-btn primary" onClick={() => { if (showSettingsRef.current) window.history.back(); else setShowSettings(false); }}>닫기</button>
@@ -1127,8 +1162,8 @@ function App() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">그룹 관리</div>
             
-            {/* 🟢 새 그룹 만들기 구역 */}
-            <label className="label">새 그룹 만들기</label>
+            {/* 🟢 1. 새 그룹 만들기 (입력 후 자동 비우기) */}
+            <label className="label">1. 새 그룹 만들기</label>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
               <input className="input" style={{ flex: 1 }} value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="예: 1조, 낚시모임" />
               <button className="modal-btn primary" style={{ width: 'auto', padding: '0 16px' }} onClick={handleGroupSubmit}>생성</button>
@@ -1136,15 +1171,22 @@ function App() {
             
             <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
             
-            {/* 🟢 기존 그룹 선택 및 인원 추가 구역 (파란색 안내문구 삭제 완료) */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <label className="label" style={{ margin: 0 }}>그룹 인원 편집</label>
-              <select className="select" style={{ width: 'auto', padding: '6px 12px', fontSize: '13px', background: '#f8fafc' }} value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
+            {/* 🟢 2. 그룹 선택 및 삭제 (바로 옆에 휴지통 버튼 배치) */}
+            <label className="label">2. 관리할 그룹 선택</label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
+              <select className="select" style={{ flex: 1, margin: 0 }} value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
                 {Object.keys(groups).length === 0 ? (<option value="">그룹 없음</option>) : (Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
               </select>
+              <button className="modal-btn" style={{ width: 'auto', padding: '0 14px', margin: 0, color: '#ef4444', borderColor: '#fca5a5', background: '#fef2f2' }} onClick={deleteCurrentGroup} disabled={!currentGroup}>
+                🗑️ 삭제
+              </button>
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
+
+            {/* 🟢 3. 선택된 그룹에 인원 추가 */}
+            <label className="label">3. 선택된 그룹에 인원 추가</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
               <div>
                 <label className="label" style={{ fontSize: '12px', marginBottom: '4px' }}>소속</label>
                 <select className="select" value={groupAddTeam} onChange={(e) => { setGroupAddTeam(e.target.value); setGroupAddName(""); }}>
@@ -1159,25 +1201,9 @@ function App() {
                 </select>
               </div>
             </div>
-            <div className="modal-actions" style={{ marginTop: '16px' }}>
-              <button className="modal-btn primary" style={{ width: '100%' }} onClick={addToGroup} disabled={!currentGroup || !groupAddName}>+ 인원 추가</button>
-            </div>
+            <button className="modal-btn primary" style={{ width: '100%' }} onClick={addToGroup} disabled={!currentGroup || !groupAddName}>+ 현재 그룹에 인원 추가</button>
 
-            {/* 🟢 현재 그룹 삭제 버튼 */}
-            {currentGroup && (
-              <>
-                <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
-                <button 
-                  className="modal-btn" 
-                  style={{ width: '100%', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}
-                  onClick={deleteCurrentGroup}
-                >
-                  🗑️ '{currentGroup}' 그룹 삭제
-                </button>
-              </>
-            )}
-            
-            <div className="modal-actions" style={{ marginTop: '20px' }}>
+            <div className="modal-actions" style={{ marginTop: '24px' }}>
               <button className="modal-btn" style={{ width: '100%' }} onClick={() => { if (showGroupAddRef.current) window.history.back(); else setShowGroupAdd(false); }}>닫기</button>
             </div>
           </div>
