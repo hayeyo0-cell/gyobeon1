@@ -448,6 +448,9 @@ function App() {
   // 🟢 다크 모드 State
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(LS_DARK_MODE) === 'true');
 
+  // 🟢 부드러운 스와이프 애니메이션 State
+  const [slideAnim, setSlideAnim] = useState("");
+
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
 
@@ -459,7 +462,7 @@ function App() {
   const currentEditDayType = guessDayType(browseDate);
   const currentEditDayLabel = currentEditDayType === "nor" ? "평일" : currentEditDayType === "sat" ? "토요일" : "휴일";
 
-  // 🟢 스와이프 제어 센서 State (탭마다 다르게 이동)
+  // 🟢 스와이프 제어 센서 State (탭마다 다르게 이동 & 애니메이션 적용)
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const [touchStartY, setTouchStartY] = useState(null);
@@ -485,11 +488,14 @@ function App() {
     // 위아래 스크롤이 더 크면 스와이프 무시 (수직 스크롤 보호)
     if (Math.abs(distanceY) > Math.abs(distanceX)) return;
 
-    const isLeftSwipe = distanceX > 60; // 왼쪽으로 확 밀었을 때 (다음)
-    const isRightSwipe = distanceX < -60; // 오른쪽으로 확 밀었을 때 (이전)
+    const isLeftSwipe = distanceX > 50; // 왼쪽으로 넘김 (다음)
+    const isRightSwipe = distanceX < -50; // 오른쪽으로 넘김 (이전)
 
     if (isLeftSwipe || isRightSwipe) {
       const direction = isLeftSwipe ? 1 : -1;
+      
+      // 스와이프 방향에 맞춰 애니메이션 클래스 적용
+      setSlideAnim(isLeftSwipe ? "slide-left" : "slide-right");
 
       if (activeTabRef.current === 'home') {
         setHomeDate(prev => addDays(prev, direction));
@@ -508,6 +514,9 @@ function App() {
         setGroupBaseDate(prev => addDays(prev, direction * 7));
       }
     }
+    
+    setTouchStart(null);
+    setTouchEnd(null);
   };
 
   // --- 다크 모드 및 캡처 스크립트 로드 ---
@@ -792,7 +801,7 @@ function App() {
                   <div className="date-box"><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() + 1); setHomeDate(formatDate(d)); }}>+</button><div className="date-value">{parseLocalDate(homeDate).getMonth() + 1}월</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
                   <div className="date-box"><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, 1))}>+</button><div className="date-value">{parseLocalDate(homeDate).getDate()}일</div><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, -1))}>-</button></div>
                 </div>
-                <div className="card main-panel">
+                <div className={`card main-panel ${slideAnim}`} onAnimationEnd={() => setSlideAnim("")}>
                   <div className="center-view">
                     <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
                     <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
@@ -816,7 +825,7 @@ function App() {
                 <div className="all-team-tabs">
                   {TEAM_ORDER.map((key) => { const isActive = viewTeam === key; const isMyTeam = selectedTeam === key; return (<button key={key} className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`} onClick={() => setViewTeam(key)}>{TEAM_LABELS[key]}{isActive && <span className="view-dot" />}</button>); })}
                 </div>
-                <div className="all-tab-grid-wrap">
+                <div className={`all-tab-grid-wrap ${slideAnim}`} onAnimationEnd={() => setSlideAnim("")}>
                   <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
                     {visibleAllGrid.map((item) => {
                       const myCodeForDate = viewTeam === mySelection?.teamKey && mySelection?.code ? getMyCodeForDate(currentViewTeam, browseDate, mySelection) : "";
@@ -847,7 +856,7 @@ function App() {
                 <div className="all-team-tabs">
                   {TEAM_ORDER.map((key) => { const isActive = viewTeam === key; const isMyTeam = selectedTeam === key; return (<button key={key} className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`} onClick={() => setViewTeam(key)}>{TEAM_LABELS[key]}{isActive && <span className="view-dot" />}</button>); })}
                 </div>
-                <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+                <div className={`card ${slideAnim}`} style={{ padding: 0, overflow: "hidden" }} onAnimationEnd={() => setSlideAnim("")}>
                   {diaList.map((item, idx) => (
                     <div key={`${item.code}-${idx}`} onClick={() => openPathDialog(item, browseDate)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 16px", borderBottom: idx === diaList.length - 1 ? "none" : "1px solid #e5e7eb", fontSize: 18, background: viewTeam === selectedTeam && (samePersonName(item.name, mySelection?.name) || (mySelection?.teamKey === viewTeam && mySelection?.code && normalizeCodeKey(item.code) === normalizeCodeKey(getMyCodeForDate(currentViewTeam, browseDate, mySelection)))) ? (isDarkMode ? "#374151" : "#eef6ff") : "transparent", cursor: "pointer" }}>
                       <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
@@ -868,7 +877,7 @@ function App() {
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, 1))}>+</button>
                 </div>
 
-                <div className="month-calendar">
+                <div className={`month-calendar ${slideAnim}`} onAnimationEnd={() => setSlideAnim("")}>
                   <div className="month-weekdays">
                     <div className="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="sat">토</div>
                   </div>
@@ -898,7 +907,8 @@ function App() {
             )}
 
             {activeTab === "group" && (
-              <div className="group-page tab-page" id="capture-group-area">
+              <div className="group-page tab-page">
+                {/* 캡처 버튼이 제거된 깨끗한 상단바 */}
                 <div className="group-top-bar-v4">
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, -7))}>◀</button>
                   <select className="group-select-month" value={groupMonth} onChange={(e) => handleGroupMonthChange(e.target.value)}>
@@ -908,12 +918,10 @@ function App() {
                     {Object.keys(groups).length === 0 ? (<option value="">그룹 없음</option>) : (Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
                   </select>
                   <button className="group-add-btn-v4" onClick={() => { setNewGroupName(""); setIsEditGroupMode(false); setShowGroupAdd(true); }}>+ 그룹추가</button>
-                  {/* 🟢 사진 캡처 버튼 (그룹) */}
-                  <button className="nav-btn-v4" style={{ background: '#e0e7ff', color: '#2563eb' }} onClick={() => captureAndSave('capture-group-area', `그룹_${currentGroup || '교번'}`, isDarkMode)}>📷</button>
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>▶</button>
                 </div>
 
-                <div className="group-table-wrap">
+                <div className={`group-table-wrap ${slideAnim}`} onAnimationEnd={() => setSlideAnim("")}>
                   <table className="group-table">
                     <thead>
                       <tr>
