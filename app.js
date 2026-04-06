@@ -526,7 +526,6 @@ function App() {
     touchStartY.current = null;
   };
 
-  // 🟢 전체 및 DIA 탭 스와이프 시 '팀'이 아니라 '날짜'가 변경되도록 완벽 적용!
   const changeData = (direction) => {
     if (activeTabRef.current === 'home') setHomeDate(prev => addDays(prev, direction));
     else if (activeTabRef.current === 'all' || activeTabRef.current === 'dia') setBrowseDate(prev => addDays(prev, direction));
@@ -696,7 +695,7 @@ function App() {
     if (nextMonthValue === todayMonth) setGroupBaseDate(today); else setGroupBaseDate(getMonthStartDate(nextMonthValue));
   }
 
-  // 🟢 하단 탭 한 번 더 누르면 오늘 + 내 소속으로 완벽 복귀
+  // 🟢 [수정 완료] 탭 연동 완벽 처리
   function switchTab(tabName) {
     const currentTab = activeTabRef.current;
     const today = getKoreaToday();
@@ -721,9 +720,11 @@ function App() {
     if (tabName === "home") {
       setHomeDate(today);
     } else if (tabName === "all" || tabName === "dia") {
-      if (currentTab === "home") setBrowseDate(homeDate);
-      else setBrowseDate(today);
-      setViewTeam(myTeamKey);
+      if (currentTab !== "all" && currentTab !== "dia") {
+        if (currentTab === "home") setBrowseDate(homeDate);
+        else setBrowseDate(today);
+        setViewTeam(myTeamKey);
+      }
     } else if (tabName === "month") {
       setMonthDate(today);
     } else if (tabName === "group") {
@@ -965,11 +966,16 @@ function App() {
                       const myCodeForDate = viewTeam === mySelection?.teamKey && mySelection?.code ? getMyCodeForDate(currentViewTeam, browseDate, mySelection) : "";
                       const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name) || (myCodeForDate && normalizeCodeKey(item.code) === normalizeCodeKey(myCodeForDate)));
                       const isToday = browseDate === getKoreaToday();
+                      
+                      // 🟢 커스텀 색상(파스텔톤 등)이 들어갔을 때 텍스트 색상을 진하게 고정시켜 다크모드 글씨 씹힘 방지
                       const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
+                      const customTextColorCode = item.customColor ? { color: "#0f172a" } : undefined;
+                      const customTextColorName = item.customColor ? { color: "#374151" } : undefined;
+                      
                       return (
                         <div key={`${item.idx}-${item.code}-${item.displayName}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                          <div className="all-code">{item.code || "-"}</div>
-                          <div className="all-name">{item.displayName || "-"}</div>
+                          <div className="all-code" style={customTextColorCode}>{item.code || "-"}</div>
+                          <div className="all-name" style={customTextColorName}>{item.displayName || "-"}</div>
                         </div>
                       );
                     })}
@@ -1169,6 +1175,7 @@ function App() {
               </>
             )}
             
+            {/* 🟢 공용 기준일 암호 설정 복구 */}
             {isAdminUser && (
               <div className="card" style={{ marginTop: 14, padding: 12 }}>
                 <div className="label" style={{ marginBottom: 10 }}>관리자</div>
