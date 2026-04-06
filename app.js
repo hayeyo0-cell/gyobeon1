@@ -311,6 +311,47 @@ function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "")
 function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
 function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: end || "-" }; } return { startTime: raw, endTime: "" }; }
 
+// 🟢 최고 해상도(scale: 3) 적용 & 흐림/투명 버그 완벽 차단 캡처 기능
+const captureAndSave = async (elementId, filename, isDarkMode) => {
+  if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+  const element = document.getElementById(elementId);
+  if (!element) return;
+
+  const originalAnimation = element.style.animation;
+  element.style.animation = 'none';
+
+  const calendarEl = element.querySelector('.month-calendar');
+  const calBg = calendarEl ? calendarEl.style.background : '';
+  const calTransform = calendarEl ? calendarEl.style.transform : '';
+
+  if (calendarEl) {
+    calendarEl.style.transform = 'none';
+    calendarEl.style.background = isDarkMode ? '#1e293b' : '#ffffff';
+  }
+
+  await new Promise(res => setTimeout(res, 50));
+
+  try {
+    const canvas = await window.html2canvas(element, {
+      scale: 3, // 🔥 화질을 최고치인 3배수로 올려서 사진처럼 쨍하게 만듦!
+      backgroundColor: isDarkMode ? '#0f172a' : '#eef1f6',
+      useCORS: true
+    });
+    const link = document.createElement("a");
+    link.download = filename + ".png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  } catch (e) {
+    alert("캡처에 실패했습니다.");
+  } finally {
+    element.style.animation = originalAnimation;
+    if (calendarEl) {
+      calendarEl.style.background = calBg;
+      calendarEl.style.transform = calTransform;
+    }
+  }
+};
+
 function fetchJsonp(params = {}, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
     const callbackName = `gyobeonJsonp_${Date.now()}_${Math.floor(Math.random() * 10000)}`; const script = document.createElement("script");
@@ -331,19 +372,6 @@ async function loadZipBlob() { const db = await openZipDB(); return new Promise(
 async function saveParsedData(value) { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readwrite"); const store = tx.objectStore("files"); store.put({ data: value, savedAt: Date.now() }, "parsedData"); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
 async function loadParsedData() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); const req = store.get("parsedData"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
 function promptAdminPassword() { const value = window.prompt("관리자 비밀번호를 입력하세요"); if (value == null) return null; if (String(value).trim() !== ADMIN_PASSWORD) { alert("비밀번호가 올바르지 않습니다."); return null; } return String(value).trim(); }
-
-const captureAndSave = async (elementId, filename, isDarkMode) => {
-  if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
-  const element = document.getElementById(elementId);
-  if (!element) return;
-  try {
-    const canvas = await window.html2canvas(element, { scale: 2, backgroundColor: isDarkMode ? '#1f2937' : '#ffffff' });
-    const link = document.createElement("a");
-    link.download = filename + ".png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  } catch (e) { alert("캡처에 실패했습니다."); }
-};
 
 
 function App() {
@@ -695,7 +723,6 @@ function App() {
     if (nextMonthValue === todayMonth) setGroupBaseDate(today); else setGroupBaseDate(getMonthStartDate(nextMonthValue));
   }
 
-  // 🟢 [수정 완료] 탭 연동 완벽 처리
   function switchTab(tabName) {
     const currentTab = activeTabRef.current;
     const today = getKoreaToday();
@@ -871,6 +898,43 @@ function App() {
     setCurrentGroup(Object.keys(next)[0] || "");
   }
 
+  // 🟢 새롭게 추가된 그룹 '공유' (카톡 복사) 기능
+  function handleShareGroup() {
+    if (!currentGroup || groupMembers.length === 0) return alert("공유할 그룹 인원이 없습니다.");
+    
+    const weekStart = parseLocalDate(weekDates[0]);
+    const weekEnd = parseLocalDate(weekDates[6]);
+    const dateRange = `${weekStart.getMonth()+1}/${weekStart.getDate()} ~ ${weekEnd.getMonth()+1}/${weekEnd.getDate()}`;
+    
+    let text = `🗓️ [${currentGroup}] 주간 스케줄\n(${dateRange})\n\n`;
+
+    groupMembers.forEach(member => {
+      text += `👤 ${member.name} (${TEAM_LABELS[member.team]})\n`;
+      weekDates.forEach(date => {
+        const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
+        const dayStr = weekdayShort(date);
+        const dateStr = formatMonthDay(date);
+        text += ` • ${dateStr}(${dayStr}): ${item?.code || "-"}\n`;
+      });
+      text += `\n`;
+    });
+
+    if (navigator.share) {
+      navigator.share({
+        title: `${currentGroup} 스케줄`,
+        text: text
+      }).catch(err => {
+          console.log("공유 취소 또는 에러", err);
+      });
+    } else {
+      navigator.clipboard.writeText(text).then(() => {
+        alert("스케줄이 복사되었습니다. 카톡 등에 붙여넣기 하세요!");
+      }).catch(() => {
+        alert("복사 기능이 지원되지 않는 기기입니다.");
+      });
+    }
+  }
+
   async function handleInstall() { if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; setDeferredPrompt(null); }
   function applyPendingRosterUpdate() { if (!pendingRosterJson) { setShowUpdatePopup(false); return; } acceptRemoteRoster(pendingRosterJson, { alertMessage: "최신 교번 정보가 반영되었습니다.", nextDataOverride: data, syncMine: false }); }
   function closeUpdatePopup() { setShowUpdatePopup(false); }
@@ -967,7 +1031,6 @@ function App() {
                       const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name) || (myCodeForDate && normalizeCodeKey(item.code) === normalizeCodeKey(myCodeForDate)));
                       const isToday = browseDate === getKoreaToday();
                       
-                      // 🟢 커스텀 색상(파스텔톤 등)이 들어갔을 때 텍스트 색상을 진하게 고정시켜 다크모드 글씨 씹힘 방지
                       const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
                       const customTextColorCode = item.customColor ? { color: "#0f172a" } : undefined;
                       const customTextColorName = item.customColor ? { color: "#374151" } : undefined;
@@ -1064,7 +1127,11 @@ function App() {
                       {Object.keys(groups).length === 0 ? (<option value="">그룹 없음</option>) : (Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
                     </select>
                   </div>
-                  <button className="group-add-btn-v4" onClick={() => setShowGroupAdd(true)}>+ 그룹 관리</button>
+                  {/* 🟢 우측 상단 관리 / 공유 분할 버튼 */}
+                  <div style={{ flex: 1, display: 'flex', gap: '4px', minWidth: 0, height: '100%' }}>
+                    <button className="group-add-btn-v4" onClick={() => setShowGroupAdd(true)}>관리</button>
+                    <button className="group-add-btn-v4" style={{ background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2)' }} onClick={handleShareGroup}>공유</button>
+                  </div>
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>▶</button>
                 </div>
                 <div className="group-table-wrap" style={swipeStyle}>
@@ -1175,7 +1242,6 @@ function App() {
               </>
             )}
             
-            {/* 🟢 공용 기준일 암호 설정 복구 */}
             {isAdminUser && (
               <div className="card" style={{ marginTop: 14, padding: 12 }}>
                 <div className="label" style={{ marginBottom: 10 }}>관리자</div>
