@@ -292,7 +292,21 @@ function getMyCodeForDate(team, dateStr, mySelection) { if (!team || !mySelectio
 
 function getMonthMatrix(dateStr) { const d = parseLocalDate(dateStr); const year = d.getFullYear(); const month = d.getMonth(); const first = new Date(year, month, 1); const firstDay = first.getDay(); const start = new Date(year, month, 1 - firstDay); const matrix = []; for (let r = 0; r < 6; r++) { const row = []; for (let c = 0; c < 7; c++) { const temp = new Date(start); temp.setDate(start.getDate() + r * 7 + c); row.push(formatDate(temp)); } matrix.push(row); } return matrix; }
 function getWeekDates(baseDate) { const d = parseLocalDate(baseDate); const day = d.getDay(); const sunday = new Date(d); sunday.setDate(d.getDate() - day); const dates = []; for (let i = 0; i < 7; i++) { const temp = new Date(sunday); temp.setDate(sunday.getDate() + i); dates.push(formatDate(temp)); } return dates; }
-function getMonthOptions(centerDateStr, range = 12) { const base = parseLocalDate(centerDateStr); const list = []; for (let i = -range; i <= range; i++) { const d = new Date(base.getFullYear(), base.getMonth() + i, 1); const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; list.push({ value, label: `${d.getFullYear()}년 ${d.getMonth() + 1}월` }); } return list; }
+
+// 🟢 현재 월에 "📍 이번 달" 이모지와 강조 텍스트 추가
+function getMonthOptions(centerDateStr, range = 12) { 
+  const base = parseLocalDate(centerDateStr); 
+  const currentMonthVal = getDisplayMonthValue(getKoreaToday());
+  const list = []; 
+  for (let i = -range; i <= range; i++) { 
+    const d = new Date(base.getFullYear(), base.getMonth() + i, 1); 
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; 
+    const label = value === currentMonthVal ? `📍 ${d.getFullYear()}년 ${d.getMonth() + 1}월 (이번 달)` : `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
+    list.push({ value, label }); 
+  } 
+  return list; 
+}
+
 function getDisplayMonthValue(dateStr) { return String(dateStr || "").slice(0, 7); }
 function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "").split("-").map(Number); if (!y || !m) return getKoreaToday(); return `${y}-${String(m).padStart(2, "0")}-01`; }
 function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
@@ -435,8 +449,7 @@ function App() {
   const isSwipingRef = useRef(false);
 
   const onTouchStart = (e) => {
-    // 💡 핵심: 버튼, 셀렉트, 인풋 등 상단 메뉴나 버튼을 건드릴 땐 스와이프 작동 금지!
-    // 월교번 셀은 스와이프가 되도록 특정 영역(.month-cell)은 예외 처리
+    // 💡 핵심: 버튼이나 셀렉트는 건드리지 않고, 스와이프 가능한 탭 영역만 골라서 반응하게 처리
     const target = e.target.closest('.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4, .month-header-bar, .all-header, .date-grid');
     if (target) return;
 
@@ -468,7 +481,7 @@ function App() {
     }
 
     if (isSwipingRef.current) {
-      setSwipeOffset(diffX * 0.7); // 쫀득하게 따라오도록 감도 0.7 적용
+      setSwipeOffset(diffX * 0.7); // 쫀득하게 따라오도록 감도 조절
     }
   };
 
@@ -527,8 +540,17 @@ function App() {
     else if (activeTabRef.current === 'group') setGroupBaseDate(prev => addDays(prev, direction * 7));
   };
 
-  // 🟢 부분 애니메이션 전용 스타일
+  // 부분 애니메이션 전용 스타일
   const swipeStyle = { transform: `translateX(${swipeOffset}px)`, opacity: swipeOpacity, transition: swipeTransition, willChange: 'transform, opacity' };
+
+  // 🟢 [추가] 관리자가 공용 기준일을 입력하면 즉시 로컬에 자동 저장
+  useEffect(() => {
+    if (remoteBaseDate) {
+      setGlobalBaseDate(remoteBaseDate);
+      const prevConfig = loadCachedSharedConfig() || {};
+      saveCachedSharedConfig({ ...prevConfig, baseDate: remoteBaseDate });
+    }
+  }, [remoteBaseDate]);
 
   useEffect(() => {
     localStorage.setItem(LS_DARK_MODE, isDarkMode);
@@ -711,7 +733,7 @@ function App() {
 
   async function handleZipUpload(event) { const file = event.target.files?.[0]; if (!file) return; setZipName(file.name); setInitialRemoteChecked(false); await parseAndSetZip(file, true, false, remoteRoster, true); }
   
-  // 🟢 비번 창 복구된 공용 기준일 서버 저장 기능
+  // 🟢 관리자가 버튼 누르면 공용 기준일 암호 묻고 저장
   async function saveSharedConfig() {
     if (!isAdminUser) return alert("관리자만 저장할 수 있습니다."); 
     const adminKey = promptAdminPassword(); 
@@ -788,7 +810,7 @@ function App() {
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { const team = effectiveData?.[teamKey]; if (!team || !item?.code) return; const image = findPathImage(team, dateStr, item.code); setViewTeam(teamKey); setPathTeamKey(teamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
-  // 🟢 그룹 1단계: 생성 (생성 후 이름 비우기)
+  // 🟢 그룹 생성 (성공 시 입력칸을 즉시 지움)
   function handleGroupSubmit() { 
     const name = newGroupName.trim(); 
     if (!name) return alert("그룹 이름을 입력해주세요."); 
@@ -798,13 +820,13 @@ function App() {
     setGroups(next); 
     saveGroups(next); 
     setCurrentGroup(name); 
-    setNewGroupName(""); // 입력창 깔끔하게 비우기
+    setNewGroupName(""); // 입력칸 초기화
   }
   
-  // 🟢 그룹 3단계: 인원 추가
   function addToGroup() { 
-    const targetGroup = currentGroup; 
-    if (!targetGroup) return alert("먼저 관리할 그룹을 선택해주세요."); 
+    const typedGroupName = newGroupName.trim(); 
+    const targetGroup = currentGroup || typedGroupName; 
+    if (!targetGroup) return alert("그룹 이름을 입력하거나 현재 그룹을 선택해주세요."); 
     if (!groupAddTeam || !groupAddName) return alert("소속과 이름을 선택해주세요."); 
     const next = { ...groups }; 
     if (!next[targetGroup]) next[targetGroup] = []; 
@@ -818,10 +840,10 @@ function App() {
   
   function removeFromGroup(teamKey, name) { const next = { ...groups }; next[currentGroup] = (next[currentGroup] || []).filter((item) => !(item.team === teamKey && samePersonName(item.name, name))); setGroups(next); saveGroups(next); }
   
-  // 🟢 그룹 2단계: 선택된 그룹 바로 삭제
+  // 🟢 현재 그룹 통째로 삭제
   function deleteCurrentGroup() {
     if (!currentGroup) return;
-    if (!window.confirm(`정말 '${currentGroup}' 그룹을 삭제하시겠습니까?`)) return;
+    if (!window.confirm(`정말 '${currentGroup}' 그룹 전체를 삭제하시겠습니까?\n(삭제 후 복구할 수 없습니다)`)) return;
     const next = { ...groups };
     delete next[currentGroup];
     setGroups(next);
@@ -1135,13 +1157,13 @@ function App() {
               </>
             )}
             
-            {/* 🟢 공용 기준일 (저장 버튼 누르면 비번 물어봄) */}
+            {/* 🟢 공용 기준일 (저장 버튼 누르면 비번 묻도록 복구됨) */}
             {isAdminUser && (
               <div className="card" style={{ marginTop: 14, padding: 12 }}>
                 <div className="label" style={{ marginBottom: 10 }}>관리자</div>
                 <label className="label">공용 기준일</label>
                 <input className="input" type="date" value={remoteBaseDate} onChange={(e) => setRemoteBaseDate(e.target.value)} />
-                <div className="help-text" style={{ marginTop: 10 }}>관리자에서 저장 또는 배포하면 공용 기준일과 배포본이 반영됩니다.</div>
+                <div className="help-text" style={{ marginTop: 10 }}>공용 기준일을 설정하고 아래 버튼을 눌러야 서버에 영구 반영됩니다.</div>
                 <div className="modal-actions">
                   <button className="modal-btn" onClick={publishRoster} disabled={savingSharedConfig}>{savingSharedConfig ? "처리중..." : "현재배정 배포"}</button>
                   <button className="modal-btn primary" onClick={saveSharedConfig} disabled={savingSharedConfig}>{savingSharedConfig ? "저장중..." : "공용 기준일 저장"}</button>
@@ -1162,7 +1184,7 @@ function App() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">그룹 관리</div>
             
-            {/* 🟢 1. 새 그룹 만들기 (입력 후 자동 비우기) */}
+            {/* 🟢 1. 새 그룹 만들기 (만들면 글씨 바로 지워짐) */}
             <label className="label">1. 새 그룹 만들기</label>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
               <input className="input" style={{ flex: 1 }} value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="예: 1조, 낚시모임" />
@@ -1171,7 +1193,7 @@ function App() {
             
             <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
             
-            {/* 🟢 2. 그룹 선택 및 삭제 (바로 옆에 휴지통 버튼 배치) */}
+            {/* 🟢 2. 그룹 선택 및 삭제 (안내문구 삭제, 바로 옆에 휴지통 버튼 배치) */}
             <label className="label">2. 관리할 그룹 선택</label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
               <select className="select" style={{ flex: 1, margin: 0 }} value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
