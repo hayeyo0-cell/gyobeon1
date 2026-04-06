@@ -311,7 +311,7 @@ function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "")
 function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
 function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: end || "-" }; } return { startTime: raw, endTime: "" }; }
 
-// 🟢 최고 해상도(scale: 3) 유지 & 흐림/투명 버그 완벽 차단 캡처 함수 (월교번용)
+// 🟢 최고 해상도(scale: 3) & 흐림/투명 버그 완벽 차단 캡처 함수
 const captureAndSave = async (elementId, filename, isDarkMode) => {
   if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
   const element = document.getElementById(elementId);
@@ -333,7 +333,7 @@ const captureAndSave = async (elementId, filename, isDarkMode) => {
 
   try {
     const canvas = await window.html2canvas(element, {
-      scale: 3,
+      scale: 3, 
       backgroundColor: isDarkMode ? '#0f172a' : '#eef1f6',
       useCORS: true
     });
@@ -576,6 +576,16 @@ function App() {
     if (isDarkMode) document.body.classList.add('dark-mode');
     else document.body.classList.remove('dark-mode');
   }, [isDarkMode]);
+
+  // 🟢 캡처 도구 주소를 훨씬 안정적인 초고속 서버(cdnjs)로 변경!
+  useEffect(() => {
+    if (!window.html2canvas) {
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+      script.id = "html2canvas-script";
+      document.body.appendChild(script);
+    }
+  }, []);
 
   // --- 기존 useEffect 모음 ---
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
@@ -889,7 +899,7 @@ function App() {
     setCurrentGroup(Object.keys(next)[0] || "");
   }
 
-  // 🟢 새롭게 추가된 그룹 고화질 캡처 & 네이티브 공유 기능
+  // 🟢 그룹 고화질 사진 캡처 & 스마트폰 네이티브 공유창 호출 기능
   const handleShareGroupImage = async () => {
     if (!currentGroup || groupMembers.length === 0) return alert("공유할 그룹 인원이 없습니다.");
     if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
@@ -897,7 +907,6 @@ function App() {
     const element = document.getElementById('capture-group-area');
     if (!element) return;
 
-    // 캡처하는 찰나의 순간 표 전체가 잘리지 않게 설정하고, 애니메이션/투명도 효과 차단
     const originalTransform = element.style.transform;
     const originalOverflow = element.style.overflow;
     element.style.transform = 'none';
@@ -907,7 +916,7 @@ function App() {
 
     try {
       const canvas = await window.html2canvas(element, {
-        scale: 3, // 🔥 3배수 최고 화질로 렌더링
+        scale: 3, 
         backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
         useCORS: true
       });
@@ -916,7 +925,6 @@ function App() {
         if (!blob) return alert("이미지 생성에 실패했습니다.");
         const file = new File([blob], `${currentGroup}_스케줄.png`, { type: 'image/png' });
 
-        // 기기가 파일 공유를 지원하면 네이티브 공유창(카톡, 밴드 등) 띄우기
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({
@@ -924,21 +932,19 @@ function App() {
               files: [file]
             });
           } catch (shareErr) {
-            console.log('공유가 취소되었습니다.', shareErr);
+            console.log('공유 취소', shareErr);
           }
         } else {
-          // 공유를 지원하지 않는 기기면 갤러리에 고화질로 바로 다운로드
           const link = document.createElement("a");
           link.download = `${currentGroup}_스케줄.png`;
           link.href = URL.createObjectURL(blob);
           link.click();
-          alert("기기가 바로 공유를 지원하지 않아 앨범에 사진으로 저장했습니다.");
+          alert("기기가 바로 공유를 지원하지 않아 사진으로 저장했습니다.");
         }
       });
     } catch (e) {
       alert("캡처에 실패했습니다.");
     } finally {
-      // 캡처 후 화면 원래대로 복구
       element.style.transform = originalTransform;
       element.style.overflow = originalOverflow;
     }
@@ -963,10 +969,7 @@ function App() {
             <div className="card-title">기본자료 ZIP 등록</div>
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
             <div className="help-text">처음 한 번만 ZIP 파일을 등록하면 이후에는 자동으로 저장되어 계속 사용할 수 있습니다.</div>
-            <div className="notice-box">관리자로부터 받은 최신 ZIP 파일을 선택해주세요.</div>
             {loading && <div className="help-text" style={{ color: "#2563eb" }}>불러오는 중...</div>}
-            {zipName && <div className="help-text">현재 파일: {zipName}</div>}
-            {error && <div className="help-text" style={{ color: "#dc2626" }}>{error}</div>}
           </div>
         ) : allowProfileEdit ? (
           <div className="card">
@@ -976,8 +979,7 @@ function App() {
               {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
             </select>
             <label className="label" style={{ marginTop: 12 }}>내 이름</label>
-            <input className="input" type="text" placeholder="이름 직접 입력 (없으면 새로 등록됩니다)" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
-            <div className="help-text" style={{ marginTop: 6 }}>기본데이터에 이름이 없으면 선택한 교번 기준으로 사용됩니다.</div>
+            <input className="input" type="text" placeholder="이름 직접 입력" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
             <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
             <select className="select" value={draftCode} onChange={(e) => { setDraftCode(e.target.value); }}>
               <option value="">선택</option>
@@ -985,7 +987,6 @@ function App() {
             </select>
             <label className="label" style={{ marginTop: 12 }}>기준 날짜</label>
             <input className="input" type="date" value={profileAnchorDate} onChange={(e) => { const nextDate = e.target.value || getKoreaToday(); setProfileAnchorDate(nextDate); }} />
-            <div className="help-text" style={{ marginTop: 10 }}>기존 이름이면 자동으로 교번이 채워지고, 없으면 교번을 직접 선택해서 사용합니다.</div>
             <div className="modal-actions">
               <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() || !draftCode}>시작하기</button>
             </div>
@@ -1014,7 +1015,6 @@ function App() {
                     <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
                     <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
                     <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
-                    {remoteLoading && <div className="help-text" style={{ color: "#2563eb" }}>최신 배포본 확인 중...</div>}
                   </div>
                 </div>
               </>
@@ -1039,7 +1039,6 @@ function App() {
                       const myCodeForDate = viewTeam === mySelection?.teamKey && mySelection?.code ? getMyCodeForDate(currentViewTeam, browseDate, mySelection) : "";
                       const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name) || (myCodeForDate && normalizeCodeKey(item.code) === normalizeCodeKey(myCodeForDate)));
                       const isToday = browseDate === getKoreaToday();
-                      
                       const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
                       const customTextColorCode = item.customColor ? { color: "#0f172a" } : undefined;
                       const customTextColorName = item.customColor ? { color: "#374151" } : undefined;
@@ -1121,48 +1120,39 @@ function App() {
                 <div className="group-top-bar-v4">
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, -7))}>◀</button>
                   <div className="group-select-wrap">
-                    <div className="group-select-display">
-                      {groupMonth ? `${parseInt(groupMonth.split('-')[1], 10)}월 ▾` : "월 ▾"}
-                    </div>
+                    <div className="group-select-display">{groupMonth ? `${parseInt(groupMonth.split('-')[1], 10)}월 ▾` : "월 ▾"}</div>
                     <select className="group-select-overlay" value={groupMonth} onChange={(e) => handleGroupMonthChange(e.target.value)}>
                       {groupMonthOptions.map((item) => (<option key={item.value} value={item.value}>{item.label}</option>))}
                     </select>
                   </div>
                   <div className="group-select-wrap">
-                    <div className="group-select-display">
-                      {currentGroup ? `${currentGroup} ▾` : "그룹 없음 ▾"}
-                    </div>
+                    <div className="group-select-display">{currentGroup ? `${currentGroup} ▾` : "그룹 없음 ▾"}</div>
                     <select className="group-select-overlay" value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
                       {Object.keys(groups).length === 0 ? (<option value="">그룹 없음</option>) : (Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
                     </select>
                   </div>
                   <div style={{ flex: 1, display: 'flex', gap: '4px', minWidth: 0, height: '100%' }}>
                     <button className="group-add-btn-v4" onClick={() => setShowGroupAdd(true)}>관리</button>
-                    {/* 🟢 공유 버튼 클릭 시 고화질 캡처 및 공유창 자동 실행 */}
-                    <button className="group-add-btn-v4" style={{ background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2)' }} onClick={handleShareGroupImage}>공유</button>
+                    <button className="group-add-btn-v4" style={{ background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)' }} onClick={handleShareGroupImage}>공유</button>
                   </div>
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>▶</button>
                 </div>
-                {/* 🟢 캡처 시 잘림 방지를 위해 id 지정 */}
                 <div className="group-table-wrap" style={swipeStyle} id="capture-group-area">
                   <table className="group-table">
                     <thead>
                       <tr>
                         <th className="sticky-col">이름</th>
-                        {weekDates.map((date) => {
-                          const isSelectedCol = selectedGroupDate === date; const isToday = date === getKoreaToday();
-                          return (
-                            <th key={date} onClick={() => setSelectedGroupDate(date)} className={`${isSelectedCol ? "active-col" : ""} ${isToday ? "today-col" : ""}`} style={{ cursor: "pointer", transition: "all 0.18s ease" }}>
-                              <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
-                              <div className="day-date">{formatMonthDay(date)}</div>
-                            </th>
-                          );
-                        })}
+                        {weekDates.map((date) => (
+                          <th key={date} onClick={() => setSelectedGroupDate(date)} className={`${selectedGroupDate === date ? "active-col" : ""} ${date === getKoreaToday() ? "today-col" : ""}`}>
+                            <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
+                            <div className="day-date">{formatMonthDay(date)}</div>
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
                       {groupMembers.length === 0 ? (
-                        <tr><td colSpan={8} className="empty-msg" style={{padding: '20px', textAlign: 'center'}}>그룹 인원을 추가해주세요.</td></tr>
+                        <tr><td colSpan={8} className="empty-msg">그룹 인원을 추가해주세요.</td></tr>
                       ) : (
                         groupMembers.map((member, idx) => (
                           <tr key={`${member.team}-${member.name}-${idx}`}>
@@ -1175,11 +1165,8 @@ function App() {
                             </td>
                             {weekDates.map((date) => {
                               const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
-                              const isSelectedCol = selectedGroupDate === date;
                               return (
-                                <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: item.name || member.name, displayName: item.displayName || member.name, idx: -1 }, date); } }} style={{ cursor: "pointer", background: isSelectedCol ? (isDarkMode ? "#374151" : "#f5f3ff") : "", fontWeight: isSelectedCol ? 700 : 600, color: isSelectedCol ? (isDarkMode ? "#a78bfa" : "#4c1d95") : "inherit", transition: "all 0.18s ease" }}>
-                                  {item?.code || "-"}
-                                </td>
+                                <td key={date} onClick={() => { if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: member.name, idx: -1 }, date); } }}>{item?.code || "-"}</td>
                               );
                             })}
                           </tr>
@@ -1205,120 +1192,43 @@ function App() {
       )}
 
       {showSettings && (
-        <div className="modal-backdrop" onClick={() => { if (showSettingsRef.current) window.history.back(); else setShowSettings(false); }}>
+        <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">설정</div>
-            <label className="label" style={{ marginTop: 6 }}>화면 테마</label>
-            <button className="modal-btn" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 16px', marginBottom: 16 }} onClick={() => setIsDarkMode(!isDarkMode)}>
-              <span>{isDarkMode ? "🌙 다크 모드 켜짐" : "☀️ 라이트 모드 켜짐"}</span>
-              <span style={{ fontSize: '18px' }}>{isDarkMode ? "✅" : "☑️"}</span>
+            <button className="modal-btn" style={{ width: '100%', marginBottom: 16 }} onClick={() => setIsDarkMode(!isDarkMode)}>
+              {isDarkMode ? "🌙 다크 모드 켜짐" : "☀️ 라이트 모드 켜짐"}
             </button>
-            <label className="label">기본자료 ZIP 등록 / 변경</label>
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
-            <div className="help-text">처음 한 번 등록하면 이후에는 자동 저장됩니다. ZIP 구조가 바뀔 때만 다시 등록하면 됩니다.</div>
-
-            {!allowProfileEdit ? (
-              <>
-                <label className="label" style={{ marginTop: 14 }}>내 정보</label>
-                <div className="notice-box" style={{ marginTop: 8 }}>
-                  내 소속: {TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"}<br />
-                  내 이름: {mySelection?.name || "-"}<br />
-                  내 기준교번: {mySelection?.code || "-"}<br />
-                  기준날짜: {mySelection?.anchorDate || "-"}
-                </div>
-                <div className="help-text" style={{ marginTop: 10 }}>앱은 저장된 ZIP/공용데이터로 빠르게 열리고, 최신 배포본은 뒤에서 확인 후 알림으로 안내됩니다.</div>
-                <div className="modal-actions"><button className="modal-btn" onClick={startReconfigureProfile}>내 정보 다시 설정</button></div>
-              </>
-            ) : (
-              <>
-                <label className="label" style={{ marginTop: 12 }}>내 소속</label>
-                <select className="select" value={draftTeam} onChange={(e) => { const nextTeam = e.target.value; setDraftTeam(nextTeam); setSelectedTeam(nextTeam); setDraftName(""); setDraftCode(""); }}>
-                  {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
-                </select>
-                <label className="label" style={{ marginTop: 12 }}>내 이름</label>
-                <input className="input" type="text" placeholder="이름 직접 입력 (없으면 새로 등록됩니다)" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
-                <div className="help-text" style={{ marginTop: 6 }}>기본데이터에 이름이 없으면 선택한 교번 기준으로 저장됩니다.</div>
-                <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
-                <select className="select" value={draftCode} onChange={(e) => { setDraftCode(e.target.value); }}>
-                  <option value="">선택</option>
-                  {(setupSourceData?.[draftTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (<option key={`${code}-${idx}`} value={code}>{code}</option>))}
-                </select>
-                <label className="label" style={{ marginTop: 12 }}>기준 날짜</label>
-                <input className="input" type="date" value={profileAnchorDate} onChange={(e) => { const nextDate = e.target.value || getKoreaToday(); setProfileAnchorDate(nextDate); }} />
-                <div className="modal-actions">
-                  <button className="modal-btn" onClick={cancelReconfigureProfile}>취소</button>
-                  <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() || !draftCode}>저장</button>
-                </div>
-              </>
-            )}
-            
-            {isAdminUser && (
-              <div className="card" style={{ marginTop: 14, padding: 12 }}>
-                <div className="label" style={{ marginBottom: 10 }}>관리자</div>
-                <label className="label">공용 기준일</label>
-                <input className="input" type="date" value={remoteBaseDate} onChange={(e) => setRemoteBaseDate(e.target.value)} />
-                <div className="help-text" style={{ marginTop: 10 }}>날짜를 선택하고 저장 버튼을 누르면 다른 사람들에게도 반영됩니다.</div>
-                <div className="modal-actions">
-                  <button className="modal-btn" onClick={publishRoster} disabled={savingSharedConfig}>{savingSharedConfig ? "처리중..." : "현재배정 배포"}</button>
-                  <button className="modal-btn primary" onClick={saveSharedConfig} disabled={savingSharedConfig}>{savingSharedConfig ? "저장중..." : "공용 기준일 저장"}</button>
-                </div>
-              </div>
-            )}
-            
             <div className="modal-actions">
-              <button className="modal-btn" onClick={resetMyProfile}>내 정보 초기화</button>
-              <button className="modal-btn primary" onClick={() => { if (showSettingsRef.current) window.history.back(); else setShowSettings(false); }}>닫기</button>
+              <button className="modal-btn" onClick={resetMyProfile}>초기화</button>
+              <button className="modal-btn primary" onClick={() => setShowSettings(false)}>닫기</button>
             </div>
           </div>
         </div>
       )}
 
       {showGroupAdd && (
-        <div className="modal-backdrop" onClick={() => { if (showGroupAddRef.current) window.history.back(); else setShowGroupAdd(false); }}>
+        <div className="modal-backdrop" onClick={() => setShowGroupAdd(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">그룹 관리</div>
-            
-            <label className="label">1. 새 그룹 만들기</label>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-              <input className="input" style={{ flex: 1 }} value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="예: 1조, 낚시모임" />
-              <button className="modal-btn primary" style={{ width: 'auto', padding: '0 16px' }} onClick={handleGroupSubmit}>생성</button>
-            </div>
-            
-            <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
-            
-            <label className="label">2. 관리할 그룹 선택</label>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
-              <select className="select" style={{ flex: 1, margin: 0 }} value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
-                {Object.keys(groups).length === 0 ? (<option value="">그룹 없음</option>) : (Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
+            <input className="input" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="새 그룹 이름" />
+            <button className="modal-btn primary" style={{ width: '100%', marginTop: 8 }} onClick={handleGroupSubmit}>그룹 생성</button>
+            <hr style={{ margin: '20px 0', opacity: 0.2 }} />
+            <select className="select" value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
+              {Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>)}
+            </select>
+            <button className="modal-btn" style={{ width: '100%', marginTop: 8, color: '#ef4444' }} onClick={deleteCurrentGroup}>그룹 삭제</button>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
+              <select className="select" value={groupAddTeam} onChange={(e) => setGroupAddTeam(e.target.value)}>
+                {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
               </select>
-              <button className="modal-btn" style={{ width: 'auto', padding: '0 14px', margin: 0, color: '#ef4444', borderColor: '#fca5a5', background: '#fef2f2' }} onClick={deleteCurrentGroup} disabled={!currentGroup}>
-                🗑️ 삭제
-              </button>
+              <select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}>
+                <option value="">이름 선택</option>
+                {(effectiveData?.[groupAddTeam]?.people || []).map((p) => (<option key={p.name} value={p.name}>{p.name}</option>))}
+              </select>
             </div>
-            
-            <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
-
-            <label className="label">3. 선택된 그룹에 인원 추가</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
-              <div>
-                <label className="label" style={{ fontSize: '12px', marginBottom: '4px' }}>소속</label>
-                <select className="select" value={groupAddTeam} onChange={(e) => { setGroupAddTeam(e.target.value); setGroupAddName(""); }}>
-                  {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
-                </select>
-              </div>
-              <div>
-                <label className="label" style={{ fontSize: '12px', marginBottom: '4px' }}>이름</label>
-                <select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}>
-                  <option value="">선택</option>
-                  {(effectiveData?.[groupAddTeam]?.people || []).map((person) => (<option key={`${groupAddTeam}-${person.name}`} value={person.name}>{person.name}</option>))}
-                </select>
-              </div>
-            </div>
-            <button className="modal-btn primary" style={{ width: '100%' }} onClick={addToGroup} disabled={!currentGroup || !groupAddName}>+ 현재 그룹에 인원 추가</button>
-
-            <div className="modal-actions" style={{ marginTop: '24px' }}>
-              <button className="modal-btn" style={{ width: '100%' }} onClick={() => { if (showGroupAddRef.current) window.history.back(); else setShowGroupAdd(false); }}>닫기</button>
-            </div>
+            <button className="modal-btn primary" style={{ width: '100%', marginTop: 8 }} onClick={addToGroup}>인원 추가</button>
+            <div className="modal-actions"><button className="modal-btn primary" onClick={() => setShowGroupAdd(false)}>닫기</button></div>
           </div>
         </div>
       )}
@@ -1327,38 +1237,14 @@ function App() {
         <div className="modal-backdrop" onClick={closeEditDialog}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">표시 수정</div>
-            <div className="modal-sub">{TEAM_LABELS[viewTeam]} {editingCell?.code} {editingCell?.name}</div>
-            <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
-            <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="비워두면 원래 이름 사용" />
-            <div className="help-text" style={{ marginTop: 6 }}>※ 사용자 화면 표시용에 저장됨</div>
-            <label className="label" style={{ marginTop: 12 }}>색상</label>
-            <select className="select" value={editColor || "default"} onChange={(e) => setEditColor(e.target.value === "default" ? "" : e.target.value)}>
-              <option value="default">기본</option>
-              {COLOR_OPTIONS.filter((item) => item.value).map((item) => (<option key={item.label} value={item.value}>{item.label}</option>))}
+            <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="표시 이름" />
+            <select className="select" style={{ marginTop: 12 }} value={editColor || "default"} onChange={(e) => setEditColor(e.target.value === "default" ? "" : e.target.value)}>
+              <option value="default">기본 색상</option>
+              {COLOR_OPTIONS.filter(o => o.value).map(o => <option key={o.label} value={o.value}>{o.label}</option>)}
             </select>
-            <div className="color-preview" style={{ backgroundColor: editColor || "#ffffff" }} />
-            <button className="modal-btn" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsWorktimeEditOpen((prev) => !prev)}>출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}</button>
-            {isWorktimeEditOpen && (
-              <div style={{ marginTop: 12 }}>
-                <div className="help-text" style={{ marginBottom: 10 }}>※ 현재 날짜 기준 출퇴근시간 수정</div>
-                <div className="notice-box" style={{ marginBottom: 12 }}>적용 기준: {currentEditDayLabel}</div>
-                <label className="label">출근</label>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, marginBottom: 12 }}>
-                  <input className="input" inputMode="numeric" value={editStartHour} onChange={(e) => setEditStartHour(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="06" />
-                  <div style={{ fontWeight: 700 }}>:</div>
-                  <input className="input" inputMode="numeric" value={editStartMin} onChange={(e) => setEditStartMin(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="33" />
-                </div>
-                <label className="label">퇴근</label>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
-                  <input className="input" inputMode="numeric" value={editEndHour} onChange={(e) => setEditEndHour(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="15" />
-                  <div style={{ fontWeight: 700 }}>:</div>
-                  <input className="input" inputMode="numeric" value={editEndMin} onChange={(e) => setEditEndMin(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="54" />
-                </div>
-              </div>
-            )}
             <div className="modal-actions">
-              <button className="modal-btn" onClick={closeEditDialog}>아니요</button>
-              <button className="modal-btn primary" onClick={() => commitEdit(editColor, editAlias)}>변경</button>
+              <button className="modal-btn" onClick={closeEditDialog}>취소</button>
+              <button className="modal-btn primary" onClick={() => commitEdit()}>저장</button>
             </div>
           </div>
         </div>
@@ -1371,22 +1257,7 @@ function App() {
             <button className="modal-btn primary" onClick={closePathDialog}>닫기</button>
           </div>
           <div className="viewer-body">
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
-            <div style={{ color: "#6b7280", marginBottom: 16 }}>{pathDate} {weekdayName(pathDate)}</div>
-            {pathImage ? (<img src={pathImage} alt="행로표" className="fullscreen-image" />) : (<div className="empty-box">해당 행로표 이미지를 찾지 못했습니다.</div>)}
-          </div>
-        </div>
-      )}
-
-      {showUpdatePopup && (
-        <div className="modal-backdrop" onClick={closeUpdatePopup}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">업데이트 알림</div>
-            <div className="help-text" style={{ marginTop: 8 }}>최신 인원/교번 정보가 있습니다.<br />지금 업데이트하시겠습니까?</div>
-            <div className="modal-actions">
-              <button className="modal-btn" onClick={closeUpdatePopup}>나중에</button>
-              <button className="modal-btn primary" onClick={applyPendingRosterUpdate}>업데이트</button>
-            </div>
+            {pathImage ? <img src={pathImage} alt="행로표" className="fullscreen-image" /> : <div className="empty-box">이미지가 없습니다.</div>}
           </div>
         </div>
       )}
