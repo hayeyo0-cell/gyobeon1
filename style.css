@@ -54,7 +54,7 @@ button:active { transform: scale(0.97); }
 .bottom-tab.active { color: #ffffff; background: rgba(255, 255, 255, 0.08); font-size: 16px; font-weight: 700; }
 .bottom-tab.active::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: 5px; height: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.95); }
 
-/* 그룹 UI (가운데 3칸 동일 비율 1:1:1) */
+/* 그룹 UI */
 .group-page { background: transparent; border-radius: 0; padding: 0; box-shadow: none; border: none; }
 .group-top-bar-v4 { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 10px; background: rgba(255, 255, 255, 0.95); border-radius: 20px; border: 1px solid rgba(203, 213, 225, 0.8); box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8); margin-bottom: 12px; width: 100%; transition: background-color 0.2s ease, border-color 0.2s ease; }
 .nav-btn-v4 { flex: 0 0 auto; padding: 8px 12px; background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); border: none; border-radius: 12px; font-size: 16px; color: white; cursor: pointer; font-weight: 800; box-shadow: 0 4px 10px rgba(47, 97, 220, 0.2); }
@@ -105,20 +105,20 @@ button:active { transform: scale(0.97); }
 .all-team-tab.active { box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.22), 0 10px 18px rgba(90, 130, 235, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.38); }
 .all-team-tab.my-team.active { box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.22), 0 10px 18px rgba(16, 185, 129, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
 .view-dot { position: absolute; top: 6px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: #2563eb; box-shadow: 0 0 6px rgba(37, 99, 235, 0.55); }
+
 .all-tab-grid-wrap { overflow: visible; background: linear-gradient(180deg, rgba(194, 211, 245, 0.78) 0%, rgba(178, 198, 238, 0.72) 100%); border-radius: 28px; padding: 8px; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.38); margin-bottom: 12px; transition: background 0.2s ease; }
 .all-grid-real { display: grid; width: 100%; height: auto; gap: 2px; align-items: stretch; }
-.all-cell-real { min-width: 0; min-height: 52px; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border-radius: 10px; padding: 6px 3px; text-align: center; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; user-select: none; touch-action: manipulation; border: 1px solid #c8d6f0; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.92); transition: transform 0.12s ease, border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease; }
+
+/* 🟢 전체화면 글씨 겹침 & 삐져나옴 완벽 방지 */
+.all-cell-real { min-width: 0; min-height: 52px; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border-radius: 10px; padding: 4px 2px; text-align: center; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; user-select: none; touch-action: manipulation; border: 1px solid #c8d6f0; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.92); transition: transform 0.12s ease, border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease; }
 .all-cell-real:hover { background: linear-gradient(180deg, #ffffff 0%, #f3f8ff 100%); }
 .all-cell-real:active { transform: scale(0.985); }
-.all-code { font-size: 17px; line-height: 1.1; font-weight: 800; color: #0f172a; white-space: nowrap; transition: color 0.2s ease; }
-.all-name { margin-top: 3px; font-size: 13px; line-height: 1.2; font-weight: 700; color: #374151; word-break: keep-all; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; transition: color 0.2s ease; }
+.all-code { margin: 0; font-size: 16px; line-height: 1; font-weight: 800; color: #0f172a; white-space: nowrap; transition: color 0.2s ease; }
+.all-name { margin: 0; font-size: 12px; line-height: 1; font-weight: 700; color: #374151; word-break: keep-all; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; transition: color 0.2s ease; }
 
-/* 🟢 잔상 원인 삭제 완료! / 본인 칸 배경 제거 코드도 걷어내서 자연스러운 그라데이션 유지 */
-.cell-my { border: 2px solid #22c7d8 !important; transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 20px rgba(34, 199, 216, 0.25), 0 4px 8px rgba(34, 199, 216, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.72); z-index: 2; position: relative; transition: all 0.2s ease; }
+.all-cell-real[style] { background-image: none !important; }
+.cell-my { border: 2px solid #22c7d8 !important; background-image: none !important; transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 20px rgba(34, 199, 216, 0.25), 0 4px 8px rgba(34, 199, 216, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.72); z-index: 2; position: relative; transition: all 0.2s ease; }
 .cell-my-today { animation: myCellBlink 1.4s ease-in-out infinite; }
-.all-grid-real.density-6 .all-code { font-size: 15px; } .all-grid-real.density-6 .all-name { font-size: 11px; }
-.all-grid-real.density-5 .all-code { font-size: 16px; } .all-grid-real.density-5 .all-name { font-size: 11px; }
-.all-grid-real.density-4 .all-code { font-size: 17px; } .all-grid-real.density-4 .all-name { font-size: 12px; }
 
 /* 월력 디자인 */
 .month-calendar { background: rgba(255, 255, 255, 0.76); border-radius: 24px; padding: 10px; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7); transition: background-color 0.2s ease, border-color 0.2s ease; }
@@ -252,10 +252,15 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .all-team-tab { font-size: 13px; padding: 9px 0; border-radius: 14px; }
   .view-dot { top: 5px; right: 7px; width: 5px; height: 5px; }
 
+  /* 🟢 전체화면 모바일 글씨 겹침 픽스 반영 */
   .all-tab-grid-wrap { padding: 6px; border-radius: 22px; margin-bottom: 10px; }
-  .all-cell-real { min-height: 48px; border-radius: 8px; padding: 5px 2px; }
-  .all-code { font-size: 12.5px; }
-  .all-name { font-size: 9px; margin-top: 2px; }
+  .all-cell-real { min-height: 48px; border-radius: 8px; padding: 4px 1px; gap: 1px; }
+  .all-code { font-size: 14px; }
+  .all-name { font-size: 10px; margin-top: 0; }
+
+  .all-grid-real.density-4 .all-code { font-size: 15px; } .all-grid-real.density-4 .all-name { font-size: 11px; }
+  .all-grid-real.density-5 .all-code { font-size: 13.5px; } .all-grid-real.density-5 .all-name { font-size: 10px; }
+  .all-grid-real.density-6 .all-code { font-size: 12px; } .all-grid-real.density-6 .all-name { font-size: 9px; }
 
   /* 그룹 모바일 디자인 */
   .group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
