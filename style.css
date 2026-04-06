@@ -9,7 +9,7 @@ button:active { transform: scale(0.97); }
 .container { width: 100%; min-height: 100dvh; padding: 24px 8px 24px; overflow-y: auto; overflow-x: hidden; }
 .container::after { content: ""; display: block; height: calc(86px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; }
 .card, .main-panel, .month-header-bar, .month-calendar, .all-tab-header, .all-team-tabs, .all-tab-grid-wrap, .group-page, .group-table-wrap { width: 100%; margin-left: auto; margin-right: auto; }
-.card { background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(10px); border-radius: 24px; padding: 14px; margin-bottom: 10px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.78); transition: background-color 0.2s ease, border-color 0.2s ease; }
+.card { background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 24px; padding: 14px; margin-bottom: 10px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.78); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .card-title { font-size: 20px; font-weight: 800; margin-bottom: 10px; }
 .help-text { color: #6b7280; font-size: 14px; line-height: 1.5; margin-top: 6px; }
 .notice-box { background: rgba(233, 242, 255, 0.95); border: 1px solid rgba(189, 210, 255, 0.95); color: #2146a6; border-radius: 16px; padding: 10px 12px; margin-top: 10px; font-size: 13px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7); }
@@ -35,6 +35,14 @@ button:active { transform: scale(0.97); }
 .main-subinfo { margin-top: 12px; font-size: 15px; font-weight: 700; color: #64748b; letter-spacing: -0.01em; }
 .tab-page { min-height: 100%; animation: pageFadeIn 0.18s ease; }
 @keyframes pageFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 스와이프 관련 래퍼 설정 */
+.swipe-wrapper {
+  width: 100%;
+  height: 100%;
+  /* 자바스크립트에서 style={transform: ...} 로 제어됨 */
+}
+
 .bottom-tabs { position: fixed; left: 0; right: 0; bottom: 0; height: calc(60px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); background: rgba(39, 82, 191, 0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid rgba(255, 255, 255, 0.16); box-shadow: 0 -6px 22px rgba(15, 23, 42, 0.12); z-index: 50; overflow: hidden; }
 .bottom-tabs.tabs-5 { display: flex !important; width: 100%; }
 .bottom-tabs.tabs-5 .bottom-tab { flex: 1 1 20% !important; width: 20% !important; min-width: 0; }
@@ -46,13 +54,61 @@ button:active { transform: scale(0.97); }
 .bottom-tab.active { color: #ffffff; background: rgba(255, 255, 255, 0.08); font-size: 16px; font-weight: 700; }
 .bottom-tab.active::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: 5px; height: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.95); }
 
-/* 그룹 UI */
+/* =========================================
+   새로 도입된 그룹 헤더 UI (1:1:1 공평한 크기)
+========================================== */
 .group-page { background: transparent; border-radius: 0; padding: 0; box-shadow: none; border: none; }
 .group-top-bar-v4 { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 10px; background: rgba(255, 255, 255, 0.95); border-radius: 20px; border: 1px solid rgba(203, 213, 225, 0.8); box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8); margin-bottom: 12px; width: 100%; transition: background-color 0.2s ease, border-color 0.2s ease; }
 .nav-btn-v4 { flex: 0 0 auto; padding: 8px 12px; background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); border: none; border-radius: 12px; font-size: 16px; color: white; cursor: pointer; font-weight: 800; box-shadow: 0 4px 10px rgba(47, 97, 220, 0.2); }
-.group-select-month, .group-select-name { flex: 1 1 auto; min-width: 0; padding: 8px 6px; border-radius: 12px; border: 1px solid #cbd5e1; font-size: 14px; font-weight: 800; background: #f8fafc; color: #0f172a; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
-.group-add-btn-v4 { flex: 0 0 auto; background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%); color: #fff; border: none; padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 14px; box-shadow: 0 4px 10px rgba(124, 58, 237, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2); cursor: pointer; white-space: nowrap; }
 
+/* 🟢 투명 셀렉트 래퍼 (가운데 3칸 동일 비율) */
+.group-select-wrap {
+  flex: 1 1 0; /* 1:1 비율 분배 */
+  min-width: 0; /* 글씨 넘침 방지 */
+  position: relative;
+}
+.group-select-display {
+  width: 100%;
+  padding: 8px 4px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  font-size: 13px;
+  font-weight: 800;
+  background: #f8fafc;
+  color: #0f172a;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.group-select-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  opacity: 0; /* 투명하게 만들어서 위를 덮음 */
+  cursor: pointer;
+}
+
+/* 🟢 그룹 추가 버튼 (가운데 3칸 동일 비율) */
+.group-add-btn-v4 { 
+  flex: 1 1 0; /* 1:1 비율 분배 */
+  min-width: 0; 
+  background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%); 
+  color: #fff; 
+  border: none; 
+  padding: 8px 4px; 
+  border-radius: 12px; 
+  font-weight: 800; 
+  font-size: 13px; 
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2); 
+  cursor: pointer; 
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 그룹 테이블 */
 .group-table-wrap { overflow: auto; border-radius: 18px; background: #ffffff; border: 1px solid rgba(203, 213, 225, 0.9); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .group-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
 .group-table th, .group-table td { border-bottom: 1px solid rgba(203, 213, 225, 0.6); border-right: 1px solid rgba(203, 213, 225, 0.6); padding: 8px 4px; text-align: center; vertical-align: middle; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
@@ -150,7 +206,7 @@ button:active { transform: scale(0.97); }
 @keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(34, 199, 216, 0.18), 0 8px 16px rgba(34, 199, 216, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.76); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 3px rgba(34, 199, 216, 0.28), 0 12px 24px rgba(34, 199, 216, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.82); } }
 
 /* =========================================
-   📖 스와이프 슬라이드 애니메이션 (부드러운 책장 넘기기)
+   📖 스와이프 슬라이드 애니메이션 (책장 넘기기)
 ========================================== */
 .slide-left {
   animation: slideInRight 0.3s ease-out forwards;
@@ -175,7 +231,7 @@ button:active { transform: scale(0.97); }
 ========================================== */
 body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .card, .dark-mode .main-panel, .dark-mode .month-calendar, .dark-mode .group-table-wrap, .dark-mode .group-top-bar-v4 { background: rgba(30, 41, 59, 0.95); border-color: #334155; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-.dark-mode .input, .dark-mode .select, .dark-mode .group-select-month, .dark-mode .group-select-name { background: #1e293b; border-color: #475569; color: #f8fafc; }
+.dark-mode .input, .dark-mode .select, .dark-mode .group-select-display { background: #1e293b; border-color: #475569; color: #f8fafc; }
 .dark-mode .date-box { background: rgba(30, 41, 59, 0.95); border-color: #334155; }
 .dark-mode .date-btn { background: #334155; color: #f8fafc; }
 .dark-mode .date-value { background: #1e293b; color: #f8fafc; }
@@ -254,8 +310,11 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   /* 그룹 모바일 디자인 */
   .group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
   .nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
-  .group-select-month, .group-select-name { padding: 6px 4px; font-size: 13px; border-radius: 10px; }
-  .group-add-btn-v4 { padding: 6px 8px; font-size: 12px; border-radius: 10px; }
+  
+  /* 🟢 모바일에서 글씨가 더 쾌적하게 보이도록 크기 조절 */
+  .group-select-display { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
+  .group-add-btn-v4 { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
+  
   .group-table { font-size: 12px; }
   .group-table th:first-child, .group-table td:first-child, .group-name-cell { width: 68px; min-width: 68px; max-width: 68px; }
   .day-name { font-size: 13px; }
