@@ -311,7 +311,7 @@ function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "")
 function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
 function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: end || "-" }; } return { startTime: raw, endTime: "" }; }
 
-// 🟢 최고 해상도(scale: 3) 유지 & 흐림/투명 버그 완벽 차단 캡처 함수 (월교번용)
+// 🟢 캡처 기능 (월교번)
 const captureAndSave = async (elementId, filename, isDarkMode) => {
   if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
   const element = document.getElementById(elementId);
@@ -319,7 +319,6 @@ const captureAndSave = async (elementId, filename, isDarkMode) => {
 
   const originalAnimation = element.style.animation;
   element.style.animation = 'none';
-
   const calendarEl = element.querySelector('.month-calendar');
   const calBg = calendarEl ? calendarEl.style.background : '';
   const calTransform = calendarEl ? calendarEl.style.transform : '';
@@ -333,7 +332,7 @@ const captureAndSave = async (elementId, filename, isDarkMode) => {
 
   try {
     const canvas = await window.html2canvas(element, {
-      scale: 3,
+      scale: 3, 
       backgroundColor: isDarkMode ? '#0f172a' : '#eef1f6',
       useCORS: true
     });
@@ -372,7 +371,6 @@ async function loadZipBlob() { const db = await openZipDB(); return new Promise(
 async function saveParsedData(value) { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readwrite"); const store = tx.objectStore("files"); store.put({ data: value, savedAt: Date.now() }, "parsedData"); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
 async function loadParsedData() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); const req = store.get("parsedData"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
 function promptAdminPassword() { const value = window.prompt("관리자 비밀번호를 입력하세요"); if (value == null) return null; if (String(value).trim() !== ADMIN_PASSWORD) { alert("비밀번호가 올바르지 않습니다."); return null; } return String(value).trim(); }
-
 
 function App() {
   const initialSelection = loadMySelection();
@@ -577,7 +575,16 @@ function App() {
     else document.body.classList.remove('dark-mode');
   }, [isDarkMode]);
 
-  // --- 기존 useEffect 모음 ---
+  // 🟢 캡처 도구 (html2canvas) 로딩 오류 완벽 해결 (글로벌 안정 CDN 사용)
+  useEffect(() => {
+    if (!window.html2canvas) {
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+      script.id = "html2canvas-script";
+      document.body.appendChild(script);
+    }
+  }, []);
+
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
   useEffect(() => { cleanupNameOverrides(); setOverrides(loadOverrides()); }, []);
   useEffect(() => { saveMySelection(mySelection); }, [mySelection]);
@@ -889,7 +896,7 @@ function App() {
     setCurrentGroup(Object.keys(next)[0] || "");
   }
 
-  // 🟢 새롭게 추가된 그룹 고화질 캡처 & 네이티브 공유 기능
+  // 🟢 그룹 고화질 캡처 & 스마트폰 기본 카톡/밴드 공유 기능
   const handleShareGroupImage = async () => {
     if (!currentGroup || groupMembers.length === 0) return alert("공유할 그룹 인원이 없습니다.");
     if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
@@ -897,7 +904,6 @@ function App() {
     const element = document.getElementById('capture-group-area');
     if (!element) return;
 
-    // 캡처하는 찰나의 순간 표 전체가 잘리지 않게 설정하고, 애니메이션/투명도 효과 차단
     const originalTransform = element.style.transform;
     const originalOverflow = element.style.overflow;
     element.style.transform = 'none';
@@ -907,7 +913,7 @@ function App() {
 
     try {
       const canvas = await window.html2canvas(element, {
-        scale: 3, // 🔥 3배수 최고 화질로 렌더링
+        scale: 3, 
         backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
         useCORS: true
       });
@@ -916,7 +922,6 @@ function App() {
         if (!blob) return alert("이미지 생성에 실패했습니다.");
         const file = new File([blob], `${currentGroup}_스케줄.png`, { type: 'image/png' });
 
-        // 기기가 파일 공유를 지원하면 네이티브 공유창(카톡, 밴드 등) 띄우기
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({
@@ -924,10 +929,9 @@ function App() {
               files: [file]
             });
           } catch (shareErr) {
-            console.log('공유가 취소되었습니다.', shareErr);
+            console.log('공유 취소', shareErr);
           }
         } else {
-          // 공유를 지원하지 않는 기기면 갤러리에 고화질로 바로 다운로드
           const link = document.createElement("a");
           link.download = `${currentGroup}_스케줄.png`;
           link.href = URL.createObjectURL(blob);
@@ -938,7 +942,6 @@ function App() {
     } catch (e) {
       alert("캡처에 실패했습니다.");
     } finally {
-      // 캡처 후 화면 원래대로 복구
       element.style.transform = originalTransform;
       element.style.overflow = originalOverflow;
     }
