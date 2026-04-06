@@ -293,7 +293,7 @@ function getMyCodeForDate(team, dateStr, mySelection) { if (!team || !mySelectio
 function getMonthMatrix(dateStr) { const d = parseLocalDate(dateStr); const year = d.getFullYear(); const month = d.getMonth(); const first = new Date(year, month, 1); const firstDay = first.getDay(); const start = new Date(year, month, 1 - firstDay); const matrix = []; for (let r = 0; r < 6; r++) { const row = []; for (let c = 0; c < 7; c++) { const temp = new Date(start); temp.setDate(start.getDate() + r * 7 + c); row.push(formatDate(temp)); } matrix.push(row); } return matrix; }
 function getWeekDates(baseDate) { const d = parseLocalDate(baseDate); const day = d.getDay(); const sunday = new Date(d); sunday.setDate(d.getDate() - day); const dates = []; for (let i = 0; i < 7; i++) { const temp = new Date(sunday); temp.setDate(sunday.getDate() + i); dates.push(formatDate(temp)); } return dates; }
 
-// 🟢 현재 월에 "📍 이번 달" 이모지와 강조 텍스트 추가
+// 🟢 현재 월에 "📍 이번 달" 텍스트를 붙여서 언제든지 쉽게 돌아올 수 있게 시각적 안내
 function getMonthOptions(centerDateStr, range = 12) { 
   const base = parseLocalDate(centerDateStr); 
   const currentMonthVal = getDisplayMonthValue(getKoreaToday());
@@ -543,7 +543,7 @@ function App() {
   // 부분 애니메이션 전용 스타일
   const swipeStyle = { transform: `translateX(${swipeOffset}px)`, opacity: swipeOpacity, transition: swipeTransition, willChange: 'transform, opacity' };
 
-  // 🟢 [추가] 관리자가 공용 기준일을 입력하면 즉시 로컬에 자동 저장
+  // 🟢 [추가] 관리자가 공용 기준일을 텍스트로 입력하면 즉시 로컬에 자동 저장
   useEffect(() => {
     if (remoteBaseDate) {
       setGlobalBaseDate(remoteBaseDate);
@@ -704,9 +704,16 @@ function App() {
     if (nextMonthValue === todayMonth) setGroupBaseDate(today); else setGroupBaseDate(getMonthStartDate(nextMonthValue));
   }
 
+  // 🟢 탭 버튼 두 번 누르면 무조건 오늘로 복귀! (숨겨진 프로 기능)
   function switchTab(tabName) {
     const currentTab = activeTabRef.current; const today = getKoreaToday(); const myTeamKey = mySelection?.teamKey || selectedTeam || "ks";
-    if (tabName === currentTab) { if (tabName === "home") setHomeDate(today); return; }
+    if (tabName === currentTab) { 
+      if (tabName === "home") setHomeDate(today); 
+      else if (tabName === "all" || tabName === "dia") setBrowseDate(today);
+      else if (tabName === "month") setMonthDate(today);
+      else if (tabName === "group") { setGroupMonth(getDisplayMonthValue(today)); setGroupBaseDate(today); setSelectedGroupDate(""); }
+      return; 
+    }
     if (tabName === "home") setHomeDate(today);
     if (currentTab === "home" && tabName !== "home") { if (tabName === "all" || tabName === "dia") { setBrowseDate(homeDate); setViewTeam(myTeamKey); } else if (tabName === "month") { setMonthDate(today); } else if (tabName === "group") { setGroupMonth(getDisplayMonthValue(today)); setGroupBaseDate(today); setSelectedGroupDate(""); } }
     if (tabName === "all") setViewTeam(myTeamKey);
@@ -733,7 +740,7 @@ function App() {
 
   async function handleZipUpload(event) { const file = event.target.files?.[0]; if (!file) return; setZipName(file.name); setInitialRemoteChecked(false); await parseAndSetZip(file, true, false, remoteRoster, true); }
   
-  // 🟢 관리자가 버튼 누르면 공용 기준일 암호 묻고 저장
+  // 🟢 비번 창 정상 작동 복구 완료
   async function saveSharedConfig() {
     if (!isAdminUser) return alert("관리자만 저장할 수 있습니다."); 
     const adminKey = promptAdminPassword(); 
@@ -810,7 +817,7 @@ function App() {
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { const team = effectiveData?.[teamKey]; if (!team || !item?.code) return; const image = findPathImage(team, dateStr, item.code); setViewTeam(teamKey); setPathTeamKey(teamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
-  // 🟢 그룹 생성 (성공 시 입력칸을 즉시 지움)
+  // 🟢 그룹창 개편: 생성 (입력창 비움)
   function handleGroupSubmit() { 
     const name = newGroupName.trim(); 
     if (!name) return alert("그룹 이름을 입력해주세요."); 
@@ -820,9 +827,10 @@ function App() {
     setGroups(next); 
     saveGroups(next); 
     setCurrentGroup(name); 
-    setNewGroupName(""); // 입력칸 초기화
+    setNewGroupName(""); 
   }
   
+  // 🟢 그룹창 개편: 인원 추가
   function addToGroup() { 
     const typedGroupName = newGroupName.trim(); 
     const targetGroup = currentGroup || typedGroupName; 
@@ -840,7 +848,7 @@ function App() {
   
   function removeFromGroup(teamKey, name) { const next = { ...groups }; next[currentGroup] = (next[currentGroup] || []).filter((item) => !(item.team === teamKey && samePersonName(item.name, name))); setGroups(next); saveGroups(next); }
   
-  // 🟢 현재 그룹 통째로 삭제
+  // 🟢 그룹창 개편: 휴지통 삭제
   function deleteCurrentGroup() {
     if (!currentGroup) return;
     if (!window.confirm(`정말 '${currentGroup}' 그룹 전체를 삭제하시겠습니까?\n(삭제 후 복구할 수 없습니다)`)) return;
@@ -916,7 +924,6 @@ function App() {
                   <div className="date-box"><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() + 1); setHomeDate(formatDate(d)); }}>+</button><div className="date-value">{parseLocalDate(homeDate).getMonth() + 1}월</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
                   <div className="date-box"><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, 1))}>+</button><div className="date-value">{parseLocalDate(homeDate).getDate()}일</div><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, -1))}>-</button></div>
                 </div>
-                {/* 🟢 내용물만 스와이프 되도록 swipeStyle 적용 */}
                 <div className="card main-panel" style={swipeStyle}>
                   <div className="center-view">
                     <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
@@ -941,7 +948,6 @@ function App() {
                 <div className="all-team-tabs">
                   {TEAM_ORDER.map((key) => { const isActive = viewTeam === key; const isMyTeam = selectedTeam === key; return (<button key={key} className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`} onClick={() => setViewTeam(key)}>{TEAM_LABELS[key]}{isActive && <span className="view-dot" />}</button>); })}
                 </div>
-                {/* 🟢 내용물만 스와이프 되도록 swipeStyle 적용 */}
                 <div className="all-tab-grid-wrap" style={swipeStyle}>
                   <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
                     {visibleAllGrid.map((item) => {
@@ -973,7 +979,6 @@ function App() {
                 <div className="all-team-tabs">
                   {TEAM_ORDER.map((key) => { const isActive = viewTeam === key; const isMyTeam = selectedTeam === key; return (<button key={key} className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`} onClick={() => setViewTeam(key)}>{TEAM_LABELS[key]}{isActive && <span className="view-dot" />}</button>); })}
                 </div>
-                {/* 🟢 내용물만 스와이프 되도록 swipeStyle 적용 */}
                 <div className="card" style={{ padding: 0, overflow: "hidden", ...swipeStyle }}>
                   {diaList.map((item, idx) => (
                     <div key={`${item.code}-${idx}`} onClick={() => openPathDialog(item, browseDate)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 16px", borderBottom: idx === diaList.length - 1 ? "none" : "1px solid #e5e7eb", fontSize: 18, background: viewTeam === selectedTeam && (samePersonName(item.name, mySelection?.name) || (mySelection?.teamKey === viewTeam && mySelection?.code && normalizeCodeKey(item.code) === normalizeCodeKey(getMyCodeForDate(currentViewTeam, browseDate, mySelection)))) ? (isDarkMode ? "#374151" : "#eef6ff") : "transparent", cursor: "pointer" }}>
@@ -993,8 +998,6 @@ function App() {
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', fontSize: '20px' }} onClick={() => captureAndSave('capture-month-area', `월교번_${monthHeaderDate.getFullYear()}_${monthHeaderDate.getMonth() + 1}`, isDarkMode)}>📷</button>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, 1))}>+</button>
                 </div>
-
-                {/* 🟢 내용물만 스와이프 되도록 swipeStyle 적용 */}
                 <div className="month-calendar" style={swipeStyle}>
                   <div className="month-weekdays">
                     <div className="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="sat">토</div>
@@ -1047,8 +1050,6 @@ function App() {
                   <button className="group-add-btn-v4" onClick={() => setShowGroupAdd(true)}>+ 그룹 관리</button>
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>▶</button>
                 </div>
-
-                {/* 🟢 내용물만 스와이프 되도록 swipeStyle 적용 */}
                 <div className="group-table-wrap" style={swipeStyle}>
                   <table className="group-table">
                     <thead>
@@ -1157,13 +1158,13 @@ function App() {
               </>
             )}
             
-            {/* 🟢 공용 기준일 (저장 버튼 누르면 비번 묻도록 복구됨) */}
+            {/* 🟢 공용 기준일 (관리자만 비번 묻도록) */}
             {isAdminUser && (
               <div className="card" style={{ marginTop: 14, padding: 12 }}>
                 <div className="label" style={{ marginBottom: 10 }}>관리자</div>
                 <label className="label">공용 기준일</label>
                 <input className="input" type="date" value={remoteBaseDate} onChange={(e) => setRemoteBaseDate(e.target.value)} />
-                <div className="help-text" style={{ marginTop: 10 }}>공용 기준일을 설정하고 아래 버튼을 눌러야 서버에 영구 반영됩니다.</div>
+                <div className="help-text" style={{ marginTop: 10 }}>날짜를 선택하고 저장 버튼을 누르면 다른 사람들에게도 반영됩니다.</div>
                 <div className="modal-actions">
                   <button className="modal-btn" onClick={publishRoster} disabled={savingSharedConfig}>{savingSharedConfig ? "처리중..." : "현재배정 배포"}</button>
                   <button className="modal-btn primary" onClick={saveSharedConfig} disabled={savingSharedConfig}>{savingSharedConfig ? "저장중..." : "공용 기준일 저장"}</button>
@@ -1184,7 +1185,7 @@ function App() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">그룹 관리</div>
             
-            {/* 🟢 1. 새 그룹 만들기 (만들면 글씨 바로 지워짐) */}
+            {/* 🟢 1. 새 그룹 생성 */}
             <label className="label">1. 새 그룹 만들기</label>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
               <input className="input" style={{ flex: 1 }} value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="예: 1조, 낚시모임" />
@@ -1193,7 +1194,7 @@ function App() {
             
             <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
             
-            {/* 🟢 2. 그룹 선택 및 삭제 (안내문구 삭제, 바로 옆에 휴지통 버튼 배치) */}
+            {/* 🟢 2. 그룹 선택 + 바로 삭제 버튼 */}
             <label className="label">2. 관리할 그룹 선택</label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
               <select className="select" style={{ flex: 1, margin: 0 }} value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
@@ -1206,7 +1207,7 @@ function App() {
             
             <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
 
-            {/* 🟢 3. 선택된 그룹에 인원 추가 */}
+            {/* 🟢 3. 인원 추가 */}
             <label className="label">3. 선택된 그룹에 인원 추가</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
               <div>
