@@ -543,6 +543,7 @@ function App() {
   };
 
   const swipeStyle = { transform: `translate3d(${swipeOffset}px, 0, 0)`, transition: swipeTransition, willChange: 'transform' };
+  const stickySwipeStyle = { transform: `translate3d(${-swipeOffset}px, 0, 0)`, transition: swipeTransition, willChange: 'transform' };
 
   useEffect(() => { if (remoteBaseDate) { setGlobalBaseDate(remoteBaseDate); const prevConfig = loadCachedSharedConfig() || {}; saveCachedSharedConfig({ ...prevConfig, baseDate: remoteBaseDate }); } }, [remoteBaseDate]);
   useEffect(() => { localStorage.setItem(LS_DARK_MODE, isDarkMode); if (isDarkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode'); }, [isDarkMode]);
@@ -634,6 +635,7 @@ function App() {
 
   const currentViewTeam = effectiveData?.[viewTeam] || null;
 
+  // 1. myInfo
   const myInfo = useMemo(() => {
     const myTeamKey = mySelection?.teamKey || selectedTeam; const myName = String(mySelection?.name || "").trim(); const team = effectiveData?.[myTeamKey]; if (!team || !myName) return null;
     const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
@@ -643,6 +645,7 @@ function App() {
     const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName };
   }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, worktimeVersion, overrides]);
 
+  // 2. allGrid
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return []; let grid = [];
     if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides); } else {
@@ -658,10 +661,20 @@ function App() {
     return grid;
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
 
+  // 3. filteredGrid (검색어 반영)
+  const filteredGrid = useMemo(() => {
+    if (!searchQuery) return allGrid;
+    return allGrid.filter(item => (item.displayName || item.name).includes(searchQuery) || (item.code || "").includes(searchQuery));
+  }, [allGrid, searchQuery]);
+
+  // 4. visibleAllGrid (렌더링용)
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
+  
+  // 5. layout settings
   const allGridLayout = useMemo(() => { return getAllGridLayout(visibleAllGrid.length || 0); }, [visibleAllGrid.length]);
   const allGridRows = useMemo(() => { return Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols)); }, [visibleAllGrid.length, allGridLayout.cols]);
 
+  // 6. diaList
   const diaList = useMemo(() => {
     const team = currentViewTeam; if (!team) return []; let grid = [];
     const canUseMyAnchorForTeam = viewTeam === mySelection?.teamKey && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(team, mySelection.name);
@@ -670,12 +683,7 @@ function App() {
     const diaOrder = getDiaOrder(team); return diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-" }; });
   }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection]);
 
-  // 🟢 실시간 검색어 필터링 적용 (입력 즉시 반응)
-  const filteredGrid = useMemo(() => {
-    if (!searchQuery) return allGrid;
-    return allGrid.filter(item => (item.displayName || item.name).includes(searchQuery) || (item.code || "").includes(searchQuery));
-  }, [allGrid, searchQuery]);
-
+  // 7. filteredDiaList (검색어 반영)
   const filteredDiaList = useMemo(() => {
     if (!searchQuery) return diaList;
     return diaList.filter(item => (item.displayName || item.name).includes(searchQuery) || (item.code || "").includes(searchQuery));
@@ -714,7 +722,6 @@ function App() {
     if (tabName === "home") window.history.pushState({ __gyobeon: true, layer: "root" }, "");
     else window.history.pushState({ __gyobeon: true, layer: `tab-${tabName}` }, "");
     
-    // 🟢 탭 이동 시 검색어 초기화
     setSearchQuery(""); setShowSearch(false);
   }
 
@@ -1002,7 +1009,6 @@ function App() {
                     <button className="all-header-btn" onClick={() => setShowSearch(!showSearch)}>🔍</button>
                     <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
-                  {/* 🟢 실시간 검색창 UI */}
                   {showSearch && <input className="input" style={{ marginTop: 8 }} placeholder="이름 또는 교번 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />}
                 </div>
                 <div className="all-team-tabs">
@@ -1029,7 +1035,6 @@ function App() {
                 ) : (
                   <div className="card" style={{ padding: 0, overflow: "hidden", ...swipeStyle }}>
                     {filteredDiaList.map((item, idx) => {
-                      // 🟢 DIA 순서 다크모드 전용 하이라이트 (테두리와 색상 팝 효과)
                       const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name) || (mySelection?.teamKey === viewTeam && mySelection?.code && normalizeCodeKey(item.code) === normalizeCodeKey(getMyCodeForDate(currentViewTeam, browseDate, mySelection))));
                       return (
                         <div key={`${item.code}-${idx}`} onClick={() => openPathDialog(item, browseDate)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 16px", borderBottom: idx === filteredDiaList.length - 1 ? "none" : (isDarkMode ? "1px solid #334155" : "1px solid #e5e7eb"), fontSize: 18, background: isMine ? (isDarkMode ? "rgba(56, 189, 248, 0.15)" : "#eef6ff") : "transparent", borderLeft: isMine ? (isDarkMode ? "4px solid #38bdf8" : "4px solid #3b82f6") : "4px solid transparent", cursor: "pointer" }}>
@@ -1058,7 +1063,7 @@ function App() {
                   {monthMatrix.map((row, rowIdx) => (
                     <div className="month-row" key={rowIdx}>
                       {row.map((date) => {
-                        // 🟢 백지화면 해결: member.name이 아닌 item.name 사용하도록 완전 복구
+                        // 🟢 백지화면 원인(member.name 오타) 해결 완료!!
                         const item = mySelection?.name ? getPersonGyobunForDate(effectiveData, remoteRoster, mySelection?.teamKey || selectedTeam, mySelection.name, date, overrides, mySelection) : null;
                         const sameMonth = parseLocalDate(date).getMonth() === monthHeaderDate.getMonth(); const isSelected = date === monthDate; const toneClass = getDateToneClass(date);
                         const targetTeamKey = mySelection?.teamKey || selectedTeam; const worktime = item?.code ? pickWorktime(effectiveData[targetTeamKey], item.code, date) : ""; const { startTime, endTime } = splitWorktime(worktime);
