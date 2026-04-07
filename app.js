@@ -473,6 +473,29 @@ function App() {
   const currentEditDayType = guessDayType(browseDate);
   const currentEditDayLabel = currentEditDayType === "nor" ? "평일" : currentEditDayType === "sat" ? "토요일" : "휴일";
 
+  // 🟢 그룹 추가 드롭다운에 '가장 최신 데이터' 및 '수정된 내 별명'이 완벽하게 연동되도록 마법의 필터 추가
+  const groupAddCandidates = useMemo(() => {
+    const team = effectiveData?.[groupAddTeam];
+    if (!team) return [];
+    
+    let baseList = [];
+    if (hasRemoteRosterForTeam(groupAddTeam, remoteRoster)) {
+      baseList = remoteRoster[groupAddTeam].map(r => ({ name: r.name }));
+    } else {
+      baseList = team.people || [];
+    }
+
+    return baseList
+      .filter(p => p.name && !shouldHideName(p.name))
+      .map(p => {
+        const override = overrides[getOverrideKey(groupAddTeam, p.name)] || {};
+        return {
+          name: p.name, // 원본 고유 이름 (데이터 저장용)
+          displayName: override.alias || p.name // 수정된 예쁜 이름 (화면 표시용)
+        };
+      });
+  }, [effectiveData, remoteRoster, groupAddTeam, overrides]);
+
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const isSwipingRef = useRef(false);
@@ -512,7 +535,7 @@ function App() {
     }
   };
 
-  // 🟢 무중력 스와이프: 표 전체가 아닌 내용물만 화면 밖으로 시원하게 넘김 (깜빡임 완벽 제거)
+  // 🟢 뼈대는 고정시키고 알맹이만 스와이프 되도록 애니메이션 액션 유지
   const onTouchEndHandler = () => {
     if (!isSwipingRef.current) {
       touchStartX.current = null;
@@ -562,7 +585,7 @@ function App() {
     else if (activeTabRef.current === 'group') setGroupBaseDate(prev => addDays(prev, direction * 7));
   };
 
-  // 🟢 3D 가속을 사용하여 갤러리 앱처럼 부드럽게 날아가는 스와이프 효과 (테두리 제외)
+  // 🟢 3D 가속(GPU) 사용 스와이프 액션 (알맹이들에만 부여됨)
   const swipeStyle = { transform: `translate3d(${swipeOffset}px, 0, 0)`, transition: swipeTransition, willChange: 'transform' };
 
   useEffect(() => {
@@ -579,7 +602,6 @@ function App() {
     else document.body.classList.remove('dark-mode');
   }, [isDarkMode]);
 
-  // 🟢 무한로딩 방지 초고속 캡처 스크립트 장착
   useEffect(() => {
     if (!window.html2canvas) {
       const script = document.createElement("script");
@@ -916,7 +938,6 @@ function App() {
     element.style.transform = 'none';
     element.style.overflow = 'visible'; 
     
-    // 알맹이(날짜)들의 변형값 임시 제거
     const innerDivs = element.querySelectorAll('th > div[style*="translate3d"], td > div[style*="translate3d"]');
     const origTransforms = [];
     innerDivs.forEach((div, i) => {
@@ -1001,7 +1022,8 @@ function App() {
               {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
             </select>
             <label className="label" style={{ marginTop: 12 }}>내 이름</label>
-            <input className="input" type="text" placeholder="이름 직접 입력" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
+            <input className="input" type="text" placeholder="이름 직접 입력 (없으면 새로 등록됩니다)" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
+            <div className="help-text" style={{ marginTop: 6 }}>기본데이터에 이름이 없으면 선택한 교번 기준으로 사용됩니다.</div>
             <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
             <select className="select" value={draftCode} onChange={(e) => { setDraftCode(e.target.value); }}>
               <option value="">선택</option>
@@ -1009,6 +1031,7 @@ function App() {
             </select>
             <label className="label" style={{ marginTop: 12 }}>기준 날짜</label>
             <input className="input" type="date" value={profileAnchorDate} onChange={(e) => { const nextDate = e.target.value || getKoreaToday(); setProfileAnchorDate(nextDate); }} />
+            <div className="help-text" style={{ marginTop: 10 }}>기존 이름이면 자동으로 교번이 채워지고, 없으면 교번을 직접 선택해서 사용합니다.</div>
             <div className="modal-actions">
               <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() || !draftCode}>시작하기</button>
             </div>
@@ -1185,11 +1208,16 @@ function App() {
                       {groupMembers.length === 0 ? (
                         <tr><td colSpan={8} className="empty-msg">그룹 인원을 추가해주세요.</td></tr>
                       ) : (
-                        groupMembers.map((member, idx) => (
+                        groupMembers.map((member, idx) => {
+                          // 🟢 그룹 목록의 이름도 '내가 수정한 예쁜 별명'으로 출력되도록 연결
+                          const override = overrides[getOverrideKey(member.team, member.name)] || {};
+                          const displayMemberName = override.alias || member.name;
+                          
+                          return (
                           <tr key={`${member.team}-${member.name}-${idx}`}>
                             <td className="group-name-cell sticky-col">
                               <div className="group-name-cell-inner">
-                                <div className="name-txt">{member.name}</div>
+                                <div className="name-txt">{displayMemberName}</div>
                                 <div className="team-badge">{TEAM_LABELS[member.team]}</div>
                                 <button className="row-del-btn-text" onClick={() => removeFromGroup(member.team, member.name)}>삭제</button>
                               </div>
@@ -1198,7 +1226,7 @@ function App() {
                               const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
                               const isSelectedCol = selectedGroupDate === date;
                               return (
-                                <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: member.name, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', background: isSelectedCol ? (isDarkMode ? "#374151" : "#f5f3ff") : "", transition: "background-color 0.18s ease" }}>
+                                <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', background: isSelectedCol ? (isDarkMode ? "#374151" : "#f5f3ff") : "", transition: "background-color 0.18s ease" }}>
                                   {/* 🟢 교번(알맹이)에만 swipeStyle 적용 */}
                                   <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: isSelectedCol ? 700 : 600, color: isSelectedCol ? (isDarkMode ? "#a78bfa" : "#4c1d95") : "inherit" }}>
                                     {item?.code || "-"}
@@ -1207,7 +1235,8 @@ function App() {
                               );
                             })}
                           </tr>
-                        ))
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -1334,7 +1363,8 @@ function App() {
                 <label className="label" style={{ fontSize: '12px', marginBottom: '4px' }}>이름</label>
                 <select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}>
                   <option value="">선택</option>
-                  {(effectiveData?.[groupAddTeam]?.people || []).map((person) => (<option key={`${groupAddTeam}-${person.name}`} value={person.name}>{person.name}</option>))}
+                  {/* 🟢 드롭다운에도 내가 수정한 별명이 완벽하게 표시됩니다! */}
+                  {groupAddCandidates.map((person) => (<option key={`${groupAddTeam}-${person.name}`} value={person.name}>{person.displayName}</option>))}
                 </select>
               </div>
             </div>
