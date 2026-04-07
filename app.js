@@ -995,7 +995,6 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {/* 🟢 5칸짜리로 깔끔하게 재배치된 전체 헤더 (수정 버튼 귀환!) */}
                   {activeTab === "all" ? (
                     <div className="all-header">
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
@@ -1026,10 +1025,15 @@ function App() {
                         const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name) || (myCodeForDate && normalizeCodeKey(item.code) === normalizeCodeKey(myCodeForDate)));
                         const isToday = browseDate === getKoreaToday();
                         const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
+                        
+                        // 🟢 다크모드 글씨 안보임 해결: 커스텀 색상(파스텔톤)이 들어간 칸은 강제로 쌩블랙 글씨 유지!
+                        const customTextColorCode = item.customColor ? { color: "#000000" } : undefined;
+                        const customTextColorName = item.customColor ? { color: "#000000" } : undefined;
+                        
                         return (
                           <div key={`${item.idx}-${item.code}-${item.displayName}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                            <div className="all-code">{item.code || "-"}</div>
-                            <div className="all-name">{item.displayName || "-"}</div>
+                            <div className="all-code" style={customTextColorCode}>{item.code || "-"}</div>
+                            <div className="all-name" style={customTextColorName}>{item.displayName || "-"}</div>
                           </div>
                         );
                       })}
