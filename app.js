@@ -543,7 +543,6 @@ function App() {
   };
 
   const swipeStyle = { transform: `translate3d(${swipeOffset}px, 0, 0)`, transition: swipeTransition, willChange: 'transform' };
-  const stickySwipeStyle = { transform: `translate3d(${-swipeOffset}px, 0, 0)`, transition: swipeTransition, willChange: 'transform' };
 
   useEffect(() => { if (remoteBaseDate) { setGlobalBaseDate(remoteBaseDate); const prevConfig = loadCachedSharedConfig() || {}; saveCachedSharedConfig({ ...prevConfig, baseDate: remoteBaseDate }); } }, [remoteBaseDate]);
   useEffect(() => { localStorage.setItem(LS_DARK_MODE, isDarkMode); if (isDarkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode'); }, [isDarkMode]);
@@ -671,7 +670,7 @@ function App() {
     const diaOrder = getDiaOrder(team); return diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-" }; });
   }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection]);
 
-  // 🟢 검색 결과 필터링 로직
+  // 🟢 실시간 검색어 필터링 적용 (입력 즉시 반응)
   const filteredGrid = useMemo(() => {
     if (!searchQuery) return allGrid;
     return allGrid.filter(item => (item.displayName || item.name).includes(searchQuery) || (item.code || "").includes(searchQuery));
@@ -714,6 +713,8 @@ function App() {
     setActiveTab(tabName);
     if (tabName === "home") window.history.pushState({ __gyobeon: true, layer: "root" }, "");
     else window.history.pushState({ __gyobeon: true, layer: `tab-${tabName}` }, "");
+    
+    // 🟢 탭 이동 시 검색어 초기화
     setSearchQuery(""); setShowSearch(false);
   }
 
@@ -1001,6 +1002,7 @@ function App() {
                     <button className="all-header-btn" onClick={() => setShowSearch(!showSearch)}>🔍</button>
                     <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
+                  {/* 🟢 실시간 검색창 UI */}
                   {showSearch && <input className="input" style={{ marginTop: 8 }} placeholder="이름 또는 교번 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />}
                 </div>
                 <div className="all-team-tabs">
@@ -1026,12 +1028,16 @@ function App() {
                   </div>
                 ) : (
                   <div className="card" style={{ padding: 0, overflow: "hidden", ...swipeStyle }}>
-                    {filteredDiaList.map((item, idx) => (
-                      <div key={`${item.code}-${idx}`} onClick={() => openPathDialog(item, browseDate)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 16px", borderBottom: idx === filteredDiaList.length - 1 ? "none" : "1px solid #e5e7eb", fontSize: 18, background: viewTeam === selectedTeam && (samePersonName(item.name, mySelection?.name) || (mySelection?.teamKey === viewTeam && mySelection?.code && normalizeCodeKey(item.code) === normalizeCodeKey(getMyCodeForDate(currentViewTeam, browseDate, mySelection)))) ? (isDarkMode ? "#374151" : "#eef6ff") : "transparent", cursor: "pointer" }}>
-                        <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
-                        <div style={{ fontWeight: 600 }}>{item.displayName || item.name}</div>
-                      </div>
-                    ))}
+                    {filteredDiaList.map((item, idx) => {
+                      // 🟢 DIA 순서 다크모드 전용 하이라이트 (테두리와 색상 팝 효과)
+                      const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name) || (mySelection?.teamKey === viewTeam && mySelection?.code && normalizeCodeKey(item.code) === normalizeCodeKey(getMyCodeForDate(currentViewTeam, browseDate, mySelection))));
+                      return (
+                        <div key={`${item.code}-${idx}`} onClick={() => openPathDialog(item, browseDate)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 16px", borderBottom: idx === filteredDiaList.length - 1 ? "none" : (isDarkMode ? "1px solid #334155" : "1px solid #e5e7eb"), fontSize: 18, background: isMine ? (isDarkMode ? "rgba(56, 189, 248, 0.15)" : "#eef6ff") : "transparent", borderLeft: isMine ? (isDarkMode ? "4px solid #38bdf8" : "4px solid #3b82f6") : "4px solid transparent", cursor: "pointer" }}>
+                          <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
+                          <div style={{ fontWeight: 600 }}>{item.displayName || item.name}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1052,11 +1058,12 @@ function App() {
                   {monthMatrix.map((row, rowIdx) => (
                     <div className="month-row" key={rowIdx}>
                       {row.map((date) => {
+                        // 🟢 백지화면 해결: member.name이 아닌 item.name 사용하도록 완전 복구
                         const item = mySelection?.name ? getPersonGyobunForDate(effectiveData, remoteRoster, mySelection?.teamKey || selectedTeam, mySelection.name, date, overrides, mySelection) : null;
                         const sameMonth = parseLocalDate(date).getMonth() === monthHeaderDate.getMonth(); const isSelected = date === monthDate; const toneClass = getDateToneClass(date);
                         const targetTeamKey = mySelection?.teamKey || selectedTeam; const worktime = item?.code ? pickWorktime(effectiveData[targetTeamKey], item.code, date) : ""; const { startTime, endTime } = splitWorktime(worktime);
                         return (
-                          <button key={date} className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`} onClick={() => { if (item?.code) { openPathDialogForTeamAndDate(targetTeamKey, { code: item.code, name: member.name, displayName: member.name, idx: -1 }, date); } else { setMonthDate(date); } }}>
+                          <button key={date} className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`} onClick={() => { if (item?.code) { openPathDialogForTeamAndDate(targetTeamKey, { code: item.code, name: item.name || mySelection?.name || "", displayName: item.displayName || mySelection?.name || "", idx: -1 }, date); } else { setMonthDate(date); } }}>
                             <div className={`month-cell-inner ${toneClass}`}>
                               <div className={`month-day ${toneClass}`}>{parseLocalDate(date).getDate()}</div>
                               <div className={`month-code-line ${toneClass}`}>{item?.code || "-"}</div>
@@ -1087,7 +1094,7 @@ function App() {
                   <div className="group-select-wrap">
                     <div className="group-select-display">{currentGroup ? `${currentGroup} ▾` : "그룹 없음 ▾"}</div>
                     <select className="group-select-overlay" value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
-                      {Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
+                      {Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>)}
                     </select>
                   </div>
                   <div style={{ flex: 1, display: 'flex', gap: '4px', minWidth: 0, height: '100%' }}>
@@ -1100,7 +1107,7 @@ function App() {
                   <table className="group-table">
                     <thead>
                       <tr>
-                        <th className="sticky-col" style={stickySwipeStyle}>이름</th>
+                        <th className="sticky-col">이름</th>
                         {weekDates.map((date) => {
                           const isSelectedCol = selectedGroupDate === date; const isToday = date === getKoreaToday();
                           return (
@@ -1123,7 +1130,7 @@ function App() {
                           const displayMemberName = override.alias || member.name;
                           return (
                           <tr key={`${member.team}-${member.name}-${idx}`}>
-                            <td className="group-name-cell sticky-col" style={stickySwipeStyle}>
+                            <td className="group-name-cell sticky-col">
                               <div className="group-name-cell-inner">
                                 <div className="name-txt">{displayMemberName}</div>
                                 <div className="team-badge">{TEAM_LABELS[member.team]}</div>
