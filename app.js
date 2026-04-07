@@ -635,7 +635,6 @@ function App() {
 
   const currentViewTeam = effectiveData?.[viewTeam] || null;
 
-  // 1. myInfo
   const myInfo = useMemo(() => {
     const myTeamKey = mySelection?.teamKey || selectedTeam; const myName = String(mySelection?.name || "").trim(); const team = effectiveData?.[myTeamKey]; if (!team || !myName) return null;
     const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
@@ -645,7 +644,6 @@ function App() {
     const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName };
   }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, worktimeVersion, overrides]);
 
-  // 2. allGrid
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return []; let grid = [];
     if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides); } else {
@@ -661,20 +659,15 @@ function App() {
     return grid;
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
 
-  // 3. filteredGrid (검색어 반영)
   const filteredGrid = useMemo(() => {
     if (!searchQuery) return allGrid;
     return allGrid.filter(item => (item.displayName || item.name).includes(searchQuery) || (item.code || "").includes(searchQuery));
   }, [allGrid, searchQuery]);
 
-  // 4. visibleAllGrid (렌더링용)
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
-  
-  // 5. layout settings
   const allGridLayout = useMemo(() => { return getAllGridLayout(visibleAllGrid.length || 0); }, [visibleAllGrid.length]);
   const allGridRows = useMemo(() => { return Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols)); }, [visibleAllGrid.length, allGridLayout.cols]);
 
-  // 6. diaList
   const diaList = useMemo(() => {
     const team = currentViewTeam; if (!team) return []; let grid = [];
     const canUseMyAnchorForTeam = viewTeam === mySelection?.teamKey && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(team, mySelection.name);
@@ -683,7 +676,6 @@ function App() {
     const diaOrder = getDiaOrder(team); return diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-" }; });
   }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection]);
 
-  // 7. filteredDiaList (검색어 반영)
   const filteredDiaList = useMemo(() => {
     if (!searchQuery) return diaList;
     return diaList.filter(item => (item.displayName || item.name).includes(searchQuery) || (item.code || "").includes(searchQuery));
@@ -1003,12 +995,23 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  <div className="all-header">
-                    <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
-                    <div className="all-header-title">{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
-                    <button className="all-header-btn" onClick={() => setShowSearch(!showSearch)}>🔍</button>
-                    <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
-                  </div>
+                  {/* 🟢 5칸짜리로 깔끔하게 재배치된 전체 헤더 (수정 버튼 귀환!) */}
+                  {activeTab === "all" ? (
+                    <div className="all-header">
+                      <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
+                      <div className="all-header-title">{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
+                      <button className="all-header-btn" onClick={() => setShowSearch(!showSearch)}>🔍</button>
+                      <button className={`all-edit-btn ${editMode ? "active" : ""}`} onClick={() => setEditMode(!editMode)}>{editMode ? "수정중" : "수정"}</button>
+                      <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                    </div>
+                  ) : (
+                    <div className="all-header dia-header">
+                      <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
+                      <div className="all-header-title">{TEAM_LABELS[viewTeam]} DIA순서 {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
+                      <button className="all-header-btn" onClick={() => setShowSearch(!showSearch)}>🔍</button>
+                      <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                    </div>
+                  )}
                   {showSearch && <input className="input" style={{ marginTop: 8 }} placeholder="이름 또는 교번 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />}
                 </div>
                 <div className="all-team-tabs">
@@ -1063,7 +1066,6 @@ function App() {
                   {monthMatrix.map((row, rowIdx) => (
                     <div className="month-row" key={rowIdx}>
                       {row.map((date) => {
-                        // 🟢 백지화면 원인(member.name 오타) 해결 완료!!
                         const item = mySelection?.name ? getPersonGyobunForDate(effectiveData, remoteRoster, mySelection?.teamKey || selectedTeam, mySelection.name, date, overrides, mySelection) : null;
                         const sameMonth = parseLocalDate(date).getMonth() === monthHeaderDate.getMonth(); const isSelected = date === monthDate; const toneClass = getDateToneClass(date);
                         const targetTeamKey = mySelection?.teamKey || selectedTeam; const worktime = item?.code ? pickWorktime(effectiveData[targetTeamKey], item.code, date) : ""; const { startTime, endTime } = splitWorktime(worktime);
