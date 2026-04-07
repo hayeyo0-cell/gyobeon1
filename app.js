@@ -1026,7 +1026,6 @@ function App() {
                         const isToday = browseDate === getKoreaToday();
                         const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
                         
-                        // 🟢 다크모드 글씨 안보임 해결: 커스텀 색상(파스텔톤)이 들어간 칸은 강제로 쌩블랙 글씨 유지!
                         const customTextColorCode = item.customColor ? { color: "#000000" } : undefined;
                         const customTextColorName = item.customColor ? { color: "#000000" } : undefined;
                         
@@ -1071,7 +1070,12 @@ function App() {
                     <div className="month-row" key={rowIdx}>
                       {row.map((date) => {
                         const item = mySelection?.name ? getPersonGyobunForDate(effectiveData, remoteRoster, mySelection?.teamKey || selectedTeam, mySelection.name, date, overrides, mySelection) : null;
-                        const sameMonth = parseLocalDate(date).getMonth() === monthHeaderDate.getMonth(); const isSelected = date === monthDate; const toneClass = getDateToneClass(date);
+                        const sameMonth = parseLocalDate(date).getMonth() === monthHeaderDate.getMonth(); 
+                        
+                        // 🟢 해결 1: 월교번 '오늘' 날짜 하이라이트를 무조건 진짜 오늘(getKoreaToday)일 때만 표시되도록 수정!
+                        const isSelected = date === getKoreaToday(); 
+                        
+                        const toneClass = getDateToneClass(date);
                         const targetTeamKey = mySelection?.teamKey || selectedTeam; const worktime = item?.code ? pickWorktime(effectiveData[targetTeamKey], item.code, date) : ""; const { startTime, endTime } = splitWorktime(worktime);
                         return (
                           <button key={date} className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`} onClick={() => { if (item?.code) { openPathDialogForTeamAndDate(targetTeamKey, { code: item.code, name: item.name || mySelection?.name || "", displayName: item.displayName || mySelection?.name || "", idx: -1 }, date); } else { setMonthDate(date); } }}>
@@ -1151,9 +1155,14 @@ function App() {
                             {weekDates.map((date) => {
                               const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
                               const isSelectedCol = selectedGroupDate === date;
+                              
+                              // 🟢 해결 2: 그룹 다크모드에서 선택한 열이 돋보이도록 색상 재지정 (퍼플빛 네온)
+                              const cellBackground = isSelectedCol ? (isDarkMode ? "rgba(139, 92, 246, 0.15)" : "#f5f3ff") : "";
+                              const textColor = isSelectedCol ? (isDarkMode ? "#a78bfa" : "#4c1d95") : "inherit";
+                              
                               return (
-                                <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', background: isSelectedCol ? (isDarkMode ? "#374151" : "#f5f3ff") : "", transition: "background-color 0.18s ease" }}>
-                                  <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: isSelectedCol ? 700 : 600, color: isSelectedCol ? (isDarkMode ? "#a78bfa" : "#4c1d95") : "inherit" }}>
+                                <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', background: cellBackground, transition: "background-color 0.18s ease" }}>
+                                  <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: isSelectedCol ? 700 : 600, color: textColor }}>
                                     {item?.code || "-"}
                                   </div>
                                 </td>
