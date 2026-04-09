@@ -41,6 +41,40 @@ button:active { transform: scale(0.97); }
 .main-time { margin-top: 14px; font-size: clamp(24px, 6vw, 36px); line-height: 1.15; font-weight: 700; }
 .main-subinfo { margin-top: 12px; font-size: 15px; font-weight: 700; color: #64748b; letter-spacing: -0.01em; transition: color 0.2s ease; }
 
+/* 🟢 행로표 썸네일 미리보기 UI */
+.home-path-preview {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  animation: fadeIn 0.3s ease;
+}
+.home-path-preview img {
+  width: 100%;
+  max-width: 240px; 
+  height: 130px; 
+  object-fit: contain; 
+  border-radius: 14px;
+  background: #f8fafc; 
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  transition: transform 0.15s ease;
+}
+.home-path-preview:active img {
+  transform: scale(0.96);
+}
+.preview-label {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #475569;
+  font-weight: 700;
+  background: rgba(241, 245, 249, 0.8);
+  padding: 4px 12px;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
 .tab-page { min-height: 100%; animation: pageFadeIn 0.18s ease; }
 @keyframes pageFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -214,6 +248,18 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .modal-title, .dark-mode .label { color: #e2e8f0; }
 .dark-mode .empty-msg { color: #94a3b8; }
 
+/* 🟢 다크모드 썸네일 미리보기 UI */
+.dark-mode .home-path-preview img {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+.dark-mode .preview-label {
+  color: #94a3b8;
+  background: rgba(30, 41, 59, 0.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
 /* =========================================
    📱 모바일 최적화 (@media)
 ========================================== */
@@ -253,7 +299,6 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 
   .all-page { padding-bottom: 20px; }
   
-  /* 🟢 모바일 화면에서도 수정/검색 버튼이 잘 들어가도록 5칸 세팅! */
   .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 48px 40px; border-radius: 18px; }
   .dia-header { grid-template-columns: 40px 1fr 38px 40px; }
   
@@ -264,7 +309,6 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .all-team-tab { font-size: 13px; padding: 9px 0; border-radius: 14px; }
   .view-dot { top: 5px; right: 7px; width: 5px; height: 5px; }
 
-  /* 🟢 전체화면 모바일 글씨 겹침 픽스 반영 & 시원한 폰트 적용 */
   .all-tab-grid-wrap { padding: 6px; border-radius: 22px; margin-bottom: 10px; }
   .all-cell-real { min-height: 48px; border-radius: 8px; padding: 2px 1px; }
   
@@ -272,7 +316,6 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .all-grid-real.density-5 .all-code { font-size: 15px; } .all-grid-real.density-5 .all-name { font-size: 11.5px; }
   .all-grid-real.density-6 .all-code { font-size: 14px; } .all-grid-real.density-6 .all-name { font-size: 10px; }
 
-  /* 그룹 모바일 디자인 */
   .group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
   .nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
   
