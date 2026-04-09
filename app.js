@@ -644,6 +644,20 @@ function App() {
     const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName };
   }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, worktimeVersion, overrides]);
 
+  // 🟢 홈 화면용 행로표 미리보기(썸네일) 스마트 로직 추가!
+  const homePathImage = useMemo(() => {
+    if (!effectiveData || !myInfo?.code) return null;
+    const targetTeamKey = mySelection?.teamKey || selectedTeam;
+    const team = effectiveData[targetTeamKey];
+    if (!team) return null;
+
+    const codeStr = String(myInfo.code).trim();
+    // '휴' 또는 '대'로 시작하면 썸네일 자체를 숨김
+    if (codeStr.startsWith("휴") || codeStr.startsWith("대")) return null;
+
+    return findPathImage(team, homeDate, myInfo.code);
+  }, [effectiveData, homeDate, myInfo?.code, mySelection, selectedTeam]);
+
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return []; let grid = [];
     if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides); } else {
@@ -987,6 +1001,21 @@ function App() {
                     <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
                     <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
                     <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
+                    
+                    {/* 🟢 행로표 썸네일 미리보기 (클릭하면 팝업 열림) */}
+                    {homePathImage && (
+                      <div 
+                        className="home-path-preview" 
+                        onClick={() => {
+                          const targetTeamKey = mySelection?.teamKey || selectedTeam;
+                          openPathDialogForTeamAndDate(targetTeamKey, { code: myInfo?.code, name: myInfo?.name || "", displayName: myInfo?.displayName || "", idx: -1 }, homeDate);
+                        }}
+                      >
+                        <img src={homePathImage} alt="행로표 미리보기" />
+                        <div className="preview-label">🔍 터치해서 크게 보기</div>
+                      </div>
+                    )}
+
                   </div>
                 </div>
               </>
