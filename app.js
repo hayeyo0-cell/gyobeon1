@@ -1071,10 +1071,7 @@ function App() {
                       {row.map((date) => {
                         const item = mySelection?.name ? getPersonGyobunForDate(effectiveData, remoteRoster, mySelection?.teamKey || selectedTeam, mySelection.name, date, overrides, mySelection) : null;
                         const sameMonth = parseLocalDate(date).getMonth() === monthHeaderDate.getMonth(); 
-                        
-                        // 🟢 해결 1: 월교번 '오늘' 날짜 하이라이트를 무조건 진짜 오늘(getKoreaToday)일 때만 표시되도록 수정!
                         const isSelected = date === getKoreaToday(); 
-                        
                         const toneClass = getDateToneClass(date);
                         const targetTeamKey = mySelection?.teamKey || selectedTeam; const worktime = item?.code ? pickWorktime(effectiveData[targetTeamKey], item.code, date) : ""; const { startTime, endTime } = splitWorktime(worktime);
                         return (
@@ -1156,7 +1153,6 @@ function App() {
                               const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
                               const isSelectedCol = selectedGroupDate === date;
                               
-                              // 🟢 해결 2: 그룹 다크모드에서 선택한 열이 돋보이도록 색상 재지정 (퍼플빛 네온)
                               const cellBackground = isSelectedCol ? (isDarkMode ? "rgba(139, 92, 246, 0.15)" : "#f5f3ff") : "";
                               const textColor = isSelectedCol ? (isDarkMode ? "#a78bfa" : "#4c1d95") : "inherit";
                               
