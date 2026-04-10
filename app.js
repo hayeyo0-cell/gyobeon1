@@ -644,17 +644,13 @@ function App() {
     const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName };
   }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, worktimeVersion, overrides]);
 
-  // 🟢 홈 화면용 행로표 미리보기(썸네일) 스마트 로직 추가!
   const homePathImage = useMemo(() => {
     if (!effectiveData || !myInfo?.code) return null;
     const targetTeamKey = mySelection?.teamKey || selectedTeam;
     const team = effectiveData[targetTeamKey];
     if (!team) return null;
-
     const codeStr = String(myInfo.code).trim();
-    // '휴' 또는 '대'로 시작하면 썸네일 자체를 숨김
     if (codeStr.startsWith("휴") || codeStr.startsWith("대")) return null;
-
     return findPathImage(team, homeDate, myInfo.code);
   }, [effectiveData, homeDate, myInfo?.code, mySelection, selectedTeam]);
 
@@ -864,6 +860,66 @@ function App() {
     setCurrentGroup(Object.keys(next)[0] || "");
   }
 
+  // 🟢 데이터 백업 로직 추가
+  function exportSettings() {
+    const dataToSave = {
+      mySelection: loadMySelection(),
+      overrides: loadOverrides(),
+      groups: loadGroups(),
+      worktimeOverrides: loadWorktimeOverrides(),
+      isDarkMode: isDarkMode
+    };
+    const jsonStr = JSON.stringify(dataToSave, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const today = getKoreaToday().replace(/-/g, "");
+    a.download = `gyobeon_backup_${today}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // 🟢 데이터 복구 로직 추가
+  function importSettings(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        if (imported.mySelection) {
+           saveMySelection(imported.mySelection);
+           setMySelection(imported.mySelection);
+           setSelectedTeam(imported.mySelection.teamKey || "ks");
+           setViewTeam(imported.mySelection.teamKey || "ks");
+        }
+        if (imported.overrides) {
+           saveOverrides(imported.overrides);
+           setOverrides(imported.overrides);
+        }
+        if (imported.groups) {
+           saveGroups(imported.groups);
+           setGroups(imported.groups);
+           setCurrentGroup(Object.keys(imported.groups)[0] || "");
+        }
+        if (imported.worktimeOverrides) {
+           saveWorktimeOverrides(imported.worktimeOverrides);
+           setWorktimeVersion(v => v + 1);
+        }
+        if (imported.isDarkMode !== undefined) {
+           setIsDarkMode(imported.isDarkMode);
+        }
+        alert("설정이 성공적으로 복구되었습니다!");
+        if (showSettingsRef.current) window.history.back(); else setShowSettings(false);
+      } catch(err) {
+        alert("잘못된 백업 파일입니다.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = null; // 입력 초기화
+  }
+
   const handleShareGroupImage = async () => {
     if (!currentGroup || groupMembers.length === 0) return alert("공유할 그룹 인원이 없습니다.");
     if (!window.html2canvas) {
@@ -1002,7 +1058,6 @@ function App() {
                     <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
                     <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
                     
-                    {/* 🟢 행로표 썸네일 미리보기 (클릭하면 팝업 열림) */}
                     {homePathImage && (
                       <div 
                         className="home-path-preview" 
@@ -1263,6 +1318,18 @@ function App() {
                 </div>
               </>
             )}
+
+            {/* 🟢 데이터 백업 및 복구 기능 UI */}
+            <label className="label" style={{ marginTop: 24 }}>데이터 백업 및 복구</label>
+            <div className="help-text">내가 설정한 별명, 색상, 그룹, 내 정보 등을 파일로 저장하거나 불러올 수 있습니다. 카카오톡 '나에게 쓰기'에 보관해두면 폰을 바꿔도 안심입니다!</div>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <button className="modal-btn" style={{ flex: 1 }} onClick={exportSettings}>📥 백업하기</button>
+              <label className="modal-btn" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', margin: 0 }}>
+                📤 복구하기
+                <input type="file" accept=".json" style={{ display: 'none' }} onChange={importSettings} />
+              </label>
+            </div>
+            <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0 10px 0' }} />
             
             {isAdminUser && (
               <div className="card" style={{ marginTop: 14, padding: 12 }}>
