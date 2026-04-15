@@ -82,7 +82,7 @@ async function ensureHolidayYear(year, onApplied) {
   try {
     const fetched = await fetchHolidayYear(y);
     if (fetched?.length) { setHolidayYear(y, fetched); saveHolidayYearToCache(y, fetched); onApplied?.(); return; }
-    if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) { setHolidayYear(y, fetched); onApplied?.(); }
+    if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) { setHolidayYear(y, DEFAULT_HOLIDAYS_BY_YEAR[y]); onApplied?.(); }
   } catch (err) {
     if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) { setHolidayYear(y, DEFAULT_HOLIDAYS_BY_YEAR[y]); onApplied?.(); }
   } finally { HOLIDAY_FETCHING_YEARS.delete(y); }
@@ -393,7 +393,7 @@ function App() {
   const initialAppliedRemoteRoster = hasAnyRemoteRoster(cachedRemoteRoster) ? cachedRemoteRoster : getEmptyRemoteRoster();
 
   const [zipName, setZipName] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // 🛠️ 초기 로딩 메시지 제거를 위해 false 유지
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [remoteRoster, setRemoteRoster] = useState(initialAppliedRemoteRoster);
