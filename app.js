@@ -82,7 +82,7 @@ async function ensureHolidayYear(year, onApplied) {
   try {
     const fetched = await fetchHolidayYear(y);
     if (fetched?.length) { setHolidayYear(y, fetched); saveHolidayYearToCache(y, fetched); onApplied?.(); return; }
-    if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) { setHolidayYear(y, DEFAULT_HOLIDAYS_BY_YEAR[y]); onApplied?.(); }
+    if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) { setHolidayYear(y, fetched); onApplied?.(); }
   } catch (err) {
     if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) { setHolidayYear(y, DEFAULT_HOLIDAYS_BY_YEAR[y]); onApplied?.(); }
   } finally { HOLIDAY_FETCHING_YEARS.delete(y); }
@@ -393,7 +393,7 @@ function App() {
   const initialAppliedRemoteRoster = hasAnyRemoteRoster(cachedRemoteRoster) ? cachedRemoteRoster : getEmptyRemoteRoster();
 
   const [zipName, setZipName] = useState("");
-  const [loading, setLoading] = useState(false); // 🛠️ 초기 로딩 메시지 제거를 위해 false 유지
+  const [loading, setLoading] = useState(false); 
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [remoteRoster, setRemoteRoster] = useState(initialAppliedRemoteRoster);
@@ -1206,7 +1206,7 @@ function App() {
                           const isSelectedCol = selectedGroupDate === date; const isToday = date === getKoreaToday();
                           return (
                             <th key={date} onClick={() => setSelectedGroupDate(date)} className={`${isSelectedCol ? "active-col" : ""} ${isToday ? "today-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
-                              {/* 🟢 수정 포인트: padding 상단을 10px로 늘려 둥근 모서리 잘림 해결 */}
+                              {/* 🛠️ 1. 그룹 탭 요일 잘림 방지 (padding-top 10px로 보정) */}
                               <div style={{ ...swipeStyle, padding: '10px 4px 8px 4px', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                 <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
                                 <div className="day-date">{formatMonthDay(date)}</div>
@@ -1236,8 +1236,9 @@ function App() {
                               const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
                               const isSelectedCol = selectedGroupDate === date;
                               
-                              const cellBackground = isSelectedCol ? (isDarkMode ? "rgba(139, 92, 246, 0.15)" : "#f5f3ff") : "";
-                              const textColor = isSelectedCol ? (isDarkMode ? "#a78bfa" : "#4c1d95") : "inherit";
+                              {/* 🛠️ 2. 다크모드 색상 복구 (이전 선호 색감인 부드러운 블루 톤으로 고정) */}
+                              const cellBackground = isSelectedCol ? (isDarkMode ? "rgba(59, 130, 246, 0.2)" : "#f5f3ff") : "";
+                              const textColor = isSelectedCol ? (isDarkMode ? "#60a5fa" : "#4c1d95") : "inherit";
                               
                               return (
                                 <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', background: cellBackground, transition: "background-color 0.18s ease" }}>
