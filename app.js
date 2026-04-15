@@ -82,7 +82,7 @@ async function ensureHolidayYear(year, onApplied) {
   try {
     const fetched = await fetchHolidayYear(y);
     if (fetched?.length) { setHolidayYear(y, fetched); saveHolidayYearToCache(y, fetched); onApplied?.(); return; }
-    if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) { setHolidayYear(y, DEFAULT_HOLIDAYS_BY_YEAR[y]); onApplied?.(); }
+    if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) { setHolidayYear(y, fetched); onApplied?.(); }
   } catch (err) {
     if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) { setHolidayYear(y, DEFAULT_HOLIDAYS_BY_YEAR[y]); onApplied?.(); }
   } finally { HOLIDAY_FETCHING_YEARS.delete(y); }
@@ -860,7 +860,6 @@ function App() {
     setCurrentGroup(Object.keys(next)[0] || "");
   }
 
-  // 🟢 데이터 백업 로직 추가
   function exportSettings() {
     const dataToSave = {
       mySelection: loadMySelection(),
@@ -880,7 +879,6 @@ function App() {
     URL.revokeObjectURL(url);
   }
 
-  // 🟢 데이터 복구 로직 추가
   function importSettings(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -917,7 +915,7 @@ function App() {
       }
     };
     reader.readAsText(file);
-    e.target.value = null; // 입력 초기화
+    e.target.value = null; 
   }
 
   const handleShareGroupImage = async () => {
@@ -1208,7 +1206,8 @@ function App() {
                           const isSelectedCol = selectedGroupDate === date; const isToday = date === getKoreaToday();
                           return (
                             <th key={date} onClick={() => setSelectedGroupDate(date)} className={`${isSelectedCol ? "active-col" : ""} ${isToday ? "today-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
-                              <div style={{ ...swipeStyle, padding: '8px 4px', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                              {/* 🟢 수정 포인트: padding 상단을 10px로 늘려 둥근 모서리 잘림 해결 */}
+                              <div style={{ ...swipeStyle, padding: '10px 4px 8px 4px', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                 <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
                                 <div className="day-date">{formatMonthDay(date)}</div>
                               </div>
@@ -1319,7 +1318,6 @@ function App() {
               </>
             )}
 
-            {/* 🟢 데이터 백업 및 복구 기능 UI */}
             <label className="label" style={{ marginTop: 24 }}>데이터 백업 및 복구</label>
             <div className="help-text">내가 설정한 별명, 색상, 그룹, 내 정보 등을 파일로 저장하거나 불러올 수 있습니다. 카카오톡 '나에게 쓰기'에 보관해두면 폰을 바꿔도 안심입니다!</div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
