@@ -548,15 +548,17 @@ function App() {
 
   useEffect(() => { if (remoteBaseDate) { setGlobalBaseDate(remoteBaseDate); const prevConfig = loadCachedSharedConfig() || {}; saveCachedSharedConfig({ ...prevConfig, baseDate: remoteBaseDate }); } }, [remoteBaseDate]);
   
-  // 🛠️ 다크모드 배경색 확실히 고정 (이전 선호 디자인으로 복구)
+  // 🛠️ 다크모드 배경색 강제 고정 및 흰색 탈출 (수정 포인트)
   useEffect(() => { 
     localStorage.setItem(LS_DARK_MODE, isDarkMode); 
     if (isDarkMode) {
       document.body.classList.add('dark-mode'); 
-      document.body.style.backgroundColor = '#0f172a'; // 짙은 다크 네이비
+      document.body.style.backgroundColor = '#0f172a'; // 다크 네이비 블랙
+      document.documentElement.style.backgroundColor = '#0f172a'; // 최상단 영역까지
     } else {
       document.body.classList.remove('dark-mode'); 
-      document.body.style.backgroundColor = '#eef1f6'; // 깨끗한 라이트 연회색
+      document.body.style.backgroundColor = '#eef1f6'; // 라이트 연회색
+      document.documentElement.style.backgroundColor = '#eef1f6';
     }
   }, [isDarkMode]);
   
@@ -1218,7 +1220,7 @@ function App() {
                           const isSelectedCol = selectedGroupDate === date; const isToday = date === getKoreaToday();
                           return (
                             <th key={date} onClick={() => setSelectedGroupDate(date)} className={`${isSelectedCol ? "active-col" : ""} ${isToday ? "today-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
-                              {/* 🛠️ 그룹 탭 요일 잘림 방지: 상단 여백 10px로 늘림 */}
+                              {/* 🛠️ 그룹 탭 요일 잘림 방지 (여백 보정) */}
                               <div style={{ ...swipeStyle, padding: '10px 4px 8px 4px', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                 <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
                                 <div className="day-date">{formatMonthDay(date)}</div>
@@ -1248,7 +1250,7 @@ function App() {
                               const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
                               const isSelectedCol = selectedGroupDate === date;
                               
-                              // 🛠️ 다크모드 선택 강조 색상 복구
+                              // 🛠️ 다크모드 강조 색상 복구 (이전 사진의 부드러운 블루 계열)
                               const cellBackground = isSelectedCol ? (isDarkMode ? "rgba(59, 130, 246, 0.2)" : "#f5f3ff") : "";
                               const textColor = isSelectedCol ? (isDarkMode ? "#60a5fa" : "#4c1d95") : "inherit";
                               
