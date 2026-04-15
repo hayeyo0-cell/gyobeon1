@@ -393,7 +393,7 @@ function App() {
   const initialAppliedRemoteRoster = hasAnyRemoteRoster(cachedRemoteRoster) ? cachedRemoteRoster : getEmptyRemoteRoster();
 
   const [zipName, setZipName] = useState("");
-  const [loading, setLoading] = useState(false); 
+  const [loading, setLoading] = useState(false); // 🛠️ 사용자 요청대로 로딩 메시지 제거
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [remoteRoster, setRemoteRoster] = useState(initialAppliedRemoteRoster);
@@ -455,6 +455,7 @@ function App() {
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
   const [postSetupRemoteCheckNeeded, setPostSetupRemoteCheckNeeded] = useState(false);
 
+  // 🛠️ 다크모드 색상 고정 (이전 선호 색상으로 복구)
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(LS_DARK_MODE) === 'true');
 
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -546,7 +547,19 @@ function App() {
   const stickySwipeStyle = { transform: `translate3d(${-swipeOffset}px, 0, 0)`, transition: swipeTransition, willChange: 'transform' };
 
   useEffect(() => { if (remoteBaseDate) { setGlobalBaseDate(remoteBaseDate); const prevConfig = loadCachedSharedConfig() || {}; saveCachedSharedConfig({ ...prevConfig, baseDate: remoteBaseDate }); } }, [remoteBaseDate]);
-  useEffect(() => { localStorage.setItem(LS_DARK_MODE, isDarkMode); if (isDarkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode'); }, [isDarkMode]);
+  
+  // 🛠️ 다크모드 배경색 확실히 고정 (이전 선호 디자인으로 복구)
+  useEffect(() => { 
+    localStorage.setItem(LS_DARK_MODE, isDarkMode); 
+    if (isDarkMode) {
+      document.body.classList.add('dark-mode'); 
+      document.body.style.backgroundColor = '#0f172a'; // 짙은 다크 네이비
+    } else {
+      document.body.classList.remove('dark-mode'); 
+      document.body.style.backgroundColor = '#eef1f6'; // 깨끗한 라이트 연회색
+    }
+  }, [isDarkMode]);
+  
   useEffect(() => { if (!window.html2canvas) { const script = document.createElement("script"); script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; script.id = "html2canvas-script"; document.body.appendChild(script); } }, []);
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
   useEffect(() => { cleanupNameOverrides(); setOverrides(loadOverrides()); }, []);
@@ -1005,7 +1018,6 @@ function App() {
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
             <div className="help-text">처음 한 번만 ZIP 파일을 등록하면 이후에는 자동으로 저장되어 계속 사용할 수 있습니다.</div>
             <div className="notice-box">관리자로부터 받은 최신 ZIP 파일을 선택해주세요.</div>
-            {loading && <div className="help-text" style={{ color: "#2563eb" }}>불러오는 중...</div>}
             {zipName && <div className="help-text">현재 파일: {zipName}</div>}
             {error && <div className="help-text" style={{ color: "#dc2626" }}>{error}</div>}
           </div>
@@ -1206,7 +1218,7 @@ function App() {
                           const isSelectedCol = selectedGroupDate === date; const isToday = date === getKoreaToday();
                           return (
                             <th key={date} onClick={() => setSelectedGroupDate(date)} className={`${isSelectedCol ? "active-col" : ""} ${isToday ? "today-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
-                              {/* 🛠️ 1. 그룹 탭 요일 잘림 방지 (padding-top 10px로 보정) */}
+                              {/* 🛠️ 그룹 탭 요일 잘림 방지: 상단 여백 10px로 늘림 */}
                               <div style={{ ...swipeStyle, padding: '10px 4px 8px 4px', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                 <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
                                 <div className="day-date">{formatMonthDay(date)}</div>
@@ -1236,7 +1248,7 @@ function App() {
                               const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
                               const isSelectedCol = selectedGroupDate === date;
                               
-                              {/* 🛠️ 2. 다크모드 색상 복구 (이전 선호 색감인 부드러운 블루 톤으로 고정) */}
+                              // 🛠️ 다크모드 선택 강조 색상 복구
                               const cellBackground = isSelectedCol ? (isDarkMode ? "rgba(59, 130, 246, 0.2)" : "#f5f3ff") : "";
                               const textColor = isSelectedCol ? (isDarkMode ? "#60a5fa" : "#4c1d95") : "inherit";
                               
