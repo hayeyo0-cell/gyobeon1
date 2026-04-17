@@ -679,14 +679,17 @@ function App() {
     return grid.map(item => ({ ...item, teamKey: viewTeam })); 
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
 
-  /** 🚀 수정 완료 1: 통합 검색 로직 (시각 기반 필터링 적용) **/
+  /** 🚀 수정 완료: 검색 시각 기반 날짜 교차 필터링 **/
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
 
     const yesterdayStr = addDays(browseDate, -1);
-    const nowHour = getKoreaNow().getHours();
-    const isMorning = nowHour < 12; // 낮 12시 이전엔 어제 야간 근무자 우선 검색
+    const now = getKoreaNow();
+    const nowHour = now.getHours();
+    
+    // 오전 11시 전이라면 '어제 출근자'의 새벽 운행을 우선 검색
+    const isEarlyMorning = nowHour < 11; 
 
     let crossTeamResults = [];
 
@@ -711,8 +714,11 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
         
-        // [수정] 오전이라면, 오늘 밤에 출근할 사람의 열차번호는 검색 결과에서 제외
-        if (isMorning && isTrainMatch && isNightStartCode(teamKey, item.code)) return false;
+        // 저녁에 검색할 때, 오늘 밤에 출근할 사람의 '내일 새벽 열차' 검색 결과는 제외 (이소영님 제외)
+        if (!isEarlyMorning && isTrainMatch && isNightStartCode(teamKey, item.code)) {
+            const isDawnTrain = trains.some(t => Number(t) >= 2000 && Number(t) <= 2100); 
+            if (isDawnTrain) return false;
+        }
 
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
@@ -724,9 +730,7 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
 
-        // [수정] 오후라면 어제 새벽 열차는 결과에서 제외
-        if (!isMorning && isTrainMatch) return false;
-
+        // 저녁에 검색했을 때 어제 출근해서 오늘 새벽에 운행한 사람을 표시 (권재림님 검색)
         return isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr }));
 
@@ -1418,17 +1422,11 @@ function App() {
             <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="비워두면 원래 이름 사용" />
             <label className="label" style={{ marginTop: 12 }}>색상</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                {COLOR_OPTIONS.map((item) => (
-                    <button 
-                        key={item.label} 
-                        className={`color-dot ${editColor === item.value ? 'active' : ''}`}
-                        style={{ backgroundColor: item.value || '#ffffff', border: item.value ? 'none' : '1px solid #ddd' }}
-                        onClick={() => setEditColor(item.value)}
-                        title={item.label}
-                    />
-                ))}
-            </div>
+            <select className="select" value={editColor || "default"} onChange={(e) => setEditColor(e.target.value === "default" ? "" : e.target.value)}>
+              <option value="default">기본 색상</option>
+              {COLOR_OPTIONS.filter((item) => item.value).map((item) => (<option key={item.label} value={item.value}>{item.label}</option>))}
+            </select>
+            <div className="color-preview" style={{ backgroundColor: editColor || "#ffffff" }} />
             <button className="modal-btn" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsWorktimeEditOpen((prev) => !prev)}>출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}</button>
             {isWorktimeEditOpen && (
               <div style={{ marginTop: 12 }}>
