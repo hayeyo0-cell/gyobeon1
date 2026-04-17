@@ -1141,29 +1141,30 @@ function App() {
                 
                 {activeTab === "all" ? (
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
-                    {(!searchQuery || visibleAllGrid.length !== 1) && (
-                      <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
-                        {visibleAllGrid.map((item, idx) => {
-                          const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
-                          const isToday = browseDate === getKoreaToday();
-                          const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
-                          const textColorStyle = item.customColor ? { color: "#000000" } : undefined;
-                          
-                          return (
-                            <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                              <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
-                              <div className="all-name" style={textColorStyle}>
-                                  {item.displayName || "-"}
-                                  {searchQuery && (
-                                      <div style={{fontSize: '9px', opacity: 0.8, color: item.customColor ? '#000000' : 'inherit'}}>
-                                          [{TEAM_LABELS[item.teamKey]}]
-                                      </div>
-                                  )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+  {inlinePathImage ? (
+    <div className="search-result-inline" style={{ marginTop: '10px', textAlign: 'center' }}>
+        <div style={{ padding: '10px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid #ddd', marginBottom: '10px', color: isDarkMode ? '#fff' : '#000' }}>
+            {inlinePathImage.team} / {inlinePathImage.name} / {inlinePathImage.code}
+        </div>
+        <img src={inlinePathImage.src} alt="행로표" style={{ width: '100%', borderRadius: '8px' }} onError={(e) => { e.target.style.display = 'none'; }} />
+    </div>
+  ) : (
+    <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
+      {visibleAllGrid.map((item, idx) => {
+        const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
+        const textColorStyle = item.customColor ? { color: "#000000" } : undefined;
+        return (
+          <div key={idx} className="all-cell-real" style={customStyle} onClick={() => handleAllCellTap(item)}>
+            <div className="all-code" style={textColorStyle}>{item.code}</div>
+            <div className="all-name">{item.displayName}
+                {searchQuery && <div style={{fontSize: '9px', opacity: 0.8}}>[{TEAM_LABELS[item.teamKey]}]</div>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  )}
+</div>
                     )}
                   </div>
                 ) : (
