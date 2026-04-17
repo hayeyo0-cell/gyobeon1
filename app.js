@@ -688,7 +688,6 @@ function App() {
     const now = getKoreaNow();
     const nowHour = now.getHours();
     
-    // 오전 11시 전이라면 '어제 출근자'의 새벽 운행을 우선 검색
     const isEarlyMorning = nowHour < 11; 
 
     let crossTeamResults = [];
@@ -697,24 +696,20 @@ function App() {
       const team = effectiveData[teamKey];
       if (!team) return;
 
-      // 오늘 그리드 생성
       const teamGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, browseDate, overrides)
         : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, browseDate), overrides);
 
-      // 어제 그리드 생성 (어제 출근 야간 근무자용)
       const yesterdayGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
         : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
 
-      // 오늘 출근자 매칭
       const matchedToday = teamGrid.filter(item => {
         const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
         
-        // 저녁에 검색할 때, 오늘 밤에 출근할 사람의 '내일 새벽 열차' 검색 결과는 제외 (이소영님 제외)
         if (!isEarlyMorning && isTrainMatch && isNightStartCode(teamKey, item.code)) {
             const isDawnTrain = trains.some(t => Number(t) >= 2000 && Number(t) <= 2100); 
             if (isDawnTrain) return false;
@@ -723,14 +718,12 @@ function App() {
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      // 어제 야간 근무자 중 오늘 새벽 운행자 매칭
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
         const folder = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
 
-        // 저녁에 검색했을 때 어제 출근해서 오늘 새벽에 운행한 사람을 표시 (권재림님 검색)
         return isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr }));
 
@@ -748,7 +741,7 @@ function App() {
     const team = currentViewTeam; if (!team) return []; let grid = [];
     const canUseMyAnchorForTeam = viewTeam === mySelection?.teamKey && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(team, mySelection.name);
     if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, team, remoteRoster, browseDate, overrides); } else if (canUseMyAnchorForTeam) { grid = buildAssignedGrid(team, mySelection.name, normalizeToFixedCode(team, mySelection.code), diffDays(mySelection.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); } else { const teamAnchor = buildTeamAnchorFromZip(team); grid = buildAssignedGrid(team, teamAnchor.name, teamAnchor.code, diffDays(teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); }
-    if (viewTeam === mySelection?.teamKey && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) { const myCode = normalizeToFixedCode(team, getMyCodeForDate(team, browseDate, mySelection)); grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; }); }
+    if (viewTeam === mySelection?.teamKey && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) { const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection)); grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; }); }
     const diaOrder = getDiaOrder(team); return diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-" }; });
   }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection]);
 
@@ -1139,7 +1132,6 @@ function App() {
                         const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
                         
-                        /** 🚀 수정 완료 2: 배경색(customColor)이 있을 때 다크모드 가독성 해결 **/
                         const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
                         const textColorStyle = item.customColor ? { color: "#000000" } : undefined;
                         
@@ -1150,7 +1142,7 @@ function App() {
                                 {item.displayName || "-"}
                                 {searchQuery && (
                                     <div style={{fontSize: '9px', opacity: 0.8, color: item.customColor ? '#000000' : 'inherit'}}>
-                                        [{TEAM_LABELS[item.teamKey]}] {item.searchOrigin === 'yesterday' ? '(어제 출근)' : ''}
+                                        [{TEAM_LABELS[item.teamKey]}]
                                     </div>
                                 )}
                             </div>
@@ -1232,7 +1224,7 @@ function App() {
                   </div>
                   <div style={{ flex: 1, display: 'flex', gap: '4px', minWidth: 0, height: '100%' }}>
                     <button className="group-add-btn-v4" onClick={() => setShowGroupAdd(true)}>관리</button>
-                    <button className="group-add-btn-v4" style={{ background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 255, 0.2)' }} onClick={handleShareGroupImage}>공유</button>
+                    <button className="group-add-btn-v4" style={{ background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2)' }} onClick={handleShareGroupImage}>공유</button>
                   </div>
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>▶</button>
                 </div>
@@ -1422,11 +1414,17 @@ function App() {
             <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="비워두면 원래 이름 사용" />
             <label className="label" style={{ marginTop: 12 }}>색상</label>
-            <select className="select" value={editColor || "default"} onChange={(e) => setEditColor(e.target.value === "default" ? "" : e.target.value)}>
-              <option value="default">기본 색상</option>
-              {COLOR_OPTIONS.filter((item) => item.value).map((item) => (<option key={item.label} value={item.value}>{item.label}</option>))}
-            </select>
-            <div className="color-preview" style={{ backgroundColor: editColor || "#ffffff" }} />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                {COLOR_OPTIONS.map((item) => (
+                    <button 
+                        key={item.label} 
+                        className={`color-dot ${editColor === item.value ? 'active' : ''}`}
+                        style={{ backgroundColor: item.value || '#ffffff', border: item.value ? 'none' : '1px solid #ddd', width: 40, height: 40, borderRadius: '50%' }}
+                        onClick={() => setEditColor(item.value)}
+                        title={item.label}
+                    />
+                ))}
+            </div>
             <button className="modal-btn" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsWorktimeEditOpen((prev) => !prev)}>출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}</button>
             {isWorktimeEditOpen && (
               <div style={{ marginTop: 12 }}>
