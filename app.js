@@ -41,7 +41,7 @@ const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
 const LS_WORKTIME_OVERRIDES = "gyobeon_worktime_overrides";
 const LS_DARK_MODE = "gyobeon_dark_mode";
 
-/** 유틸리티 */
+/** 유틸리티 함수 */
 function normalizeNameKey(name) { return String(name || "").trim().toLowerCase().replace(/\s+/g, ""); }
 function shouldHideName(name) { return HIDDEN_NAME_KEYS.includes(normalizeNameKey(name)); }
 function samePersonName(a, b) { return String(a || "").trim().replace(/\s/g, "") === String(b || "").trim().replace(/\s/g, ""); }
@@ -156,7 +156,7 @@ function cloneTeamData(data) {
   return result;
 }
 
-/** parseZipToData: 열차번호 데이터(train_data) 파싱 추가 */
+/** 🆕 parseZipToData: 열차번호 데이터(train_data) 파싱 추가 */
 function parseZipToData(parsedFiles) {
   const result = {}; TEAM_ORDER.forEach((teamKey) => { result[teamKey] = createTeamBucket(teamKey); });
   Object.entries(parsedFiles).forEach(([path, content]) => {
@@ -183,6 +183,7 @@ function parseZipToData(parsedFiles) {
         const mapping = {};
         let lastCode = "";
         lines.forEach(line => {
+          if (!line) return;
           if (line.match(/^(\d+)(d|~)$|^대\d+/i)) {
             lastCode = normalizeCodeKey(line);
             mapping[lastCode] = [];
@@ -267,6 +268,136 @@ function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrid
     return { idx: fallback?.idx ?? idx, name, displayName: override.alias || name, code: slotCode, customColor: override.color || "", employeeId: found?.employeeId || fallback?.employeeId || "", teamKey };
   }).filter(Boolean);
 }
+
+function buildTeamAnchorFromZip(team) {
+  const people = Array.isArray(team?.people) ? team.people : []; const fixedCodes = getGyobunOrder(team); const baseDate = getZipBaseDate(team);
+  if (!people.length) return { name: team?.info?.baseName || "", code: normalizeToFixedCode(team, team?.info?.baseCode || fixedCodes[0] || ""), anchorDate: baseDate };
+  const matchedPerson = people.find((p) => samePersonName(p.name, team?.info?.baseName)); if (matchedPerson) return { name: matchedPerson.name, code: normalizeToFixedCode(team, team?.info?.baseCode || matchedPerson.baseCode || fixedCodes[0] || ""), anchorDate: baseDate };
+  const firstPerson = people[0]; return { name: firstPerson?.name || "", code: normalizeToFixedCode(team, team?.info?.baseCode || firstPerson?.baseCode || fixedCodes[0] || ""), anchorDate: baseDate };
+}
+
+function findRemoteRowByName(teamKey, name, remoteRoster) { const rows = remoteRoster?.[teamKey] || []; return rows.find((row) => samePersonName(row.name, name)) || null; }
+function findZipPersonByName(team, name) { if (!team?.people?.length) return null; return team.people.find((p) => samePersonName(p.name, name)) || null; }
+
+function applyRemoteRosterNamesForSetup(baseData, remoteRoster) {
+  if (!baseData) return null; const next = cloneTeamData(baseData);
+  TEAM_ORDER.forEach((teamKey) => {
+    const team = next[teamKey]; if (!team) return; const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : []; if (!rows.length) return;
+    const fixedOrder = getGyobunOrder(team); const originalPeople = Array.isArray(team.people) ? team.people : [];
+    const mapped = fixedOrder.map((slotCode, idx) => {
+      const found = rows.find((row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode));
+      const fallback = originalPeople.find((p) => normalizeCodeKey(p.baseCode) === normalizeCodeKey(slotCode)) || originalPeople[idx] || { idx, name: "", baseCode: slotCode, employeeId: "" };
+      const name = String(found?.name || fallback?.name || "").trim(); if (!name || shouldHideName(name)) return null;
+      return { idx: fallback?.idx ?? idx, name, baseCode: slotCode, employeeId: found?.employeeId || fallback?.employeeId || "" };
+    }).filter(Boolean);
+    if (mapped.length > 0) { team.people = mapped; team.names = mapped.map((p) => p.name); }
+  });
+  return next;
+}
+
+function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection = null) {
+  if (!team || !name) return buildTeamAnchorFromZip(team);
+  if (mySelection?.teamKey === teamKey && samePersonName(mySelection?.name, name)) return { name, code: normalizeToFixedCode(team, mySelection?.code || ""), anchorDate: String(mySelection?.anchorDate || "").trim() || getZipBaseDate(team) };
+  const remoteRow = findRemoteRowByName(teamKey, name, remoteRoster); if (remoteRow?.code) return { name, code: normalizeToFixedCode(team, remoteRow.code), anchorDate: getRemoteAnchorBaseDate(team) };
+  const zipPerson = findZipPersonByName(team, name); if (zipPerson?.baseCode) return { name, code: normalizeToFixedCode(team, zipPerson.baseCode), anchorDate: getZipBaseDate(team) };
+  return buildTeamAnchorFromZip(team);
+}
+
+function buildAllTeamsAutoAnchorsFromIdentity(data, remoteRoster, selectedTeamKey, selectedName, mySelection = null) {
+  const result = {}; TEAM_ORDER.forEach((teamKey) => { const team = data?.[teamKey]; if (!team) return; if (teamKey === selectedTeamKey && selectedName) { result[teamKey] = buildAnchorForIdentity(teamKey, team, remoteRoster, selectedName, mySelection); return; } result[teamKey] = buildTeamAnchorFromZip(team); });
+  return result;
+}
+
+function getMyCodeForDate(team, dateStr, mySelection) { if (!team || !mySelection?.code) return ""; const anchorDate = String(mySelection.anchorDate || "").trim() || getZipBaseDate(team); const dayOffset = diffDays(anchorDate, dateStr); return shiftCodeByDays(team, mySelection.code, dayOffset); }
+
+function getMonthMatrix(dateStr) { const d = parseLocalDate(dateStr); const year = d.getFullYear(); const month = d.getMonth(); const first = new Date(year, month, 1); const firstDay = first.getDay(); const start = new Date(year, month, 1 - firstDay); const matrix = []; for (let r = 0; r < 6; r++) { const row = []; for (let c = 0; c < 7; c++) { const temp = new Date(start); temp.setDate(start.getDate() + r * 7 + c); row.push(formatDate(temp)); } matrix.push(row); } return matrix; }
+function getWeekDates(baseDate) { const d = parseLocalDate(baseDate); const day = d.getDay(); const sunday = new Date(d); sunday.setDate(d.getDate() - day); const dates = []; for (let i = 0; i < 7; i++) { const temp = new Date(sunday); temp.setDate(sunday.getDate() + i); dates.push(formatDate(temp)); } return dates; }
+
+function getMonthOptions(centerDateStr, range = 12) { 
+  const base = parseLocalDate(centerDateStr); 
+  const currentMonthVal = getDisplayMonthValue(getKoreaToday());
+  const list = []; 
+  for (let i = -range; i <= range; i++) { 
+    const d = new Date(base.getFullYear(), base.getMonth() + i, 1); 
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; 
+    const label = value === currentMonthVal ? `📍 ${d.getFullYear()}년 ${d.getMonth() + 1}월 (이번 달)` : `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
+    list.push({ value, label }); 
+  } 
+  return list; 
+}
+
+function getDisplayMonthValue(dateStr) { return String(dateStr || "").slice(0, 7); }
+function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "").split("-").map(Number); if (!y || !m) return getKoreaToday(); return `${y}-${String(m).padStart(2, "0")}-01`; }
+function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
+function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: end || "-" }; } return { startTime: raw, endTime: "" }; }
+
+const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
+  if (!window.html2canvas) {
+    await new Promise(r => setTimeout(r, 500));
+    if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+  }
+  
+  const element = document.getElementById(elementId);
+  if (!element) return;
+
+  const originalAnimation = element.style.animation;
+  element.style.animation = 'none';
+  const calendarEl = element.querySelector('.month-calendar');
+  const calBg = calendarEl ? calendarEl.style.background : '';
+  const calTransform = calendarEl ? calendarEl.style.transform : '';
+
+  if (calendarEl) {
+    calendarEl.style.transform = 'none';
+    calendarEl.style.background = isDarkMode ? '#1e293b' : '#ffffff';
+  }
+
+  await new Promise(res => setTimeout(res, 50));
+
+  try {
+    const canvas = await window.html2canvas(element, {
+      scale: 3, 
+      backgroundColor: isDarkMode ? '#0f172a' : '#eef1f6',
+      useCORS: true
+    });
+    
+    const timestamp = new Date().toLocaleTimeString('ko-KR', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '');
+    const filename = `${filenamePrefix}_${timestamp}.png`;
+
+    const link = document.createElement("a");
+    link.download = filename;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  } catch (e) {
+    alert("캡처에 실패했습니다.");
+  } finally {
+    element.style.animation = originalAnimation;
+    if (calendarEl) {
+      calendarEl.style.background = calBg;
+      calendarEl.style.transform = calTransform;
+    }
+  }
+};
+
+function fetchJsonp(params = {}, timeoutMs = 15000) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `gyobeonJsonp_${Date.now()}_${Math.floor(Math.random() * 10000)}`; const script = document.createElement("script");
+    const cleanup = () => { try { delete window[callbackName]; } catch (_) {} if (script.parentNode) script.parentNode.removeChild(script); };
+    const timeout = setTimeout(() => { cleanup(); reject(new Error("JSONP 로드 시간 초과")); }, timeoutMs);
+    window[callbackName] = (data) => { clearTimeout(timeout); cleanup(); resolve(data); };
+    script.onerror = () => { clearTimeout(timeout); cleanup(); reject(new Error("JSONP 로드 실패")); };
+    const search = new URLSearchParams({ ...params, callback: callbackName, t: String(Date.now()) }); script.src = `${ADMIN_SCRIPT_URL}?${search.toString()}`; document.body.appendChild(script);
+  });
+}
+
+function fetchRemoteRosterJsonp(timeoutMs = 6000) { return fetchJsonp({ mode: "roster" }, timeoutMs); }
+function fetchSharedConfigJsonp(timeoutMs = 4000) { return fetchJsonp({ mode: "config" }, timeoutMs); }
+
+function openZipDB() { return new Promise((resolve, reject) => { const request = indexedDB.open("gyobeon-app-db", 1); request.onupgradeneeded = function () { const db = request.result; if (!db.objectStoreNames.contains("files")) { db.createObjectStore("files"); } }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); }
+async function saveZipBlob(blob, name) { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readwrite"); const store = tx.objectStore("files"); store.put({ blob, name, savedAt: Date.now() }, "latestZip"); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
+async function loadZipBlob() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); const req = store.get("latestZip"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
+async function saveParsedData(value) { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readwrite"); const store = tx.objectStore("files"); store.put({ data: value, savedAt: Date.now() }, "parsedData"); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
+async function loadParsedData() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); const req = store.get("parsedData"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
+function promptAdminPassword() { const value = window.prompt("관리자 비밀번호를 입력하세요"); if (value == null) return null; if (String(value).trim() !== ADMIN_PASSWORD) { alert("비밀번호가 올바르지 않습니다."); return null; } return String(value).trim(); }
 
 function App() {
   const initialSelection = loadMySelection();
@@ -567,14 +698,15 @@ function App() {
       const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection));
       grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; });
     }
-    return grid.map(item => ({ ...item, teamKey: viewTeam })); 
+    return grid.map(item => ({ ...item, teamKey: viewTeam })); // 기본 배정 시 teamKey 부여
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
 
-  /** 🆕 통합 검색 로직 (어제 야간 대응 + 이름/교번/열번) */
+  /** 🆕 통합 검색 로직 (전체 소속 순회 + 이름/교번/열번 + 어제 야간 대응) */
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
 
+    const dayType = guessDayType(browseDate);
     const yesterdayStr = addDays(browseDate, -1);
     let crossTeamResults = [];
 
@@ -585,14 +717,14 @@ function App() {
       // 1. 오늘 기준 그리드 생성
       const teamGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, browseDate, overrides)
-        : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, browseDate), overrides);
+        : buildAssignedGrid(team, teamAnchors[teamKey].name, teamAnchors[teamKey].code, diffDays(teamAnchors[teamKey].anchorDate, browseDate), overrides);
 
       // 2. 어제 기준 그리드 생성 (어제 출근 야간 근무자용)
       const yesterdayGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
-        : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
+        : buildAssignedGrid(team, teamAnchors[teamKey].name, teamAnchors[teamKey].code, diffDays(teamAnchors[teamKey].anchorDate, yesterdayStr), overrides);
 
-      // 오늘 출근자 매칭
+      // 오늘 출근자 매칭 (이름/교번/열차)
       const matched = teamGrid.filter(item => {
         const basicMatch = (item.displayName || item.name || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
@@ -600,9 +732,10 @@ function App() {
         return basicMatch || trains.some(t => String(t) === searchQuery);
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      // 3. 어제 야간 근무자 중 오늘 새벽 운행자 매칭 (비번 열차 대응)
+      // 3. 어제 야간 근무자 중 오늘 새벽 열차 운행자 매칭 (비번 열차 대응)
       const yesterdayNightMatched = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
+        // 야간 근무인 경우 어제 출근한 요일 기준으로 데이터 탐색
         const folder = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         return trains.some(t => String(t) === searchQuery);
@@ -878,11 +1011,7 @@ function App() {
     });
     await new Promise(res => setTimeout(res, 50));
     try {
-      const canvas = await window.html2canvas(element, {
-        scale: 3, 
-        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-        useCORS: true
-      });
+      const canvas = await window.html2canvas(element, { scale: 3, backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', useCORS: true });
       canvas.toBlob(async (blob) => {
         if (!blob) return alert("이미지 생성에 실패했습니다.");
         const d = new Date(); const timestamp = `${d.getHours()}${d.getMinutes()}${d.getSeconds()}`;
@@ -1025,7 +1154,7 @@ function App() {
                             <div className="all-name" style={textColorStyle}>
                                 {item.displayName || "-"}
                                 {searchQuery && (
-                                    <div style={{fontSize: '9px', opacity: 0.8}}>
+                                    <div style={{fontSize: '9px', opacity: 0.8, color: item.customColor ? '#000000' : 'inherit'}}>
                                         [{TEAM_LABELS[item.teamKey]}] {item.searchOrigin === 'yesterday' ? '(어제 출근)' : ''}
                                     </div>
                                 )}
