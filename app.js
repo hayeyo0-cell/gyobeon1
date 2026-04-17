@@ -41,7 +41,7 @@ const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
 const LS_WORKTIME_OVERRIDES = "gyobeon_worktime_overrides";
 const LS_DARK_MODE = "gyobeon_dark_mode";
 
-/** 유틸리티 */
+/** 유틸리티 함수 */
 function normalizeNameKey(name) { return String(name || "").trim().toLowerCase().replace(/\s+/g, ""); }
 function shouldHideName(name) { return HIDDEN_NAME_KEYS.includes(normalizeNameKey(name)); }
 function samePersonName(a, b) { return String(a || "").trim().replace(/\s/g, "") === String(b || "").trim().replace(/\s/g, ""); }
@@ -112,16 +112,7 @@ function isNightStartCode(teamKey, code) { const parsed = parseShiftCode(code); 
 function isNightEndCode(teamKey, code) { const parsed = parseShiftCode(code); if (!parsed || parsed.suffix !== "~") return false; const range = getNightRange(teamKey); return parsed.num >= range.start && parsed.num <= range.end; }
 function isDayShiftCode(teamKey, code) { const parsed = parseShiftCode(code); if (!parsed || parsed.suffix !== "d") return false; const range = getNightRange(teamKey); return parsed.num >= 1 && parsed.num < range.start; }
 
-function loadWorktimeOverrides() { try { return JSON.parse(localStorage.getItem(LS_WORKTIME_OVERRIDES) || "{}"); } catch { return {}; } }
-function saveWorktimeOverrides(value) { localStorage.setItem(LS_WORKTIME_OVERRIDES, JSON.stringify(value || {})); }
-function getWorktimeOverrideKey(teamKey, code) { return `${teamKey}::${normalizeCodeKey(code)}`; }
-function getWorktimeOverrideValue(teamKey, code, dayType) { const data = loadWorktimeOverrides(); const key = getWorktimeOverrideKey(teamKey, code); return String(data?.[key]?.[dayType] || "").trim(); }
-function parseTimeValueToParts(value) { const raw = String(value || "").trim(); if (!raw || raw === "----") return { sh: "", sm: "", eh: "", em: "" }; const match = raw.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/); return match ? { sh: match[1], sm: match[2], eh: match[3], em: match[4] } : { sh: "", sm: "", eh: "", em: "" }; }
-function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 2); }
-function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
-function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
-
-[span_3](start_span)[span_4](start_span)[span_5](start_span)/** 🆕 getPathFolder: 다이아 특성에 따른 폴더 경로 반환 (행로표 및 열차 데이터용)[span_3](end_span)[span_4](end_span)[span_5](end_span) */
+/** 🆕 폴더 결정 로직 (행로표 이미지 및 열차번호 데이터용 공용 사용) */
 function getPathFolder(teamKey, dateStr, code) {
   const day = parseLocalDate(dateStr).getDay(); const isHol = isHolidayDate(dateStr);
   if (isNightStartCode(teamKey, code)) { if (isHol || day === 0) return "hol_nor"; if (day >= 1 && day <= 4) return "nor"; if (day === 5) return "nor_sat"; if (day === 6) return "sat_hol"; }
@@ -156,7 +147,7 @@ function cloneTeamData(data) {
   return result;
 }
 
-[span_6](start_span)[span_7](start_span)/** 🆕 parseZipToData: 열차번호 데이터(train_data) 파싱 추가[span_6](end_span)[span_7](end_span) */
+/** 🆕 ZIP 파싱: 열차번호 데이터(train_data) 읽기 추가 */
 function parseZipToData(parsedFiles) {
   const result = {}; TEAM_ORDER.forEach((teamKey) => { result[teamKey] = createTeamBucket(teamKey); });
   Object.entries(parsedFiles).forEach(([path, content]) => {
@@ -176,8 +167,8 @@ function parseZipToData(parsedFiles) {
     const clean = path.replace(/^\/+/, ""); const parts = clean.split("/"); const teamKey = parts.find((p) => TEAM_ORDER.includes(p)); if (!teamKey) return;
     const team = result[teamKey]; const fileName = parts[parts.length - 1]; const parent = parts[parts.length - 2]; const gyobunOrder = team.gyobun.length ? team.gyobun : DEFAULT_GYOBUN;
     if (fileName === "nor_worktime.txt") team.worktimes.nor = parseWorktime(content, gyobunOrder); if (fileName === "sat_worktime.txt") team.worktimes.sat = parseWorktime(content, gyobunOrder); if (fileName === "hol_worktime.txt") team.worktimes.hol = parseWorktime(content, gyobunOrder);
-    
-    // 🆕 train_data 파싱
+
+    // 🆕 train_data 파싱 (교번 코드 아래에 열차번호 목록이 오는 구조 대응)
     if (parts.includes("train_data") && fileName.endsWith(".txt")) {
         const type = fileName.replace("_train_data.txt", "").replace(".txt", ""); 
         const lines = parseLines(content);
@@ -264,7 +255,7 @@ function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrid
     const fallback = originalPeople.find((p) => normalizeCodeKey(shiftCodeByDays(team, p.baseCode || "", dayOffset)) === normalizeCodeKey(slotCode)) || originalPeople[idx] || null;
     const name = String(found?.name || fallback?.name || "").trim(); if (!name || shouldHideName(name)) return null;
     const override = overrides[getOverrideKey(teamKey, name)] || {};
-    return { idx: fallback?.idx ?? idx, name, displayName: override.alias || name, code: slotCode, customColor: override.color || "", employeeId: found?.employeeId || fallback?.employeeId || "" };
+    return { idx: fallback?.idx ?? idx, name, displayName: override.alias || name, code: slotCode, customColor: override.color || "", employeeId: found?.employeeId || fallback?.employeeId || "", teamKey };
   }).filter(Boolean);
 }
 
@@ -696,10 +687,10 @@ function App() {
       const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection));
       grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; });
     }
-    return grid;
+    return grid.map(item => ({ ...item, teamKey: viewTeam })); // 기본 배정 시 teamKey 부여
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
 
-  [span_8](start_span)[span_9](start_span)/** 🆕 통합 검색 로직 (이름/교번/전체 호선 열차번호)[span_8](end_span)[span_9](end_span) */
+  /** 🆕 통합 검색 로직 (전체 소속 순회 + 이름/교번/열번) */
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
@@ -711,17 +702,22 @@ function App() {
       const team = effectiveData[teamKey];
       if (!team) return;
 
+      // 해당 소속의 오늘 날짜 기준 그리드 임시 생성
       const teamGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, browseDate, overrides)
         : buildAssignedGrid(team, teamAnchors[teamKey].name, teamAnchors[teamKey].code, diffDays(teamAnchors[teamKey].anchorDate, browseDate), overrides);
 
       const matched = teamGrid.filter(item => {
+        // 1. 이름/교번 매칭
         const basicMatch = (item.displayName || item.name).includes(searchQuery) || (item.code || "").includes(searchQuery);
+        
+        // 2. 열차번호 매칭 (폴더명 가져와서 trainData 조회)
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const trainMatch = trains.some(t => t.includes(searchQuery));
+
         return basicMatch || trainMatch;
-      }).map(item => ({ ...item, teamKey }));
+      }).map(item => ({ ...item, teamKey })); // 검색 결과는 명시적으로 teamKey 주입
 
       crossTeamResults = [...crossTeamResults, ...matched];
     });
@@ -860,19 +856,19 @@ function App() {
 
   function handleAllCellTap(item) { if (editMode) openEditDialog(item); else openPathDialog(item, browseDate); }
   function openEditDialog(item) {
-    setEditingCell(item); const key = getOverrideKey(viewTeam, item.name); const current = overrides[key] || {}; setEditColor(current.color || ""); setEditAlias(current.alias || "");
-    const team = effectiveData?.[viewTeam]; const currentTime = team ? pickWorktime(team, item.code, browseDate) : "----"; const parts = parseTimeValueToParts(currentTime);
+    setEditingCell(item); const key = getOverrideKey(item.teamKey || viewTeam, item.name); const current = overrides[key] || {}; setEditColor(current.color || ""); setEditAlias(current.alias || "");
+    const team = effectiveData?.[item.teamKey || viewTeam]; const currentTime = team ? pickWorktime(team, item.code, browseDate) : "----"; const parts = parseTimeValueToParts(currentTime);
     setEditStartHour(parts.sh); setEditStartMin(parts.sm); setEditEndHour(parts.eh); setEditEndMin(parts.em); setIsWorktimeEditOpen(false); setEditOpen(true);
   }
   function closeEditDialog() { if (editOpenRef.current) window.history.back(); else setEditOpen(false); }
   function commitEdit(nextColorValue = editColor, nextAliasValue = editAlias) {
-    if (!editingCell) return; const cleanColor = String(nextColorValue || "").trim(); const cleanAlias = String(nextAliasValue || "").trim(); const key = getOverrideKey(viewTeam, editingCell.name); const next = { ...overrides };
+    if (!editingCell) return; const currentTeam = editingCell.teamKey || viewTeam; const cleanColor = String(nextColorValue || "").trim(); const cleanAlias = String(nextAliasValue || "").trim(); const key = getOverrideKey(currentTeam, editingCell.name); const next = { ...overrides };
     if (!cleanColor && !cleanAlias) delete next[key]; else next[key] = { color: cleanColor, alias: cleanAlias };
-    if (isWorktimeEditOpen) { const built = buildTimeValueFromParts(editStartHour, editStartMin, editEndHour, editEndMin); if (!built) return alert("출퇴근시간 형식을 다시 확인해주세요."); const dayType = guessDayType(browseDate); const allWorktimeOverrides = loadWorktimeOverrides(); const wtKey = getWorktimeOverrideKey(viewTeam, editingCell.code); const currentEntry = { ...(allWorktimeOverrides[wtKey] || {}) }; currentEntry[dayType] = built; allWorktimeOverrides[wtKey] = currentEntry; saveWorktimeOverrides(allWorktimeOverrides); setWorktimeVersion((v) => v + 1); }
+    if (isWorktimeEditOpen) { const built = buildTimeValueFromParts(editStartHour, editStartMin, editEndHour, editEndMin); if (!built) return alert("출퇴근시간 형식을 다시 확인해주세요."); const dayType = guessDayType(browseDate); const allWorktimeOverrides = loadWorktimeOverrides(); const wtKey = getWorktimeOverrideKey(currentTeam, editingCell.code); const currentEntry = { ...(allWorktimeOverrides[wtKey] || {}) }; currentEntry[dayType] = built; allWorktimeOverrides[wtKey] = currentEntry; saveWorktimeOverrides(allWorktimeOverrides); setWorktimeVersion((v) => v + 1); }
     setOverrides(next); saveOverrides(next); setEditOpen(false); setEditingCell(null); setEditColor(""); setEditAlias(""); setIsWorktimeEditOpen(false); setEditStartHour(""); setEditStartMin(""); setEditEndHour(""); setEditEndMin("");
   }
 
-  function openPathDialog(item, dateStr = todayStr) { if (!effectiveData || !item?.code) return; const targetTeam = effectiveData[item.teamKey || viewTeam]; const image = findPathImage(targetTeam, dateStr, item.code); setPathTeamKey(item.teamKey || viewTeam); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
+  function openPathDialog(item, dateStr = todayStr) { if (!effectiveData || !item?.code) return; const currentTeamKey = item.teamKey || viewTeam; const team = effectiveData[currentTeamKey]; const image = findPathImage(team, dateStr, item.code); setPathTeamKey(currentTeamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { const team = effectiveData?.[teamKey]; if (!team || !item?.code) return; const image = findPathImage(team, dateStr, item.code); setViewTeam(teamKey); setPathTeamKey(teamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
@@ -993,7 +989,11 @@ function App() {
     });
     await new Promise(res => setTimeout(res, 50));
     try {
-      const canvas = await window.html2canvas(element, { scale: 3, backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', useCORS: true });
+      const canvas = await window.html2canvas(element, {
+        scale: 3, 
+        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+        useCORS: true
+      });
       canvas.toBlob(async (blob) => {
         if (!blob) return alert("이미지 생성에 실패했습니다.");
         const d = new Date(); const timestamp = `${d.getHours()}${d.getMinutes()}${d.getSeconds()}`;
@@ -1094,7 +1094,6 @@ function App() {
                         <div className="preview-label">🔍 터치해서 크게 보기</div>
                       </div>
                     )}
-
                   </div>
                 </div>
               </>
@@ -1405,7 +1404,7 @@ function App() {
         <div className="modal-backdrop" onClick={closeEditDialog}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">표시 수정</div>
-            <div className="modal-sub">{TEAM_LABELS[viewTeam]} {editingCell?.code} {editingCell?.name}</div>
+            <div className="modal-sub">{TEAM_LABELS[editingCell?.teamKey || viewTeam]} {editingCell?.code} {editingCell?.name}</div>
             <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="비워두면 원래 이름 사용" />
             <label className="label" style={{ marginTop: 12 }}>색상</label>
@@ -1473,7 +1472,7 @@ function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, over
   const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
   const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
   const code = shiftCodeByDays(team, anchor.code, dayOffset);
-  return { code, name, displayName: override.alias || name };
+  return { code, name, displayName: override.alias || name, teamKey };
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
