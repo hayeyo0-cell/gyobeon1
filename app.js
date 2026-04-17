@@ -688,36 +688,27 @@ function App() {
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
-
     const yesterdayStr = addDays(browseDate, -1);
-
     let crossTeamResults = [];
-
     TEAM_ORDER.forEach(teamKey => {
       const team = effectiveData[teamKey];
       if (!team) return;
-
-      const teamGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
-        ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, browseDate, overrides)
-        : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, browseDate), overrides);
-
-      const yesterdayGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
-        ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
-        : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
+      const getGrid = (d) => hasRemoteRosterForTeam(teamKey, remoteRoster)
+        ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, d, overrides)
+        : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, d), overrides);
+      
+      const teamGrid = getGrid(browseDate);
+      const yesterdayGrid = getGrid(yesterdayStr);
 
       const matchedToday = teamGrid.filter(item => {
         const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
-        
-        /** 🚀 수정: 오늘 출근자 중 새벽 열차(2000~2100번대 등) 검색은 제외 
-         * (오늘 밤에 출근할 송호철님이 오늘 2006으로 검색되는 것 방지) **/
         if (isTrainMatch && isNightStartCode(teamKey, item.code)) {
             const isDawnTrain = trains.some(t => Number(t) >= 2000 && Number(t) <= 2100); 
             if (isDawnTrain) return false;
         }
-
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
@@ -725,18 +716,25 @@ function App() {
         if (!isNightStartCode(teamKey, item.code)) return false;
         const folder = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
-        const isTrainMatch = trains.some(t => String(t) === searchQuery);
-
-        /** 🚀 수정: 어제 출근자 중 해당 열차(예: 2006)가 있다면 오늘 결과로 포함 
-         * (17일 출근 송호철님이 18일 2006 검색 결과로 나옴) **/
-        return isTrainMatch;
+        return trains.some(t => String(t) === searchQuery);
       }).map(item => ({ ...item, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr }));
-
       crossTeamResults = [...crossTeamResults, ...matchedToday, ...matchedYesterday];
     });
-
     return crossTeamResults;
   }, [allGrid, searchQuery, browseDate, effectiveData, remoteRoster, overrides, teamAnchors]);
+
+  // 바로 아래에 이 변수도 새로 추가해 주세요 (이미지 자동 팝업용)
+  const inlinePathImage = useMemo(() => {
+    if (activeTab !== "all" || !searchQuery || visibleAllGrid.length !== 1) return null;
+    const target = visibleAllGrid[0];
+    const targetDate = target.searchOrigin === 'yesterday' ? target.browseDate : browseDate;
+    return {
+      src: findPathImage(effectiveData?.[target.teamKey], targetDate, target.code),
+      name: target.displayName || target.name,
+      code: target.code,
+      team: TEAM_LABELS[target.teamKey]
+    };
+  }, [visibleAllGrid, searchQuery, activeTab, effectiveData, browseDate]);
 
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
 
