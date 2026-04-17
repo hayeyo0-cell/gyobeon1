@@ -1,3 +1,10 @@
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (최종 수정본)
+ * 수정 사항: 
+ * 1. 야간 근무자(NightStart)의 새벽 열차 검색 시 날짜 교차 로직 적용 (송호철/정지은 기관사님 사례 해결)
+ * 2. 검색 결과가 1명일 때 이름 셀을 거치지 않고 즉시 행로표(이미지) 전체화면 팝업
+ * 3. "(어제 출근)" 등 불필요한 문구 완전 삭제 및 다크모드 글자색 대비 수정
+ **/
+
 const { useEffect, useMemo, useRef, useState } = React;
 
 const TEAM_LABELS = { ks: "경산", my: "문양", wb: "월배", as: "안심" };
@@ -121,7 +128,6 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🆕 getPathFolder: 요일별 특화 폴더 결정 */
 function getPathFolder(teamKey, dateStr, code) {
   const day = parseLocalDate(dateStr).getDay(); const isHol = isHolidayDate(dateStr);
   if (isNightStartCode(teamKey, code)) { if (isHol || day === 0) return "hol_nor"; if (day >= 1 && day <= 4) return "nor"; if (day === 5) return "nor_sat"; if (day === 6) return "sat_hol"; }
@@ -684,9 +690,6 @@ function App() {
     if (!searchQuery) return allGrid;
 
     const yesterdayStr = addDays(browseDate, -1);
-    const now = getKoreaNow();
-    const nowHour = now.getHours();
-    const isEarlyMorning = nowHour < 11; 
 
     let crossTeamResults = [];
 
@@ -708,7 +711,9 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
         
-        if (!isEarlyMorning && isTrainMatch && isNightStartCode(teamKey, item.code)) {
+        /** 🚀 수정: 오늘 출근자 중 새벽 열차(2000~2100번대 등) 검색은 제외 
+         * (오늘 밤에 출근할 송호철님이 오늘 2006으로 검색되는 것 방지) **/
+        if (isTrainMatch && isNightStartCode(teamKey, item.code)) {
             const isDawnTrain = trains.some(t => Number(t) >= 2000 && Number(t) <= 2100); 
             if (isDawnTrain) return false;
         }
@@ -722,6 +727,8 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
 
+        /** 🚀 수정: 어제 출근자 중 해당 열차(예: 2006)가 있다면 오늘 결과로 포함 
+         * (17일 출근 송호철님이 18일 2006 검색 결과로 나옴) **/
         return isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr }));
 
@@ -733,7 +740,7 @@ function App() {
 
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
 
-  /** 🚀 🆕 수정: 결과가 1명일 때 행로표 즉각 실행 **/
+  /** 🚀 🆕 수정: 결과가 딱 1명일 때 행로표 즉각 실행 (팝업) **/
   useEffect(() => {
     if (activeTab === "all" && visibleAllGrid.length === 1 && searchQuery.length >= 2) {
       const target = visibleAllGrid[0];
@@ -751,7 +758,7 @@ function App() {
     const canUseMyAnchorForTeam = viewTeam === mySelection?.teamKey && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(team, mySelection.name);
     if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, team, remoteRoster, browseDate, overrides); } else if (canUseMyAnchorForTeam) { grid = buildAssignedGrid(team, mySelection.name, normalizeToFixedCode(team, mySelection.code), diffDays(mySelection.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); } else { const teamAnchor = buildTeamAnchorFromZip(currentViewTeam); grid = buildAssignedGrid(team, teamAnchor.name, teamAnchor.code, diffDays(teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); }
     if (viewTeam === mySelection?.teamKey && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) { const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection)); grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; }); }
-    const diaOrder = getDiaOrder(team); return diaOrder.map((code) => { found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-" }; });
+    const diaOrder = getDiaOrder(team); return diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-" }; });
   }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection]);
 
   const filteredDiaList = useMemo(() => {
@@ -1136,7 +1143,6 @@ function App() {
                 
                 {activeTab === "all" ? (
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
-                    {/* 🚀 🆕 수정: 검색 결과가 1명일 때는 그리드를 그리지 않고 숨김 (즉시 팝업을 위해) */}
                     {(!searchQuery || visibleAllGrid.length !== 1) && (
                       <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
                         {visibleAllGrid.map((item, idx) => {
