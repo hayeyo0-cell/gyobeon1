@@ -41,7 +41,6 @@ const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
 const LS_WORKTIME_OVERRIDES = "gyobeon_worktime_overrides";
 const LS_DARK_MODE = "gyobeon_dark_mode";
 
-/** 유틸리티 함수 */
 function normalizeNameKey(name) { return String(name || "").trim().toLowerCase().replace(/\s+/g, ""); }
 function shouldHideName(name) { return HIDDEN_NAME_KEYS.includes(normalizeNameKey(name)); }
 function samePersonName(a, b) { return String(a || "").trim().replace(/\s/g, "") === String(b || "").trim().replace(/\s/g, ""); }
@@ -112,7 +111,16 @@ function isNightStartCode(teamKey, code) { const parsed = parseShiftCode(code); 
 function isNightEndCode(teamKey, code) { const parsed = parseShiftCode(code); if (!parsed || parsed.suffix !== "~") return false; const range = getNightRange(teamKey); return parsed.num >= range.start && parsed.num <= range.end; }
 function isDayShiftCode(teamKey, code) { const parsed = parseShiftCode(code); if (!parsed || parsed.suffix !== "d") return false; const range = getNightRange(teamKey); return parsed.num >= 1 && parsed.num < range.start; }
 
-/** 🆕 폴더 결정 로직 (행로표 이미지 및 열차번호 데이터용 공용 사용) */
+function loadWorktimeOverrides() { try { return JSON.parse(localStorage.getItem(LS_WORKTIME_OVERRIDES) || "{}"); } catch { return {}; } }
+function saveWorktimeOverrides(value) { localStorage.setItem(LS_WORKTIME_OVERRIDES, JSON.stringify(value || {})); }
+function getWorktimeOverrideKey(teamKey, code) { return `${teamKey}::${normalizeCodeKey(code)}`; }
+function getWorktimeOverrideValue(teamKey, code, dayType) { const data = loadWorktimeOverrides(); const key = getWorktimeOverrideKey(teamKey, code); return String(data?.[key]?.[dayType] || "").trim(); }
+function parseTimeValueToParts(value) { const raw = String(value || "").trim(); if (!raw || raw === "----") return { sh: "", sm: "", eh: "", em: "" }; const match = raw.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/); return match ? { sh: match[1], sm: match[2], eh: match[3], em: match[4] } : { sh: "", sm: "", eh: "", em: "" }; }
+function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 2); }
+function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
+function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
+
+/** 🆕 getPathFolder: 요일/코드에 따른 폴더명 반환 (행로표 및 열차 데이터 공용) */
 function getPathFolder(teamKey, dateStr, code) {
   const day = parseLocalDate(dateStr).getDay(); const isHol = isHolidayDate(dateStr);
   if (isNightStartCode(teamKey, code)) { if (isHol || day === 0) return "hol_nor"; if (day >= 1 && day <= 4) return "nor"; if (day === 5) return "nor_sat"; if (day === 6) return "sat_hol"; }
@@ -147,7 +155,7 @@ function cloneTeamData(data) {
   return result;
 }
 
-/** 🆕 ZIP 파싱: 열차번호 데이터(train_data) 읽기 추가 */
+/** 🆕 parseZipToData: 열차번호 데이터(train_data) 파싱 추가 */
 function parseZipToData(parsedFiles) {
   const result = {}; TEAM_ORDER.forEach((teamKey) => { result[teamKey] = createTeamBucket(teamKey); });
   Object.entries(parsedFiles).forEach(([path, content]) => {
@@ -168,13 +176,14 @@ function parseZipToData(parsedFiles) {
     const team = result[teamKey]; const fileName = parts[parts.length - 1]; const parent = parts[parts.length - 2]; const gyobunOrder = team.gyobun.length ? team.gyobun : DEFAULT_GYOBUN;
     if (fileName === "nor_worktime.txt") team.worktimes.nor = parseWorktime(content, gyobunOrder); if (fileName === "sat_worktime.txt") team.worktimes.sat = parseWorktime(content, gyobunOrder); if (fileName === "hol_worktime.txt") team.worktimes.hol = parseWorktime(content, gyobunOrder);
 
-    // 🆕 train_data 파싱 (교번 코드 아래에 열차번호 목록이 오는 구조 대응)
+    // 🆕 train_data 파싱 (Safe Guard 적용)
     if (parts.includes("train_data") && fileName.endsWith(".txt")) {
         const type = fileName.replace("_train_data.txt", "").replace(".txt", ""); 
         const lines = parseLines(content);
         const mapping = {};
         let lastCode = "";
         lines.forEach(line => {
+          if (!line) return;
           if (line.match(/^(\d+)(d|~)$|^대\d+/i)) {
             lastCode = normalizeCodeKey(line);
             mapping[lastCode] = [];
@@ -182,6 +191,7 @@ function parseZipToData(parsedFiles) {
             mapping[lastCode] = [...mapping[lastCode], ...line.split(/\s+/).filter(Boolean)];
           }
         });
+        if (!team.trainData) team.trainData = {};
         team.trainData[type] = mapping;
     }
 
@@ -242,7 +252,7 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
   if (!team || !team.people?.length) return [];
   const people = team.people; const fixedCodes = getGyobunOrder(team); const anchorPersonIndex = people.findIndex((p) => samePersonName(p.name, anchorName)); const anchorCodeIndex = fixedCodes.findIndex((code) => normalizeCodeKey(code) === normalizeCodeKey(anchorCode));
   if (anchorPersonIndex < 0 || anchorCodeIndex < 0) { return fixedCodes.map((slotCode, slotIndex) => { const person = people[slotIndex] || { idx: slotIndex, name: "" }; const override = overrides[getOverrideKey(team.key, person.name)] || {}; return { idx: person.idx, name: person.name, displayName: override.alias || person.name, code: slotCode, customColor: override.color || "" }; }).filter((item) => item.name); }
-  return fixedCodes.map((slotCode, slotIndex) => { const personIndex = positiveMod(anchorPersonIndex + (slotIndex - anchorCodeIndex - dayOffset), people.length); const person = people[personIndex]; const override = overrides[getOverrideKey(team.key, person.name)] || {}; return { idx: person.idx, name: person.name, displayName: override.alias || person.name, code: slotCode, customColor: override.color || "" }; }).filter((item) => item.name);
+  return fixedCodes.map((slotCode, slotIndex) => { const personIndex = positiveMod(anchorPersonIndex + (slotIndex - anchorCodeIndex - dayOffset), people.length); const person = people[personIndex]; if (!person) return null; const override = overrides[getOverrideKey(team.key, person.name)] || {}; return { idx: person.idx, name: person.name, displayName: override.alias || person.name, code: slotCode, customColor: override.color || "" }; }).filter((item) => item && item.name);
 }
 
 function getRemoteAnchorBaseDate(team) { return getGlobalBaseDate() || getZipBaseDate(team); }
@@ -465,7 +475,9 @@ function App() {
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
   const [postSetupRemoteCheckNeeded, setPostSetupRemoteCheckNeeded] = useState(false);
 
+  // 🛠️ 다크모드 색상 고정 (이전 선호 색상으로 복구)
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(LS_DARK_MODE) === 'true');
+
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [swipeTransition, setSwipeTransition] = useState("");
 
@@ -555,15 +567,16 @@ function App() {
 
   useEffect(() => { if (remoteBaseDate) { setGlobalBaseDate(remoteBaseDate); const prevConfig = loadCachedSharedConfig() || {}; saveCachedSharedConfig({ ...prevConfig, baseDate: remoteBaseDate }); } }, [remoteBaseDate]);
   
+  // 🛠️ 다크모드 배경색 강제 고정 및 흰색 탈출 (수정 포인트)
   useEffect(() => { 
     localStorage.setItem(LS_DARK_MODE, isDarkMode); 
     if (isDarkMode) {
       document.body.classList.add('dark-mode'); 
-      document.body.style.backgroundColor = '#0f172a';
-      document.documentElement.style.backgroundColor = '#0f172a';
+      document.body.style.backgroundColor = '#0f172a'; // 다크 네이비 블랙
+      document.documentElement.style.backgroundColor = '#0f172a'; // 최상단 영역까지
     } else {
       document.body.classList.remove('dark-mode'); 
-      document.body.style.backgroundColor = '#eef1f6';
+      document.body.style.backgroundColor = '#eef1f6'; // 라이트 연회색
       document.documentElement.style.backgroundColor = '#eef1f6';
     }
   }, [isDarkMode]);
@@ -709,12 +722,12 @@ function App() {
 
       const matched = teamGrid.filter(item => {
         // 1. 이름/교번 매칭
-        const basicMatch = (item.displayName || item.name).includes(searchQuery) || (item.code || "").includes(searchQuery);
+        const basicMatch = (item.displayName || item.name || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         
         // 2. 열차번호 매칭 (폴더명 가져와서 trainData 조회)
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
-        const trainMatch = trains.some(t => t.includes(searchQuery));
+        const trainMatch = trains.some(t => String(t).includes(searchQuery));
 
         return basicMatch || trainMatch;
       }).map(item => ({ ...item, teamKey })); // 검색 결과는 명시적으로 teamKey 주입
@@ -1127,13 +1140,13 @@ function App() {
                 {activeTab === "all" ? (
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
                     <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
-                      {visibleAllGrid.map((item) => {
+                      {visibleAllGrid.map((item, idx) => {
                         const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
                         const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
                         
                         return (
-                          <div key={`${item.idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
+                          <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
                             <div className="all-code">{item.code || "-"}</div>
                             <div className="all-name">
                                 {item.displayName || "-"}
