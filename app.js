@@ -733,12 +733,11 @@ function App() {
 
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
 
-  /** 🚀 🆕 수정: 검색 결과가 딱 1명일 때 행로표 즉시 팝업 로직 **/
+  /** 🚀 🆕 수정: 결과가 1명일 때 행로표 즉각 실행 **/
   useEffect(() => {
     if (activeTab === "all" && visibleAllGrid.length === 1 && searchQuery.length >= 2) {
       const target = visibleAllGrid[0];
       const targetDate = target.searchOrigin === 'yesterday' ? target.browseDate : browseDate;
-      // 이미 열려있는 동일 행로표면 중복 호출 방지
       if (pathOpen && pathTarget?.name === target.name && pathDate === targetDate) return;
       openPathDialog(target, targetDate);
     }
@@ -750,9 +749,9 @@ function App() {
   const diaList = useMemo(() => {
     const team = currentViewTeam; if (!team) return []; let grid = [];
     const canUseMyAnchorForTeam = viewTeam === mySelection?.teamKey && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(team, mySelection.name);
-    if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, team, remoteRoster, browseDate, overrides); } else if (canUseMyAnchorForTeam) { grid = buildAssignedGrid(team, mySelection.name, normalizeToFixedCode(team, mySelection.code), diffDays(mySelection.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); } else { const teamAnchor = buildTeamAnchorFromZip(team); grid = buildAssignedGrid(team, teamAnchor.name, teamAnchor.code, diffDays(teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); }
+    if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, team, remoteRoster, browseDate, overrides); } else if (canUseMyAnchorForTeam) { grid = buildAssignedGrid(team, mySelection.name, normalizeToFixedCode(team, mySelection.code), diffDays(mySelection.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); } else { const teamAnchor = buildTeamAnchorFromZip(currentViewTeam); grid = buildAssignedGrid(team, teamAnchor.name, teamAnchor.code, diffDays(teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); }
     if (viewTeam === mySelection?.teamKey && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) { const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection)); grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; }); }
-    const diaOrder = getDiaOrder(team); return diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-" }; });
+    const diaOrder = getDiaOrder(team); return diaOrder.map((code) => { found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-" }; });
   }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection]);
 
   const filteredDiaList = useMemo(() => {
@@ -1137,28 +1136,31 @@ function App() {
                 
                 {activeTab === "all" ? (
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
-                    <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
-                      {visibleAllGrid.map((item, idx) => {
-                        const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
-                        const isToday = browseDate === getKoreaToday();
-                        const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
-                        const textColorStyle = item.customColor ? { color: "#000000" } : undefined;
-                        
-                        return (
-                          <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                            <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
-                            <div className="all-name" style={textColorStyle}>
-                                {item.displayName || "-"}
-                                {searchQuery && (
-                                    <div style={{fontSize: '9px', opacity: 0.8, color: item.customColor ? '#000000' : 'inherit'}}>
-                                        [{TEAM_LABELS[item.teamKey]}]
-                                    </div>
-                                )}
+                    {/* 🚀 🆕 수정: 검색 결과가 1명일 때는 그리드를 그리지 않고 숨김 (즉시 팝업을 위해) */}
+                    {(!searchQuery || visibleAllGrid.length !== 1) && (
+                      <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
+                        {visibleAllGrid.map((item, idx) => {
+                          const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
+                          const isToday = browseDate === getKoreaToday();
+                          const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
+                          const textColorStyle = item.customColor ? { color: "#000000" } : undefined;
+                          
+                          return (
+                            <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
+                              <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
+                              <div className="all-name" style={textColorStyle}>
+                                  {item.displayName || "-"}
+                                  {searchQuery && (
+                                      <div style={{fontSize: '9px', opacity: 0.8, color: item.customColor ? '#000000' : 'inherit'}}>
+                                          [{TEAM_LABELS[item.teamKey]}]
+                                      </div>
+                                  )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="card" style={{ padding: 0, overflow: "hidden", ...swipeStyle }}>
