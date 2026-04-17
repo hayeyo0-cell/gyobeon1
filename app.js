@@ -41,7 +41,6 @@ const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
 const LS_WORKTIME_OVERRIDES = "gyobeon_worktime_overrides";
 const LS_DARK_MODE = "gyobeon_dark_mode";
 
-/** 유틸리티 함수 */
 function normalizeNameKey(name) { return String(name || "").trim().toLowerCase().replace(/\s+/g, ""); }
 function shouldHideName(name) { return HIDDEN_NAME_KEYS.includes(normalizeNameKey(name)); }
 function samePersonName(a, b) { return String(a || "").trim().replace(/\s/g, "") === String(b || "").trim().replace(/\s/g, ""); }
@@ -54,8 +53,9 @@ function addDays(dateStr, days) { const d = parseLocalDate(dateStr); d.setDate(d
 function addMonths(dateStr, months) { const d = parseLocalDate(dateStr); const originalDate = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + months); const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(originalDate, lastDay)); return formatDate(d); }
 function diffDays(a, b) { const da = parseLocalDate(a); const db = parseLocalDate(b); da.setHours(0, 0, 0, 0); db.setHours(0, 0, 0, 0); return Math.round((db.getTime() - da.getTime()) / 86400000); }
 function positiveMod(n, mod) { return ((n % mod) + mod) % mod; }
-function weekdayName(dateStr) { const names = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"]; return names[parseLocalDate(dateStr).getDay()]; }
 function weekdayShort(dateStr) { const names = ["일", "월", "화", "수", "목", "금", "토"]; return names[parseLocalDate(dateStr).getDay()]; }
+function weekdayName(dateStr) { const names = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"]; return names[parseLocalDate(dateStr).getDay()]; }
+
 function isSaturday(dateStr) { return parseLocalDate(dateStr).getDay() === 6; }
 function isSunday(dateStr) { return parseLocalDate(dateStr).getDay() === 0; }
 function getYearFromDateStr(dateStr) { return Number(String(dateStr || "").slice(0, 4)); }
@@ -121,7 +121,7 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🆕 getPathFolder: 요일/코드에 따른 폴더 경로 반환 (행로표 및 열차 데이터 공용) */
+/** 🆕 getPathFolder: 요일별 특화 폴더 결정 */
 function getPathFolder(teamKey, dateStr, code) {
   const day = parseLocalDate(dateStr).getDay(); const isHol = isHolidayDate(dateStr);
   if (isNightStartCode(teamKey, code)) { if (isHol || day === 0) return "hol_nor"; if (day >= 1 && day <= 4) return "nor"; if (day === 5) return "nor_sat"; if (day === 6) return "sat_hol"; }
@@ -156,7 +156,6 @@ function cloneTeamData(data) {
   return result;
 }
 
-/** 🆕 parseZipToData: 열차번호 데이터(train_data) 파싱 추가 */
 function parseZipToData(parsedFiles) {
   const result = {}; TEAM_ORDER.forEach((teamKey) => { result[teamKey] = createTeamBucket(teamKey); });
   Object.entries(parsedFiles).forEach(([path, content]) => {
@@ -180,16 +179,11 @@ function parseZipToData(parsedFiles) {
     if (parts.includes("train_data") && fileName.endsWith(".txt")) {
         const type = fileName.replace("_train_data.txt", "").replace(".txt", ""); 
         const lines = parseLines(content);
-        const mapping = {};
-        let lastCode = "";
+        const mapping = {}; let lastCode = "";
         lines.forEach(line => {
           if (!line) return;
-          if (line.match(/^(\d+)(d|~)$|^대\d+/i)) {
-            lastCode = normalizeCodeKey(line);
-            mapping[lastCode] = [];
-          } else if (lastCode) {
-            mapping[lastCode] = [...mapping[lastCode], ...line.split(/\s+/).filter(Boolean)];
-          }
+          if (line.match(/^(\d+)(d|~)$|^대\d+/i)) { lastCode = normalizeCodeKey(line); mapping[lastCode] = []; }
+          else if (lastCode) { mapping[lastCode] = [...mapping[lastCode], ...line.split(/\s+/).filter(Boolean)]; }
         });
         if (!team.trainData) team.trainData = {};
         team.trainData[type] = mapping;
@@ -251,7 +245,7 @@ function migrateLegacyOverrides(currentOverrides, data) {
 function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
   if (!team || !team.people?.length) return [];
   const people = team.people; const fixedCodes = getGyobunOrder(team); const anchorPersonIndex = people.findIndex((p) => samePersonName(p.name, anchorName)); const anchorCodeIndex = fixedCodes.findIndex((code) => normalizeCodeKey(code) === normalizeCodeKey(anchorCode));
-  if (anchorPersonIndex < 0 || anchorCodeIndex < 0) { return fixedCodes.map((slotCode, slotIndex) => { const person = people[slotIndex] || { idx: slotIndex, name: "" }; const override = overrides[getOverrideKey(team.key, person.name)] || {}; return { idx: person.idx, name: person.name, displayName: override.alias || person.name, code: slotCode, customColor: override.color || "" }; }).filter((item) => item.name); }
+  if (anchorPersonIndex < 0 || anchorCodeIndex < 0) { return fixedCodes.map((slotCode, slotIndex) => { const person = people[slotIndex] || { idx: slotIndex, name: "" }; const override = overrides[getOverrideKey(team.key, person.name)] || {}; return { idx: person.idx, name: person.name, displayName: override.alias || person.name, code: slotCode, customColor: override.color || "", teamKey: team.key }; }).filter((item) => item.name); }
   return fixedCodes.map((slotCode, slotIndex) => { const personIndex = positiveMod(anchorPersonIndex + (slotIndex - anchorCodeIndex - dayOffset), people.length); const person = people[personIndex]; if (!person) return null; const override = overrides[getOverrideKey(team.key, person.name)] || {}; return { idx: person.idx, name: person.name, displayName: override.alias || person.name, code: slotCode, customColor: override.color || "", teamKey: team.key }; }).filter((item) => item && item.name);
 }
 
@@ -354,27 +348,13 @@ const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
   await new Promise(res => setTimeout(res, 50));
 
   try {
-    const canvas = await window.html2canvas(element, {
-      scale: 3, 
-      backgroundColor: isDarkMode ? '#0f172a' : '#eef1f6',
-      useCORS: true
-    });
-    
+    const canvas = await window.html2canvas(element, { scale: 3, backgroundColor: isDarkMode ? '#0f172a' : '#eef1f6', useCORS: true });
     const timestamp = new Date().toLocaleTimeString('ko-KR', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '');
     const filename = `${filenamePrefix}_${timestamp}.png`;
-
-    const link = document.createElement("a");
-    link.download = filename;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  } catch (e) {
-    alert("캡처에 실패했습니다.");
-  } finally {
+    const link = document.createElement("a"); link.download = filename; link.href = canvas.toDataURL("image/png"); link.click();
+  } catch (e) { alert("캡처에 실패했습니다."); } finally {
     element.style.animation = originalAnimation;
-    if (calendarEl) {
-      calendarEl.style.background = calBg;
-      calendarEl.style.transform = calTransform;
-    }
+    if (calendarEl) { calendarEl.style.background = calBg; calendarEl.style.transform = calTransform; }
   }
 };
 
@@ -476,7 +456,6 @@ function App() {
   const [postSetupRemoteCheckNeeded, setPostSetupRemoteCheckNeeded] = useState(false);
 
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(LS_DARK_MODE) === 'true');
-
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [swipeTransition, setSwipeTransition] = useState("");
 
@@ -494,7 +473,6 @@ function App() {
   const isAdminUser = samePersonName(mySelection?.name, ADMIN_NAME);
   const isKsUser = mySelection?.teamKey === "ks";
   const currentEditDayType = guessDayType(browseDate);
-  const currentEditDayLabel = currentEditDayType === "nor" ? "평일" : currentEditDayType === "sat" ? "토요일" : "휴일";
 
   const groupAddCandidates = useMemo(() => {
     const team = effectiveData?.[groupAddTeam];
@@ -698,50 +676,61 @@ function App() {
       const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection));
       grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; });
     }
-    return grid.map(item => ({ ...item, teamKey: viewTeam })); // 기본 배정 시 teamKey 부여
+    return grid.map(item => ({ ...item, teamKey: viewTeam })); 
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
 
-  /** 🆕 통합 검색 로직 (전체 소속 순회 + 이름/교번/열번 + 어제 야간 대응) */
+  /** 🆕 통합 검색 로직 (시각 기반 필터링 적용) */
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
 
-    const dayType = guessDayType(browseDate);
     const yesterdayStr = addDays(browseDate, -1);
+    const nowHour = getKoreaNow().getHours();
+    const isMorning = nowHour < 12; // 낮 12시 이전엔 어제 야간 근무자 우선 검색
+
     let crossTeamResults = [];
 
     TEAM_ORDER.forEach(teamKey => {
       const team = effectiveData[teamKey];
       if (!team) return;
 
-      // 1. 오늘 기준 그리드 생성
+      // 오늘 그리드 생성
       const teamGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, browseDate, overrides)
-        : buildAssignedGrid(team, teamAnchors[teamKey].name, teamAnchors[teamKey].code, diffDays(teamAnchors[teamKey].anchorDate, browseDate), overrides);
+        : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, browseDate), overrides);
 
-      // 2. 어제 기준 그리드 생성 (어제 출근 야간 근무자용)
+      // 어제 그리드 생성 (어제 출근 야간 근무자용)
       const yesterdayGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
-        : buildAssignedGrid(team, teamAnchors[teamKey].name, teamAnchors[teamKey].code, diffDays(teamAnchors[teamKey].anchorDate, yesterdayStr), overrides);
+        : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
 
-      // 오늘 출근자 매칭 (이름/교번/열차)
-      const matched = teamGrid.filter(item => {
-        const basicMatch = (item.displayName || item.name || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
+      // 오늘 출근자 매칭
+      const matchedToday = teamGrid.filter(item => {
+        const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
-        return basicMatch || trains.some(t => String(t) === searchQuery);
+        const isTrainMatch = trains.some(t => String(t) === searchQuery);
+        
+        // 오전이라면, 오늘 밤에 탈 사람의 열차번호는 결과에서 제외
+        if (isMorning && isTrainMatch && isNightStartCode(teamKey, item.code)) return false;
+
+        return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      // 3. 어제 야간 근무자 중 오늘 새벽 열차 운행자 매칭 (비번 열차 대응)
-      const yesterdayNightMatched = yesterdayGrid.filter(item => {
+      // 어제 야간 근무자 중 오늘 새벽 운행자 매칭
+      const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
-        // 야간 근무인 경우 어제 출근한 요일 기준으로 데이터 탐색
         const folder = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
-        return trains.some(t => String(t) === searchQuery);
+        const isTrainMatch = trains.some(t => String(t) === searchQuery);
+
+        // 오후라면 어제 새벽 열차는 결과에서 제외
+        if (!isMorning && isTrainMatch) return false;
+
+        return isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr }));
 
-      crossTeamResults = [...crossTeamResults, ...matched, ...yesterdayNightMatched];
+      crossTeamResults = [...crossTeamResults, ...matchedToday, ...matchedYesterday];
     });
 
     return crossTeamResults;
@@ -1060,7 +1049,7 @@ function App() {
               {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
             </select>
             <label className="label" style={{ marginTop: 12 }}>내 이름</label>
-            <input className="input" type="text" placeholder="이름 직접 입력" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
+            <input className="input" type="text" placeholder="이름 직접 입력 (없으면 새로 등록됩니다)" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
             <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
             <select className="select" value={draftCode} onChange={(e) => { setDraftCode(e.target.value); }}>
               <option value="">선택</option>
