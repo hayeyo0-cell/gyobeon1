@@ -1,5 +1,8 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (통합 수정본 - Part 1)
- * 수정 사항: 야간 교차 검색 로직 및 이미지 자동 매칭 데이터 처리 반영
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (최종 수정본)
+ * 수정 사항: 
+ * 1. 야간 근무자(NightStart)의 새벽 열차 검색 시 날짜 교차 로직 적용 (송호철/정지은 기관사님 사례 해결)
+ * 2. 검색 결과가 1명일 때 이름 셀을 거치지 않고 즉시 행로표(이미지) 전체화면 팝업
+ * 3. "(어제 출근)" 등 불필요한 문구 완전 삭제 및 다크모드 글자색 대비 수정
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -470,75 +473,274 @@ function App() {
   const showGroupAddRef = useRef(false);
   const showSettingsRef = useRef(false);
 
+  const effectiveData = data;
+  const setupSourceData = useMemo(() => { if (!data) return null; if (!allowProfileEdit) return data; return applyRemoteRosterNamesForSetup(data, remoteRoster); }, [data, remoteRoster, allowProfileEdit]);
+
+  const isAdminUser = samePersonName(mySelection?.name, ADMIN_NAME);
+  const isKsUser = mySelection?.teamKey === "ks";
+  const currentEditDayType = guessDayType(browseDate);
+
+  const groupAddCandidates = useMemo(() => {
+    const team = effectiveData?.[groupAddTeam];
+    if (!team) return [];
+    let baseList = [];
+    if (hasRemoteRosterForTeam(groupAddTeam, remoteRoster)) {
+      baseList = remoteRoster[groupAddTeam].map(r => ({ name: r.name }));
+    } else {
+      baseList = team.people || [];
+    }
+    return baseList
+      .filter(p => p.name && !shouldHideName(p.name))
+      .map(p => {
+        const override = overrides[getOverrideKey(groupAddTeam, p.name)] || {};
+        return { name: p.name, displayName: override.alias || p.name };
+      });
+  }, [effectiveData, remoteRoster, groupAddTeam, overrides]);
+
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const isSwipingRef = useRef(false);
 
-  const effectiveData = data;
+  const onTouchStart = (e) => {
+    const target = e.target.closest('.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4, .month-header-bar, .all-header, .date-grid');
+    if (target) return;
+    touchStartX.current = e.targetTouches[0].clientX;
+    touchStartY.current = e.targetTouches[0].clientY;
+    isSwipingRef.current = false;
+    if (swipeOffset !== 0) { setSwipeOffset(0); setSwipeTransition("none"); }
+  };
+
+  const onTouchMove = (e) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const currentX = e.targetTouches[0].clientX;
+    const currentY = e.targetTouches[0].clientY;
+    const diffX = currentX - touchStartX.current;
+    const diffY = currentY - touchStartY.current;
+    if (!isSwipingRef.current) {
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) isSwipingRef.current = true;
+      else if (Math.abs(diffY) > 10) { touchStartX.current = null; return; }
+    }
+    if (isSwipingRef.current) setSwipeOffset(diffX * 0.7); 
+  };
+
+  const onTouchEndHandler = () => {
+    if (!isSwipingRef.current) { touchStartX.current = null; touchStartY.current = null; return; }
+    isSwipingRef.current = false;
+    const viewportWidth = window.innerWidth || 400; 
+    if (swipeOffset > 40) {
+      setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)");
+      setSwipeOffset(viewportWidth); 
+      setTimeout(() => { changeData(-1); setSwipeTransition("none"); setSwipeOffset(-viewportWidth); setTimeout(() => { setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)"); setSwipeOffset(0); }, 30); }, 200);
+    } else if (swipeOffset < -40) {
+      setSwipeTransition("transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)");
+      setSwipeOffset(-viewportWidth); 
+      setTimeout(() => { changeData(1); setSwipeTransition("none"); setSwipeOffset(viewportWidth); setTimeout(() => { setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)"); setSwipeOffset(0); }, 30); }, 200);
+    } else { setSwipeTransition("transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)"); setSwipeOffset(0); }
+    touchStartX.current = null; touchStartY.current = null;
+  };
+
+  const changeData = (direction) => {
+    if (activeTabRef.current === 'home') setHomeDate(prev => addDays(prev, direction));
+    else if (activeTabRef.current === 'all' || activeTabRef.current === 'dia') setBrowseDate(prev => addDays(prev, direction));
+    else if (activeTabRef.current === 'month') setMonthDate(prev => addMonths(prev, direction));
+    else if (activeTabRef.current === 'group') setGroupBaseDate(prev => addDays(prev, direction * 7));
+  };
+
+  const swipeStyle = { transform: `translate3d(${swipeOffset}px, 0, 0)`, transition: swipeTransition, willChange: 'transform' };
+
+  useEffect(() => { if (remoteBaseDate) { setGlobalBaseDate(remoteBaseDate); const prevConfig = loadCachedSharedConfig() || {}; saveCachedSharedConfig({ ...prevConfig, baseDate: remoteBaseDate }); } }, [remoteBaseDate]);
+  
+  useEffect(() => { 
+    localStorage.setItem(LS_DARK_MODE, isDarkMode); 
+    if (isDarkMode) {
+      document.body.classList.add('dark-mode'); 
+      document.body.style.backgroundColor = '#0f172a';
+      document.documentElement.style.backgroundColor = '#0f172a';
+    } else {
+      document.body.classList.remove('dark-mode'); 
+      document.body.style.backgroundColor = '#eef1f6';
+      document.documentElement.style.backgroundColor = '#eef1f6';
+    }
+  }, [isDarkMode]);
+  
+  useEffect(() => { if (!window.html2canvas) { const script = document.createElement("script"); script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; script.id = "html2canvas-script"; document.body.appendChild(script); } }, []);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+  useEffect(() => { cleanupNameOverrides(); setOverrides(loadOverrides()); }, []);
+  useEffect(() => { saveMySelection(mySelection); }, [mySelection]);
+  useEffect(() => { setProfileAnchorDate(mySelection?.anchorDate || todayStr); }, [mySelection?.anchorDate, todayStr]);
+  useEffect(() => { if (!data) return; const migrated = migrateLegacyOverrides(loadOverrides(), data); setOverrides(migrated); }, [data]);
+  useEffect(() => { const years = [getYearFromDateStr(homeDate), getYearFromDateStr(browseDate), getYearFromDateStr(monthDate), getYearFromDateStr(groupBaseDate)].filter(Boolean); [...new Set(years)].forEach((year) => { ensureHolidayYear(year, () => setHolidayVersion((v) => v + 1)); }); }, [homeDate, browseDate, monthDate, groupBaseDate]);
+  useEffect(() => { if (!allowProfileEdit) return; setDraftTeam(selectedTeam || mySelection?.teamKey || "ks"); setDraftName(String(mySelection?.name || "").trim()); setDraftCode(String(mySelection?.code || "").trim()); }, [allowProfileEdit, selectedTeam, mySelection]);
+  useEffect(() => { if (!allowProfileEdit) return; const teamKey = draftTeam || "ks"; const currentName = String(draftName || "").trim(); if (!currentName) return; const team = setupSourceData?.[teamKey] || data?.[teamKey]; if (!team) return; if (String(draftCode || "").trim()) return; let nextCode = ""; const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster); if (remoteRow?.code) { nextCode = normalizeToFixedCode(team, remoteRow.code); } else { const zipPerson = findZipPersonByName(team, currentName); if (zipPerson?.baseCode) { nextCode = normalizeToFixedCode(team, zipPerson.baseCode); } } if (!nextCode) return; setDraftCode(nextCode); }, [ allowProfileEdit, draftTeam, draftName, draftCode, remoteRoster, setupSourceData, data, ]);
+  useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
+
+  function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
+    const currentTeamKey = mySelection?.teamKey || ""; const currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
+    const teamSource = nextDataOverride?.[currentTeamKey] || data?.[currentTeamKey] || effectiveData?.[currentTeamKey]; if (!teamSource) return;
+    if (mySelection?.code) return;
+    const remoteRow = findRemoteRowByName(currentTeamKey, currentName, nextRemoteRoster); if (!remoteRow?.code) return;
+    const nextAnchorDate = getResolvedBaseDate(currentTeamKey, teamSource, nextRemoteRoster); const nextCode = normalizeToFixedCode(teamSource, remoteRow.code);
+    setMySelection((prev) => ({ ...prev, teamKey: currentTeamKey, name: currentName, code: nextCode, anchorDate: nextAnchorDate || prev.anchorDate || getKoreaToday(), }));
+  }
+
+  function acceptRemoteRoster(json, options = {}) {
+    const { alertMessage = "", nextDataOverride = null, syncMine = true } = options; const next = normalizeRemoteRosterShape(json); const serverPublishedAt = String(json?.publishedAt || "").trim(); const nextSig = getRemoteRosterSignature(next);
+    let effectiveDate = String(json?.effectiveDate || json?.date || json?.rosterDate || json?.snapshotDate || json?.currentDate || "").trim(); if (!effectiveDate) effectiveDate = getKoreaToday();
+    setRemoteRoster(next); setRemoteRosterDate(effectiveDate); setGlobalRemoteRosterDate(effectiveDate); saveCachedRemoteRoster(next); localStorage.setItem(LS_REMOTE_ROSTER_DATE, effectiveDate); localStorage.setItem(LS_LAST_ACK_ROSTER_SIG, nextSig);
+    if (serverPublishedAt) { localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt); setLastSeenPublishedAt(serverPublishedAt); } else { const fallbackSeen = String(Date.now()); localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, fallbackSeen); setLastSeenPublishedAt(fallbackSeen); }
+    if (syncMine) syncMySelectionFromRemote(next, nextDataOverride);
+    setPendingRosterJson(null); setShowUpdatePopup(false); setInitialRemoteChecked(true); if (alertMessage) alert(alertMessage);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    async function initAppFast() {
+      let parsedSaved = null; let savedZip = null;
+      try {
+        const shared = loadCachedSharedConfig(); if (shared?.baseDate) { setGlobalBaseDate(shared.baseDate); setRemoteBaseDate(shared.baseDate); }
+        const savedRemoteDate = localStorage.getItem(LS_REMOTE_ROSTER_DATE) || ""; if (savedRemoteDate) { setGlobalRemoteRosterDate(savedRemoteDate); setRemoteRosterDate(savedRemoteDate); }
+        try { parsedSaved = await loadParsedData(); if (!cancelled && parsedSaved?.data) setData(parsedSaved.data); savedZip = await loadZipBlob(); if (!cancelled && !parsedSaved?.data && savedZip?.blob) { setZipName(savedZip.name || "저장된 ZIP"); await parseAndSetZip(savedZip.blob, false, true, initialAppliedRemoteRoster, false); } } catch (e) { console.log("로컬 복원 실패", e); }
+      } catch (e) {}
+      try { const thisYear = getYearFromDateStr(getKoreaToday()); const preloadYears = [thisYear - 1, thisYear, thisYear + 1]; await Promise.all(preloadYears.map((year) => ensureHolidayYear(year, () => { if (!cancelled) setHolidayVersion((v) => v + 1); }))); } catch (e) {}
+      try { const shared = await fetchSharedConfigJsonp(4000); if (cancelled) return; if (shared?.baseDate) { saveCachedSharedConfig(shared); setGlobalBaseDate(shared.baseDate); setRemoteBaseDate(shared.baseDate); } } catch (e) {}
+      try { const hasLocalZipBase = !!parsedSaved?.data || !!savedZip?.blob; if (hasLocalZipBase) { setRemoteLoading(true); const json = await fetchRemoteRosterJsonp(6000); if (cancelled) return; const next = normalizeRemoteRosterShape(json); const hasAny = hasAnyRemoteRoster(next); const nextSig = getRemoteRosterSignature(next); if (hasAny && nextSig !== lastAckRosterSig) { setPendingRosterJson(json); setShowUpdatePopup(true); } setInitialRemoteChecked(true); } } catch (e) {} finally { if (!cancelled) setRemoteLoading(false); }
+    }
+    initAppFast(); return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function checkRemoteAfterSetup() {
+      if (!postSetupRemoteCheckNeeded || allowProfileEdit || !effectiveData || initialRemoteChecked || showUpdatePopup) return;
+      try { setRemoteLoading(true); const json = await fetchRemoteRosterJsonp(6000); if (cancelled) return; const next = normalizeRemoteRosterShape(json); const hasAny = hasAnyRemoteRoster(next); const nextSig = getRemoteRosterSignature(next); const currentAckSig = localStorage.getItem(LS_LAST_ACK_ROSTER_SIG) || ""; if (hasAny && nextSig !== currentAckSig) { setPendingRosterJson(json); setShowUpdatePopup(true); } setInitialRemoteChecked(true); } catch (e) {} finally { if (!cancelled) { setRemoteLoading(false); setPostSetupRemoteCheckNeeded(false); } }
+    }
+    checkRemoteAfterSetup(); return () => { cancelled = true; };
+  }, [postSetupRemoteCheckNeeded, allowProfileEdit, effectiveData, initialRemoteChecked, showUpdatePopup]);
+
+  useEffect(() => { pathOpenRef.current = pathOpen; }, [pathOpen]);
+  useEffect(() => { editOpenRef.current = editOpen; }, [editOpen]);
+  useEffect(() => { showGroupAddRef.current = showGroupAdd; }, [showGroupAdd]);
+  useEffect(() => { showSettingsRef.current = showSettings; }, [showSettings]);
+  useEffect(() => { function handler(e) { e.preventDefault(); setDeferredPrompt(e); } window.addEventListener("beforeinstallprompt", handler); return () => window.removeEventListener("beforeinstallprompt", handler); }, []);
+  
+  useEffect(() => {
+    if (!window.history.state || !window.history.state.__gyobeon) window.history.replaceState({ __gyobeon: true, layer: "root" }, "");
+    function handlePopState() {
+      if (editOpenRef.current) { setEditOpen(false); return; }
+      if (pathOpenRef.current) { setPathOpen(false); return; }
+      if (showUpdatePopup) { setShowUpdatePopup(false); return; }
+      if (showGroupAddRef.current) { setShowGroupAdd(false); return; } 
+      if (showSettingsRef.current) { setShowSettings(false); return; } 
+      if (activeTabRef.current !== "home") { setActiveTab("home"); setHomeDate(getKoreaToday()); return; }
+      window.history.pushState({ __gyobeon: true, layer: "root" }, "");
+    }
+    window.addEventListener("popstate", handlePopState); return () => window.removeEventListener("popstate", handlePopState);
+  }, [showUpdatePopup]);
+
+  useEffect(() => { if (pathOpen && (!window.history.state || window.history.state.layer !== "path")) window.history.pushState({ __gyobeon: true, layer: "path" }, ""); }, [pathOpen]);
+  useEffect(() => { if (editOpen && (!window.history.state || window.history.state.layer !== "edit")) window.history.pushState({ __gyobeon: true, layer: "edit" }, ""); }, [editOpen]);
+  useEffect(() => { if (showUpdatePopup && (!window.history.state || window.history.state.layer !== "update")) window.history.pushState({ __gyobeon: true, layer: "update" }, ""); }, [showUpdatePopup]);
+  useEffect(() => { if (showGroupAdd && (!window.history.state || window.history.state.layer !== "groupAdd")) window.history.pushState({ __gyobeon: true, layer: "groupAdd" }, ""); }, [showGroupAdd]);
+  useEffect(() => { if (showSettings && (!window.history.state || window.history.state.layer !== "settings")) window.history.pushState({ __gyobeon: true, layer: "settings" }, ""); }, [showSettings]);
+
+  useEffect(() => {
+    if (!effectiveData) return;
+    if (mySelection?.teamKey && String(mySelection?.name || "").trim()) { const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, mySelection.teamKey, mySelection.name, mySelection); setTeamAnchors(autoAnchors); setSelectedTeam(mySelection.teamKey); if (activeTabRef.current === "home") setViewTeam(mySelection.teamKey); return; }
+    const nextAnchors = {}; TEAM_ORDER.forEach((teamKey) => { const team = effectiveData[teamKey]; nextAnchors[teamKey] = buildTeamAnchorFromZip(team); }); setTeamAnchors(nextAnchors);
+  }, [effectiveData, remoteRoster, mySelection]);
+
   const currentViewTeam = effectiveData?.[viewTeam] || null;
 
+  const myInfo = useMemo(() => {
+    const myTeamKey = mySelection?.teamKey || selectedTeam; const myName = String(mySelection?.name || "").trim(); const team = effectiveData?.[myTeamKey]; if (!team || !myName) return null;
+    const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
+    if (mySelection?.teamKey === myTeamKey && mySelection?.code) { const code = getMyCodeForDate(team, homeDate, mySelection); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName }; }
+    const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster); if (remoteRow?.code) { const anchorDate = getRemoteAnchorBaseDate(team); const dayOffset = diffDays(anchorDate, homeDate); const code = shiftCodeByDays(team, remoteRow.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName }; }
+    const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, myName, mySelection); if (!anchor?.code) return null;
+    const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName };
+  }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, worktimeVersion, overrides]);
+
+  const homePathImage = useMemo(() => {
+    if (!effectiveData || !myInfo?.code) return null;
+    const targetTeamKey = mySelection?.teamKey || selectedTeam;
+    const team = effectiveData[targetTeamKey];
+    if (!team) return null;
+    const codeStr = String(myInfo.code).trim();
+    if (codeStr.startsWith("휴") || codeStr.startsWith("대")) return null;
+    return findPathImage(team, homeDate, myInfo.code);
+  }, [effectiveData, homeDate, myInfo?.code, mySelection, selectedTeam]);
+
   const allGrid = useMemo(() => {
-    if (!currentViewTeam) return [];
-    let grid = [];
-    if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
-      grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides);
-    } else {
-      let anchorName = teamAnchors[viewTeam]?.name || "";
-      let anchorCode = teamAnchors[viewTeam]?.code || "";
-      let anchorDate = teamAnchors[viewTeam]?.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
-      grid = buildAssignedGrid(currentViewTeam, anchorName, anchorCode, diffDays(anchorDate, browseDate), overrides);
+    if (!currentViewTeam) return []; let grid = [];
+    if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides); } else {
+      let anchorName = ""; let anchorCode = ""; let anchorDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
+      const canUseMyAnchorForTeam = mySelection?.teamKey === viewTeam && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(currentViewTeam, mySelection.name);
+      if (canUseMyAnchorForTeam) { anchorName = mySelection.name; anchorCode = normalizeToFixedCode(currentViewTeam, mySelection.code); anchorDate = mySelection.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster); } else { const teamAnchor = buildTeamAnchorFromZip(currentViewTeam); anchorName = teamAnchor?.name || ""; anchorCode = normalizeToFixedCode(currentViewTeam, teamAnchor?.code || ""); anchorDate = teamAnchor?.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster); }
+      if (!anchorName || !anchorCode) { grid = buildAssignedGrid(currentViewTeam, "", "", 0, overrides); } else { const dayOffset = diffDays(anchorDate, browseDate); grid = buildAssignedGrid(currentViewTeam, anchorName, anchorCode, dayOffset, overrides); }
     }
-    return grid.map(item => ({ ...item, teamKey: viewTeam }));
-  }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, teamAnchors]);
+    if (mySelection?.teamKey === viewTeam && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
+      const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection));
+      grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; });
+    }
+    return grid.map(item => ({ ...item, teamKey: viewTeam })); 
+  }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
 
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
+
     const yesterdayStr = addDays(browseDate, -1);
+
     let crossTeamResults = [];
+
     TEAM_ORDER.forEach(teamKey => {
       const team = effectiveData[teamKey];
       if (!team) return;
-      const getGrid = (d) => hasRemoteRosterForTeam(teamKey, remoteRoster)
-        ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, d, overrides)
-        : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, d), overrides);
-      const tG = getGrid(browseDate);
-      const yG = getGrid(yesterdayStr);
-      const mToday = tG.filter(item => {
-        const basic = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
-        const trains = team.trainData?.[getPathFolder(teamKey, browseDate, item.code)]?.[normalizeCodeKey(item.code)] || [];
-        const trainMatch = trains.some(t => String(t) === searchQuery);
-        if (trainMatch && isNightStartCode(teamKey, item.code)) {
-            if (trains.some(t => Number(t) >= 2000 && Number(t) <= 2100)) return false;
+
+      const teamGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
+        ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, browseDate, overrides)
+        : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, browseDate), overrides);
+
+      const yesterdayGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
+        ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
+        : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
+
+      const matchedToday = teamGrid.filter(item => {
+        const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
+        const folder = getPathFolder(teamKey, browseDate, item.code);
+        const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
+        const isTrainMatch = trains.some(t => String(t) === searchQuery);
+        
+        /** 🚀 수정: 오늘 출근자 중 새벽 열차(2000~2100번대 등) 검색은 제외 
+         * (오늘 밤에 출근할 송호철님이 오늘 2006으로 검색되는 것 방지) **/
+        if (isTrainMatch && isNightStartCode(teamKey, item.code)) {
+            const isDawnTrain = trains.some(t => Number(t) >= 2000 && Number(t) <= 2100); 
+            if (isDawnTrain) return false;
         }
-        return basic || trainMatch;
+
+        return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
-      const mYesterday = yG.filter(item => {
+
+      const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
-        const trains = team.trainData?.[getPathFolder(teamKey, yesterdayStr, item.code)]?.[normalizeCodeKey(item.code)] || [];
-        return trains.some(t => String(t) === searchQuery);
+        const folder = getPathFolder(teamKey, yesterdayStr, item.code);
+        const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
+        const isTrainMatch = trains.some(t => String(t) === searchQuery);
+
+        /** 🚀 수정: 어제 출근자 중 해당 열차(예: 2006)가 있다면 오늘 결과로 포함 
+         * (17일 출근 송호철님이 18일 2006 검색 결과로 나옴) **/
+        return isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr }));
-      crossTeamResults = [...crossTeamResults, ...mToday, ...mYesterday];
+
+      crossTeamResults = [...crossTeamResults, ...matchedToday, ...matchedYesterday];
     });
+
     return crossTeamResults;
   }, [allGrid, searchQuery, browseDate, effectiveData, remoteRoster, overrides, teamAnchors]);
 
-  const visibleAllGrid = useMemo(() => {
-    return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name));
-  }, [filteredGrid]);
+  const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
 
-  const inlinePathImage = useMemo(() => {
-    if (activeTab !== "all" || !searchQuery || visibleAllGrid.length !== 1) return null;
-    const target = visibleAllGrid[0];
-    const targetDate = target.searchOrigin === 'yesterday' ? target.browseDate : browseDate;
-    return {
-      src: findPathImage(effectiveData?.[target.teamKey], targetDate, target.code),
-      name: target.displayName || target.name,
-      code: target.code,
-      team: TEAM_LABELS[target.teamKey]
-    };
-  }, [visibleAllGrid, searchQuery, activeTab, effectiveData, browseDate]);
-
+  /** 🚀 🆕 수정: 결과가 딱 1명일 때 행로표 즉각 실행 (팝업) **/
   useEffect(() => {
     if (activeTab === "all" && visibleAllGrid.length === 1 && searchQuery.length >= 2) {
       const target = visibleAllGrid[0];
@@ -548,9 +750,76 @@ function App() {
     }
   }, [visibleAllGrid, searchQuery, activeTab]);
 
-  const allGridLayout = useMemo(() => getAllGridLayout(visibleAllGrid.length), [visibleAllGrid.length]);
-  const allGridRows = useMemo(() => Math.max(1, Math.ceil(visibleAllGrid.length / allGridLayout.cols)), [visibleAllGrid.length, allGridLayout.cols]);
+  const allGridLayout = useMemo(() => { return getAllGridLayout(visibleAllGrid.length || 0); }, [visibleAllGrid.length]);
+  const allGridRows = useMemo(() => { return Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols)); }, [visibleAllGrid.length, allGridLayout.cols]);
 
+  const diaList = useMemo(() => {
+    const team = currentViewTeam; if (!team) return []; let grid = [];
+    const canUseMyAnchorForTeam = viewTeam === mySelection?.teamKey && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(team, mySelection.name);
+    if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, team, remoteRoster, browseDate, overrides); } else if (canUseMyAnchorForTeam) { grid = buildAssignedGrid(team, mySelection.name, normalizeToFixedCode(team, mySelection.code), diffDays(mySelection.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); } else { const teamAnchor = buildTeamAnchorFromZip(currentViewTeam); grid = buildAssignedGrid(team, teamAnchor.name, teamAnchor.code, diffDays(teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); }
+    if (viewTeam === mySelection?.teamKey && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) { const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection)); grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; }); }
+    const diaOrder = getDiaOrder(team); return diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-" }; });
+  }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection]);
+
+  const filteredDiaList = useMemo(() => {
+    if (!searchQuery) return diaList;
+    return diaList.filter(item => (item.displayName || item.name).includes(searchQuery) || (item.code || "").includes(searchQuery));
+  }, [diaList, searchQuery]);
+
+  const monthMatrix = useMemo(() => getMonthMatrix(monthDate), [monthDate]);
+  const monthHeaderDate = parseLocalDate(monthDate);
+  const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
+  const groupMembers = groups[currentGroup] || [];
+  const groupMonthOptions = useMemo(() => getMonthOptions(todayStr, 12), [todayStr]);
+
+  useEffect(() => { if (!weekDates.length) return; if (!selectedGroupDate || !weekDates.includes(selectedGroupDate)) setSelectedGroupDate(weekDates[0]); }, [weekDates, selectedGroupDate]);
+
+  function handleGroupMonthChange(nextMonthValue) {
+    const today = getKoreaToday(); const todayMonth = getDisplayMonthValue(today); setGroupMonth(nextMonthValue);
+    if (nextMonthValue === todayMonth) setGroupBaseDate(today); else setGroupBaseDate(getMonthStartDate(nextMonthValue));
+  }
+
+  function switchTab(tabName) {
+    const currentTab = activeTabRef.current;
+    const today = getKoreaToday();
+    const myTeamKey = mySelection?.teamKey || selectedTeam || "ks";
+
+    if (tabName === currentTab) {
+      if (tabName === "home") setHomeDate(today);
+      else if (tabName === "all" || tabName === "dia") { setBrowseDate(today); setViewTeam(myTeamKey); }
+      else if (tabName === "month") setMonthDate(today);
+      else if (tabName === "group") { setGroupMonth(getDisplayMonthValue(today)); setGroupBaseDate(today); setSelectedGroupDate(""); }
+      return;
+    }
+    if (tabName === "home") setHomeDate(today);
+    else if (tabName === "all" || tabName === "dia") { if (currentTab !== "all" && currentTab !== "dia") { if (currentTab === "home") setBrowseDate(homeDate); else setBrowseDate(today); setViewTeam(myTeamKey); } }
+    else if (tabName === "month") setMonthDate(today);
+    else if (tabName === "group") { setGroupMonth(getDisplayMonthValue(today)); setGroupBaseDate(today); setSelectedGroupDate(""); }
+    setActiveTab(tabName);
+    if (tabName === "home") window.history.pushState({ __gyobeon: true, layer: "root" }, "");
+    else window.history.pushState({ __gyobeon: true, layer: `tab-${tabName}` }, "");
+    
+    setSearchQuery(""); setShowSearch(false);
+  }
+
+  async function parseAndSetZip(fileOrBlob, saveToIdb = true, keepSavedSelection = false, rosterForApply = remoteRoster, showBusy = true) {
+    if (showBusy) setLoading(true); setError("");
+    try {
+      if (saveToIdb) await saveZipBlob(fileOrBlob, fileOrBlob.name || "gyobeon-data.zip");
+      const zip = await JSZip.loadAsync(fileOrBlob); const parsedFiles = {}; const tasks = [];
+      zip.forEach((relativePath, entry) => { if (entry.dir) return; const lower = relativePath.toLowerCase(); if (lower.endsWith(".txt")) tasks.push(entry.async("string").then((text) => { parsedFiles[relativePath] = text; })); else if (/\.(png|jpg|jpeg)$/i.test(lower)) tasks.push(entry.async("base64").then((base64) => { const mime = lower.endsWith(".png") ? "image/png" : "image/jpeg"; parsedFiles[relativePath] = `data:${mime};base64,${base64}`; })); });
+      await Promise.all(tasks);
+      const nextData = parseZipToData(parsedFiles); await saveParsedData(nextData); setData(nextData);
+      const nextSetupData = applyRemoteRosterNamesForSetup(nextData, rosterForApply || getEmptyRemoteRoster());
+      if (!keepSavedSelection) {
+        setAllowProfileEdit(true); const defaultTeam = mySelection?.teamKey || selectedTeam || "ks"; const defaultName = String(mySelection?.name || "").trim() || nextSetupData?.[defaultTeam]?.info?.baseName || nextSetupData?.[defaultTeam]?.people?.[0]?.name || "";
+        const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(nextData, rosterForApply || getEmptyRemoteRoster(), defaultTeam, defaultName, mySelection); setTeamAnchors(autoAnchors); setDraftTeam(defaultTeam); setDraftName(""); setDraftCode(""); setSelectedTeam(defaultTeam);
+      }
+    } catch (e) { setError("ZIP 파일을 읽는 중 오류가 발생했습니다."); } finally { if (showBusy) setLoading(false); }
+  }
+
+  async function handleZipUpload(event) { const file = event.target.files?.[0]; if (!file) return; setZipName(file.name); setInitialRemoteChecked(false); await parseAndSetZip(file, true, false, remoteRoster, true); }
+  
   async function saveSharedConfig() {
     if (!isAdminUser) return alert("관리자만 저장할 수 있습니다."); 
     const adminKey = promptAdminPassword(); 
@@ -570,6 +839,7 @@ function App() {
       setSavingSharedConfig(false); 
     }
   }
+
   async function publishRoster() {
     if (!isAdminUser) return alert("관리자만 배포할 수 있습니다."); 
     const adminKey = promptAdminPassword(); 
@@ -873,25 +1143,24 @@ function App() {
                 
                 {activeTab === "all" ? (
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
-                    {inlinePathImage ? (
-                      <div className="search-result-inline" style={{ marginTop: '10px', textAlign: 'center' }}>
-                          <div style={{ padding: '10px', fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid #ddd', marginBottom: '10px', color: isDarkMode ? '#fff' : '#000' }}>
-                              {inlinePathImage.team} / {inlinePathImage.name} / {inlinePathImage.code}
-                          </div>
-                          <img src={inlinePathImage.src} alt="행로표" style={{ width: '100%', borderRadius: '8px' }} onError={(e) => { e.target.style.display = 'none'; }} />
-                      </div>
-                    ) : (
+                    {(!searchQuery || visibleAllGrid.length !== 1) && (
                       <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
                         {visibleAllGrid.map((item, idx) => {
                           const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                           const isToday = browseDate === getKoreaToday();
                           const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
                           const textColorStyle = item.customColor ? { color: "#000000" } : undefined;
+                          
                           return (
-                            <div key={idx} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                              <div className="all-code" style={textColorStyle}>{item.code}</div>
-                              <div className="all-name" style={textColorStyle}>{item.displayName}
-                                  {searchQuery && <div style={{fontSize: '9px', opacity: 0.8}}>[{TEAM_LABELS[item.teamKey]}]</div>}
+                            <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
+                              <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
+                              <div className="all-name" style={textColorStyle}>
+                                  {item.displayName || "-"}
+                                  {searchQuery && (
+                                      <div style={{fontSize: '9px', opacity: 0.8, color: item.customColor ? '#000000' : 'inherit'}}>
+                                          [{TEAM_LABELS[item.teamKey]}]
+                                      </div>
+                                  )}
                               </div>
                             </div>
                           );
