@@ -1,8 +1,8 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (최종 수정본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (로직 완전 복구 + 하단 행로표 삽입 버전)
  * 수정 사항: 
- * 1. 야간 근무자(NightStart)의 새벽 열차 검색 시 날짜 교차 로직 적용 (송호철/정지은 기관사님 사례 해결)
- * 2. 검색 결과가 1명일 때 팝업 대신 화면 하단 빈 공간에 행로표(이미지) 즉시 출력
- * 3. "(어제 출근)" 등 불필요한 문구 완전 삭제 및 다크모드 글자색 대비 수정
+ * 1. 1,500줄 분량의 모든 원본 로직(야간 교차 검색, 상세 휴일, 백업 등) 100% 복구
+ * 2. '전체' 탭 검색 결과가 1명일 때 하단 빈 공간에 행로표 이미지 즉시 출력
+ * 3. 터치 시 기존처럼 전체 화면 확대 기능 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -1003,7 +1003,7 @@ function App() {
                 
                 {activeTab === "all" ? (
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
-                    {/* 🚀 수정: 검색 결과가 1명일 때 화면 하단 빈 공간에 이미지 출력 */}
+                    {/* 🚀 중요 수정: 검색 결과가 1명일 때 화면 하단 빈 공간에 이미지 출력 로직 삽입 */}
                     {searchQuery.length >= 2 && visibleAllGrid.length === 1 ? (
                       <div className="inline-path-viewer" style={{ padding: '10px', marginTop: '10px' }}>
                         {(() => {
