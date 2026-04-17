@@ -29,7 +29,6 @@ const DEFAULT_HOLIDAYS_BY_YEAR = {
 
 let RUNTIME_HOLIDAYS_BY_YEAR = { ...DEFAULT_HOLIDAYS_BY_YEAR };
 const HOLIDAY_FETCHING_YEARS = new Set();
-
 const DEFAULT_GYOBUN = ["2d", "대3", "16d", "휴1", "휴2", "대2", "14d", "24d", "24~", "휴3", "5d", "17d", "27d", "27~", "휴4", "3d", "13d", "23d", "23~", "휴5", "휴6", "대1", "15d", "22d", "22~", "휴7", "9d", "10d", "28d", "28~", "휴8", "4d", "20d", "25d", "25~", "휴9", "1d", "11d", "대4", "대4~", "휴10", "휴11", "7d", "18d", "29d", "29~", "휴12", "8d", "12d", "26d", "26~", "휴13", "휴14", "6d", "19d", "21d", "21~", "휴15"];
 const HIDDEN_NAME_KEYS = ["gb2601"];
 
@@ -42,6 +41,7 @@ const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
 const LS_WORKTIME_OVERRIDES = "gyobeon_worktime_overrides";
 const LS_DARK_MODE = "gyobeon_dark_mode";
 
+/** 유틸리티 */
 function normalizeNameKey(name) { return String(name || "").trim().toLowerCase().replace(/\s+/g, ""); }
 function shouldHideName(name) { return HIDDEN_NAME_KEYS.includes(normalizeNameKey(name)); }
 function samePersonName(a, b) { return String(a || "").trim().replace(/\s/g, "") === String(b || "").trim().replace(/\s/g, ""); }
@@ -60,7 +60,6 @@ function isSaturday(dateStr) { return parseLocalDate(dateStr).getDay() === 6; }
 function isSunday(dateStr) { return parseLocalDate(dateStr).getDay() === 0; }
 function getYearFromDateStr(dateStr) { return Number(String(dateStr || "").slice(0, 4)); }
 function dedupeSortDates(list) { return [...new Set((list || []).map((v) => String(v || "").trim()).filter(Boolean))].sort(); }
-
 function setHolidayYear(year, dates) { const y = Number(year); if (!y) return; RUNTIME_HOLIDAYS_BY_YEAR[y] = dedupeSortDates(dates); }
 function loadHolidayYearFromCache(year) { try { const raw = JSON.parse(localStorage.getItem(`${LS_HOLIDAY_CACHE_PREFIX}${year}`) || "null"); if (!raw?.dates?.length) return null; return dedupeSortDates(raw.dates); } catch { return null; } }
 function saveHolidayYearToCache(year, dates) { try { localStorage.setItem(`${LS_HOLIDAY_CACHE_PREFIX}${year}`, JSON.stringify({ year, savedAt: Date.now(), dates: dedupeSortDates(dates) })); } catch (_) {} }
@@ -122,6 +121,7 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
+[span_3](start_span)[span_4](start_span)[span_5](start_span)/** 🆕 getPathFolder: 다이아 특성에 따른 폴더 경로 반환 (행로표 및 열차 데이터용)[span_3](end_span)[span_4](end_span)[span_5](end_span) */
 function getPathFolder(teamKey, dateStr, code) {
   const day = parseLocalDate(dateStr).getDay(); const isHol = isHolidayDate(dateStr);
   if (isNightStartCode(teamKey, code)) { if (isHol || day === 0) return "hol_nor"; if (day >= 1 && day <= 4) return "nor"; if (day === 5) return "nor_sat"; if (day === 6) return "sat_hol"; }
@@ -145,17 +145,18 @@ function getDiaOrder(team) { return team?.diaOrder?.length ? team.diaOrder : get
 function normalizeToFixedCode(team, code) { const fixedCodes = getGyobunOrder(team); return fixedCodes.find((item) => normalizeCodeKey(item) === normalizeCodeKey(code)) || code || ""; }
 function shiftCodeByDays(team, baseCode, dayOffset) { const order = getGyobunOrder(team); const baseIdx = order.findIndex((code) => normalizeCodeKey(code) === normalizeCodeKey(baseCode)); if (baseIdx < 0) return baseCode || ""; return order[positiveMod(baseIdx + dayOffset, order.length)] || baseCode || ""; }
 function getAllGridLayout(count) { if (count >= 49) return { cols: 6, className: "density-6" }; if (count >= 36) return { cols: 5, className: "density-5" }; return { cols: 4, className: "density-4" }; }
-function createTeamBucket(teamKey) { return { key: teamKey, label: TEAM_LABELS[teamKey], names: [], gyobun: [], diaOrder: [], people: [], info: { totalCount: 0, baseDate: null, baseCode: null, baseName: null, raw: [] }, worktimes: { nor: {}, sat: {}, hol: {} }, paths: { nor: {}, sat: {}, hol: {}, nor_sat: {}, sat_hol: {}, hol_nor: {} } }; }
+function createTeamBucket(teamKey) { return { key: teamKey, label: TEAM_LABELS[teamKey], names: [], gyobun: [], diaOrder: [], people: [], info: { totalCount: 0, baseDate: null, baseCode: null, baseName: null, raw: [] }, worktimes: { nor: {}, sat: {}, hol: {} }, paths: { nor: {}, sat: {}, hol: {}, nor_sat: {}, sat_hol: {}, hol_nor: {} }, trainData: {} }; }
 
 function cloneTeamData(data) {
   const result = {};
   TEAM_ORDER.forEach((teamKey) => {
     const team = data?.[teamKey]; if (!team) return;
-    result[teamKey] = { ...team, names: Array.isArray(team.names) ? [...team.names] : [], gyobun: Array.isArray(team.gyobun) ? [...team.gyobun] : [], diaOrder: Array.isArray(team.diaOrder) ? [...team.diaOrder] : [], people: Array.isArray(team.people) ? team.people.map((p) => ({ ...p })) : [], info: team.info ? { ...team.info, raw: [...(team.info.raw || [])] } : createTeamBucket(teamKey).info, worktimes: { nor: { ...(team.worktimes?.nor || {}) }, sat: { ...(team.worktimes?.sat || {}) }, hol: { ...(team.worktimes?.hol || {}) } }, paths: { nor: { ...(team.paths?.nor || {}) }, sat: { ...(team.paths?.sat || {}) }, hol: { ...(team.paths?.hol || {}) }, nor_sat: { ...(team.paths?.nor_sat || {}) }, sat_hol: { ...(team.paths?.sat_hol || {}) }, hol_nor: { ...(team.paths?.hol_nor || {}) } } };
+    result[teamKey] = { ...team, names: Array.isArray(team.names) ? [...team.names] : [], gyobun: Array.isArray(team.gyobun) ? [...team.gyobun] : [], diaOrder: Array.isArray(team.diaOrder) ? [...team.diaOrder] : [], people: Array.isArray(team.people) ? team.people.map((p) => ({ ...p })) : [], info: team.info ? { ...team.info, raw: [...(team.info.raw || [])] } : createTeamBucket(teamKey).info, worktimes: { nor: { ...(team.worktimes?.nor || {}) }, sat: { ...(team.worktimes?.sat || {}) }, hol: { ...(team.worktimes?.hol || {}) } }, paths: { nor: { ...(team.paths?.nor || {}) }, sat: { ...(team.paths?.sat || {}) }, hol: { ...(team.paths?.hol || {}) }, nor_sat: { ...(team.paths?.nor_sat || {}) }, sat_hol: { ...(team.paths?.sat_hol || {}) }, hol_nor: { ...(team.paths?.hol_nor || {}) } }, trainData: { ...(team.trainData || {}) } };
   });
   return result;
 }
 
+[span_6](start_span)[span_7](start_span)/** 🆕 parseZipToData: 열차번호 데이터(train_data) 파싱 추가[span_6](end_span)[span_7](end_span) */
 function parseZipToData(parsedFiles) {
   const result = {}; TEAM_ORDER.forEach((teamKey) => { result[teamKey] = createTeamBucket(teamKey); });
   Object.entries(parsedFiles).forEach(([path, content]) => {
@@ -175,6 +176,24 @@ function parseZipToData(parsedFiles) {
     const clean = path.replace(/^\/+/, ""); const parts = clean.split("/"); const teamKey = parts.find((p) => TEAM_ORDER.includes(p)); if (!teamKey) return;
     const team = result[teamKey]; const fileName = parts[parts.length - 1]; const parent = parts[parts.length - 2]; const gyobunOrder = team.gyobun.length ? team.gyobun : DEFAULT_GYOBUN;
     if (fileName === "nor_worktime.txt") team.worktimes.nor = parseWorktime(content, gyobunOrder); if (fileName === "sat_worktime.txt") team.worktimes.sat = parseWorktime(content, gyobunOrder); if (fileName === "hol_worktime.txt") team.worktimes.hol = parseWorktime(content, gyobunOrder);
+    
+    // 🆕 train_data 파싱
+    if (parts.includes("train_data") && fileName.endsWith(".txt")) {
+        const type = fileName.replace("_train_data.txt", "").replace(".txt", ""); 
+        const lines = parseLines(content);
+        const mapping = {};
+        let lastCode = "";
+        lines.forEach(line => {
+          if (line.match(/^(\d+)(d|~)$|^대\d+/i)) {
+            lastCode = normalizeCodeKey(line);
+            mapping[lastCode] = [];
+          } else if (lastCode) {
+            mapping[lastCode] = [...mapping[lastCode], ...line.split(/\s+/).filter(Boolean)];
+          }
+        });
+        team.trainData[type] = mapping;
+    }
+
     if (parts.includes("path") && /\.(png|jpg|jpeg)$/i.test(fileName)) { const kind = parent; if (team.paths[kind]) { const originalName = fileName; const lowerName = fileName.toLowerCase(); const baseName = lowerName.replace(/\.(png|jpg|jpeg)$/i, ""); team.paths[kind][originalName] = content; team.paths[kind][lowerName] = content; team.paths[kind][baseName] = content; } }
   });
   return result;
@@ -393,7 +412,7 @@ function App() {
   const initialAppliedRemoteRoster = hasAnyRemoteRoster(cachedRemoteRoster) ? cachedRemoteRoster : getEmptyRemoteRoster();
 
   const [zipName, setZipName] = useState("");
-  const [loading, setLoading] = useState(false); // 🛠️ 사용자 요청대로 로딩 메시지 제거
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [remoteRoster, setRemoteRoster] = useState(initialAppliedRemoteRoster);
@@ -455,9 +474,7 @@ function App() {
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
   const [postSetupRemoteCheckNeeded, setPostSetupRemoteCheckNeeded] = useState(false);
 
-  // 🛠️ 다크모드 색상 고정 (이전 선호 색상으로 복구)
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(LS_DARK_MODE) === 'true');
-
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [swipeTransition, setSwipeTransition] = useState("");
 
@@ -544,20 +561,18 @@ function App() {
   };
 
   const swipeStyle = { transform: `translate3d(${swipeOffset}px, 0, 0)`, transition: swipeTransition, willChange: 'transform' };
-  const stickySwipeStyle = { transform: `translate3d(${-swipeOffset}px, 0, 0)`, transition: swipeTransition, willChange: 'transform' };
 
   useEffect(() => { if (remoteBaseDate) { setGlobalBaseDate(remoteBaseDate); const prevConfig = loadCachedSharedConfig() || {}; saveCachedSharedConfig({ ...prevConfig, baseDate: remoteBaseDate }); } }, [remoteBaseDate]);
   
-  // 🛠️ 다크모드 배경색 강제 고정 및 흰색 탈출 (수정 포인트)
   useEffect(() => { 
     localStorage.setItem(LS_DARK_MODE, isDarkMode); 
     if (isDarkMode) {
       document.body.classList.add('dark-mode'); 
-      document.body.style.backgroundColor = '#0f172a'; // 다크 네이비 블랙
-      document.documentElement.style.backgroundColor = '#0f172a'; // 최상단 영역까지
+      document.body.style.backgroundColor = '#0f172a';
+      document.documentElement.style.backgroundColor = '#0f172a';
     } else {
       document.body.classList.remove('dark-mode'); 
-      document.body.style.backgroundColor = '#eef1f6'; // 라이트 연회색
+      document.body.style.backgroundColor = '#eef1f6';
       document.documentElement.style.backgroundColor = '#eef1f6';
     }
   }, [isDarkMode]);
@@ -684,10 +699,35 @@ function App() {
     return grid;
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
 
+  [span_8](start_span)[span_9](start_span)/** 🆕 통합 검색 로직 (이름/교번/전체 호선 열차번호)[span_8](end_span)[span_9](end_span) */
   const filteredGrid = useMemo(() => {
+    if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
-    return allGrid.filter(item => (item.displayName || item.name).includes(searchQuery) || (item.code || "").includes(searchQuery));
-  }, [allGrid, searchQuery]);
+
+    const dayType = guessDayType(browseDate);
+    let crossTeamResults = [];
+
+    TEAM_ORDER.forEach(teamKey => {
+      const team = effectiveData[teamKey];
+      if (!team) return;
+
+      const teamGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
+        ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, browseDate, overrides)
+        : buildAssignedGrid(team, teamAnchors[teamKey].name, teamAnchors[teamKey].code, diffDays(teamAnchors[teamKey].anchorDate, browseDate), overrides);
+
+      const matched = teamGrid.filter(item => {
+        const basicMatch = (item.displayName || item.name).includes(searchQuery) || (item.code || "").includes(searchQuery);
+        const folder = getPathFolder(teamKey, browseDate, item.code);
+        const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
+        const trainMatch = trains.some(t => t.includes(searchQuery));
+        return basicMatch || trainMatch;
+      }).map(item => ({ ...item, teamKey }));
+
+      crossTeamResults = [...crossTeamResults, ...matched];
+    });
+
+    return crossTeamResults;
+  }, [allGrid, searchQuery, browseDate, effectiveData, remoteRoster, overrides, teamAnchors]);
 
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
   const allGridLayout = useMemo(() => { return getAllGridLayout(visibleAllGrid.length || 0); }, [visibleAllGrid.length]);
@@ -832,7 +872,7 @@ function App() {
     setOverrides(next); saveOverrides(next); setEditOpen(false); setEditingCell(null); setEditColor(""); setEditAlias(""); setIsWorktimeEditOpen(false); setEditStartHour(""); setEditStartMin(""); setEditEndHour(""); setEditEndMin("");
   }
 
-  function openPathDialog(item, dateStr = todayStr) { if (!currentViewTeam || !item?.code) return; const image = findPathImage(currentViewTeam, dateStr, item.code); setPathTeamKey(viewTeam); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
+  function openPathDialog(item, dateStr = todayStr) { if (!effectiveData || !item?.code) return; const targetTeam = effectiveData[item.teamKey || viewTeam]; const image = findPathImage(targetTeam, dateStr, item.code); setPathTeamKey(item.teamKey || viewTeam); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { const team = effectiveData?.[teamKey]; if (!team || !item?.code) return; const image = findPathImage(team, dateStr, item.code); setViewTeam(teamKey); setPathTeamKey(teamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
@@ -939,64 +979,36 @@ function App() {
       await new Promise(r => setTimeout(r, 500));
       if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
     }
-    
     const element = document.getElementById('capture-group-area');
     if (!element) return;
-
     const originalTransform = element.style.transform;
     const originalOverflow = element.style.overflow;
     element.style.transform = 'none';
     element.style.overflow = 'visible'; 
-    
     const innerDivs = element.querySelectorAll('th > div[style*="translate3d"], td > div[style*="translate3d"]');
     const origTransforms = [];
     innerDivs.forEach((div, i) => {
       origTransforms[i] = div.style.transform;
       div.style.transform = 'none';
     });
-
     await new Promise(res => setTimeout(res, 50));
-
     try {
-      const canvas = await window.html2canvas(element, {
-        scale: 3, 
-        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-        useCORS: true
-      });
-
+      const canvas = await window.html2canvas(element, { scale: 3, backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', useCORS: true });
       canvas.toBlob(async (blob) => {
         if (!blob) return alert("이미지 생성에 실패했습니다.");
-        
-        const d = new Date();
-        const timestamp = `${d.getHours()}${d.getMinutes()}${d.getSeconds()}`;
+        const d = new Date(); const timestamp = `${d.getHours()}${d.getMinutes()}${d.getSeconds()}`;
         const filename = `${currentGroup}_스케줄_${timestamp}.png`;
         const file = new File([blob], filename, { type: 'image/png' });
-
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({
-              title: `${currentGroup} 스케줄`,
-              files: [file]
-            });
-          } catch (shareErr) {
-            console.log('공유 취소', shareErr);
-          }
+          try { await navigator.share({ title: `${currentGroup} 스케줄`, files: [file] }); } catch (shareErr) { console.log('공유 취소', shareErr); }
         } else {
-          const link = document.createElement("a");
-          link.download = filename;
-          link.href = URL.createObjectURL(blob);
-          link.click();
+          const link = document.createElement("a"); link.download = filename; link.href = URL.createObjectURL(blob); link.click();
           alert("기기가 바로 공유를 지원하지 않아 앨범에 사진으로 저장했습니다.");
         }
       });
-    } catch (e) {
-      alert("캡처에 실패했습니다.");
-    } finally {
-      element.style.transform = originalTransform;
-      element.style.overflow = originalOverflow;
-      innerDivs.forEach((div, i) => {
-        div.style.transform = origTransforms[i];
-      });
+    } catch (e) { alert("캡처에 실패했습니다."); } finally {
+      element.style.transform = originalTransform; element.style.overflow = originalOverflow;
+      innerDivs.forEach((div, i) => { div.style.transform = origTransforms[i]; });
     }
   };
 
@@ -1107,7 +1119,7 @@ function App() {
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   )}
-                  {showSearch && <input className="input" style={{ marginTop: 8 }} placeholder="이름 또는 교번 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />}
+                  {showSearch && <input className="input" style={{ marginTop: 8 }} placeholder="이름/교번/열번 통합 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />}
                 </div>
                 <div className="all-team-tabs">
                   {TEAM_ORDER.map((key) => { const isActive = viewTeam === key; const isMyTeam = selectedTeam === key; return (<button key={key} className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`} onClick={() => setViewTeam(key)}>{TEAM_LABELS[key]}{isActive && <span className="view-dot" />}</button>); })}
@@ -1117,18 +1129,17 @@ function App() {
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
                     <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
                       {visibleAllGrid.map((item) => {
-                        const myCodeForDate = viewTeam === mySelection?.teamKey && mySelection?.code ? getMyCodeForDate(currentViewTeam, browseDate, mySelection) : "";
-                        const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name) || (myCodeForDate && normalizeCodeKey(item.code) === normalizeCodeKey(myCodeForDate)));
+                        const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
                         const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
                         
-                        const customTextColorCode = item.customColor ? { color: "#000000" } : undefined;
-                        const customTextColorName = item.customColor ? { color: "#000000" } : undefined;
-                        
                         return (
-                          <div key={`${item.idx}-${item.code}-${item.displayName}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                            <div className="all-code" style={customTextColorCode}>{item.code || "-"}</div>
-                            <div className="all-name" style={customTextColorName}>{item.displayName || "-"}</div>
+                          <div key={`${item.idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
+                            <div className="all-code">{item.code || "-"}</div>
+                            <div className="all-name">
+                                {item.displayName || "-"}
+                                {searchQuery && <div style={{fontSize: '10px', opacity: 0.8}}>[{TEAM_LABELS[item.teamKey]}]</div>}
+                            </div>
                           </div>
                         );
                       })}
@@ -1137,7 +1148,7 @@ function App() {
                 ) : (
                   <div className="card" style={{ padding: 0, overflow: "hidden", ...swipeStyle }}>
                     {filteredDiaList.map((item, idx) => {
-                      const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name) || (mySelection?.teamKey === viewTeam && mySelection?.code && normalizeCodeKey(item.code) === normalizeCodeKey(getMyCodeForDate(currentViewTeam, browseDate, mySelection))));
+                      const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                       return (
                         <div key={`${item.code}-${idx}`} onClick={() => openPathDialog(item, browseDate)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 16px", borderBottom: idx === filteredDiaList.length - 1 ? "none" : (isDarkMode ? "1px solid #334155" : "1px solid #e5e7eb"), fontSize: 18, background: isMine ? (isDarkMode ? "rgba(56, 189, 248, 0.15)" : "#eef6ff") : "transparent", borderLeft: isMine ? (isDarkMode ? "4px solid #38bdf8" : "4px solid #3b82f6") : "4px solid transparent", cursor: "pointer" }}>
                           <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
@@ -1220,7 +1231,6 @@ function App() {
                           const isSelectedCol = selectedGroupDate === date; const isToday = date === getKoreaToday();
                           return (
                             <th key={date} onClick={() => setSelectedGroupDate(date)} className={`${isSelectedCol ? "active-col" : ""} ${isToday ? "today-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
-                              {/* 🛠️ 그룹 탭 요일 잘림 방지 (여백 보정) */}
                               <div style={{ ...swipeStyle, padding: '10px 4px 8px 4px', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                 <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
                                 <div className="day-date">{formatMonthDay(date)}</div>
@@ -1249,11 +1259,8 @@ function App() {
                             {weekDates.map((date) => {
                               const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
                               const isSelectedCol = selectedGroupDate === date;
-                              
-                              // 🛠️ 다크모드 강조 색상 복구 (이전 사진의 부드러운 블루 계열)
                               const cellBackground = isSelectedCol ? (isDarkMode ? "rgba(59, 130, 246, 0.2)" : "#f5f3ff") : "";
                               const textColor = isSelectedCol ? (isDarkMode ? "#60a5fa" : "#4c1d95") : "inherit";
-                              
                               return (
                                 <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', background: cellBackground, transition: "background-color 0.18s ease" }}>
                                   <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: isSelectedCol ? 700 : 600, color: textColor }}>
@@ -1297,7 +1304,6 @@ function App() {
             <label className="label">기본자료 ZIP 등록 / 변경</label>
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
             <div className="help-text">처음 한 번 등록하면 이후에는 자동 저장됩니다. ZIP 구조가 바뀔 때만 다시 등록하면 됩니다.</div>
-
             {!allowProfileEdit ? (
               <>
                 <label className="label" style={{ marginTop: 14 }}>내 정보</label>
@@ -1307,7 +1313,6 @@ function App() {
                   내 기준교번: {mySelection?.code || "-"}<br />
                   기준날짜: {mySelection?.anchorDate || "-"}
                 </div>
-                <div className="help-text" style={{ marginTop: 10 }}>앱은 저장된 ZIP/공용데이터로 빠르게 열리고, 최신 배포본은 뒤에서 확인 후 알림으로 안내됩니다.</div>
                 <div className="modal-actions"><button className="modal-btn" onClick={startReconfigureProfile}>내 정보 다시 설정</button></div>
               </>
             ) : (
@@ -1317,8 +1322,7 @@ function App() {
                   {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
                 </select>
                 <label className="label" style={{ marginTop: 12 }}>내 이름</label>
-                <input className="input" type="text" placeholder="이름 직접 입력 (없으면 새로 등록됩니다)" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
-                <div className="help-text" style={{ marginTop: 6 }}>기본데이터에 이름이 없으면 선택한 교번 기준으로 저장됩니다.</div>
+                <input className="input" type="text" placeholder="이름 직접 입력" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
                 <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
                 <select className="select" value={draftCode} onChange={(e) => { setDraftCode(e.target.value); }}>
                   <option value="">선택</option>
@@ -1332,9 +1336,7 @@ function App() {
                 </div>
               </>
             )}
-
             <label className="label" style={{ marginTop: 24 }}>데이터 백업 및 복구</label>
-            <div className="help-text">내가 설정한 별명, 색상, 그룹, 내 정보 등을 파일로 저장하거나 불러올 수 있습니다. 카카오톡 '나에게 쓰기'에 보관해두면 폰을 바꿔도 안심입니다!</div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <button className="modal-btn" style={{ flex: 1 }} onClick={exportSettings}>📥 백업하기</button>
               <label className="modal-btn" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', margin: 0 }}>
@@ -1342,21 +1344,17 @@ function App() {
                 <input type="file" accept=".json" style={{ display: 'none' }} onChange={importSettings} />
               </label>
             </div>
-            <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0 10px 0' }} />
-            
             {isAdminUser && (
               <div className="card" style={{ marginTop: 14, padding: 12 }}>
                 <div className="label" style={{ marginBottom: 10 }}>관리자</div>
                 <label className="label">공용 기준일</label>
                 <input className="input" type="date" value={remoteBaseDate} onChange={(e) => setRemoteBaseDate(e.target.value)} />
-                <div className="help-text" style={{ marginTop: 10 }}>날짜를 선택하고 저장 버튼을 누르면 다른 사람들에게도 반영됩니다.</div>
                 <div className="modal-actions">
                   <button className="modal-btn" onClick={publishRoster} disabled={savingSharedConfig}>{savingSharedConfig ? "처리중..." : "현재배정 배포"}</button>
                   <button className="modal-btn primary" onClick={saveSharedConfig} disabled={savingSharedConfig}>{savingSharedConfig ? "저장중..." : "공용 기준일 저장"}</button>
                 </div>
               </div>
             )}
-            
             <div className="modal-actions">
               <button className="modal-btn" onClick={resetMyProfile}>내 정보 초기화</button>
               <button className="modal-btn primary" onClick={() => { if (showSettingsRef.current) window.history.back(); else setShowSettings(false); }}>닫기</button>
@@ -1369,45 +1367,33 @@ function App() {
         <div className="modal-backdrop" onClick={() => { if (showGroupAddRef.current) window.history.back(); else setShowGroupAdd(false); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">그룹 관리</div>
-            
             <label className="label">1. 새 그룹 만들기</label>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
               <input className="input" style={{ flex: 1 }} value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="예: 1조, 낚시모임" />
               <button className="modal-btn primary" style={{ width: 'auto', padding: '0 16px' }} onClick={handleGroupSubmit}>생성</button>
             </div>
-            
-            <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
-            
             <label className="label">2. 관리할 그룹 선택</label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
               <select className="select" style={{ flex: 1, margin: 0 }} value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
                 {Object.keys(groups).length === 0 ? (<option value="">그룹 없음</option>) : (Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
               </select>
-              <button className="modal-btn" style={{ width: 'auto', padding: '0 14px', margin: 0, color: '#ef4444', borderColor: '#fca5a5', background: '#fef2f2' }} onClick={deleteCurrentGroup} disabled={!currentGroup}>
-                🗑️ 삭제
-              </button>
+              <button className="modal-btn" style={{ width: 'auto', padding: '0 14px', margin: 0, color: '#ef4444', borderColor: '#fca5a5', background: '#fef2f2' }} onClick={deleteCurrentGroup} disabled={!currentGroup}>🗑️ 삭제</button>
             </div>
-            
-            <hr style={{ border: '0', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
-
             <label className="label">3. 선택된 그룹에 인원 추가</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
               <div>
-                <label className="label" style={{ fontSize: '12px', marginBottom: '4px' }}>소속</label>
                 <select className="select" value={groupAddTeam} onChange={(e) => { setGroupAddTeam(e.target.value); setGroupAddName(""); }}>
                   {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
                 </select>
               </div>
               <div>
-                <label className="label" style={{ fontSize: '12px', marginBottom: '4px' }}>이름</label>
                 <select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}>
                   <option value="">선택</option>
                   {groupAddCandidates.map((person) => (<option key={`${groupAddTeam}-${person.name}`} value={person.name}>{person.displayName}</option>))}
                 </select>
               </div>
             </div>
-            <button className="modal-btn primary" style={{ width: '100%' }} onClick={addToGroup} disabled={!currentGroup || !groupAddName}>+ 현재 그룹에 인원 추가</button>
-
+            <button className="modal-btn primary" style={{ width: '100%' }} onClick={addToGroup} disabled={!currentGroup || !groupAddName}>+ 인원 추가</button>
             <div className="modal-actions" style={{ marginTop: '24px' }}>
               <button className="modal-btn" style={{ width: '100%' }} onClick={() => { if (showGroupAddRef.current) window.history.back(); else setShowGroupAdd(false); }}>닫기</button>
             </div>
@@ -1422,7 +1408,6 @@ function App() {
             <div className="modal-sub">{TEAM_LABELS[viewTeam]} {editingCell?.code} {editingCell?.name}</div>
             <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="비워두면 원래 이름 사용" />
-            <div className="help-text" style={{ marginTop: 6 }}>※ 사용자 화면 표시용에 저장됨</div>
             <label className="label" style={{ marginTop: 12 }}>색상</label>
             <select className="select" value={editColor || "default"} onChange={(e) => setEditColor(e.target.value === "default" ? "" : e.target.value)}>
               <option value="default">기본 색상</option>
@@ -1432,15 +1417,11 @@ function App() {
             <button className="modal-btn" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsWorktimeEditOpen((prev) => !prev)}>출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}</button>
             {isWorktimeEditOpen && (
               <div style={{ marginTop: 12 }}>
-                <div className="help-text" style={{ marginBottom: 10 }}>※ 현재 날짜 기준 출퇴근시간 수정</div>
-                <div className="notice-box" style={{ marginBottom: 12 }}>적용 기준: {currentEditDayLabel}</div>
-                <label className="label">출근</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, marginBottom: 12 }}>
                   <input className="input" inputMode="numeric" value={editStartHour} onChange={(e) => setEditStartHour(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="06" />
                   <div style={{ fontWeight: 700 }}>:</div>
                   <input className="input" inputMode="numeric" value={editStartMin} onChange={(e) => setEditStartMin(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="33" />
                 </div>
-                <label className="label">퇴근</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
                   <input className="input" inputMode="numeric" value={editEndHour} onChange={(e) => setEditEndHour(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="15" />
                   <div style={{ fontWeight: 700 }}>:</div>
