@@ -80,7 +80,7 @@ async function ensureHolidayYear(year, onApplied) {
   try {
     const fetched = await fetchHolidayYear(y);
     if (fetched?.length) { setHolidayYear(y, fetched); saveHolidayYearToCache(y, fetched); onApplied?.(); return; }
-    if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) { setHolidayYear(y, fetched); onApplied?.(); }
+    if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) { setHolidayYear(y, DEFAULT_HOLIDAYS_BY_YEAR[y]); onApplied?.(); }
   } catch (err) {
     if (DEFAULT_HOLIDAYS_BY_YEAR[y]?.length) { setHolidayYear(y, DEFAULT_HOLIDAYS_BY_YEAR[y]); onApplied?.(); }
   } finally { HOLIDAY_FETCHING_YEARS.delete(y); }
@@ -120,7 +120,7 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🆕 getPathFolder: 요일/코드에 따른 폴더명 반환 (행로표 및 열차 데이터 공용) */
+/** 🆕 getPathFolder: 요일별 특화 폴더 결정 */
 function getPathFolder(teamKey, dateStr, code) {
   const day = parseLocalDate(dateStr).getDay(); const isHol = isHolidayDate(dateStr);
   if (isNightStartCode(teamKey, code)) { if (isHol || day === 0) return "hol_nor"; if (day >= 1 && day <= 4) return "nor"; if (day === 5) return "nor_sat"; if (day === 6) return "sat_hol"; }
@@ -155,7 +155,7 @@ function cloneTeamData(data) {
   return result;
 }
 
-/** 🆕 parseZipToData: 열차번호 데이터(train_data) 파싱 추가 */
+/** 🆕 ZIP 파싱: 열차 데이터 읽기 포함 */
 function parseZipToData(parsedFiles) {
   const result = {}; TEAM_ORDER.forEach((teamKey) => { result[teamKey] = createTeamBucket(teamKey); });
   Object.entries(parsedFiles).forEach(([path, content]) => {
@@ -176,17 +176,15 @@ function parseZipToData(parsedFiles) {
     const team = result[teamKey]; const fileName = parts[parts.length - 1]; const parent = parts[parts.length - 2]; const gyobunOrder = team.gyobun.length ? team.gyobun : DEFAULT_GYOBUN;
     if (fileName === "nor_worktime.txt") team.worktimes.nor = parseWorktime(content, gyobunOrder); if (fileName === "sat_worktime.txt") team.worktimes.sat = parseWorktime(content, gyobunOrder); if (fileName === "hol_worktime.txt") team.worktimes.hol = parseWorktime(content, gyobunOrder);
 
-    // 🆕 train_data 파싱 (Safe Guard 적용)
+    // 열차 데이터 파싱
     if (parts.includes("train_data") && fileName.endsWith(".txt")) {
         const type = fileName.replace("_train_data.txt", "").replace(".txt", ""); 
         const lines = parseLines(content);
-        const mapping = {};
-        let lastCode = "";
+        const mapping = {}; let lastCode = "";
         lines.forEach(line => {
           if (!line) return;
           if (line.match(/^(\d+)(d|~)$|^대\d+/i)) {
-            lastCode = normalizeCodeKey(line);
-            mapping[lastCode] = [];
+            lastCode = normalizeCodeKey(line); mapping[lastCode] = [];
           } else if (lastCode) {
             mapping[lastCode] = [...mapping[lastCode], ...line.split(/\s+/).filter(Boolean)];
           }
@@ -251,8 +249,12 @@ function migrateLegacyOverrides(currentOverrides, data) {
 function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
   if (!team || !team.people?.length) return [];
   const people = team.people; const fixedCodes = getGyobunOrder(team); const anchorPersonIndex = people.findIndex((p) => samePersonName(p.name, anchorName)); const anchorCodeIndex = fixedCodes.findIndex((code) => normalizeCodeKey(code) === normalizeCodeKey(anchorCode));
-  if (anchorPersonIndex < 0 || anchorCodeIndex < 0) { return fixedCodes.map((slotCode, slotIndex) => { const person = people[slotIndex] || { idx: slotIndex, name: "" }; const override = overrides[getOverrideKey(team.key, person.name)] || {}; return { idx: person.idx, name: person.name, displayName: override.alias || person.name, code: slotCode, customColor: override.color || "" }; }).filter((item) => item.name); }
-  return fixedCodes.map((slotCode, slotIndex) => { const personIndex = positiveMod(anchorPersonIndex + (slotIndex - anchorCodeIndex - dayOffset), people.length); const person = people[personIndex]; if (!person) return null; const override = overrides[getOverrideKey(team.key, person.name)] || {}; return { idx: person.idx, name: person.name, displayName: override.alias || person.name, code: slotCode, customColor: override.color || "" }; }).filter((item) => item && item.name);
+  return fixedCodes.map((slotCode, slotIndex) => {
+    const personIndex = anchorPersonIndex < 0 || anchorCodeIndex < 0 ? slotIndex : positiveMod(anchorPersonIndex + (slotIndex - anchorCodeIndex - dayOffset), people.length);
+    const person = people[personIndex]; if (!person) return null;
+    const override = overrides[getOverrideKey(team.key, person.name)] || {};
+    return { idx: person.idx, name: person.name, displayName: override.alias || person.name, code: slotCode, customColor: override.color || "", teamKey: team.key };
+  }).filter(Boolean);
 }
 
 function getRemoteAnchorBaseDate(team) { return getGlobalBaseDate() || getZipBaseDate(team); }
@@ -475,9 +477,7 @@ function App() {
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
   const [postSetupRemoteCheckNeeded, setPostSetupRemoteCheckNeeded] = useState(false);
 
-  // 🛠️ 다크모드 색상 고정 (이전 선호 색상으로 복구)
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(LS_DARK_MODE) === 'true');
-
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [swipeTransition, setSwipeTransition] = useState("");
 
@@ -567,16 +567,15 @@ function App() {
 
   useEffect(() => { if (remoteBaseDate) { setGlobalBaseDate(remoteBaseDate); const prevConfig = loadCachedSharedConfig() || {}; saveCachedSharedConfig({ ...prevConfig, baseDate: remoteBaseDate }); } }, [remoteBaseDate]);
   
-  // 🛠️ 다크모드 배경색 강제 고정 및 흰색 탈출 (수정 포인트)
   useEffect(() => { 
     localStorage.setItem(LS_DARK_MODE, isDarkMode); 
     if (isDarkMode) {
       document.body.classList.add('dark-mode'); 
-      document.body.style.backgroundColor = '#0f172a'; // 다크 네이비 블랙
-      document.documentElement.style.backgroundColor = '#0f172a'; // 최상단 영역까지
+      document.body.style.backgroundColor = '#0f172a';
+      document.documentElement.style.backgroundColor = '#0f172a';
     } else {
       document.body.classList.remove('dark-mode'); 
-      document.body.style.backgroundColor = '#eef1f6'; // 라이트 연회색
+      document.body.style.backgroundColor = '#eef1f6';
       document.documentElement.style.backgroundColor = '#eef1f6';
     }
   }, [isDarkMode]);
@@ -700,7 +699,7 @@ function App() {
       const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection));
       grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; });
     }
-    return grid.map(item => ({ ...item, teamKey: viewTeam })); // 기본 배정 시 teamKey 부여
+    return grid.map(item => ({ ...item, teamKey: viewTeam })); 
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
 
   /** 🆕 통합 검색 로직 (전체 소속 순회 + 이름/교번/열번) */
@@ -715,22 +714,18 @@ function App() {
       const team = effectiveData[teamKey];
       if (!team) return;
 
-      // 해당 소속의 오늘 날짜 기준 그리드 임시 생성
       const teamGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, browseDate, overrides)
-        : buildAssignedGrid(team, teamAnchors[teamKey].name, teamAnchors[teamKey].code, diffDays(teamAnchors[teamKey].anchorDate, browseDate), overrides);
+        : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, browseDate), overrides);
 
       const matched = teamGrid.filter(item => {
-        // 1. 이름/교번 매칭
+        if (!item) return false;
         const basicMatch = (item.displayName || item.name || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
-        
-        // 2. 열차번호 매칭 (폴더명 가져와서 trainData 조회)
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const trainMatch = trains.some(t => String(t).includes(searchQuery));
-
         return basicMatch || trainMatch;
-      }).map(item => ({ ...item, teamKey })); // 검색 결과는 명시적으로 teamKey 주입
+      }).map(item => ({ ...item, teamKey })); 
 
       crossTeamResults = [...crossTeamResults, ...matched];
     });
@@ -869,8 +864,8 @@ function App() {
 
   function handleAllCellTap(item) { if (editMode) openEditDialog(item); else openPathDialog(item, browseDate); }
   function openEditDialog(item) {
-    setEditingCell(item); const key = getOverrideKey(item.teamKey || viewTeam, item.name); const current = overrides[key] || {}; setEditColor(current.color || ""); setEditAlias(current.alias || "");
-    const team = effectiveData?.[item.teamKey || viewTeam]; const currentTime = team ? pickWorktime(team, item.code, browseDate) : "----"; const parts = parseTimeValueToParts(currentTime);
+    setEditingCell(item); const currentTeam = item.teamKey || viewTeam; const key = getOverrideKey(currentTeam, item.name); const current = overrides[key] || {}; setEditColor(current.color || ""); setEditAlias(current.alias || "");
+    const team = effectiveData?.[currentTeam]; const currentTime = team ? pickWorktime(team, item.code, browseDate) : "----"; const parts = parseTimeValueToParts(currentTime);
     setEditStartHour(parts.sh); setEditStartMin(parts.sm); setEditEndHour(parts.eh); setEditEndMin(parts.em); setIsWorktimeEditOpen(false); setEditOpen(true);
   }
   function closeEditDialog() { if (editOpenRef.current) window.history.back(); else setEditOpen(false); }
@@ -1002,11 +997,7 @@ function App() {
     });
     await new Promise(res => setTimeout(res, 50));
     try {
-      const canvas = await window.html2canvas(element, {
-        scale: 3, 
-        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-        useCORS: true
-      });
+      const canvas = await window.html2canvas(element, { scale: 3, backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', useCORS: true });
       canvas.toBlob(async (blob) => {
         if (!blob) return alert("이미지 생성에 실패했습니다.");
         const d = new Date(); const timestamp = `${d.getHours()}${d.getMinutes()}${d.getSeconds()}`;
@@ -1056,8 +1047,7 @@ function App() {
               {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
             </select>
             <label className="label" style={{ marginTop: 12 }}>내 이름</label>
-            <input className="input" type="text" placeholder="이름 직접 입력 (없으면 새로 등록됩니다)" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
-            <div className="help-text" style={{ marginTop: 6 }}>기본데이터에 이름이 없으면 선택한 교번 기준으로 사용됩니다.</div>
+            <input className="input" type="text" placeholder="이름 직접 입력" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
             <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
             <select className="select" value={draftCode} onChange={(e) => { setDraftCode(e.target.value); }}>
               <option value="">선택</option>
@@ -1065,7 +1055,6 @@ function App() {
             </select>
             <label className="label" style={{ marginTop: 12 }}>기준 날짜</label>
             <input className="input" type="date" value={profileAnchorDate} onChange={(e) => { const nextDate = e.target.value || getKoreaToday(); setProfileAnchorDate(nextDate); }} />
-            <div className="help-text" style={{ marginTop: 10 }}>기존 이름이면 자동으로 교번이 채워지고, 없으면 교번을 직접 선택해서 사용합니다.</div>
             <div className="modal-actions">
               <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() || !draftCode}>시작하기</button>
             </div>
@@ -1145,10 +1134,13 @@ function App() {
                         const isToday = browseDate === getKoreaToday();
                         const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
                         
+                        // 다크모드 글씨 색상 반전 처리
+                        const textColorStyle = item.customColor ? { color: "#000000" } : undefined;
+                        
                         return (
                           <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                            <div className="all-code">{item.code || "-"}</div>
-                            <div className="all-name">
+                            <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
+                            <div className="all-name" style={textColorStyle}>
                                 {item.displayName || "-"}
                                 {searchQuery && <div style={{fontSize: '10px', opacity: 0.8}}>[{TEAM_LABELS[item.teamKey]}]</div>}
                             </div>
