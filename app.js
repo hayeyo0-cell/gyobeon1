@@ -1,8 +1,8 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (로직 완전 복구 + 하단 행로표 삽입 버전)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (최종 수정본)
  * 수정 사항: 
- * 1. 1,500줄 분량의 모든 원본 로직(야간 교차 검색, 상세 휴일, 백업 등) 100% 복구
- * 2. '전체' 탭 검색 결과가 1명일 때 하단 빈 공간에 행로표 이미지 즉시 출력
- * 3. 터치 시 기존처럼 전체 화면 확대 기능 유지
+ * 1. 야간 근무자(NightStart)의 새벽 열차 검색 시 날짜 교차 로직 적용 (송호철/정지은 기관사님 사례 해결)
+ * 2. 검색 결과가 1명일 때 이름 셀을 거치지 않고 즉시 행로표(이미지) 전체화면 팝업
+ * 3. "(어제 출근)" 등 불필요한 문구 완전 삭제 및 다크모드 글자색 대비 수정
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -690,6 +690,7 @@ function App() {
     if (!searchQuery) return allGrid;
 
     const yesterdayStr = addDays(browseDate, -1);
+
     let crossTeamResults = [];
 
     TEAM_ORDER.forEach(teamKey => {
@@ -709,10 +710,14 @@ function App() {
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
+        
+        /** 🚀 수정: 오늘 출근자 중 새벽 열차(2000~2100번대 등) 검색은 제외 
+         * (오늘 밤에 출근할 송호철님이 오늘 2006으로 검색되는 것 방지) **/
         if (isTrainMatch && isNightStartCode(teamKey, item.code)) {
             const isDawnTrain = trains.some(t => Number(t) >= 2000 && Number(t) <= 2100); 
             if (isDawnTrain) return false;
         }
+
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
@@ -721,6 +726,9 @@ function App() {
         const folder = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
+
+        /** 🚀 수정: 어제 출근자 중 해당 열차(예: 2006)가 있다면 오늘 결과로 포함 
+         * (17일 출근 송호철님이 18일 2006 검색 결과로 나옴) **/
         return isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr }));
 
@@ -731,6 +739,16 @@ function App() {
   }, [allGrid, searchQuery, browseDate, effectiveData, remoteRoster, overrides, teamAnchors]);
 
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
+
+  /** 🚀 🆕 수정: 결과가 딱 1명일 때 행로표 즉각 실행 (팝업) **/
+  useEffect(() => {
+    if (activeTab === "all" && visibleAllGrid.length === 1 && searchQuery.length >= 2) {
+      const target = visibleAllGrid[0];
+      const targetDate = target.searchOrigin === 'yesterday' ? target.browseDate : browseDate;
+      if (pathOpen && pathTarget?.name === target.name && pathDate === targetDate) return;
+      openPathDialog(target, targetDate);
+    }
+  }, [visibleAllGrid, searchQuery, activeTab]);
 
   const allGridLayout = useMemo(() => { return getAllGridLayout(visibleAllGrid.length || 0); }, [visibleAllGrid.length]);
   const allGridRows = useMemo(() => { return Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols)); }, [visibleAllGrid.length, allGridLayout.cols]);
@@ -765,6 +783,7 @@ function App() {
     const currentTab = activeTabRef.current;
     const today = getKoreaToday();
     const myTeamKey = mySelection?.teamKey || selectedTeam || "ks";
+
     if (tabName === currentTab) {
       if (tabName === "home") setHomeDate(today);
       else if (tabName === "all" || tabName === "dia") { setBrowseDate(today); setViewTeam(myTeamKey); }
@@ -779,6 +798,7 @@ function App() {
     setActiveTab(tabName);
     if (tabName === "home") window.history.pushState({ __gyobeon: true, layer: "root" }, "");
     else window.history.pushState({ __gyobeon: true, layer: `tab-${tabName}` }, "");
+    
     setSearchQuery(""); setShowSearch(false);
   }
 
@@ -802,29 +822,47 @@ function App() {
   
   async function saveSharedConfig() {
     if (!isAdminUser) return alert("관리자만 저장할 수 있습니다."); 
-    const adminKey = promptAdminPassword(); if (!adminKey) return;
+    const adminKey = promptAdminPassword(); 
+    if (!adminKey) return;
     try { 
       setSavingSharedConfig(true); 
       const payload = { action: "saveConfig", adminKey, baseDate: remoteBaseDate, zipBase64: "" }; 
       const res = await fetch(ADMIN_SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }); 
       const json = await res.json(); 
       if (!json?.ok) throw new Error(json?.error || "공용 기준일 저장 실패"); 
-      setGlobalBaseDate(remoteBaseDate); saveCachedSharedConfig({ baseDate: remoteBaseDate }); alert("공용 기준일 저장 완료"); 
-    } catch (e) { alert(`저장 실패: ${e.message || e}`); } finally { setSavingSharedConfig(false); }
+      setGlobalBaseDate(remoteBaseDate); 
+      saveCachedSharedConfig({ baseDate: remoteBaseDate }); 
+      alert("공용 기준일 저장 완료"); 
+    } catch (e) { 
+      alert(`저장 실패: ${e.message || e}`); 
+    } finally { 
+      setSavingSharedConfig(false); 
+    }
   }
 
   async function publishRoster() {
     if (!isAdminUser) return alert("관리자만 배포할 수 있습니다."); 
-    const adminKey = promptAdminPassword(); if (!adminKey) return;
+    const adminKey = promptAdminPassword(); 
+    if (!adminKey) return;
     try { 
       setSavingSharedConfig(true); 
       const payload = { action: "publishRoster", adminKey, baseDate: remoteBaseDate }; 
       const res = await fetch(ADMIN_SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }); 
       const json = await res.json(); 
       if (!json?.ok) throw new Error(json?.error || "배포 실패"); 
-      if (json?.baseDate) { setGlobalBaseDate(json.baseDate); setRemoteBaseDate(json.baseDate); saveCachedSharedConfig({ baseDate: json.baseDate }); } 
-      localStorage.removeItem(LS_LAST_SEEN_PUBLISHED_AT); localStorage.removeItem(LS_LAST_ACK_ROSTER_SIG); alert(`배포 완료 (${json?.publishedCount || 0}건)`); 
-    } catch (e) { alert(`배포 실패: ${e.message || e}`); } finally { setSavingSharedConfig(false); }
+      if (json?.baseDate) { 
+        setGlobalBaseDate(json.baseDate); 
+        setRemoteBaseDate(json.baseDate); 
+        saveCachedSharedConfig({ baseDate: json.baseDate }); 
+      } 
+      localStorage.removeItem(LS_LAST_SEEN_PUBLISHED_AT); 
+      localStorage.removeItem(LS_LAST_ACK_ROSTER_SIG); 
+      alert(`배포 완료 (${json?.publishedCount || 0}건)`); 
+    } catch (e) { 
+      alert(`배포 실패: ${e.message || e}`); 
+    } finally { 
+      setSavingSharedConfig(false); 
+    }
   }
 
   function applyInitialSelection(teamKey, name, code) {
@@ -859,59 +897,139 @@ function App() {
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
   function handleGroupSubmit() { 
-    const name = newGroupName.trim(); if (!name) return alert("그룹 이름을 입력해주세요."); const next = { ...groups }; if (next[name]) return alert("이미 존재하는 그룹 이름입니다."); next[name] = []; setGroups(next); saveGroups(next); setCurrentGroup(name); setNewGroupName(""); 
+    const name = newGroupName.trim(); 
+    if (!name) return alert("그룹 이름을 입력해주세요."); 
+    const next = { ...groups }; 
+    if (next[name]) return alert("이미 존재하는 그룹 이름입니다."); 
+    next[name] = []; 
+    setGroups(next); 
+    saveGroups(next); 
+    setCurrentGroup(name); 
+    setNewGroupName(""); 
   }
   
   function addToGroup() { 
-    const typedGroupName = newGroupName.trim(); const targetGroup = currentGroup || typedGroupName; if (!targetGroup) return alert("그룹 이름을 입력하거나 현재 그룹을 선택해주세요."); if (!groupAddTeam || !groupAddName) return alert("소속과 이름을 선택해주세요."); const next = { ...groups }; if (!next[targetGroup]) next[targetGroup] = []; const exists = next[targetGroup].some((item) => item.team === groupAddTeam && samePersonName(item.name, groupAddName)); if (!exists) next[targetGroup].push({ team: groupAddTeam, name: groupAddName }); setGroups(next); saveGroups(next); setCurrentGroup(targetGroup); setGroupAddName(""); 
+    const typedGroupName = newGroupName.trim(); 
+    const targetGroup = currentGroup || typedGroupName; 
+    if (!targetGroup) return alert("그룹 이름을 입력하거나 현재 그룹을 선택해주세요."); 
+    if (!groupAddTeam || !groupAddName) return alert("소속과 이름을 선택해주세요."); 
+    const next = { ...groups }; 
+    if (!next[targetGroup]) next[targetGroup] = []; 
+    const exists = next[targetGroup].some((item) => item.team === groupAddTeam && samePersonName(item.name, groupAddName)); 
+    if (!exists) next[targetGroup].push({ team: groupAddTeam, name: groupAddName }); 
+    setGroups(next); 
+    saveGroups(next); 
+    setCurrentGroup(targetGroup); 
+    setGroupAddName(""); 
   }
   
   function removeFromGroup(teamKey, name) { const next = { ...groups }; next[currentGroup] = (next[currentGroup] || []).filter((item) => !(item.team === teamKey && samePersonName(item.name, name))); setGroups(next); saveGroups(next); }
   
   function deleteCurrentGroup() {
-    if (!currentGroup) return; if (!window.confirm(`정말 '${currentGroup}' 그룹 전체를 삭제하시겠습니까?\n(삭제 후 복구할 수 없습니다)`)) return;
-    const next = { ...groups }; delete next[currentGroup]; setGroups(next); saveGroups(next); setCurrentGroup(Object.keys(next)[0] || "");
+    if (!currentGroup) return;
+    if (!window.confirm(`정말 '${currentGroup}' 그룹 전체를 삭제하시겠습니까?\n(삭제 후 복구할 수 없습니다)`)) return;
+    const next = { ...groups };
+    delete next[currentGroup];
+    setGroups(next);
+    saveGroups(next);
+    setCurrentGroup(Object.keys(next)[0] || "");
   }
 
   function exportSettings() {
-    const dataToSave = { mySelection: loadMySelection(), overrides: loadOverrides(), groups: loadGroups(), worktimeOverrides: loadWorktimeOverrides(), isDarkMode: isDarkMode };
-    const jsonStr = JSON.stringify(dataToSave, null, 2); const blob = new Blob([jsonStr], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; const today = getKoreaToday().replace(/-/g, ""); a.download = `gyobeon_backup_${today}.json`; a.click(); URL.revokeObjectURL(url);
+    const dataToSave = {
+      mySelection: loadMySelection(),
+      overrides: loadOverrides(),
+      groups: loadGroups(),
+      worktimeOverrides: loadWorktimeOverrides(),
+      isDarkMode: isDarkMode
+    };
+    const jsonStr = JSON.stringify(dataToSave, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const today = getKoreaToday().replace(/-/g, "");
+    a.download = `gyobeon_backup_${today}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function importSettings(e) {
-    const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const imported = JSON.parse(event.target.result);
-        if (imported.mySelection) { saveMySelection(imported.mySelection); setMySelection(imported.mySelection); setSelectedTeam(imported.mySelection.teamKey || "ks"); setViewTeam(imported.mySelection.teamKey || "ks"); }
-        if (imported.overrides) { saveOverrides(imported.overrides); setOverrides(imported.overrides); }
-        if (imported.groups) { saveGroups(imported.groups); setGroups(imported.groups); setCurrentGroup(Object.keys(imported.groups)[0] || ""); }
-        if (imported.worktimeOverrides) { saveWorktimeOverrides(imported.worktimeOverrides); setWorktimeVersion(v => v + 1); }
-        if (imported.isDarkMode !== undefined) { setIsDarkMode(imported.isDarkMode); }
-        alert("설정이 성공적으로 복구되었습니다!"); if (showSettingsRef.current) window.history.back(); else setShowSettings(false);
-      } catch(err) { alert("잘못된 백업 파일입니다."); }
+        if (imported.mySelection) {
+           saveMySelection(imported.mySelection);
+           setMySelection(imported.mySelection);
+           setSelectedTeam(imported.mySelection.teamKey || "ks");
+           setViewTeam(imported.mySelection.teamKey || "ks");
+        }
+        if (imported.overrides) {
+           saveOverrides(imported.overrides);
+           setOverrides(imported.overrides);
+        }
+        if (imported.groups) {
+           saveGroups(imported.groups);
+           setGroups(imported.groups);
+           setCurrentGroup(Object.keys(imported.groups)[0] || "");
+        }
+        if (imported.worktimeOverrides) {
+           saveWorktimeOverrides(imported.worktimeOverrides);
+           setWorktimeVersion(v => v + 1);
+        }
+        if (imported.isDarkMode !== undefined) {
+           setIsDarkMode(imported.isDarkMode);
+        }
+        alert("설정이 성공적으로 복구되었습니다!");
+        if (showSettingsRef.current) window.history.back(); else setShowSettings(false);
+      } catch(err) {
+        alert("잘못된 백업 파일입니다.");
+      }
     };
-    reader.readAsText(file); e.target.value = null; 
+    reader.readAsText(file);
+    e.target.value = null; 
   }
 
   const handleShareGroupImage = async () => {
     if (!currentGroup || groupMembers.length === 0) return alert("공유할 그룹 인원이 없습니다.");
-    if (!window.html2canvas) { await new Promise(r => setTimeout(r, 500)); if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요."); }
-    const element = document.getElementById('capture-group-area'); if (!element) return;
-    const originalTransform = element.style.transform; const originalOverflow = element.style.overflow; element.style.transform = 'none'; element.style.overflow = 'visible'; 
-    const innerDivs = element.querySelectorAll('th > div[style*="translate3d"], td > div[style*="translate3d"]'); const origTransforms = [];
-    innerDivs.forEach((div, i) => { origTransforms[i] = div.style.transform; div.style.transform = 'none'; });
+    if (!window.html2canvas) {
+      await new Promise(r => setTimeout(r, 500));
+      if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+    }
+    const element = document.getElementById('capture-group-area');
+    if (!element) return;
+    const originalTransform = element.style.transform;
+    const originalOverflow = element.style.overflow;
+    element.style.transform = 'none';
+    element.style.overflow = 'visible'; 
+    const innerDivs = element.querySelectorAll('th > div[style*="translate3d"], td > div[style*="translate3d"]');
+    const origTransforms = [];
+    innerDivs.forEach((div, i) => {
+      origTransforms[i] = div.style.transform;
+      div.style.transform = 'none';
+    });
     await new Promise(res => setTimeout(res, 50));
     try {
       const canvas = await window.html2canvas(element, { scale: 3, backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', useCORS: true });
       canvas.toBlob(async (blob) => {
         if (!blob) return alert("이미지 생성에 실패했습니다.");
         const d = new Date(); const timestamp = `${d.getHours()}${d.getMinutes()}${d.getSeconds()}`;
-        const filename = `${currentGroup}_스케줄_${timestamp}.png`; const file = new File([blob], filename, { type: 'image/png' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ title: `${currentGroup} 스케줄`, files: [file] }); } catch (shareErr) { console.log('공유 취소', shareErr); } }
-        else { const link = document.createElement("a"); link.download = filename; link.href = URL.createObjectURL(blob); link.click(); alert("기기가 바로 공유를 지원하지 않아 앨범에 사진으로 저장했습니다."); }
+        const filename = `${currentGroup}_스케줄_${timestamp}.png`;
+        const file = new File([blob], filename, { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try { await navigator.share({ title: `${currentGroup} 스케줄`, files: [file] }); } catch (shareErr) { console.log('공유 취소', shareErr); }
+        } else {
+          const link = document.createElement("a"); link.download = filename; link.href = URL.createObjectURL(blob); link.click();
+          alert("기기가 바로 공유를 지원하지 않아 앨범에 사진으로 저장했습니다.");
+        }
       });
-    } catch (e) { alert("캡처에 실패했습니다."); } finally { element.style.transform = originalTransform; element.style.overflow = originalOverflow; innerDivs.forEach((div, i) => { div.style.transform = origTransforms[i]; }); }
+    } catch (e) { alert("캡처에 실패했습니다."); } finally {
+      element.style.transform = originalTransform; element.style.overflow = originalOverflow;
+      innerDivs.forEach((div, i) => { div.style.transform = origTransforms[i]; });
+    }
   };
 
   async function handleInstall() { if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; setDeferredPrompt(null); }
@@ -922,7 +1040,12 @@ function App() {
 
   return (
     <>
-      <div className="container" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEndHandler}>
+      <div 
+        className="container"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEndHandler}
+      >
         {!effectiveData ? (
           <div className="card">
             <div className="card-title">기본자료 ZIP 등록</div>
@@ -939,7 +1062,7 @@ function App() {
               {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
             </select>
             <label className="label" style={{ marginTop: 12 }}>내 이름</label>
-            <input className="input" type="text" placeholder="이름 직접 입력" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
+            <input className="input" type="text" placeholder="이름 직접 입력 (없으면 새로 등록됩니다)" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
             <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
             <select className="select" value={draftCode} onChange={(e) => { setDraftCode(e.target.value); }}>
               <option value="">선택</option>
@@ -975,9 +1098,17 @@ function App() {
                     <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
                     <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
                     <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
+                    
                     {homePathImage && (
-                      <div className="home-path-preview" onClick={() => { const targetTeamKey = mySelection?.teamKey || selectedTeam; openPathDialogForTeamAndDate(targetTeamKey, { code: myInfo?.code, name: myInfo?.name || "", displayName: myInfo?.displayName || "", idx: -1 }, homeDate); }}>
-                        <img src={homePathImage} alt="행로표 미리보기" /><div className="preview-label">🔍 터치해서 크게 보기</div>
+                      <div 
+                        className="home-path-preview" 
+                        onClick={() => {
+                          const targetTeamKey = mySelection?.teamKey || selectedTeam;
+                          openPathDialogForTeamAndDate(targetTeamKey, { code: myInfo?.code, name: myInfo?.name || "", displayName: myInfo?.displayName || "", idx: -1 }, homeDate);
+                        }}
+                      >
+                        <img src={homePathImage} alt="행로표 미리보기" />
+                        <div className="preview-label">🔍 터치해서 크게 보기</div>
                       </div>
                     )}
                   </div>
@@ -988,13 +1119,22 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  <div className="all-header">
-                    <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
-                    <div className="all-header-title">{TEAM_LABELS[viewTeam]} {activeTab === "all" ? "" : "DIA순서"} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
-                    <button className="all-header-btn" onClick={() => setShowSearch(!showSearch)}>🔍</button>
-                    {activeTab === "all" && <button className={`all-edit-btn ${editMode ? "active" : ""}`} onClick={() => setEditMode(!editMode)}>{editMode ? "수정중" : "수정"}</button>}
-                    <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
-                  </div>
+                  {activeTab === "all" ? (
+                    <div className="all-header">
+                      <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
+                      <div className="all-header-title">{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
+                      <button className="all-header-btn" onClick={() => setShowSearch(!showSearch)}>🔍</button>
+                      <button className={`all-edit-btn ${editMode ? "active" : ""}`} onClick={() => setEditMode(!editMode)}>{editMode ? "수정중" : "수정"}</button>
+                      <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                    </div>
+                  ) : (
+                    <div className="all-header dia-header">
+                      <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
+                      <div className="all-header-title">{TEAM_LABELS[viewTeam]} DIA순서 {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
+                      <button className="all-header-btn" onClick={() => setShowSearch(!showSearch)}>🔍</button>
+                      <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                    </div>
+                  )}
                   {showSearch && <input className="input" style={{ marginTop: 8 }} placeholder="이름/교번/열번 통합 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />}
                 </div>
                 <div className="all-team-tabs">
@@ -1003,44 +1143,24 @@ function App() {
                 
                 {activeTab === "all" ? (
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
-                    {/* 🚀 중요 수정: 검색 결과가 1명일 때 화면 하단 빈 공간에 이미지 출력 로직 삽입 */}
-                    {searchQuery.length >= 2 && visibleAllGrid.length === 1 ? (
-                      <div className="inline-path-viewer" style={{ padding: '10px', marginTop: '10px' }}>
-                        {(() => {
-                          const item = visibleAllGrid[0];
-                          const targetDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
-                          const team = effectiveData[item.teamKey];
-                          const image = findPathImage(team, targetDate, item.code);
-                          return (
-                            <div className="card" style={{ padding: '15px', background: isDarkMode ? '#1e293b' : '#fff', border: isDarkMode ? '1px solid #334155' : '1px solid #e5e7eb', textAlign: 'center' }}>
-                              <div style={{ marginBottom: '10px', fontWeight: 'bold', fontSize: '18px', color: isDarkMode ? '#f8fafc' : '#1e293b' }}>
-                                [{TEAM_LABELS[item.teamKey]}] {item.code} {item.displayName}
-                              </div>
-                              {image ? (
-                                <div onClick={() => openPathDialog(item, targetDate)}>
-                                  <img src={image} alt="행로표" style={{ width: '100%', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} />
-                                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#888' }}>🔍 터치하면 크게 볼 수 있습니다.</div>
-                                </div>
-                              ) : (
-                                <div className="empty-box" style={{ padding: '40px' }}>해당 행로표 이미지가 없습니다.</div>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    ) : (
+                    {(!searchQuery || visibleAllGrid.length !== 1) && (
                       <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
                         {visibleAllGrid.map((item, idx) => {
                           const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                           const isToday = browseDate === getKoreaToday();
                           const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
-                          const textColorStyle = item.customColor ? { color: "#000000" } : { color: isDarkMode ? '#f8fafc' : 'inherit' };
+                          const textColorStyle = item.customColor ? { color: "#000000" } : undefined;
+                          
                           return (
                             <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
                               <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
                               <div className="all-name" style={textColorStyle}>
-                                {item.displayName || "-"}
-                                {searchQuery && <div style={{ fontSize: '9px', opacity: 0.8 }}>[{TEAM_LABELS[item.teamKey]}]</div>}
+                                  {item.displayName || "-"}
+                                  {searchQuery && (
+                                      <div style={{fontSize: '9px', opacity: 0.8, color: item.customColor ? '#000000' : 'inherit'}}>
+                                          [{TEAM_LABELS[item.teamKey]}]
+                                      </div>
+                                  )}
                               </div>
                             </div>
                           );
@@ -1055,7 +1175,7 @@ function App() {
                       return (
                         <div key={`${idx}`} onClick={() => openPathDialog(item, browseDate)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 16px", borderBottom: idx === filteredDiaList.length - 1 ? "none" : (isDarkMode ? "1px solid #334155" : "1px solid #e5e7eb"), fontSize: 18, background: isMine ? (isDarkMode ? "rgba(56, 189, 248, 0.15)" : "#eef6ff") : "transparent", borderLeft: isMine ? (isDarkMode ? "4px solid #38bdf8" : "4px solid #3b82f6") : "4px solid transparent", cursor: "pointer" }}>
                           <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
-                          <div style={{ fontWeight: 600, color: isDarkMode ? '#f8fafc' : 'inherit' }}>{item.displayName || item.name}</div>
+                          <div style={{ fontWeight: 600 }}>{item.displayName || item.name}</div>
                         </div>
                       );
                     })}
@@ -1067,26 +1187,32 @@ function App() {
             {activeTab === "month" && (
               <div className="tab-page" id="capture-month-area">
                 <div className="month-header-bar" style={{ display: 'flex', gap: '8px' }}>
-                  <button className="month-nav-btn" style={{ width: '48px' }} onClick={() => setMonthDate(addMonths(monthDate, -1))}>-</button>
+                  <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, -1))}>-</button>
                   <div className="month-header-title" style={{ flex: 1 }}>{monthHeaderDate.getFullYear()}년 {monthHeaderDate.getMonth() + 1}월</div>
-                  <button className="month-nav-btn" style={{ width: '48px', background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)' }} onClick={() => captureAndSave('capture-month-area', `월교번`, isDarkMode)}>📷</button>
-                  <button className="month-nav-btn" style={{ width: '48px' }} onClick={() => setMonthDate(addMonths(monthDate, 1))}>+</button>
+                  <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', fontSize: '20px' }} onClick={() => captureAndSave('capture-month-area', `월교번`, isDarkMode)}>📷</button>
+                  <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, 1))}>+</button>
                 </div>
                 <div className="month-calendar" style={swipeStyle}>
-                  <div className="month-weekdays"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>
+                  <div className="month-weekdays">
+                    <div className="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="sat">토</div>
+                  </div>
                   {monthMatrix.map((row, rowIdx) => (
                     <div className="month-row" key={rowIdx}>
                       {row.map((date) => {
                         const item = mySelection?.name ? getPersonGyobunForDate(effectiveData, remoteRoster, mySelection?.teamKey || selectedTeam, mySelection.name, date, overrides, mySelection) : null;
                         const sameMonth = parseLocalDate(date).getMonth() === monthHeaderDate.getMonth(); 
-                        const isSelected = date === getKoreaToday(); const toneClass = getDateToneClass(date);
+                        const isSelected = date === getKoreaToday(); 
+                        const toneClass = getDateToneClass(date);
                         const targetTeamKey = mySelection?.teamKey || selectedTeam; const worktime = item?.code ? pickWorktime(effectiveData[targetTeamKey], item.code, date) : ""; const { startTime, endTime } = splitWorktime(worktime);
                         return (
-                          <button key={date} className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`} onClick={() => { if (item?.code) { openPathDialogForTeamAndDate(targetTeamKey, { code: item.code, name: item.name || "", displayName: item.displayName || "", idx: -1 }, date); } }}>
+                          <button key={date} className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`} onClick={() => { if (item?.code) { openPathDialogForTeamAndDate(targetTeamKey, { code: item.code, name: item.name || mySelection?.name || "", displayName: item.displayName || mySelection?.name || "", idx: -1 }, date); } else { setMonthDate(date); } }}>
                             <div className={`month-cell-inner ${toneClass}`}>
                               <div className={`month-day ${toneClass}`}>{parseLocalDate(date).getDate()}</div>
                               <div className={`month-code-line ${toneClass}`}>{item?.code || "-"}</div>
-                              <div className="month-time-wrap"><div className={`month-time-line ${toneClass}`}>{startTime || "-"}</div><div className={`month-time-line ${toneClass}`}>{endTime || ""}</div></div>
+                              <div className="month-time-wrap">
+                                <div className={`month-time-line ${toneClass}`}>{startTime || "-"}</div>
+                                <div className={`month-time-line ${toneClass}`}>{endTime || ""}</div>
+                              </div>
                             </div>
                           </button>
                         );
@@ -1101,23 +1227,70 @@ function App() {
               <div className="group-page tab-page">
                 <div className="group-top-bar-v4">
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, -7))}>◀</button>
-                  <div className="group-select-wrap"><div className="group-select-display">{groupMonth ? `${parseInt(groupMonth.split('-')[1], 10)}월 ▾` : "월 ▾"}</div><select className="group-select-overlay" value={groupMonth} onChange={(e) => handleGroupMonthChange(e.target.value)}>{groupMonthOptions.map((item) => (<option key={item.value} value={item.value}>{item.label}</option>))}</select></div>
-                  <div className="group-select-wrap"><div className="group-select-display">{currentGroup ? `${currentGroup} ▾` : "그룹 없음 ▾"}</div><select className="group-select-overlay" value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>{Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>)}</select></div>
-                  <div style={{ flex: 1, display: 'flex', gap: '4px' }}><button className="group-add-btn-v4" onClick={() => setShowGroupAdd(true)}>관리</button><button className="group-add-btn-v4" style={{ background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)' }} onClick={handleShareGroupImage}>공유</button></div>
+                  <div className="group-select-wrap">
+                    <div className="group-select-display">{groupMonth ? `${parseInt(groupMonth.split('-')[1], 10)}월 ▾` : "월 ▾"}</div>
+                    <select className="group-select-overlay" value={groupMonth} onChange={(e) => handleGroupMonthChange(e.target.value)}>
+                      {groupMonthOptions.map((item) => (<option key={item.value} value={item.value}>{item.label}</option>))}
+                    </select>
+                  </div>
+                  <div className="group-select-wrap">
+                    <div className="group-select-display">{currentGroup ? `${currentGroup} ▾` : "그룹 없음 ▾"}</div>
+                    <select className="group-select-overlay" value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
+                      {Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1, display: 'flex', gap: '4px', minWidth: 0, height: '100%' }}>
+                    <button className="group-add-btn-v4" onClick={() => setShowGroupAdd(true)}>관리</button>
+                    <button className="group-add-btn-v4" style={{ background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2)' }} onClick={handleShareGroupImage}>공유</button>
+                  </div>
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>▶</button>
                 </div>
                 <div className="group-table-wrap" id="capture-group-area">
                   <table className="group-table">
-                    <thead><tr><th className="sticky-col">이름</th>{weekDates.map((date) => (<th key={date} onClick={() => setSelectedGroupDate(date)} className={`${selectedGroupDate === date ? "active-col" : ""} ${date === getKoreaToday() ? "today-col" : ""}`}><div style={swipeStyle}><div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div><div className="day-date">{formatMonthDay(date)}</div></div></th>))}</tr></thead>
-                    <tbody>
-                      {groupMembers.length === 0 ? (<tr><td colSpan={8} className="empty-msg">그룹 인원을 추가해주세요.</td></tr>) : (
-                        groupMembers.map((member, idx) => {
-                          const override = overrides[getOverrideKey(member.team, member.name)] || {}; const displayMemberName = override.alias || member.name;
+                    <thead>
+                      <tr>
+                        <th className="sticky-col">이름</th>
+                        {weekDates.map((date) => {
+                          const isSelectedCol = selectedGroupDate === date; const isToday = date === getKoreaToday();
                           return (
-                          <tr key={`${idx}`}><td className="group-name-cell sticky-col"><div className="group-name-cell-inner"><div className="name-txt">{displayMemberName}</div><div className="team-badge">{TEAM_LABELS[member.team]}</div><button className="row-del-btn-text" onClick={() => removeFromGroup(member.team, member.name)}>삭제</button></div></td>
+                            <th key={date} onClick={() => setSelectedGroupDate(date)} className={`${isSelectedCol ? "active-col" : ""} ${isToday ? "today-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
+                              <div style={{ ...swipeStyle, padding: '10px 4px 8px 4px', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
+                                <div className="day-date">{formatMonthDay(date)}</div>
+                              </div>
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groupMembers.length === 0 ? (
+                        <tr><td colSpan={8} className="empty-msg">그룹 인원을 추가해주세요.</td></tr>
+                      ) : (
+                        groupMembers.map((member, idx) => {
+                          const override = overrides[getOverrideKey(member.team, member.name)] || {};
+                          const displayMemberName = override.alias || member.name;
+                          return (
+                          <tr key={`${idx}`}>
+                            <td className="group-name-cell sticky-col">
+                              <div className="group-name-cell-inner">
+                                <div className="name-txt">{displayMemberName}</div>
+                                <div className="team-badge">{TEAM_LABELS[member.team]}</div>
+                                <button className="row-del-btn-text" onClick={() => removeFromGroup(member.team, member.name)}>삭제</button>
+                              </div>
+                            </td>
                             {weekDates.map((date) => {
                               const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
-                              return (<td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ background: selectedGroupDate === date ? (isDarkMode ? "rgba(59, 130, 246, 0.2)" : "#f5f3ff") : "" }}><div style={{ ...swipeStyle, color: selectedGroupDate === date ? (isDarkMode ? "#60a5fa" : "#4c1d95") : (isDarkMode ? "#f8fafc" : "inherit") }}>{item?.code || "-"}</div></td>);
+                              const isSelectedCol = selectedGroupDate === date;
+                              const cellBackground = isSelectedCol ? (isDarkMode ? "rgba(59, 130, 246, 0.2)" : "#f5f3ff") : "";
+                              const textColor = isSelectedCol ? (isDarkMode ? "#60a5fa" : "#4c1d95") : "inherit";
+                              return (
+                                <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', background: cellBackground, transition: "background-color 0.18s ease" }}>
+                                  <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: isSelectedCol ? 700 : 600, color: textColor }}>
+                                    {item?.code || "-"}
+                                  </div>
+                                </td>
+                              );
                             })}
                           </tr>
                           );
@@ -1143,32 +1316,109 @@ function App() {
       )}
 
       {showSettings && (
-        <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
+        <div className="modal-backdrop" onClick={() => { if (showSettingsRef.current) window.history.back(); else setShowSettings(false); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">설정</div>
-            <button className="modal-btn" style={{ width: '100%', marginBottom: 16 }} onClick={() => setIsDarkMode(!isDarkMode)}>{isDarkMode ? "🌙 다크 모드 켜짐" : "☀️ 라이트 모드 켜짐"}</button>
-            <label className="label">기본자료 ZIP 등록 / 변경</label><input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
+            <label className="label" style={{ marginTop: 6 }}>화면 테마</label>
+            <button className="modal-btn" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 16px', marginBottom: 16 }} onClick={() => setIsDarkMode(!isDarkMode)}>
+              <span>{isDarkMode ? "🌙 다크 모드 켜짐" : "☀️ 라이트 모드 켜짐"}</span>
+              <span style={{ fontSize: '18px' }}>{isDarkMode ? "✅" : "☑️"}</span>
+            </button>
+            <label className="label">기본자료 ZIP 등록 / 변경</label>
+            <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
             {!allowProfileEdit ? (
-              <div className="notice-box" style={{ marginTop: 14 }}>내 소속: {TEAM_LABELS[mySelection?.teamKey || selectedTeam]}<br />내 이름: {mySelection?.name}<br />내 기준교번: {mySelection?.code}<br /><button className="modal-btn" style={{ marginTop: 8 }} onClick={startReconfigureProfile}>내 정보 수정</button></div>
+              <>
+                <label className="label" style={{ marginTop: 14 }}>내 정보</label>
+                <div className="notice-box" style={{ marginTop: 8 }}>
+                  내 소속: {TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"}<br />
+                  내 이름: {mySelection?.name || "-"}<br />
+                  내 기준교번: {mySelection?.code || "-"}<br />
+                  기준날짜: {mySelection?.anchorDate || "-"}
+                </div>
+                <div className="modal-actions"><button className="modal-btn" onClick={startReconfigureProfile}>내 정보 다시 설정</button></div>
+              </>
             ) : (
-              <div style={{ marginTop: 12 }}><label className="label">내 이름</label><input className="input" type="text" value={draftName} onChange={(e) => setDraftName(e.target.value)} /><button className="modal-btn primary" style={{ marginTop: 12, width: '100%' }} onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)}>저장</button></div>
+              <>
+                <label className="label" style={{ marginTop: 12 }}>내 소속</label>
+                <select className="select" value={draftTeam} onChange={(e) => { const nextTeam = e.target.value; setDraftTeam(nextTeam); setSelectedTeam(nextTeam); setDraftName(""); setDraftCode(""); }}>
+                  {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
+                </select>
+                <label className="label" style={{ marginTop: 12 }}>내 이름</label>
+                <input className="input" type="text" placeholder="이름 직접 입력" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
+                <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
+                <select className="select" value={draftCode} onChange={(e) => { setDraftCode(e.target.value); }}>
+                  <option value="">선택</option>
+                  {(setupSourceData?.[draftTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (<option key={`${idx}`} value={code}>{code}</option>))}
+                </select>
+                <label className="label" style={{ marginTop: 12 }}>기준 날짜</label>
+                <input className="input" type="date" value={profileAnchorDate} onChange={(e) => { const nextDate = e.target.value || getKoreaToday(); setProfileAnchorDate(nextDate); }} />
+                <div className="modal-actions">
+                  <button className="modal-btn" onClick={cancelReconfigureProfile}>취소</button>
+                  <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() || !draftCode}>저장</button>
+                </div>
+              </>
             )}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '24px' }}><button className="modal-btn" style={{ flex: 1 }} onClick={exportSettings}>📥 백업</button><label className="modal-btn" style={{ flex: 1, textAlign: 'center' }}>📤 복구<input type="file" accept=".json" style={{ display: 'none' }} onChange={importSettings} /></label></div>
-            <div className="modal-actions"><button className="modal-btn" onClick={resetMyProfile}>초기화</button><button className="modal-btn primary" onClick={() => setShowSettings(false)}>닫기</button></div>
+            <label className="label" style={{ marginTop: 24 }}>데이터 백업 및 복구</label>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <button className="modal-btn" style={{ flex: 1 }} onClick={exportSettings}>📥 백업하기</button>
+              <label className="modal-btn" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', margin: 0 }}>
+                📤 복구하기
+                <input type="file" accept=".json" style={{ display: 'none' }} onChange={importSettings} />
+              </label>
+            </div>
+            {isAdminUser && (
+              <div className="card" style={{ marginTop: 14, padding: 12 }}>
+                <div className="label" style={{ marginBottom: 10 }}>관리자</div>
+                <label className="label">공용 기준일</label>
+                <input className="input" type="date" value={remoteBaseDate} onChange={(e) => setRemoteBaseDate(e.target.value)} />
+                <div className="modal-actions">
+                  <button className="modal-btn" onClick={publishRoster} disabled={savingSharedConfig}>{savingSharedConfig ? "처리중..." : "현재배정 배포"}</button>
+                  <button className="modal-btn primary" onClick={saveSharedConfig} disabled={savingSharedConfig}>{savingSharedConfig ? "저장중..." : "공용 기준일 저장"}</button>
+                </div>
+              </div>
+            )}
+            <div className="modal-actions">
+              <button className="modal-btn" onClick={resetMyProfile}>내 정보 초기화</button>
+              <button className="modal-btn primary" onClick={() => { if (showSettingsRef.current) window.history.back(); else setShowSettings(false); }}>닫기</button>
+            </div>
           </div>
         </div>
       )}
 
       {showGroupAdd && (
-        <div className="modal-backdrop" onClick={() => setShowGroupAdd(false)}>
+        <div className="modal-backdrop" onClick={() => { if (showGroupAddRef.current) window.history.back(); else setShowGroupAdd(false); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">그룹 관리</div>
-            <input className="input" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="새 그룹 이름" /><button className="modal-btn primary" style={{ width: '100%', marginTop: 8 }} onClick={handleGroupSubmit}>생성</button>
-            <select className="select" style={{ marginTop: 16 }} value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>{Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>)}</select>
-            <button className="modal-btn" style={{ width: '100%', color: '#ef4444' }} onClick={deleteCurrentGroup}>🗑️ 그룹 삭제</button>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: 16 }}><select className="select" value={groupAddTeam} onChange={(e) => setGroupAddTeam(e.target.value)}>{TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}</select><select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}><option value="">이름 선택</option>{groupAddCandidates.map((p) => (<option key={p.name} value={p.name}>{p.displayName}</option>))}</select></div>
-            <button className="modal-btn primary" style={{ width: '100%', marginTop: 8 }} onClick={addToGroup}>+ 인원 추가</button>
-            <div className="modal-actions"><button className="modal-btn" onClick={() => setShowGroupAdd(false)}>닫기</button></div>
+            <label className="label">1. 새 그룹 만들기</label>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+              <input className="input" style={{ flex: 1 }} value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="예: 1조, 낚시모임" />
+              <button className="modal-btn primary" style={{ width: 'auto', padding: '0 16px' }} onClick={handleGroupSubmit}>생성</button>
+            </div>
+            <label className="label">2. 관리할 그룹 선택</label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
+              <select className="select" style={{ flex: 1, margin: 0 }} value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
+                {Object.keys(groups).length === 0 ? (<option value="">그룹 없음</option>) : (Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
+              </select>
+              <button className="modal-btn" style={{ width: 'auto', padding: '0 14px', margin: 0, color: '#ef4444', borderColor: '#fca5a5', background: '#fef2f2' }} onClick={deleteCurrentGroup} disabled={!currentGroup}>🗑️ 삭제</button>
+            </div>
+            <label className="label">3. 선택된 그룹에 인원 추가</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+              <div>
+                <select className="select" value={groupAddTeam} onChange={(e) => { setGroupAddTeam(e.target.value); setGroupAddName(""); }}>
+                  {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
+                </select>
+              </div>
+              <div>
+                <select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}>
+                  <option value="">선택</option>
+                  {groupAddCandidates.map((person) => (<option key={`${groupAddTeam}-${person.name}`} value={person.name}>{person.displayName}</option>))}
+                </select>
+              </div>
+            </div>
+            <button className="modal-btn primary" style={{ width: '100%' }} onClick={addToGroup} disabled={!currentGroup || !groupAddName}>+ 인원 추가</button>
+            <div className="modal-actions" style={{ marginTop: '24px' }}>
+              <button className="modal-btn" style={{ width: '100%' }} onClick={() => { if (showGroupAddRef.current) window.history.back(); else setShowGroupAdd(false); }}>닫기</button>
+            </div>
           </div>
         </div>
       )}
@@ -1176,26 +1426,70 @@ function App() {
       {editOpen && (
         <div className="modal-backdrop" onClick={closeEditDialog}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">표시 수정</div><input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="표시 이름" />
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: 12 }}>{COLOR_OPTIONS.map((item) => (<button key={item.label} className="color-dot" style={{ backgroundColor: item.value || '#ffffff', border: '1px solid #ddd', width: 40, height: 40, borderRadius: '50%' }} onClick={() => setEditColor(item.value)} />))}</div>
-            <div className="modal-actions"><button className="modal-btn" onClick={closeEditDialog}>취소</button><button className="modal-btn primary" onClick={() => commitEdit()}>변경</button></div>
+            <div className="modal-title">표시 수정</div>
+            <div className="modal-sub">{TEAM_LABELS[editingCell?.teamKey || viewTeam]} {editingCell?.code} {editingCell?.name}</div>
+            <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
+            <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="비워두면 원래 이름 사용" />
+            <label className="label" style={{ marginTop: 12 }}>색상</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                {COLOR_OPTIONS.map((item) => (
+                    <button 
+                        key={item.label} 
+                        className={`color-dot ${editColor === item.value ? 'active' : ''}`}
+                        style={{ backgroundColor: item.value || '#ffffff', border: item.value ? 'none' : '1px solid #ddd', width: 40, height: 40, borderRadius: '50%' }}
+                        onClick={() => setEditColor(item.value)}
+                        title={item.label}
+                    />
+                ))}
+            </div>
+            <button className="modal-btn" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsWorktimeEditOpen((prev) => !prev)}>출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}</button>
+            {isWorktimeEditOpen && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, marginBottom: 12 }}>
+                  <input className="input" inputMode="numeric" value={editStartHour} onChange={(e) => setEditStartHour(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="06" />
+                  <div style={{ fontWeight: 700 }}>:</div>
+                  <input className="input" inputMode="numeric" value={editStartMin} onChange={(e) => setEditStartMin(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="33" />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                  <input className="input" inputMode="numeric" value={editEndHour} onChange={(e) => setEditEndHour(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="15" />
+                  <div style={{ fontWeight: 700 }}>:</div>
+                  <input className="input" inputMode="numeric" value={editEndMin} onChange={(e) => setEditEndMin(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="54" />
+                </div>
+              </div>
+            )}
+            <div className="modal-actions">
+              <button className="modal-btn" onClick={closeEditDialog}>아니요</button>
+              <button className="modal-btn primary" onClick={() => commitEdit(editColor, editAlias)}>변경</button>
+            </div>
           </div>
         </div>
       )}
 
       {pathOpen && (
         <div className="viewer-page">
-          <div className="viewer-header"><div className="viewer-title">행로표</div><button className="modal-btn primary" onClick={closePathDialog}>닫기</button></div>
+          <div className="viewer-header">
+            <div className="viewer-title">행로표</div>
+            <button className="modal-btn primary" onClick={closePathDialog}>닫기</button>
+          </div>
           <div className="viewer-body">
-            <div style={{ fontSize: 18, fontWeight: 700, color: isDarkMode ? '#f8fafc' : 'inherit' }}>{TEAM_LABELS[pathTeamKey]} / {pathTarget?.displayName} / {pathTarget?.code}</div>
-            <div style={{ color: "#6b7280", marginBottom: 16 }}>{pathDate}</div>
-            {pathImage ? (<img src={pathImage} alt="행로표" className="fullscreen-image" />) : (<div className="empty-box">이미지가 없습니다.</div>)}
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
+            <div style={{ color: "#6b7280", marginBottom: 16 }}>{pathDate} {weekdayName(pathDate)}</div>
+            {pathImage ? (<img src={pathImage} alt="행로표" className="fullscreen-image" />) : (<div className="empty-box">해당 행로표 이미지를 찾지 못했습니다.</div>)}
           </div>
         </div>
       )}
 
       {showUpdatePopup && (
-        <div className="modal-backdrop" onClick={closeUpdatePopup}><div className="modal"><div className="modal-title">업데이트</div><div className="help-text">최신 정보가 있습니다. 업데이트할까요?</div><div className="modal-actions"><button className="modal-btn" onClick={closeUpdatePopup}>나중에</button><button className="modal-btn primary" onClick={applyPendingRosterUpdate}>업데이트</button></div></div></div>
+        <div className="modal-backdrop" onClick={closeUpdatePopup}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">업데이트 알림</div>
+            <div className="help-text" style={{ marginTop: 8 }}>최신 인원/교번 정보가 있습니다.<br />지금 업데이트하시겠습니까?</div>
+            <div className="modal-actions">
+              <button className="modal-btn" onClick={closeUpdatePopup}>나중에</button>
+              <button className="modal-btn primary" onClick={applyPendingRosterUpdate}>업데이트</button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
@@ -1203,10 +1497,10 @@ function App() {
 
 function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, overrides = {}, mySelection = null) {
   const team = data?.[teamKey]; if (!team) return null;
+  const override = overrides[getOverrideKey(teamKey, name)] || {};
   const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
   const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
   const code = shiftCodeByDays(team, anchor.code, dayOffset);
-  const override = overrides[getOverrideKey(teamKey, name)] || {};
   return { code, name, displayName: override.alias || name, teamKey };
 }
 
