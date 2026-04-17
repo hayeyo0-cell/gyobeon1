@@ -1,8 +1,8 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 메인 상시 노출 버전)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (최종 수정본)
  * 수정 사항: 
- * 1. 메인 화면(Home) 하단 빈 공간에 현재 날짜/교번의 행로표 이미지를 즉시 렌더링
- * 2. 이미지 클릭 시 기존처럼 전체 화면 확대 기능 유지
- * 3. 1,500줄 이상의 기존 검색/교번/야간 로직 및 관리자 기능 완전 유지
+ * 1. 야간 근무자(NightStart)의 새벽 열차 검색 시 날짜 교차 로직 적용 (송호철/정지은 기관사님 사례 해결)
+ * 2. 검색 결과가 1명일 때 이름 셀을 거치지 않고 즉시 행로표(이미지) 전체화면 팝업
+ * 3. "(어제 출근)" 등 불필요한 문구 완전 삭제 및 다크모드 글자색 대비 수정
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -711,6 +711,8 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
         
+        /** 🚀 수정: 오늘 출근자 중 새벽 열차(2000~2100번대 등) 검색은 제외 
+         * (오늘 밤에 출근할 송호철님이 오늘 2006으로 검색되는 것 방지) **/
         if (isTrainMatch && isNightStartCode(teamKey, item.code)) {
             const isDawnTrain = trains.some(t => Number(t) >= 2000 && Number(t) <= 2100); 
             if (isDawnTrain) return false;
@@ -725,6 +727,8 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
 
+        /** 🚀 수정: 어제 출근자 중 해당 열차(예: 2006)가 있다면 오늘 결과로 포함 
+         * (17일 출근 송호철님이 18일 2006 검색 결과로 나옴) **/
         return isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr }));
 
@@ -736,6 +740,7 @@ function App() {
 
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
 
+  /** 🚀 🆕 수정: 결과가 딱 1명일 때 행로표 즉각 실행 (팝업) **/
   useEffect(() => {
     if (activeTab === "all" && visibleAllGrid.length === 1 && searchQuery.length >= 2) {
       const target = visibleAllGrid[0];
@@ -1057,7 +1062,7 @@ function App() {
               {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
             </select>
             <label className="label" style={{ marginTop: 12 }}>내 이름</label>
-            <input className="input" type="text" placeholder="이름 직접 입력" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
+            <input className="input" type="text" placeholder="이름 직접 입력 (없으면 새로 등록됩니다)" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
             <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
             <select className="select" value={draftCode} onChange={(e) => { setDraftCode(e.target.value); }}>
               <option value="">선택</option>
@@ -1088,37 +1093,25 @@ function App() {
                   <div className="date-box"><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() + 1); setHomeDate(formatDate(d)); }}>+</button><div className="date-value">{parseLocalDate(homeDate).getMonth() + 1}월</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
                   <div className="date-box"><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, 1))}>+</button><div className="date-value">{parseLocalDate(homeDate).getDate()}일</div><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, -1))}>-</button></div>
                 </div>
-                
-                {/** 🚀 수정: 메인 카드 영역을 축소하고 하단 빈 공간에 행로표 배치 **/ }
-                <div className="card main-panel" style={{...swipeStyle, marginBottom: '12px', minHeight: 'auto'}}>
+                <div className="card main-panel" style={swipeStyle}>
                   <div className="center-view">
-                    <div className="main-code" style={{ color: getDateBasedColor(homeDate), fontSize: '42px' }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
-                    <div className="main-time" style={{ color: getDateBasedColor(homeDate), fontSize: '28px', marginTop: '4px' }}>{myInfo?.time || "----"}</div>
-                    <div className="main-subinfo" style={{ marginTop: '8px' }}>{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
-                  </div>
-                </div>
-
-                {/** 🚀 🆕 추가: 사진 속 빨간 원 영역에 행로표 상시 노출 **/ }
-                <div className="home-path-full-display" style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '80px', ...swipeStyle }}>
-                  {homePathImage ? (
-                    <div 
-                      className="home-path-image-container" 
-                      onClick={() => {
-                        const targetTeamKey = mySelection?.teamKey || selectedTeam;
-                        openPathDialogForTeamAndDate(targetTeamKey, { code: myInfo?.code, name: myInfo?.name || "", displayName: myInfo?.displayName || "", idx: -1 }, homeDate);
-                      }}
-                      style={{ cursor: "pointer", borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', background: '#fff' }}
-                    >
-                      <img src={homePathImage} alt="행로표" style={{ width: '100%', display: 'block', height: 'auto' }} />
-                      <div style={{ textAlign: 'center', padding: '10px', fontSize: '13px', color: '#666', background: isDarkMode ? '#1e293b' : '#f8fafc' }}>
-                        🔍 터치하여 크게 보기
+                    <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
+                    <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
+                    <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
+                    
+                    {homePathImage && (
+                      <div 
+                        className="home-path-preview" 
+                        onClick={() => {
+                          const targetTeamKey = mySelection?.teamKey || selectedTeam;
+                          openPathDialogForTeamAndDate(targetTeamKey, { code: myInfo?.code, name: myInfo?.name || "", displayName: myInfo?.displayName || "", idx: -1 }, homeDate);
+                        }}
+                      >
+                        <img src={homePathImage} alt="행로표 미리보기" />
+                        <div className="preview-label">🔍 터치해서 크게 보기</div>
                       </div>
-                    </div>
-                  ) : (
-                    <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8', background: isDarkMode ? 'rgba(30,41,59,0.5)' : 'rgba(255,255,255,0.5)', borderRadius: '12px', border: '2px dashed #cbd5e1' }}>
-                       행로표 이미지가 없습니다.<br/>(휴무 또는 자료 부족)
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </>
             )}
