@@ -679,7 +679,6 @@ function App() {
     return grid.map(item => ({ ...item, teamKey: viewTeam })); 
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
 
-  /** 🚀 수정 완료: 검색 시각 기반 날짜 교차 필터링 **/
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
@@ -687,7 +686,6 @@ function App() {
     const yesterdayStr = addDays(browseDate, -1);
     const now = getKoreaNow();
     const nowHour = now.getHours();
-    
     const isEarlyMorning = nowHour < 11; 
 
     let crossTeamResults = [];
@@ -734,6 +732,18 @@ function App() {
   }, [allGrid, searchQuery, browseDate, effectiveData, remoteRoster, overrides, teamAnchors]);
 
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
+
+  /** 🚀 🆕 수정: 검색 결과가 딱 1명일 때 행로표 즉시 팝업 로직 **/
+  useEffect(() => {
+    if (activeTab === "all" && visibleAllGrid.length === 1 && searchQuery.length >= 2) {
+      const target = visibleAllGrid[0];
+      const targetDate = target.searchOrigin === 'yesterday' ? target.browseDate : browseDate;
+      // 이미 열려있는 동일 행로표면 중복 호출 방지
+      if (pathOpen && pathTarget?.name === target.name && pathDate === targetDate) return;
+      openPathDialog(target, targetDate);
+    }
+  }, [visibleAllGrid, searchQuery, activeTab]);
+
   const allGridLayout = useMemo(() => { return getAllGridLayout(visibleAllGrid.length || 0); }, [visibleAllGrid.length]);
   const allGridRows = useMemo(() => { return Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols)); }, [visibleAllGrid.length, allGridLayout.cols]);
 
@@ -1131,7 +1141,6 @@ function App() {
                       {visibleAllGrid.map((item, idx) => {
                         const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
-                        
                         const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
                         const textColorStyle = item.customColor ? { color: "#000000" } : undefined;
                         
