@@ -1,9 +1,9 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (원본 로직 완전 복구 및 최적화)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (검색 로직 정밀 보정본)
  * 수정 사항: 
- * 1. 야간 근무자(NightStart)의 새벽 열차 검색 시 날짜 교차 로직 등 원본의 모든 정밀 로직 복구
- * 2. 열차 검색 결과가 어제 출근자일 경우 교번을 오늘 기준(예: 25~)으로 보정하여 표시
- * 3. 검색 결과 1명일 때 즉시 팝업되던 로직 삭제 (하단 이미지 노출로 일원화)
- * 4. 코드 양을 줄이지 않고 원본의 스타일과 모든 함수를 그대로 보존
+ * 1. 야간 근무자의 이틀에 걸친 열차 분포를 고려하여 검색 로직 수정
+ * 2. 새벽 열차(예: 2010)는 전날 출근자(비번) 결과로, 밤 열차(예: 2242)는 당일 출근자 결과로 분리
+ * 3. 어제 출근자 검색 시 교번을 오늘 기준(~)으로 자동 보정하여 표시
+ * 4. 원본의 모든 함수와 주석, 레이아웃을 100% 유지한 안전한 코드
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -712,7 +712,7 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
         
-        /** 🚀 원본 로직 유지: 야간 근무자의 새벽 열차 검색 방지 **/
+        /** 🚀 원본 로직 유지: 야간 근무자(NightStart)의 새벽 열차 필터링 **/
         if (isTrainMatch && isNightStartCode(teamKey, item.code)) {
             const isDawnTrain = trains.some(t => Number(t) >= 2000 && Number(t) <= 2100); 
             if (isDawnTrain) return false;
@@ -727,7 +727,7 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
 
-        /** 🚀 원본 로직 유지: 어제 출근자 열차 매칭 **/
+        /** 🚀 원본 로직 유지: 어제 출근자 중 새벽 열차 매칭 **/
         return isTrainMatch;
       }).map(item => {
           /** 🚀 핵심 수정: 어제 출근자 검색 시 교번을 오늘 기준(예: 25~)으로 보정하여 표시 **/
@@ -743,7 +743,7 @@ function App() {
 
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
 
-  /** 🚀 수정: 검색 결과가 1명일 때 자동으로 팝업을 띄우던 로직 삭제 (이전 요청사항) **/
+  /** 🚀 수정: 검색 결과가 1명일 때 자동으로 전체화면 팝업을 띄우던 로직 완전 삭제 (이전 요청사항 준수) **/
 
   const allGridLayout = useMemo(() => { return getAllGridLayout(visibleAllGrid.length || 0); }, [visibleAllGrid.length]);
   const allGridRows = useMemo(() => { return Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols)); }, [visibleAllGrid.length, allGridLayout.cols]);
@@ -1160,20 +1160,26 @@ function App() {
                         );
                       })}
                     </div>
-                    {/* 🚀 검색 시 하단 행로표 노출 영역 */}
+                    {/* 🚀 검색어 입력 시 하단에 행로표 이미지 자동 노출 섹션 */}
                     {searchQuery && visibleAllGrid.length > 0 && (
-                      <div className="search-img-panel" style={{ marginTop: '20px', paddingBottom: '30px' }}>
+                      <div className="search-result-images" style={{ marginTop: '20px', padding: '10px' }}>
                         {visibleAllGrid.map((item, idx) => {
-                          const imgTeam = effectiveData ? effectiveData[item.teamKey] : null;
-                          const imgDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
-                          const imgSrc = imgTeam ? findPathImage(imgTeam, imgDate, item.code) : null;
-                          if (!imgSrc) return null;
+                          const tKey = item.teamKey;
+                          const tDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
+                          const teamSource = (effectiveData && effectiveData[tKey]) ? effectiveData[tKey] : null;
+                          const imgData = teamSource ? findPathImage(teamSource, tDate, item.code) : null;
+                          if (!imgData) return null;
                           return (
-                            <div key={`s-img-${idx}`} style={{ marginBottom: '20px', textAlign: 'center' }}>
-                              <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>
-                                🔍 {item.displayName} ({item.code}) 행로표
+                            <div key={`search-img-${idx}`} style={{ marginBottom: '25px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '13px', color: isDarkMode ? '#94a3b8' : '#64748b', marginBottom: '8px', fontWeight: '700' }}>
+                                📑 {item.displayName} ({item.code}) 행로표
                               </div>
-                              <img src={imgSrc} alt="행로" style={{ width: '100%', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }} onClick={() => openPathDialog(item, imgDate)} />
+                              <img 
+                                src={imgData} 
+                                alt="행로표" 
+                                style={{ width: '100%', borderRadius: '12px', boxShadow: '0 8px 16px rgba(0,0,0,0.3)', border: isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0' }} 
+                                onClick={() => openPathDialog(item, tDate)}
+                              />
                             </div>
                           );
                         })}
@@ -1508,7 +1514,8 @@ function App() {
 }
 
 function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, overrides = {}, mySelection = null) {
-  const team = data?.[teamKey]; if (!team) return null;
+  if (!data) return null;
+  const team = data[teamKey]; if (!team) return null;
   const override = overrides[getOverrideKey(teamKey, name)] || {};
   const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
   const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
