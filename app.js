@@ -1,7 +1,10 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (검색 및 행로표 매칭 최종 완성본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표/검색 로직 최종 교정본)
  * 수정 사항: 
- * 1. 검색 필터 로직 수정: 어제 근무자(~) 검색 시, 열차 데이터 참조 폴더도 반드시 '어제' 기준으로 고정 (일요일 2004열차 검색 해결)
- * 2. findPathImage & getPathFolder: 비번(~) 근무 시 전날 요일 기준 폴더(평토, 토휴, 휴평) 매칭 로직 유지
+ * 1. 행로표 폴더 판정 로직 재설계: 
+ * - 비번(~)일 때 targetDate(어제)가 토요일이면 무조건 '토휴(sat_hol)'
+ * - 비번(~)일 때 targetDate(어제)가 일요일/공휴일이면 무조건 '휴평(hol_nor)'
+ * - 비번(~)일 때 targetDate(어제)가 금요일이면 무조건 '평토(nor_sat)'
+ * 2. 검색 필터 로직: 2000대 열차 검색 시 어제 출근자(~)를 어제 폴더 기준에서 정확히 추출
  * 3. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
@@ -122,7 +125,7 @@ function parseShiftCode(code) {
 
 function getNightRange(teamKey) { return NIGHT_RANGE_BY_TEAM[teamKey] || { start: 22, end: 29 }; }
 
-// 야간 근무군 여부 판정 (숫자만으로 판단)
+// 숫자만으로 야간 여부 판단
 function isNightStartCode(teamKey, code) { 
   const s = normalizeCodeKey(code);
   const numMatch = s.match(/^(\d+)/);
@@ -130,16 +133,6 @@ function isNightStartCode(teamKey, code) {
   const num = Number(numMatch[1]);
   const range = getNightRange(teamKey); 
   return num >= range.start && num <= range.end; 
-}
-function isNightEndCode(teamKey, code) { return isNightStartCode(teamKey, code); }
-function isDayShiftCode(teamKey, code) { 
-  const s = normalizeCodeKey(code);
-  if (!s.endsWith('d')) return false;
-  const numMatch = s.match(/^(\d+)/);
-  if (!numMatch) return false;
-  const num = Number(numMatch[1]);
-  const range = getNightRange(teamKey); 
-  return num >= 1 && num < range.start; 
 }
 
 function loadWorktimeOverrides() { try { return JSON.parse(localStorage.getItem(LS_WORKTIME_OVERRIDES) || "{}"); } catch { return {}; } }
@@ -151,27 +144,30 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🚀 폴더 판정 로직: 비번(~) 근무 시 숫자를 확인하여 야간 로직으로 유도 **/
+/** 🚀 폴더 판정 로직: 현장 규칙(평토, 토휴, 휴평) 완벽 적용 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
+  // 비번(~)일 때는 무조건 '어제'가 출근 요일임
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
+  
   const d = parseLocalDate(targetDate);
-  const day = d.getDay(); 
+  const day = d.getDay(); // 0:일, 5:금, 6:토
   const isHol = isHolidayDate(targetDate);
 
   if (isNightStartCode(teamKey, code)) {
-    if (isHol || day === 0) return "hol_nor"; // 휴평
-    if (day >= 1 && day <= 4) return "nor";    // 평일
-    if (day === 5) return "nor_sat";          // 평토
-    if (day === 6) return "sat_hol";          // 토휴
+    if (isHol || day === 0) return "hol_nor"; // 일요일/공휴일 출근 -> 휴평
+    if (day === 6) return "sat_hol";          // 토요일 출근 -> 토휴
+    if (day === 5) return "nor_sat";          // 금요일 출근 -> 평토
+    return "nor";                             // 평일(월~목) 출근 -> 평일
   }
 
+  // 주간 근무
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
 }
 
-/** 🚀 이미지 찾기 로직: 폴더 판정 시 원본 code를 사용하여 비번 판정 가능케 함 **/
+/** 🚀 이미지 찾기 로직 **/
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
   const folder = getPathFolder(team.key, dateStr, code);
@@ -351,7 +347,7 @@ function buildAllTeamsAutoAnchorsFromIdentity(data, remoteRoster, selectedTeamKe
 
 function getMyCodeForDate(team, dateStr, mySelection) { if (!team || !mySelection?.code) return ""; const anchorDate = String(mySelection.anchorDate || "").trim() || getZipBaseDate(team); const dayOffset = diffDays(anchorDate, dateStr); return shiftCodeByDays(team, mySelection.code, dayOffset); }
 
-function getMonthMatrix(dateStr) { const d = parseLocalDate(dateStr); year = d.getFullYear(); const month = d.getMonth(); const first = new Date(year, month, 1); const firstDay = first.getDay(); const start = new Date(year, month, 1 - firstDay); const matrix = []; for (let r = 0; r < 6; r++) { const row = []; for (let c = 0; c < 7; c++) { const temp = new Date(start); temp.setDate(start.getDate() + r * 7 + c); row.push(formatDate(temp)); } matrix.push(row); } return matrix; }
+function getMonthMatrix(dateStr) { const d = parseLocalDate(dateStr); const year = d.getFullYear(); const month = d.getMonth(); const first = new Date(year, month, 1); const firstDay = first.getDay(); const start = new Date(year, month, 1 - firstDay); const matrix = []; for (let r = 0; r < 6; r++) { const row = []; for (let c = 0; c < 7; c++) { const temp = new Date(start); temp.setDate(start.getDate() + r * 7 + c); row.push(formatDate(temp)); } matrix.push(row); } return matrix; }
 function getWeekDates(baseDate) { const d = parseLocalDate(baseDate); const day = d.getDay(); const sunday = new Date(d); sunday.setDate(d.getDate() - day); const dates = []; for (let i = 0; i < 7; i++) { const temp = new Date(sunday); temp.setDate(sunday.getDate() + i); dates.push(formatDate(temp)); } return dates; }
 
 function getMonthOptions(centerDateStr, range = 12) { 
@@ -763,7 +759,7 @@ function App() {
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
         
-        /** 🚀 핵심 수정: 어제 출근자 검색 시 폴더 판정을 반드시 'yesterdayStr'(어제) 기준으로 수행 **/
+        /** 🚀 검색 필터 로직 핵심 보정: 어제 출근자 검색 시 'yesterdayStr'(어제 날짜)를 직접 넘김 **/
         const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
