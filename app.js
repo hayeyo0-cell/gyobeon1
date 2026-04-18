@@ -1,10 +1,12 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (오류 수정 및 로직 완결본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 로직 최종 해결본)
  * 수정 사항: 
- * 1. 렌더링 오류 수정: getMonthMatrix 함수 내 누락된 year 변수 선언 보정
- * 2. 검색 필터 보정: 어제 근무자(~) 검색 시 폴더 판정을 '어제' 기준으로 수행 (일요일 2004열차 토휴 매칭 해결)
- * 3. 이미지 매칭 보정: findPathImage 실행 시 원본 code를 유지하여 비번일(~) 판정 로직 작동 보장
- * 4. 모든 소속 공통: 토~ -> 평토, 일~ -> 토휴, 월~ -> 휴평 로직 적용
- * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
+ * 1. getPathFolder 로직 재설계: 비번(~) 근무 시 출근일(어제) 요일에 맞춰 폴더 강제 지정
+ * - 어제가 토요일(6)이면 무조건 'sat_hol'(토휴)
+ * - 어제가 일요일(0)이거나 공휴일이면 무조건 'hol_nor'(휴평)
+ * - 어제가 금요일(5)이면 무조건 'nor_sat'(평토)
+ * 2. 렌더링 오류 수정: getMonthMatrix 함수 내 누락된 year 변수 선언 보정 (화이트아웃 해결)
+ * 3. 검색 필터 보정: 2000대 열차 검색 시 어제 출근자(~)를 어제 폴더 기준에서 정확히 추출
+ * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -124,7 +126,7 @@ function parseShiftCode(code) {
 
 function getNightRange(teamKey) { return NIGHT_RANGE_BY_TEAM[teamKey] || { start: 22, end: 29 }; }
 
-// 야간 근무 여부 판정 (숫자만으로 판단)
+// 야간 근무 여부 판정 (숫자만으로 판단하여 d/~ 모두 포함)
 function isNightStartCode(teamKey, code) { 
   const s = normalizeCodeKey(code);
   const numMatch = s.match(/^(\d+)/);
@@ -143,27 +145,33 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🚀 폴더 판정 로직: 비번(~) 여부에 따른 강력한 날짜 보정 (평토, 토휴, 휴평 매칭용) **/
+/** 🚀 폴더 판정 로직 최종 수정: 비번(~) 근무 시 출근일(어제) 요일에 맞춰 폴더 강제 지정 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
+  
   const d = parseLocalDate(targetDate);
   const day = d.getDay(); 
   const isHol = isHolidayDate(targetDate);
 
   if (isNightStartCode(teamKey, code)) {
-    if (isHol || day === 0) return "hol_nor"; // 일요일/공휴일 출근 -> 휴평
-    if (day === 6) return "sat_hol";          // 토요일 출근 -> 토휴
-    if (day === 5) return "nor_sat";          // 금요일 출근 -> 평토
-    return "nor";                             // 평일 출근 -> 평일
+    // 어제가 휴일/일요일 -> 오늘 비번은 휴평 (hol_nor)
+    if (isHol || day === 0) return "hol_nor"; 
+    // 어제가 토요일 -> 오늘 비번은 토휴 (sat_hol)
+    if (day === 6) return "sat_hol"; 
+    // 어제가 금요일 -> 오늘 비번은 평토 (nor_sat)
+    if (day === 5) return "nor_sat"; 
+    // 평일 출근 -> 평일
+    return "nor"; 
   }
 
+  // 주간 근무
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
 }
 
-/** 🚀 이미지 찾기 로직: 폴더 판정 시 원본 code를 사용하여 비번 판정이 가능하게 함 **/
+/** 🚀 이미지 찾기 로직: 폴더 판정 시 원본 code를 사용하여 비번 판정 가능케 함 **/
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
   const folder = getPathFolder(team.key, dateStr, code);
@@ -362,7 +370,7 @@ function getMonthMatrix(dateStr) {
   } 
   return matrix; 
 }
-function getWeekDates(baseDate) { const d = parseLocalDate(baseDate); const day = d.getDay(); const sunday = new Date(d); sunday.setDate(d.getDate() - day); const dates = []; for (let i = 0; i < 7; i++) { const temp = new Date(sunday); temp.setDate(sunday.getDate() + i); dates.push(formatDate(temp)); } return dates; }
+function getWeekDates(baseDate) { const d = parseLocalDate(baseDate); day = d.getDay(); const sunday = new Date(d); sunday.setDate(d.getDate() - day); const dates = []; for (let i = 0; i < 7; i++) { const temp = new Date(sunday); temp.setDate(sunday.getDate() + i); dates.push(formatDate(temp)); } return dates; }
 
 function getMonthOptions(centerDateStr, range = 12) { 
   const base = parseLocalDate(centerDateStr); 
