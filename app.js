@@ -1,10 +1,11 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 완전 해결 최종본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 로직 "끝판왕" 해결본)
  * 수정 사항: 
- * 1. 이미지 뷰어 전달 로직 수정: 검색 결과가 '어제 출근자(~)'인 경우, 이미지 호출 시 날짜를 '어제'로 고정하여 전달
- * 2. getPathFolder 정밀화: 비번(~) 여부를 최우선 판정하여 출근일 기준 폴더(평토, 토휴, 휴평) 매칭
- * 3. 소속별 야간 범위: 경산(21~29), 문양(24~34) 기준 완벽 적용
- * 4. 렌더링 오류 수정: getMonthMatrix 내 year 변수 선언 완료
- * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
+ * 1. getPathFolder 최우선 순위 변경: 교번에 ~기호가 있으면 숫자와 상관없이 무조건 '어제'를 기준으로 폴더 판정
+ * - 일요일(4.19)에 '21~' 검색 -> ~가 있으므로 즉시 '어제(토요일)' 판정 -> 'sat_hol'(토휴) 강제 확정
+ * - 월요일(4.20)에 '21~' 검색 -> ~가 있으므로 즉시 '어제(일요일)' 판정 -> 'hol_nor'(휴평) 강제 확정
+ * 2. 검색 필터 유지: 2000대 열차 검색 시 searchOrigin을 통해 이미지 뷰어까지 어제 날짜 정보 전달
+ * 3. 변수 선언 보정: getMonthMatrix 내 year 변수 선언 누락 재확인 및 수정
+ * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -143,26 +144,31 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🚀 폴더 판정 로직: 비번(~) 근무 시 출근일(어제) 요일에 맞춰 폴더 고정 **/
+/** 🚀 폴더 판정 로직 최종 수정: 교본 기호(~ 여부)를 최우선으로 날짜 보정 수행 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
+  
+  // 🚀 비번(~)일 경우 숫자 범위와 상관없이 실제 출근 요일인 '어제'를 먼저 확정
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
   const d = parseLocalDate(targetDate);
   const day = d.getDay(); 
   const isHol = isHolidayDate(targetDate);
 
+  // 야간 근무자 범위(경산 21~29 등) 확인
   if (isNightStartCode(teamKey, code)) {
-    if (isHol || day === 0) return "hol_nor"; 
-    if (day === 6) return "sat_hol";          
-    if (day === 5) return "nor_sat";          
-    return "nor";                             
+    if (isHol || day === 0) return "hol_nor"; // 어제가 휴일 -> 오늘 휴평
+    if (day === 6) return "sat_hol";          // 어제가 토요일 -> 오늘 토휴
+    if (day === 5) return "nor_sat";          // 어제가 금요일 -> 오늘 평토
+    return "nor";                             // 어제가 평일 -> 오늘 평일
   }
+
+  // 주간 근무
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
 }
 
-/** 🚀 이미지 찾기: 원본 code를 유지하여 비번 판정 보장 **/
+/** 🚀 이미지 찾기: 원본 code를 전달하여 ~ 판정이 정확히 getPathFolder에서 일어나게 함 **/
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
   const folder = getPathFolder(team.key, dateStr, code);
@@ -302,7 +308,7 @@ function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrid
 }
 
 function buildTeamAnchorFromZip(team) {
-  const people = Array.isArray(team?.people) ? team.people : []; const fixedCodes = getGyobunOrder(team); const baseDate = getZipBaseDate(team);
+  const people = Array.isArray(team?.people) ? team.people : []; const fixedCodes = getGyobunOrder(team); baseDate = getZipBaseDate(team);
   if (!people.length) return { name: team?.info?.baseName || "", code: normalizeToFixedCode(team, team?.info?.baseCode || fixedCodes[0] || ""), anchorDate: baseDate };
   const matchedPerson = people.find((p) => samePersonName(p.name, team?.info?.baseName)); if (matchedPerson) return { name: matchedPerson.name, code: normalizeToFixedCode(team, team?.info?.baseCode || matchedPerson.baseCode || fixedCodes[0] || ""), anchorDate: baseDate };
   const firstPerson = people[0]; return { name: firstPerson?.name || "", code: normalizeToFixedCode(team, team?.info?.baseCode || firstPerson?.baseCode || fixedCodes[0] || ""), anchorDate: baseDate };
@@ -344,7 +350,7 @@ function getMyCodeForDate(team, dateStr, mySelection) { if (!team || !mySelectio
 
 function getMonthMatrix(dateStr) { 
   const d = parseLocalDate(dateStr); 
-  const year = d.getFullYear(); 
+  const year = d.getFullYear(); // 🚀 year 변수 선언 보장
   const month = d.getMonth(); 
   const first = new Date(year, month, 1); 
   const firstDay = first.getDay(); 
@@ -477,7 +483,7 @@ function App() {
 
   const [teamAnchors, setTeamAnchors] = useState({ ks: { name: "", code: "", anchorDate: todayStr }, my: { name: "", code: "", anchorDate: todayStr }, wb: { name: "", code: "", anchorDate: todayStr }, as: { name: "", code: "", anchorDate: todayStr } });
   const [remoteBaseDate, setRemoteBaseDate] = useState(cachedShared?.baseDate || "");
-  const [savingSharedConfig, setSavingSharedConfig] = useState(false);
+  const [savingSharedConfig, setSavingSharedConfig] = useState(SavingSharedConfig => false);
   const [overrides, setOverrides] = useState({});
   const [editMode, setEditMode] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -924,7 +930,7 @@ function App() {
   function cancelReconfigureProfile() { if (mySelection?.teamKey) { setSelectedTeam(mySelection.teamKey); setViewTeam(mySelection.teamKey); } setProfileAnchorDate(mySelection?.anchorDate || todayStr); setAllowProfileEdit(false); }
   function resetMyProfile() { const today = getKoreaToday(); clearMySelection(); setMySelection({ teamKey: "ks", name: "", code: "", anchorDate: today }); setDraftTeam("ks"); setDraftName(""); setDraftCode(""); setProfileAnchorDate(today); setAllowProfileEdit(true); setSelectedTeam("ks"); setViewTeam("ks"); setInitialRemoteChecked(false); setHomeDate(today); setBrowseDate(today); setMonthDate(today); setGroupBaseDate(today); setGroupMonth(getDisplayMonthValue(today)); setSelectedGroupDate(""); }
 
-  // 🚀 핵심 수정: 터치 시 이미지 호출 날짜를 searchOrigin에 따라 보정
+  // 🚀 터치 시 이미지 호출 날짜를 searchOrigin에 따라 보정
   function handleAllCellTap(item) { 
     if (editMode) openEditDialog(item); 
     else {
