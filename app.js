@@ -1,11 +1,9 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 로직 완전 해결본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 로직 최종 해결본 - 진짜 최종)
  * 수정 사항: 
- * 1. 교번 판정 로직 수정: 교번에 ~가 붙어있어도 숫자 범위가 야간이면 야간 근무군으로 통합 판정
- * 2. 행로표 폴더 판정: 비번(~) 근무 시 '전날 출근 요일'의 규격을 완벽하게 참조
- * - 토요일 비번(~) -> 금요일 출근(평일) -> nor_sat (평토)
- * - 일요일 비번(~) -> 토요일 출근(토요일) -> sat_hol (토휴)
- * - 월요일 비번(~) -> 일요일 출근(휴일) -> hol_nor (휴평)
- * 3. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
+ * 1. findPathImage 로직 수정: 교번을 보정(d로 변경)하기 전, 원본 교번으로 폴더를 먼저 판정하도록 순서 변경
+ * 2. getPathFolder 판정 보정: 비번(~) 교번이 들어오면 숫자를 확인하여 야간 그룹이면 무조건 전날 요일 기준 폴더 참조
+ * 3. 모든 소속 공통: 토~ -> 평토, 일~ -> 토휴, 월~ -> 휴평 로직 적용
+ * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -125,7 +123,7 @@ function parseShiftCode(code) {
 
 function getNightRange(teamKey) { return NIGHT_RANGE_BY_TEAM[teamKey] || { start: 22, end: 29 }; }
 
-/** 🚀 완전 해결의 핵심: d/~ 구분 없이 숫자만으로 야간 여부를 판단 **/
+// 숫자만으로 야간 여부 판단
 function isNightStartCode(teamKey, code) { 
   const s = normalizeCodeKey(code);
   const numMatch = s.match(/^(\d+)/);
@@ -134,9 +132,7 @@ function isNightStartCode(teamKey, code) {
   const range = getNightRange(teamKey); 
   return num >= range.start && num <= range.end; 
 }
-function isNightEndCode(teamKey, code) { 
-  return isNightStartCode(teamKey, code); 
-}
+function isNightEndCode(teamKey, code) { return isNightStartCode(teamKey, code); }
 function isDayShiftCode(teamKey, code) { 
   const s = normalizeCodeKey(code);
   if (!s.endsWith('d')) return false;
@@ -156,7 +152,7 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🚀 최종 보정된 getPathFolder: 모든 소속 공통 야간 근무와 비번의 원리 적용 **/
+/** 🚀 폴더 판정 로직: 비번(~) 여부에 따른 강력한 날짜 보정 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
@@ -166,10 +162,10 @@ function getPathFolder(teamKey, dateStr, code) {
   const isHol = isHolidayDate(targetDate);
 
   if (isNightStartCode(teamKey, code)) {
-    if (isHol || day === 0) return "hol_nor"; // 일/휴 출근 -> 다음날 비번은 휴평
-    if (day >= 1 && day <= 4) return "nor";    // 월~목 출근 -> 다음날 비번은 평일
-    if (day === 5) return "nor_sat";          // 금요일 출근 -> 다음날 비번은 평토
-    if (day === 6) return "sat_hol";          // 토요일 출근 -> 다음날 비번은 토휴
+    if (isHol || day === 0) return "hol_nor"; // 휴평
+    if (day >= 1 && day <= 4) return "nor";    // 평일
+    if (day === 5) return "nor_sat";          // 평토
+    if (day === 6) return "sat_hol";          // 토휴
   }
 
   if (isHol || day === 0) return "hol";
@@ -177,13 +173,25 @@ function getPathFolder(teamKey, dateStr, code) {
   return "nor";
 }
 
+/** 🚀 이미지 찾기 로직 핵심 수정: 폴더 판정 시 원본 code를 사용하여 비번 판정이 가능하게 함 **/
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
+  
+  // 1. 먼저 폴더를 결정 (원본 code를 넘겨야 getPathFolder 내의 isTilde 판정이 먹힘)
   const folder = getPathFolder(team.key, dateStr, code);
-  const raw = normalizeCodeKey(code); const strippedD = raw.replace(/d$/, ""); const strippedTilde = raw.replace(/~$/, ""); const strippedAll = raw.replace(/d$/, "").replace(/~$/, "");
-  const candidates = [raw, strippedD, strippedTilde, strippedAll, `제${strippedAll}`, `${raw}.png`, `${raw}.jpg`, `${raw}.jpeg`, `${strippedD}.png`, `${strippedD}.jpg`, `${strippedD}.jpeg`, `${strippedTilde}.png`, `${strippedTilde}.jpg`, `${strippedTilde}.jpeg`, `${strippedAll}.png`, `${strippedAll}.jpg`, `${strippedAll}.jpeg`, `제${strippedAll}.png`, `제${strippedAll}.jpg`, `제${strippedAll}.jpeg`];
-  const bucket = team?.paths?.[folder]; if (!bucket) return null;
-  for (const key of candidates) { if (bucket[key]) return bucket[key]; if (bucket[key.toLowerCase()]) return bucket[key.toLowerCase()]; }
+  
+  // 2. 실제 파일명은 d로 끝나는 것만 있으므로 code를 보정
+  const raw = normalizeCodeKey(code).replace('~', 'd');
+  const strippedD = raw.replace(/d$/, ""); 
+  
+  const candidates = [raw, strippedD, `제${strippedD}`, `${raw}.png`, `${raw}.jpg`, `${raw}.jpeg`, `${strippedD}.png`, `${strippedD}.jpg`, `${strippedD}.jpeg` ];
+  const bucket = team?.paths?.[folder]; 
+  if (!bucket) return null;
+  
+  for (const key of candidates) { 
+    if (bucket[key]) return bucket[key]; 
+    if (bucket[key.toLowerCase()]) return bucket[key.toLowerCase()]; 
+  }
   return null;
 }
 
@@ -928,7 +936,7 @@ function App() {
     setOverrides(next); saveOverrides(next); setEditOpen(false); setEditingCell(null); setEditColor(""); setEditAlias(""); setIsWorktimeEditOpen(false); setEditStartHour(""); setEditStartMin(""); setEditEndHour(""); setEditEndMin("");
   }
 
-  function openPathDialog(item, dateStr = todayStr) { if (!effectiveData || !item?.code) return; const currentTeamKey = item.teamKey || viewTeam; const team = effectiveData[currentTeamKey]; const realCode = item.code.replace('~', 'd'); const image = findPathImage(team, dateStr, realCode); setPathTeamKey(currentTeamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
+  function openPathDialog(item, dateStr = todayStr) { if (!effectiveData || !item?.code) return; const currentTeamKey = item.teamKey || viewTeam; const team = effectiveData[currentTeamKey]; const image = findPathImage(team, dateStr, item.code); setPathTeamKey(currentTeamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { const team = effectiveData?.[teamKey]; if (!team || !item?.code) return; const image = findPathImage(team, dateStr, item.code); setViewTeam(teamKey); setPathTeamKey(teamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
@@ -1206,8 +1214,7 @@ function App() {
                         {visibleAllGrid.map((item, idx) => {
                           const imgTeam = effectiveData ? effectiveData[item.teamKey] : null;
                           const imgDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
-                          const searchCode = item.code.replace('~', 'd');
-                          const imgSrc = imgTeam ? findPathImage(imgTeam, imgDate, searchCode) : null;
+                          const imgSrc = imgTeam ? findPathImage(imgTeam, imgDate, item.code) : null;
                           if (!imgSrc) return null;
                           return (
                             <div key={`s-img-${idx}`} style={{ marginBottom: '20px', textAlign: 'center' }}>
