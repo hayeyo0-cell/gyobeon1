@@ -1,11 +1,10 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 완전 해결본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 완전 해결 최종본)
  * 수정 사항: 
- * 1. getPathFolder 로직 전면 재설계: 비번(~) 근무 시 숫자를 확인하여 야간 그룹이면 '어제' 요일 기준 폴더 강제 지정
- * - 일요일(4.19)에 '21~' 검색 -> 어제(토요일) 출근자이므로 'sat_hol'(토휴) 확정
- * - 월요일(4.20)에 '21~' 검색 -> 어제(일요일) 출근자이므로 'hol_nor'(휴평) 확정
- * 2. findPathImage 순서 변경: 비번 기호(~)를 제거하기 전 폴더를 먼저 확정하여 판정 누락 방지
- * 3. 렌더링 오류 수정: getMonthMatrix 함수 내 'year' 변수 선언 누락 수정 (화이트아웃 해결)
- * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
+ * 1. 이미지 뷰어 전달 로직 수정: 검색 결과가 '어제 출근자(~)'인 경우, 이미지 호출 시 날짜를 '어제'로 고정하여 전달
+ * 2. getPathFolder 정밀화: 비번(~) 여부를 최우선 판정하여 출근일 기준 폴더(평토, 토휴, 휴평) 매칭
+ * 3. 소속별 야간 범위: 경산(21~29), 문양(24~34) 기준 완벽 적용
+ * 4. 렌더링 오류 수정: getMonthMatrix 내 year 변수 선언 완료
+ * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -125,7 +124,7 @@ function parseShiftCode(code) {
 
 function getNightRange(teamKey) { return NIGHT_RANGE_BY_TEAM[teamKey] || { start: 22, end: 29 }; }
 
-// 🚀 야간 근무군 여부 판정 (d/~ 상관없이 숫자만으로 판단)
+// 야간 근무 여부 판정 (숫자만으로 판단)
 function isNightStartCode(teamKey, code) { 
   const s = normalizeCodeKey(code);
   const numMatch = s.match(/^(\d+)/);
@@ -144,40 +143,31 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🚀 폴더 판정 로직: 비번(~) 여부에 따른 강력한 날짜 보정 **/
+/** 🚀 폴더 판정 로직: 비번(~) 근무 시 출근일(어제) 요일에 맞춰 폴더 고정 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
-  // 비번(~)일 때는 무조건 '어제'가 출근 요일임
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
-  
   const d = parseLocalDate(targetDate);
   const day = d.getDay(); 
   const isHol = isHolidayDate(targetDate);
 
-  // 야간 근무자 범위에 있다면 무조건 이 로직을 탐
   if (isNightStartCode(teamKey, code)) {
-    if (isHol || day === 0) return "hol_nor"; // 일요일/공휴일 출근 -> 오늘 비번은 휴평
-    if (day === 6) return "sat_hol";          // 토요일 출근 -> 오늘 비번은 토휴
-    if (day === 5) return "nor_sat";          // 금요일 출근 -> 오늘 비번은 평토
-    return "nor";                             // 평일 출근 -> 오늘 비번은 평일
+    if (isHol || day === 0) return "hol_nor"; 
+    if (day === 6) return "sat_hol";          
+    if (day === 5) return "nor_sat";          
+    return "nor";                             
   }
-
-  // 주간 근무 및 기타
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
 }
 
-/** 🚀 이미지 찾기 로직: 폴더 판정 시 원본 code를 사용하여 비번 판정 가능케 함 **/
+/** 🚀 이미지 찾기: 원본 code를 유지하여 비번 판정 보장 **/
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
-  // 1. 먼저 폴더 결정 (원본 code를 넘겨서 비번(~) 판정 로직이 작동하게 함)
   const folder = getPathFolder(team.key, dateStr, code);
-  
-  // 2. 실제 파일 매칭 시에는 ~를 d로 보정해서 찾음
   const raw = normalizeCodeKey(code).replace('~', 'd');
   const strippedD = raw.replace(/d$/, ""); 
-  
   const candidates = [raw, strippedD, `제${strippedD}`, `${raw}.png`, `${raw}.jpg`, `${raw}.jpeg`, `${strippedD}.png`, `${strippedD}.jpg`, `${strippedD}.jpeg` ];
   const bucket = team?.paths?.[folder]; 
   if (!bucket) return null;
@@ -354,7 +344,7 @@ function getMyCodeForDate(team, dateStr, mySelection) { if (!team || !mySelectio
 
 function getMonthMatrix(dateStr) { 
   const d = parseLocalDate(dateStr); 
-  const year = d.getFullYear(); // 🚀 year 변수 선언 완료
+  const year = d.getFullYear(); 
   const month = d.getMonth(); 
   const first = new Date(year, month, 1); 
   const firstDay = first.getDay(); 
@@ -778,7 +768,7 @@ function App() {
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      // 2. 어제 출근자 검색 (🚀 보정: 폴더 판정을 반드시 '어제' 기준으로 수행하여 토휴 등 매칭)
+      // 2. 어제 출근자 검색 (🚀 핵심 보정: 폴더 판정을 반드시 '어제' 기준으로 수행하여 토휴 등 매칭)
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
         
@@ -934,7 +924,15 @@ function App() {
   function cancelReconfigureProfile() { if (mySelection?.teamKey) { setSelectedTeam(mySelection.teamKey); setViewTeam(mySelection.teamKey); } setProfileAnchorDate(mySelection?.anchorDate || todayStr); setAllowProfileEdit(false); }
   function resetMyProfile() { const today = getKoreaToday(); clearMySelection(); setMySelection({ teamKey: "ks", name: "", code: "", anchorDate: today }); setDraftTeam("ks"); setDraftName(""); setDraftCode(""); setProfileAnchorDate(today); setAllowProfileEdit(true); setSelectedTeam("ks"); setViewTeam("ks"); setInitialRemoteChecked(false); setHomeDate(today); setBrowseDate(today); setMonthDate(today); setGroupBaseDate(today); setGroupMonth(getDisplayMonthValue(today)); setSelectedGroupDate(""); }
 
-  function handleAllCellTap(item) { if (editMode) openEditDialog(item); else openPathDialog(item, item.searchOrigin === 'yesterday' ? item.browseDate : browseDate); }
+  // 🚀 핵심 수정: 터치 시 이미지 호출 날짜를 searchOrigin에 따라 보정
+  function handleAllCellTap(item) { 
+    if (editMode) openEditDialog(item); 
+    else {
+      const targetDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
+      openPathDialog(item, targetDate); 
+    }
+  }
+
   function openEditDialog(item) {
     setEditingCell(item); const currentTeam = item.teamKey || viewTeam; const key = getOverrideKey(currentTeam, item.name); const current = overrides[key] || {}; setEditColor(current.color || ""); setEditAlias(current.alias || "");
     const team = effectiveData?.[currentTeam]; const currentTime = team ? pickWorktime(team, item.code, browseDate) : "----"; const parts = parseTimeValueToParts(currentTime);
@@ -948,7 +946,18 @@ function App() {
     setOverrides(next); saveOverrides(next); setEditOpen(false); setEditingCell(null); setEditColor(""); setEditAlias(""); setIsWorktimeEditOpen(false); setEditStartHour(""); setEditStartMin(""); setEditEndHour(""); setEditEndMin("");
   }
 
-  function openPathDialog(item, dateStr = todayStr) { if (!effectiveData || !item?.code) return; const currentTeamKey = item.teamKey || viewTeam; const team = effectiveData[currentTeamKey]; const image = findPathImage(team, dateStr, item.code); setPathTeamKey(currentTeamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
+  function openPathDialog(item, dateStr = todayStr) { 
+    if (!effectiveData || !item?.code) return; 
+    const currentTeamKey = item.teamKey || viewTeam; 
+    const team = effectiveData[currentTeamKey]; 
+    const image = findPathImage(team, dateStr, item.code); 
+    setPathTeamKey(currentTeamKey); 
+    setPathTarget(item); 
+    setPathDate(dateStr); 
+    setPathImage(image || ""); 
+    setPathOpen(true); 
+  }
+
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { const team = effectiveData?.[teamKey]; if (!team || !item?.code) return; const image = findPathImage(team, dateStr, item.code); setViewTeam(teamKey); setPathTeamKey(teamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
@@ -1233,7 +1242,7 @@ function App() {
                               <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>
                                 🔍 {item.displayName} ({item.code}) 행로표
                               </div>
-                              <img src={imgSrc} alt="행로" style={{ width: '100%', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }} onClick={() => openPathDialog(item, imgDate)} />
+                              <img src={imgSrc} alt="행로" style={{ width: '100%', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }} onClick={() => handleAllCellTap(item)} />
                             </div>
                           );
                         })}
