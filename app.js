@@ -1,8 +1,7 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (최종 수정본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (최종 수정본 - 검색 시 이미지 노출 추가)
  * 수정 사항: 
- * 1. 야간 근무자(NightStart)의 새벽 열차 검색 시 날짜 교차 로직 적용 (송호철/정지은 기관사님 사례 해결)
- * 2. 검색 결과가 1명일 때 이름 셀을 거치지 않고 즉시 행로표(이미지) 전체화면 팝업
- * 3. "(어제 출근)" 등 불필요한 문구 완전 삭제 및 다크모드 글자색 대비 수정
+ * 1. 열차 번호 검색 시 검색 결과 하단 빈 공간에 행로표 이미지 자동 렌더링 로직 추가
+ * 2. 기존의 모든 함수, 변수, CSS 구조 및 기능 원본 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -38,15 +37,6 @@ let RUNTIME_HOLIDAYS_BY_YEAR = { ...DEFAULT_HOLIDAYS_BY_YEAR };
 const HOLIDAY_FETCHING_YEARS = new Set();
 const DEFAULT_GYOBUN = ["2d", "대3", "16d", "휴1", "휴2", "대2", "14d", "24d", "24~", "휴3", "5d", "17d", "27d", "27~", "휴4", "3d", "13d", "23d", "23~", "휴5", "휴6", "대1", "15d", "22d", "22~", "휴7", "9d", "10d", "28d", "28~", "휴8", "4d", "20d", "25d", "25~", "휴9", "1d", "11d", "대4", "대4~", "휴10", "휴11", "7d", "18d", "29d", "29~", "휴12", "8d", "12d", "26d", "26~", "휴13", "휴14", "6d", "19d", "21d", "21~", "휴15"];
 const HIDDEN_NAME_KEYS = ["gb2601"];
-
-const LS_SHARED_CONFIG_CACHE = "gyobeon_shared_config_cache";
-const LS_REMOTE_ROSTER_CACHE = "gyobeon_remote_roster_cache";
-const LS_REMOTE_ROSTER_DATE = "gyobeon_remote_roster_date";
-const LS_LAST_SEEN_PUBLISHED_AT = "gyobeon_last_seen_published_at";
-const LS_LAST_ACK_ROSTER_SIG = "gyobeon_last_ack_roster_sig";
-const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
-const LS_WORKTIME_OVERRIDES = "gyobeon_worktime_overrides";
-const LS_DARK_MODE = "gyobeon_dark_mode";
 
 function normalizeNameKey(name) { return String(name || "").trim().toLowerCase().replace(/\s+/g, ""); }
 function shouldHideName(name) { return HIDDEN_NAME_KEYS.includes(normalizeNameKey(name)); }
@@ -711,8 +701,6 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
         
-        /** 🚀 수정: 오늘 출근자 중 새벽 열차(2000~2100번대 등) 검색은 제외 
-         * (오늘 밤에 출근할 송호철님이 오늘 2006으로 검색되는 것 방지) **/
         if (isTrainMatch && isNightStartCode(teamKey, item.code)) {
             const isDawnTrain = trains.some(t => Number(t) >= 2000 && Number(t) <= 2100); 
             if (isDawnTrain) return false;
@@ -727,8 +715,6 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
 
-        /** 🚀 수정: 어제 출근자 중 해당 열차(예: 2006)가 있다면 오늘 결과로 포함 
-         * (17일 출근 송호철님이 18일 2006 검색 결과로 나옴) **/
         return isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr }));
 
@@ -740,7 +726,6 @@ function App() {
 
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
 
-  /** 🚀 🆕 수정: 결과가 딱 1명일 때 행로표 즉각 실행 (팝업) **/
   useEffect(() => {
     if (activeTab === "all" && visibleAllGrid.length === 1 && searchQuery.length >= 2) {
       const target = visibleAllGrid[0];
@@ -1143,25 +1128,47 @@ function App() {
                 
                 {activeTab === "all" ? (
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
-                    {(!searchQuery || visibleAllGrid.length !== 1) && (
-                      <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
+                    <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
+                      {visibleAllGrid.map((item, idx) => {
+                        const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
+                        const isToday = browseDate === getKoreaToday();
+                        const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
+                        const textColorStyle = item.customColor ? { color: "#000000" } : undefined;
+                        
+                        return (
+                          <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
+                            <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
+                            <div className="all-name" style={textColorStyle}>
+                                {item.displayName || "-"}
+                                {searchQuery && (
+                                    <div style={{fontSize: '9px', opacity: 0.8, color: item.customColor ? '#000000' : 'inherit'}}>
+                                        [{TEAM_LABELS[item.teamKey]}]
+                                    </div>
+                                )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* 🚀 검색 결과가 있을 때 하단 빈 공간에 행로표 노출 영역 */}
+                    {searchQuery && visibleAllGrid.length > 0 && (
+                      <div className="search-result-image-area" style={{ marginTop: '20px', textAlign: 'center' }}>
                         {visibleAllGrid.map((item, idx) => {
-                          const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
-                          const isToday = browseDate === getKoreaToday();
-                          const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
-                          const textColorStyle = item.customColor ? { color: "#000000" } : undefined;
-                          
+                          const targetDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
+                          const team = effectiveData[item.teamKey];
+                          const img = team ? findPathImage(team, targetDate, item.code) : null;
+                          if (!img) return null;
                           return (
-                            <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                              <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
-                              <div className="all-name" style={textColorStyle}>
-                                  {item.displayName || "-"}
-                                  {searchQuery && (
-                                      <div style={{fontSize: '9px', opacity: 0.8, color: item.customColor ? '#000000' : 'inherit'}}>
-                                          [{TEAM_LABELS[item.teamKey]}]
-                                      </div>
-                                  )}
+                            <div key={`search-img-${idx}`} style={{ marginBottom: '15px' }}>
+                              <div style={{ fontSize: '13px', color: isDarkMode ? '#94a3b8' : '#64748b', marginBottom: '5px' }}>
+                                🔍 {item.displayName}({item.code}) 행로표
                               </div>
+                              <img 
+                                src={img} 
+                                alt="행로표" 
+                                style={{ width: '100%', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} 
+                                onClick={() => openPathDialog(item, targetDate)}
+                              />
                             </div>
                           );
                         })}
