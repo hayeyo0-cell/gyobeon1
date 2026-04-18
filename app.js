@@ -126,7 +126,7 @@ function parseShiftCode(code) {
 
 function getNightRange(teamKey) { return NIGHT_RANGE_BY_TEAM[teamKey] || { start: 22, end: 29 }; }
 
-// 야간 근무 여부 판정 (숫자만으로 판단하여 d/~ 모두 포함)
+// 야간 근무 여부 판정 (숫자만으로 판단)
 function isNightStartCode(teamKey, code) { 
   const s = normalizeCodeKey(code);
   const numMatch = s.match(/^(\d+)/);
@@ -149,23 +149,19 @@ function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr);
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
-  
   const d = parseLocalDate(targetDate);
   const day = d.getDay(); 
   const isHol = isHolidayDate(targetDate);
 
   if (isNightStartCode(teamKey, code)) {
-    // 어제가 휴일/일요일 -> 오늘 비번은 휴평 (hol_nor)
-    if (isHol || day === 0) return "hol_nor"; 
-    // 어제가 토요일 -> 오늘 비번은 토휴 (sat_hol)
-    if (day === 6) return "sat_hol"; 
-    // 어제가 금요일 -> 오늘 비번은 평토 (nor_sat)
-    if (day === 5) return "nor_sat"; 
-    // 평일 출근 -> 평일
-    return "nor"; 
+    // 🚀 핵심 로직: 어제 요일을 기준으로 폴더를 명확히 고정
+    if (isHol || day === 0) return "hol_nor"; // 일요일/공휴일 출근 -> 오늘 휴평
+    if (day === 6) return "sat_hol";          // 토요일 출근 -> 오늘 토휴
+    if (day === 5) return "nor_sat";          // 금요일 출근 -> 오늘 평토
+    return "nor";                             // 평일 출근 -> 오늘 평일
   }
 
-  // 주간 근무
+  // 주간 근무 및 기타
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
@@ -370,7 +366,7 @@ function getMonthMatrix(dateStr) {
   } 
   return matrix; 
 }
-function getWeekDates(baseDate) { const d = parseLocalDate(baseDate); day = d.getDay(); const sunday = new Date(d); sunday.setDate(d.getDate() - day); const dates = []; for (let i = 0; i < 7; i++) { const temp = new Date(sunday); temp.setDate(sunday.getDate() + i); dates.push(formatDate(temp)); } return dates; }
+function getWeekDates(baseDate) { const d = parseLocalDate(baseDate); const day = d.getDay(); const sunday = new Date(d); sunday.setDate(d.getDate() - day); const dates = []; for (let i = 0; i < 7; i++) { const temp = new Date(sunday); temp.setDate(sunday.getDate() + i); dates.push(formatDate(temp)); } return dates; }
 
 function getMonthOptions(centerDateStr, range = 12) { 
   const base = parseLocalDate(centerDateStr); 
@@ -763,6 +759,7 @@ function App() {
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
         : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
 
+      // 1. 오늘 출근자 검색
       const matchedToday = teamGrid.filter(item => {
         const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
@@ -776,6 +773,7 @@ function App() {
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
+      // 2. 어제 출근자 검색 (🚀 핵심 보정: 폴더 판정을 반드시 '어제' 기준으로 수행하여 토휴 매칭)
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
         
