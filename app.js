@@ -1,9 +1,12 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (검색 로직 최종 완성본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (검색 및 행로표 매칭 최종 완성본)
  * 수정 사항: 
  * 1. 새벽 열차(2000~2100대) 검색 시: 어제 출근한 비번 근무자(~)의 결과만 노출
  * 2. 밤 열차(2200대 이상) 검색 시: 오늘 새로 출근하는 근무자(d)의 결과만 노출
  * 3. 어제 출근자 결과 노출 시 교번을 오늘 기준인 (~)로 자동 변환하여 표시
- * 4. 행로표 폴더 판정 로직 수정: 비번(~) 근무 시 '어제'를 기준으로 폴더(nor_sat, sat_hol 등) 결정
+ * 4. 행로표 폴더 판정 로직(최종): 비번(~) 근무 시 반드시 '전날 출근 요일'의 규격을 참조
+ * - 토요일 비번(~) -> 금요일 출근(평일) -> nor_sat (평토)
+ * - 일요일 비번(~) -> 토요일 출근(토요일) -> sat_hol (토휴)
+ * - 월요일 비번(~) -> 일요일 출근(휴일) -> hol_nor (휴평)
  * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
@@ -130,22 +133,32 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🚀 수정된 getPathFolder: 비번(~) 근무 시 어제 기준으로 폴더를 판정하여 행로표 매칭 **/
+/** 🚀 최종 수정된 getPathFolder: 비번(~) 근무 시 '전날 출근 요일'의 규격을 완벽하게 참조 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
+  // 비번(~)일 경우 '어제'를 기준으로 폴더를 결정하여 평토, 토휴, 휴평 매칭
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
   
   const d = parseLocalDate(targetDate);
-  const day = d.getDay();
+  const day = d.getDay(); // 0:일, 5:금, 6:토
   const isHol = isHolidayDate(targetDate);
 
+  // 야간/숙박 행로가 있는 교번인 경우
   if (isNightStartCode(teamKey, code) || isNightEndCode(teamKey, code)) {
+    // 1. 휴일 또는 일요일에 출근했음 -> 다음날은 비번(~)이 평일 -> 휴평 (hol_nor)
     if (isHol || day === 0) return "hol_nor";
+    
+    // 2. 월~목요일에 출근했음 -> 다음날 비번도 평일 -> 평일 (nor)
     if (day >= 1 && day <= 4) return "nor";
+    
+    // 3. 금요일에 출근했음 -> 다음날 비번은 토요일 -> 평토 (nor_sat)
     if (day === 5) return "nor_sat";
+    
+    // 4. 토요일에 출근했음 -> 다음날 비번은 일요일(휴일) -> 토휴 (sat_hol)
     if (day === 6) return "sat_hol";
   }
 
+  // 주간(Day) 근무 또는 기타 일반 교번
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
