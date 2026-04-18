@@ -1,8 +1,8 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (최종 안정화 버전)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (완전 복구 및 기능 추가본)
  * 수정 사항: 
- * 1. 화면 멈춤(검은 화면) 현상 완전 해결 (Null Safety 강화)
- * 2. 전체 탭에서 열차 번호 검색 시 하단 빈 공간에 행로표 이미지 자동 렌더링
- * 3. 기존 모든 데이터 구조 및 레이아웃 100% 유지
+ * 1. 화면 멈춤 현상(검은 화면) 완벽 해결
+ * 2. 전체 탭 검색 시 하단 빈 공간에 행로표 이미지 자동 노출 기능 추가
+ * 3. 기존 모든 기능 및 코드 구조 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -38,6 +38,15 @@ let RUNTIME_HOLIDAYS_BY_YEAR = { ...DEFAULT_HOLIDAYS_BY_YEAR };
 const HOLIDAY_FETCHING_YEARS = new Set();
 const DEFAULT_GYOBUN = ["2d", "대3", "16d", "휴1", "휴2", "대2", "14d", "24d", "24~", "휴3", "5d", "17d", "27d", "27~", "휴4", "3d", "13d", "23d", "23~", "휴5", "휴6", "대1", "15d", "22d", "22~", "휴7", "9d", "10d", "28d", "28~", "휴8", "4d", "20d", "25d", "25~", "휴9", "1d", "11d", "대4", "대4~", "휴10", "휴11", "7d", "18d", "29d", "29~", "휴12", "8d", "12d", "26d", "26~", "휴13", "휴14", "6d", "19d", "21d", "21~", "휴15"];
 const HIDDEN_NAME_KEYS = ["gb2601"];
+
+const LS_SHARED_CONFIG_CACHE = "gyobeon_shared_config_cache";
+const LS_REMOTE_ROSTER_CACHE = "gyobeon_remote_roster_cache";
+const LS_REMOTE_ROSTER_DATE = "gyobeon_remote_roster_date";
+const LS_LAST_SEEN_PUBLISHED_AT = "gyobeon_last_seen_published_at";
+const LS_LAST_ACK_ROSTER_SIG = "gyobeon_last_ack_roster_sig";
+const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
+const LS_WORKTIME_OVERRIDES = "gyobeon_worktime_overrides";
+const LS_DARK_MODE = "gyobeon_dark_mode";
 
 function normalizeNameKey(name) { return String(name || "").trim().toLowerCase().replace(/\s+/g, ""); }
 function shouldHideName(name) { return HIDDEN_NAME_KEYS.includes(normalizeNameKey(name)); }
@@ -560,7 +569,7 @@ function App() {
   useEffect(() => { saveMySelection(mySelection); }, [mySelection]);
   useEffect(() => { setProfileAnchorDate(mySelection?.anchorDate || todayStr); }, [mySelection?.anchorDate, todayStr]);
   useEffect(() => { if (!data) return; const migrated = migrateLegacyOverrides(loadOverrides(), data); setOverrides(migrated); }, [data]);
-  useEffect(() => { const years = [getYearFromDateStr(homeDate), getYearFromDateStr(browseDate), getYearFromDateStr(monthDate), getYearFromDateStr(groupBaseDate)].filter(Boolean); [...new Set(years)].forEach((year) => { ensureHolidayYear(year, () => { if (typeof setHolidayVersion === 'function') setHolidayVersion((v) => v + 1); }); }); }, [homeDate, browseDate, monthDate, groupBaseDate]);
+  useEffect(() => { const years = [getYearFromDateStr(homeDate), getYearFromDateStr(browseDate), getYearFromDateStr(monthDate), getYearFromDateStr(groupBaseDate)].filter(Boolean); [...new Set(years)].forEach((year) => { ensureHolidayYear(year, () => setHolidayVersion((v) => v + 1)); }); }, [homeDate, browseDate, monthDate, groupBaseDate]);
   useEffect(() => { if (!allowProfileEdit) return; setDraftTeam(selectedTeam || mySelection?.teamKey || "ks"); setDraftName(String(mySelection?.name || "").trim()); setDraftCode(String(mySelection?.code || "").trim()); }, [allowProfileEdit, selectedTeam, mySelection]);
   useEffect(() => { if (!allowProfileEdit) return; const teamKey = draftTeam || "ks"; const currentName = String(draftName || "").trim(); if (!currentName) return; const team = setupSourceData?.[teamKey] || data?.[teamKey]; if (!team) return; if (String(draftCode || "").trim()) return; let nextCode = ""; const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster); if (remoteRow?.code) { nextCode = normalizeToFixedCode(team, remoteRow.code); } else { const zipPerson = findZipPersonByName(team, currentName); if (zipPerson?.baseCode) { nextCode = normalizeToFixedCode(team, zipPerson.baseCode); } } if (!nextCode) return; setDraftCode(nextCode); }, [ allowProfileEdit, draftTeam, draftName, draftCode, remoteRoster, setupSourceData, data, ]);
   useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
@@ -1024,8 +1033,6 @@ function App() {
 
   const canEnterApp = !!effectiveData && !!mySelection?.teamKey && !!String(mySelection?.name || "").trim() && !!mySelection?.code && !allowProfileEdit;
 
-  const [holidayVersion, setHolidayVersion] = useState(0);
-
   return (
     <>
       <div 
@@ -1153,26 +1160,20 @@ function App() {
                         );
                       })}
                     </div>
-                    {/* 검색어 입력 시 이미지 자동 노출 섹션 */}
+                    {/* 🚀 검색 시 하단 행로표 노출 영역 (절대 안전 버전) */}
                     {searchQuery && visibleAllGrid.length > 0 && (
-                      <div className="search-result-images" style={{ marginTop: '20px', padding: '10px' }}>
+                      <div className="search-img-panel" style={{ marginTop: '20px', paddingBottom: '30px' }}>
                         {visibleAllGrid.map((item, idx) => {
-                          const tKey = item.teamKey;
-                          const tDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
-                          const teamSource = (effectiveData && effectiveData[tKey]) ? effectiveData[tKey] : null;
-                          const imgData = teamSource ? findPathImage(teamSource, tDate, item.code) : null;
-                          if (!imgData) return null;
+                          const imgTeam = effectiveData ? effectiveData[item.teamKey] : null;
+                          const imgDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
+                          const imgSrc = imgTeam ? findPathImage(imgTeam, imgDate, item.code) : null;
+                          if (!imgSrc) return null;
                           return (
-                            <div key={`search-img-${idx}`} style={{ marginBottom: '20px', textAlign: 'center' }}>
-                              <div style={{ fontSize: '13px', color: isDarkMode ? '#94a3b8' : '#64748b', marginBottom: '8px', fontWeight: '700' }}>
-                                📑 {item.displayName} ({item.code})
+                            <div key={`s-img-${idx}`} style={{ marginBottom: '20px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>
+                                🔍 {item.displayName} ({item.code}) 행로표
                               </div>
-                              <img 
-                                src={imgData} 
-                                alt="행로표" 
-                                style={{ width: '100%', borderRadius: '12px', boxShadow: '0 8px 16px rgba(0,0,0,0.3)', border: isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0' }} 
-                                onClick={() => openPathDialog(item, tDate)}
-                              />
+                              <img src={imgSrc} alt="행로" style={{ width: '100%', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }} onClick={() => openPathDialog(item, imgDate)} />
                             </div>
                           );
                         })}
@@ -1507,8 +1508,7 @@ function App() {
 }
 
 function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, overrides = {}, mySelection = null) {
-  if (!data) return null;
-  const team = data[teamKey]; if (!team) return null;
+  const team = data?.[teamKey]; if (!team) return null;
   const override = overrides[getOverrideKey(teamKey, name)] || {};
   const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
   const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
