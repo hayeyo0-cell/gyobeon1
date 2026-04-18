@@ -1,6 +1,6 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 로직 최종 보정본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 로직 완전 해결본)
  * 수정 사항: 
- * 1. 비번(~) 교번 판정 보정: 비번 교번도 숫자가 야간 범위면 야간 로직을 타도록 수정
+ * 1. 교번 판정 로직 수정: 교번에 ~가 붙어있어도 숫자 범위가 야간이면 야간 근무군으로 통합 판정
  * 2. 행로표 폴더 판정: 비번(~) 근무 시 '전날 출근 요일'의 규격을 완벽하게 참조
  * - 토요일 비번(~) -> 금요일 출근(평일) -> nor_sat (평토)
  * - 일요일 비번(~) -> 토요일 출근(토요일) -> sat_hol (토휴)
@@ -122,23 +122,29 @@ function parseShiftCode(code) {
   if (!match) return null; 
   return { num: Number(match[1]), suffix: match[2] }; 
 }
+
 function getNightRange(teamKey) { return NIGHT_RANGE_BY_TEAM[teamKey] || { start: 22, end: 29 }; }
 
-// 보정: 비번(~) 코드여도 숫자가 야간 범위면 야간 로직을 타도록 수정
+/** 🚀 완전 해결의 핵심: d/~ 구분 없이 숫자만으로 야간 여부를 판단 **/
 function isNightStartCode(teamKey, code) { 
-  const parsed = parseShiftCode(code); 
-  if (!parsed) return false; 
+  const s = normalizeCodeKey(code);
+  const numMatch = s.match(/^(\d+)/);
+  if (!numMatch) return false;
+  const num = Number(numMatch[1]);
   const range = getNightRange(teamKey); 
-  return parsed.num >= range.start && parsed.num <= range.end; 
+  return num >= range.start && num <= range.end; 
 }
 function isNightEndCode(teamKey, code) { 
-  return isNightStartCode(teamKey, code); // 야간 숙박 계열은 d/~ 모두 동일 폴더 규칙 적용
+  return isNightStartCode(teamKey, code); 
 }
 function isDayShiftCode(teamKey, code) { 
-  const parsed = parseShiftCode(code); 
-  if (!parsed || parsed.suffix !== "d") return false; 
+  const s = normalizeCodeKey(code);
+  if (!s.endsWith('d')) return false;
+  const numMatch = s.match(/^(\d+)/);
+  if (!numMatch) return false;
+  const num = Number(numMatch[1]);
   const range = getNightRange(teamKey); 
-  return parsed.num >= 1 && parsed.num < range.start; 
+  return num >= 1 && num < range.start; 
 }
 
 function loadWorktimeOverrides() { try { return JSON.parse(localStorage.getItem(LS_WORKTIME_OVERRIDES) || "{}"); } catch { return {}; } }
@@ -150,7 +156,7 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🚀 최종 보정된 getPathFolder: 비번(~) 근무 시 숫자를 확인하여 야간 로직으로 유도 **/
+/** 🚀 최종 보정된 getPathFolder: 모든 소속 공통 야간 근무와 비번의 원리 적용 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
@@ -159,15 +165,13 @@ function getPathFolder(teamKey, dateStr, code) {
   const day = d.getDay(); 
   const isHol = isHolidayDate(targetDate);
 
-  // 야간 숙박 범위(21~ 등)라면 무조건 이 로직을 탐
   if (isNightStartCode(teamKey, code)) {
-    if (isHol || day === 0) return "hol_nor"; // 휴평
-    if (day >= 1 && day <= 4) return "nor";    // 평일
-    if (day === 5) return "nor_sat";          // 평토
-    if (day === 6) return "sat_hol";          // 토휴
+    if (isHol || day === 0) return "hol_nor"; // 일/휴 출근 -> 다음날 비번은 휴평
+    if (day >= 1 && day <= 4) return "nor";    // 월~목 출근 -> 다음날 비번은 평일
+    if (day === 5) return "nor_sat";          // 금요일 출근 -> 다음날 비번은 평토
+    if (day === 6) return "sat_hol";          // 토요일 출근 -> 다음날 비번은 토휴
   }
 
-  // 주간(Day) 근무 또는 기타 일반 교번
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
