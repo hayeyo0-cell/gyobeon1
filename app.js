@@ -1,8 +1,8 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 로직 최종 해결본 - 진짜 최종)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (열차 번호 검색 및 비번 매칭 완결본)
  * 수정 사항: 
- * 1. findPathImage 로직 수정: 교번을 보정(d로 변경)하기 전, 원본 교번으로 폴더를 먼저 판정하도록 순서 변경
- * 2. getPathFolder 판정 보정: 비번(~) 교번이 들어오면 숫자를 확인하여 야간 그룹이면 무조건 전날 요일 기준 폴더 참조
- * 3. 모든 소속 공통: 토~ -> 평토, 일~ -> 토휴, 월~ -> 휴평 로직 적용
+ * 1. 열차 번호 검색 로직 최적화: 새벽 열차(2000대) 검색 시 어제 출근자(~)를 정확히 매칭
+ * 2. findPathImage & getPathFolder: 비번(~) 근무 시 전날 요일 기준 폴더(평토, 토휴, 휴평) 자동 매칭 유지
+ * 3. 26~ 교번에서 2006열차 검색 시 정상 노출되도록 보정
  * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
@@ -123,7 +123,7 @@ function parseShiftCode(code) {
 
 function getNightRange(teamKey) { return NIGHT_RANGE_BY_TEAM[teamKey] || { start: 22, end: 29 }; }
 
-// 숫자만으로 야간 여부 판단
+// 야간 근무 여부 판정 (숫자만으로 판단)
 function isNightStartCode(teamKey, code) { 
   const s = normalizeCodeKey(code);
   const numMatch = s.match(/^(\d+)/);
@@ -152,7 +152,7 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🚀 폴더 판정 로직: 비번(~) 여부에 따른 강력한 날짜 보정 **/
+/** 🚀 폴더 판정 로직: 비번(~) 근무 시 숫자를 확인하여 야간 로직으로 유도 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
@@ -173,21 +173,15 @@ function getPathFolder(teamKey, dateStr, code) {
   return "nor";
 }
 
-/** 🚀 이미지 찾기 로직 핵심 수정: 폴더 판정 시 원본 code를 사용하여 비번 판정이 가능하게 함 **/
+/** 🚀 이미지 찾기 로직: 폴더 판정 시 원본 code를 사용하여 비번 판정 가능케 함 **/
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
-  
-  // 1. 먼저 폴더를 결정 (원본 code를 넘겨야 getPathFolder 내의 isTilde 판정이 먹힘)
   const folder = getPathFolder(team.key, dateStr, code);
-  
-  // 2. 실제 파일명은 d로 끝나는 것만 있으므로 code를 보정
   const raw = normalizeCodeKey(code).replace('~', 'd');
   const strippedD = raw.replace(/d$/, ""); 
-  
   const candidates = [raw, strippedD, `제${strippedD}`, `${raw}.png`, `${raw}.jpg`, `${raw}.jpeg`, `${strippedD}.png`, `${strippedD}.jpg`, `${strippedD}.jpeg` ];
   const bucket = team?.paths?.[folder]; 
   if (!bucket) return null;
-  
   for (const key of candidates) { 
     if (bucket[key]) return bucket[key]; 
     if (bucket[key.toLowerCase()]) return bucket[key.toLowerCase()]; 
@@ -734,12 +728,12 @@ function App() {
     return grid.map(item => ({ ...item, teamKey: viewTeam })); 
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
 
+  /** 🚀 검색 필터 로직: 열차 번호 검색 시 어제 출근자(비번 표시)와 오늘 출근자를 정확히 구분 **/
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
 
     const yesterdayStr = addDays(browseDate, -1);
-
     let crossTeamResults = [];
 
     TEAM_ORDER.forEach(teamKey => {
@@ -754,32 +748,36 @@ function App() {
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
         : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
 
+      // 1. 오늘 출근자 검색
       const matchedToday = teamGrid.filter(item => {
         const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
         
+        // 검색어가 2000~2100대 열차인 경우, 오늘 새로 출근하는 사람(d)의 목록에서는 제외
         if (isTrainMatch && isNightStartCode(teamKey, item.code)) {
             const trainNum = parseInt(searchQuery);
-            if (trainNum >= 2000 && trainNum <= 2100) return false;
+            if (trainNum >= 2000 && trainNum <= 2199) return false;
         }
-
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
+      // 2. 어제 출근자(오늘 비번) 검색
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
         const folder = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
 
+        // 2000대 열차를 운행하는 어제 야간 출근자만 검색 결과에 포함
         if (isTrainMatch) {
             const trainNum = parseInt(searchQuery);
-            if (trainNum >= 2000 && trainNum <= 2100) return true;
+            if (trainNum >= 2000 && trainNum <= 2199) return true;
         }
         return false;
       }).map(item => {
+          // 어제의 d교번을 오늘의 ~교번으로 변환하여 노출
           const todayCode = item.code.replace('d', '~');
           return { ...item, code: todayCode, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr };
       });
@@ -1214,7 +1212,8 @@ function App() {
                         {visibleAllGrid.map((item, idx) => {
                           const imgTeam = effectiveData ? effectiveData[item.teamKey] : null;
                           const imgDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
-                          const imgSrc = imgTeam ? findPathImage(imgTeam, imgDate, item.code) : null;
+                          const searchCode = item.code.replace('~', 'd');
+                          const imgSrc = imgTeam ? findPathImage(imgTeam, imgDate, searchCode) : null;
                           if (!imgSrc) return null;
                           return (
                             <div key={`s-img-${idx}`} style={{ marginBottom: '20px', textAlign: 'center' }}>
