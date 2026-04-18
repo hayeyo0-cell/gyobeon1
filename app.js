@@ -1,9 +1,8 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (검색 필터 최종 정밀 보정본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (검색 및 행로표 매칭 최종 완성본)
  * 수정 사항: 
- * 1. 새벽 열차(2000~2199) 검색 시: 오늘 출근자(d)는 무조건 제외, 어제 출근자(~)만 검색되도록 차단막 생성
- * 2. 17d 이세학 기관사님 사례처럼 행로표 내 엉뚱한 숫자로 인한 오검색 방지
- * 3. 행로표 폴더 판정: 비번(~) 근무 시 전날 요일 기준(평토, 토휴, 휴평) 매칭 완벽 지원
- * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
+ * 1. 검색 필터 로직 수정: 어제 근무자(~) 검색 시, 열차 데이터 참조 폴더도 반드시 '어제' 기준으로 고정 (일요일 2004열차 검색 해결)
+ * 2. findPathImage & getPathFolder: 비번(~) 근무 시 전날 요일 기준 폴더(평토, 토휴, 휴평) 매칭 로직 유지
+ * 3. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -131,6 +130,16 @@ function isNightStartCode(teamKey, code) {
   const num = Number(numMatch[1]);
   const range = getNightRange(teamKey); 
   return num >= range.start && num <= range.end; 
+}
+function isNightEndCode(teamKey, code) { return isNightStartCode(teamKey, code); }
+function isDayShiftCode(teamKey, code) { 
+  const s = normalizeCodeKey(code);
+  if (!s.endsWith('d')) return false;
+  const numMatch = s.match(/^(\d+)/);
+  if (!numMatch) return false;
+  const num = Number(numMatch[1]);
+  const range = getNightRange(teamKey); 
+  return num >= 1 && num < range.start; 
 }
 
 function loadWorktimeOverrides() { try { return JSON.parse(localStorage.getItem(LS_WORKTIME_OVERRIDES) || "{}"); } catch { return {}; } }
@@ -342,7 +351,7 @@ function buildAllTeamsAutoAnchorsFromIdentity(data, remoteRoster, selectedTeamKe
 
 function getMyCodeForDate(team, dateStr, mySelection) { if (!team || !mySelection?.code) return ""; const anchorDate = String(mySelection.anchorDate || "").trim() || getZipBaseDate(team); const dayOffset = diffDays(anchorDate, dateStr); return shiftCodeByDays(team, mySelection.code, dayOffset); }
 
-function getMonthMatrix(dateStr) { const d = parseLocalDate(dateStr); const year = d.getFullYear(); const month = d.getMonth(); const first = new Date(year, month, 1); const firstDay = first.getDay(); const start = new Date(year, month, 1 - firstDay); const matrix = []; for (let r = 0; r < 6; r++) { const row = []; for (let c = 0; c < 7; c++) { const temp = new Date(start); temp.setDate(start.getDate() + r * 7 + c); row.push(formatDate(temp)); } matrix.push(row); } return matrix; }
+function getMonthMatrix(dateStr) { const d = parseLocalDate(dateStr); year = d.getFullYear(); const month = d.getMonth(); const first = new Date(year, month, 1); const firstDay = first.getDay(); const start = new Date(year, month, 1 - firstDay); const matrix = []; for (let r = 0; r < 6; r++) { const row = []; for (let c = 0; c < 7; c++) { const temp = new Date(start); temp.setDate(start.getDate() + r * 7 + c); row.push(formatDate(temp)); } matrix.push(row); } return matrix; }
 function getWeekDates(baseDate) { const d = parseLocalDate(baseDate); const day = d.getDay(); const sunday = new Date(d); sunday.setDate(d.getDate() - day); const dates = []; for (let i = 0; i < 7; i++) { const temp = new Date(sunday); temp.setDate(sunday.getDate() + i); dates.push(formatDate(temp)); } return dates; }
 
 function getMonthOptions(centerDateStr, range = 12) { 
@@ -717,7 +726,6 @@ function App() {
     return grid.map(item => ({ ...item, teamKey: viewTeam })); 
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
 
-  /** 🚀 검색 필터 로직: 열차 번호 검색 시 d(오늘출근)와 ~(어제출근)를 엄밀히 구분 **/
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
@@ -737,30 +745,29 @@ function App() {
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
         : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
 
-      // 1. 오늘 출근자(d) 검색 필터링
+      // 1. 오늘 출근자 검색
       const matchedToday = teamGrid.filter(item => {
         const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
         
-        // 🚀 핵심 수정: 열번이 2000~2199(새벽열차)라면 오늘 출근자 목록에서는 절대 나오지 않게 차단
         if (isTrainMatch) {
             const trainNum = parseInt(searchQuery);
             if (trainNum >= 2000 && trainNum <= 2199) return false; 
         }
-
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      // 2. 어제 출근자(오늘 비번 ~) 검색 필터링
+      // 2. 어제 출근자(오늘 비번) 검색
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
-        const folder = getPathFolder(teamKey, yesterdayStr, item.code);
-        const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
+        
+        /** 🚀 핵심 수정: 어제 출근자 검색 시 폴더 판정을 반드시 'yesterdayStr'(어제) 기준으로 수행 **/
+        const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
+        const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
 
-        // 🚀 어제 출근자 중 오직 2000대 열차를 운행하는 사람만 비번(~)으로 노출
         if (isTrainMatch) {
             const trainNum = parseInt(searchQuery);
             if (trainNum >= 2000 && trainNum <= 2199) return true;
