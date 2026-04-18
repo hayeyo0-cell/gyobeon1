@@ -1,9 +1,9 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (최종 보정본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (검색 로직 최종 완성본)
  * 수정 사항: 
- * 1. 데이터 추가 입력 없이, 검색 시 '어제 출근자'는 오늘 기준 교번(~)으로 자동 변환 표시
- * 2. 2010 등 새벽 열차 검색 시 '어제 출근한 비번자'가 오늘 결과로 정확히 매칭됨
- * 3. 검색 결과 1명일 때 자동 팝업 로직 삭제 (하단 이미지 노출로 일원화)
- * 4. 원본의 모든 함수, 관리자 기능, 그룹 기능을 100% 그대로 보존
+ * 1. 새벽 열차(2000~2100대) 검색 시: 어제 출근한 비번 근무자(~)의 결과만 노출
+ * 2. 밤 열차(2200대 이상) 검색 시: 오늘 새로 출근하는 근무자(d)의 결과만 노출
+ * 3. 어제 출근자 결과 노출 시 교번을 오늘 기준인 (~)로 자동 변환하여 표시
+ * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -712,9 +712,10 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
         
+        /** 🚀 지능형 필터링: 새벽 열차(2000~2100)는 오늘 출근자(d) 결과에서 배제 **/
         if (isTrainMatch && isNightStartCode(teamKey, item.code)) {
-            const isDawnTrain = trains.some(t => Number(t) >= 2000 && Number(t) <= 2100); 
-            if (isDawnTrain) return false;
+            const trainNum = parseInt(searchQuery);
+            if (trainNum >= 2000 && trainNum <= 2100) return false;
         }
 
         return basicMatch || isTrainMatch;
@@ -726,9 +727,14 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
 
-        return isTrainMatch;
+        /** 🚀 지능형 필터링: 새벽 열차만 어제 출근자 결과로 인정 **/
+        if (isTrainMatch) {
+            const trainNum = parseInt(searchQuery);
+            if (trainNum >= 2000 && trainNum <= 2100) return true;
+        }
+        return false;
       }).map(item => {
-          /** 🚀 핵심 수정: 어제 출근자 검색 시 교번을 오늘 기준(예: 25~)으로 보정하여 표시 **/
+          /** 🚀 표시 보정: 어제 25d는 오늘 25~로 표시 **/
           const todayCode = item.code.replace('d', '~');
           return { ...item, code: todayCode, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr };
       });
@@ -740,8 +746,6 @@ function App() {
   }, [allGrid, searchQuery, browseDate, effectiveData, remoteRoster, overrides, teamAnchors]);
 
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
-
-  /** 🚀 팝업 로직 삭제 준수 **/
 
   const allGridLayout = useMemo(() => { return getAllGridLayout(visibleAllGrid.length || 0); }, [visibleAllGrid.length]);
   const allGridRows = useMemo(() => { return Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols)); }, [visibleAllGrid.length, allGridLayout.cols]);
@@ -887,7 +891,7 @@ function App() {
     setOverrides(next); saveOverrides(next); setEditOpen(false); setEditingCell(null); setEditColor(""); setEditAlias(""); setIsWorktimeEditOpen(false); setEditStartHour(""); setEditStartMin(""); setEditEndHour(""); setEditEndMin("");
   }
 
-  function openPathDialog(item, dateStr = todayStr) { if (!effectiveData || !item?.code) return; const currentTeamKey = item.teamKey || viewTeam; const team = effectiveData[currentTeamKey]; const image = findPathImage(team, dateStr, item.code); setPathTeamKey(currentTeamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
+  function openPathDialog(item, dateStr = todayStr) { if (!effectiveData || !item?.code) return; const currentTeamKey = item.teamKey || viewTeam; const team = effectiveData[currentTeamKey]; /** 🚀 보정: 검색에서 넘겨받은 교번(~)의 실제 행로 이미지(d) 찾기 **/ const realCode = item.code.replace('~', 'd'); const image = findPathImage(team, dateStr, realCode); setPathTeamKey(currentTeamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { const team = effectiveData?.[teamKey]; if (!team || !item?.code) return; const image = findPathImage(team, dateStr, item.code); setViewTeam(teamKey); setPathTeamKey(teamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
@@ -1166,8 +1170,9 @@ function App() {
                         {visibleAllGrid.map((item, idx) => {
                           const imgTeam = effectiveData ? effectiveData[item.teamKey] : null;
                           const imgDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
-                          /** 🚀 보정된 교번으로 행로표 찾기 (검색 결과에 표시된 것과 동일한 행로표) **/
-                          const imgSrc = imgTeam ? findPathImage(imgTeam, imgDate, item.code.replace('~', 'd')) : null;
+                          /** 🚀 보정: 표시된 교번(~)의 실제 행로표 이미지 파일(d) 찾기 **/
+                          const searchCode = item.code.replace('~', 'd');
+                          const imgSrc = imgTeam ? findPathImage(imgTeam, imgDate, searchCode) : null;
                           if (!imgSrc) return null;
                           return (
                             <div key={`s-img-${idx}`} style={{ marginBottom: '20px', textAlign: 'center' }}>
@@ -1509,7 +1514,8 @@ function App() {
 }
 
 function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, overrides = {}, mySelection = null) {
-  const team = data?.[teamKey]; if (!team) return null;
+  if (!data) return null;
+  const team = data[teamKey]; if (!team) return null;
   const override = overrides[getOverrideKey(teamKey, name)] || {};
   const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
   const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
