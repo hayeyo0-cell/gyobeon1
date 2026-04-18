@@ -1,18 +1,20 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 로직 최종 해결본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (최종 로직 완결본)
  * 수정 사항: 
- * 1. getPathFolder 로직 재설계: 비번(~) 근무 시 출근일(어제) 요일에 맞춰 폴더 강제 지정
- * - 어제가 토요일(6)이면 무조건 'sat_hol'(토휴)
- * - 어제가 일요일(0)이거나 공휴일이면 무조건 'hol_nor'(휴평)
- * - 어제가 금요일(5)이면 무조건 'nor_sat'(평토)
- * 2. 렌더링 오류 수정: getMonthMatrix 함수 내 누락된 year 변수 선언 보정 (화이트아웃 해결)
- * 3. 검색 필터 보정: 2000대 열차 검색 시 어제 출근자(~)를 어제 폴더 기준에서 정확히 추출
- * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
+ * 1. 야간 근무 범위 정밀 반영: 경산(21~29), 문양(24~34) 기준 적용
+ * 2. 행로표 폴더 판정(최종): 비번(~) 근무 시 숫자를 확인하여 야간 그룹이면 무조건 전날 요일 기준 폴더 지정
+ * - 토요일 비번(~) -> 금요일 출근(평일) -> nor_sat (평토)
+ * - 일요일 비번(~) -> 토요일 출근(토요일) -> sat_hol (토휴)
+ * - 월요일 비번(~) -> 일요일 출근(휴일) -> hol_nor (휴평)
+ * 3. 검색 필터 보정: 2000대 새벽 열차 검색 시 오늘 출근자(d) 차단 및 어제 출근자(~) 우선 매칭
+ * 4. 렌더링 오류 수정: getMonthMatrix 내 누락된 변수 선언 보정
+ * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
 
 const TEAM_LABELS = { ks: "경산", my: "문양", wb: "월배", as: "안심" };
 const TEAM_ORDER = ["ks", "my", "wb", "as"];
+// 🚀 소속별 야간 근무 범위 설정
 const NIGHT_RANGE_BY_TEAM = { ks: { start: 21, end: 29 }, my: { start: 24, end: 34 }, wb: { start: 25, end: 37 }, as: { start: 25, end: 37 } };
 
 const ADMIN_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw8NMVjH3J_Mt7SBymWOg44zvD4gd4GXkQB3r95QTl63M3aWqtf-OglLrG2rQPH7J6UjA/exec";
@@ -126,7 +128,7 @@ function parseShiftCode(code) {
 
 function getNightRange(teamKey) { return NIGHT_RANGE_BY_TEAM[teamKey] || { start: 22, end: 29 }; }
 
-// 야간 근무 여부 판정 (숫자만으로 판단)
+// 🚀 야간 근무 여부 판정 (숫자만으로 판단하여 d/~ 모두 포함)
 function isNightStartCode(teamKey, code) { 
   const s = normalizeCodeKey(code);
   const numMatch = s.match(/^(\d+)/);
@@ -154,14 +156,12 @@ function getPathFolder(teamKey, dateStr, code) {
   const isHol = isHolidayDate(targetDate);
 
   if (isNightStartCode(teamKey, code)) {
-    // 🚀 핵심 로직: 어제 요일을 기준으로 폴더를 명확히 고정
     if (isHol || day === 0) return "hol_nor"; // 일요일/공휴일 출근 -> 오늘 휴평
     if (day === 6) return "sat_hol";          // 토요일 출근 -> 오늘 토휴
     if (day === 5) return "nor_sat";          // 금요일 출근 -> 오늘 평토
     return "nor";                             // 평일 출근 -> 오늘 평일
   }
 
-  // 주간 근무 및 기타
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
@@ -773,7 +773,7 @@ function App() {
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      // 2. 어제 출근자 검색 (🚀 핵심 보정: 폴더 판정을 반드시 '어제' 기준으로 수행하여 토휴 매칭)
+      // 2. 어제 출근자 검색 (🚀 보정: 폴더 판정을 반드시 '어제' 기준으로 수행하여 토휴 등 매칭)
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
         
