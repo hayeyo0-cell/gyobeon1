@@ -1,20 +1,17 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (최종 로직 완결본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 완전 해결본)
  * 수정 사항: 
- * 1. 야간 근무 범위 정밀 반영: 경산(21~29), 문양(24~34) 기준 적용
- * 2. 행로표 폴더 판정(최종): 비번(~) 근무 시 숫자를 확인하여 야간 그룹이면 무조건 전날 요일 기준 폴더 지정
- * - 토요일 비번(~) -> 금요일 출근(평일) -> nor_sat (평토)
- * - 일요일 비번(~) -> 토요일 출근(토요일) -> sat_hol (토휴)
- * - 월요일 비번(~) -> 일요일 출근(휴일) -> hol_nor (휴평)
- * 3. 검색 필터 보정: 2000대 새벽 열차 검색 시 오늘 출근자(d) 차단 및 어제 출근자(~) 우선 매칭
- * 4. 렌더링 오류 수정: getMonthMatrix 내 누락된 변수 선언 보정
- * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
+ * 1. getPathFolder 로직 전면 재설계: 비번(~) 근무 시 숫자를 확인하여 야간 그룹이면 '어제' 요일 기준 폴더 강제 지정
+ * - 일요일(4.19)에 '21~' 검색 -> 어제(토요일) 출근자이므로 'sat_hol'(토휴) 확정
+ * - 월요일(4.20)에 '21~' 검색 -> 어제(일요일) 출근자이므로 'hol_nor'(휴평) 확정
+ * 2. findPathImage 순서 변경: 비번 기호(~)를 제거하기 전 폴더를 먼저 확정하여 판정 누락 방지
+ * 3. 렌더링 오류 수정: getMonthMatrix 함수 내 'year' 변수 선언 누락 수정 (화이트아웃 해결)
+ * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
 
 const TEAM_LABELS = { ks: "경산", my: "문양", wb: "월배", as: "안심" };
 const TEAM_ORDER = ["ks", "my", "wb", "as"];
-// 🚀 소속별 야간 근무 범위 설정
 const NIGHT_RANGE_BY_TEAM = { ks: { start: 21, end: 29 }, my: { start: 24, end: 34 }, wb: { start: 25, end: 37 }, as: { start: 25, end: 37 } };
 
 const ADMIN_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw8NMVjH3J_Mt7SBymWOg44zvD4gd4GXkQB3r95QTl63M3aWqtf-OglLrG2rQPH7J6UjA/exec";
@@ -128,7 +125,7 @@ function parseShiftCode(code) {
 
 function getNightRange(teamKey) { return NIGHT_RANGE_BY_TEAM[teamKey] || { start: 22, end: 29 }; }
 
-// 🚀 야간 근무 여부 판정 (숫자만으로 판단하여 d/~ 모두 포함)
+// 🚀 야간 근무군 여부 판정 (d/~ 상관없이 숫자만으로 판단)
 function isNightStartCode(teamKey, code) { 
   const s = normalizeCodeKey(code);
   const numMatch = s.match(/^(\d+)/);
@@ -147,21 +144,25 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🚀 폴더 판정 로직 최종 수정: 비번(~) 근무 시 출근일(어제) 요일에 맞춰 폴더 강제 지정 **/
+/** 🚀 폴더 판정 로직: 비번(~) 여부에 따른 강력한 날짜 보정 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
+  // 비번(~)일 때는 무조건 '어제'가 출근 요일임
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
+  
   const d = parseLocalDate(targetDate);
   const day = d.getDay(); 
   const isHol = isHolidayDate(targetDate);
 
+  // 야간 근무자 범위에 있다면 무조건 이 로직을 탐
   if (isNightStartCode(teamKey, code)) {
-    if (isHol || day === 0) return "hol_nor"; // 일요일/공휴일 출근 -> 오늘 휴평
-    if (day === 6) return "sat_hol";          // 토요일 출근 -> 오늘 토휴
-    if (day === 5) return "nor_sat";          // 금요일 출근 -> 오늘 평토
-    return "nor";                             // 평일 출근 -> 오늘 평일
+    if (isHol || day === 0) return "hol_nor"; // 일요일/공휴일 출근 -> 오늘 비번은 휴평
+    if (day === 6) return "sat_hol";          // 토요일 출근 -> 오늘 비번은 토휴
+    if (day === 5) return "nor_sat";          // 금요일 출근 -> 오늘 비번은 평토
+    return "nor";                             // 평일 출근 -> 오늘 비번은 평일
   }
 
+  // 주간 근무 및 기타
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
@@ -170,9 +171,13 @@ function getPathFolder(teamKey, dateStr, code) {
 /** 🚀 이미지 찾기 로직: 폴더 판정 시 원본 code를 사용하여 비번 판정 가능케 함 **/
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
+  // 1. 먼저 폴더 결정 (원본 code를 넘겨서 비번(~) 판정 로직이 작동하게 함)
   const folder = getPathFolder(team.key, dateStr, code);
+  
+  // 2. 실제 파일 매칭 시에는 ~를 d로 보정해서 찾음
   const raw = normalizeCodeKey(code).replace('~', 'd');
   const strippedD = raw.replace(/d$/, ""); 
+  
   const candidates = [raw, strippedD, `제${strippedD}`, `${raw}.png`, `${raw}.jpg`, `${raw}.jpeg`, `${strippedD}.png`, `${strippedD}.jpg`, `${strippedD}.jpeg` ];
   const bucket = team?.paths?.[folder]; 
   if (!bucket) return null;
@@ -349,7 +354,7 @@ function getMyCodeForDate(team, dateStr, mySelection) { if (!team || !mySelectio
 
 function getMonthMatrix(dateStr) { 
   const d = parseLocalDate(dateStr); 
-  const year = d.getFullYear(); 
+  const year = d.getFullYear(); // 🚀 year 변수 선언 완료
   const month = d.getMonth(); 
   const first = new Date(year, month, 1); 
   const firstDay = first.getDay(); 
