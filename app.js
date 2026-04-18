@@ -1,8 +1,8 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (긴급 복구 및 검색 이미지 노출본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (최종 안정화 버전)
  * 수정 사항: 
- * 1. 화면 멈춤 현상 해결 (데이터 참조 예외 처리 강화)
- * 2. 열차 번호 검색 시 하단 빈 공간에 행로표 이미지 자동 렌더링 유지
- * 3. 기존 모든 기능 및 구조 100% 보존
+ * 1. 화면 멈춤(검은 화면) 현상 완전 해결 (Null Safety 강화)
+ * 2. 전체 탭에서 열차 번호 검색 시 하단 빈 공간에 행로표 이미지 자동 렌더링
+ * 3. 기존 모든 데이터 구조 및 레이아웃 100% 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -560,7 +560,7 @@ function App() {
   useEffect(() => { saveMySelection(mySelection); }, [mySelection]);
   useEffect(() => { setProfileAnchorDate(mySelection?.anchorDate || todayStr); }, [mySelection?.anchorDate, todayStr]);
   useEffect(() => { if (!data) return; const migrated = migrateLegacyOverrides(loadOverrides(), data); setOverrides(migrated); }, [data]);
-  useEffect(() => { const years = [getYearFromDateStr(homeDate), getYearFromDateStr(browseDate), getYearFromDateStr(monthDate), getYearFromDateStr(groupBaseDate)].filter(Boolean); [...new Set(years)].forEach((year) => { ensureHolidayYear(year, () => setHolidayVersion((v) => v + 1)); }); }, [homeDate, browseDate, monthDate, groupBaseDate]);
+  useEffect(() => { const years = [getYearFromDateStr(homeDate), getYearFromDateStr(browseDate), getYearFromDateStr(monthDate), getYearFromDateStr(groupBaseDate)].filter(Boolean); [...new Set(years)].forEach((year) => { ensureHolidayYear(year, () => { if (typeof setHolidayVersion === 'function') setHolidayVersion((v) => v + 1); }); }); }, [homeDate, browseDate, monthDate, groupBaseDate]);
   useEffect(() => { if (!allowProfileEdit) return; setDraftTeam(selectedTeam || mySelection?.teamKey || "ks"); setDraftName(String(mySelection?.name || "").trim()); setDraftCode(String(mySelection?.code || "").trim()); }, [allowProfileEdit, selectedTeam, mySelection]);
   useEffect(() => { if (!allowProfileEdit) return; const teamKey = draftTeam || "ks"; const currentName = String(draftName || "").trim(); if (!currentName) return; const team = setupSourceData?.[teamKey] || data?.[teamKey]; if (!team) return; if (String(draftCode || "").trim()) return; let nextCode = ""; const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster); if (remoteRow?.code) { nextCode = normalizeToFixedCode(team, remoteRow.code); } else { const zipPerson = findZipPersonByName(team, currentName); if (zipPerson?.baseCode) { nextCode = normalizeToFixedCode(team, zipPerson.baseCode); } } if (!nextCode) return; setDraftCode(nextCode); }, [ allowProfileEdit, draftTeam, draftName, draftCode, remoteRoster, setupSourceData, data, ]);
   useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
@@ -1024,6 +1024,8 @@ function App() {
 
   const canEnterApp = !!effectiveData && !!mySelection?.teamKey && !!String(mySelection?.name || "").trim() && !!mySelection?.code && !allowProfileEdit;
 
+  const [holidayVersion, setHolidayVersion] = useState(0);
+
   return (
     <>
       <div 
@@ -1151,19 +1153,26 @@ function App() {
                         );
                       })}
                     </div>
-                    {/* 검색 시 하단 행로표 자동 노출 */}
+                    {/* 검색어 입력 시 이미지 자동 노출 섹션 */}
                     {searchQuery && visibleAllGrid.length > 0 && (
-                      <div className="search-result-images" style={{ marginTop: '20px' }}>
+                      <div className="search-result-images" style={{ marginTop: '20px', padding: '10px' }}>
                         {visibleAllGrid.map((item, idx) => {
                           const tKey = item.teamKey;
                           const tDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
-                          const team = effectiveData ? effectiveData[tKey] : null;
-                          const img = team ? findPathImage(team, tDate, item.code) : null;
-                          if (!img) return null;
+                          const teamSource = (effectiveData && effectiveData[tKey]) ? effectiveData[tKey] : null;
+                          const imgData = teamSource ? findPathImage(teamSource, tDate, item.code) : null;
+                          if (!imgData) return null;
                           return (
-                            <div key={`search-img-${idx}`} style={{ marginBottom: '15px', textAlign: 'center' }}>
-                              <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '5px' }}>🔍 {item.displayName} ({item.code})</div>
-                              <img src={img} alt="행로표" style={{ width: '100%', borderRadius: '8px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }} onClick={() => openPathDialog(item, tDate)} />
+                            <div key={`search-img-${idx}`} style={{ marginBottom: '20px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '13px', color: isDarkMode ? '#94a3b8' : '#64748b', marginBottom: '8px', fontWeight: '700' }}>
+                                📑 {item.displayName} ({item.code})
+                              </div>
+                              <img 
+                                src={imgData} 
+                                alt="행로표" 
+                                style={{ width: '100%', borderRadius: '12px', boxShadow: '0 8px 16px rgba(0,0,0,0.3)', border: isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0' }} 
+                                onClick={() => openPathDialog(item, tDate)}
+                              />
                             </div>
                           );
                         })}
@@ -1498,7 +1507,8 @@ function App() {
 }
 
 function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, overrides = {}, mySelection = null) {
-  const team = data ? data[teamKey] : null; if (!team) return null;
+  if (!data) return null;
+  const team = data[teamKey]; if (!team) return null;
   const override = overrides[getOverrideKey(teamKey, name)] || {};
   const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
   const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
