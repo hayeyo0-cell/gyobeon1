@@ -3,7 +3,8 @@
  * 1. 새벽 열차(2000~2100대) 검색 시: 어제 출근한 비번 근무자(~)의 결과만 노출
  * 2. 밤 열차(2200대 이상) 검색 시: 오늘 새로 출근하는 근무자(d)의 결과만 노출
  * 3. 어제 출근자 결과 노출 시 교번을 오늘 기준인 (~)로 자동 변환하여 표시
- * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
+ * 4. 행로표 폴더 판정 로직 수정: 비번(~) 근무 시 '어제'를 기준으로 폴더(nor_sat, sat_hol 등) 결정
+ * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -129,12 +130,25 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
+/** 🚀 수정된 getPathFolder: 비번(~) 근무 시 어제 기준으로 폴더를 판정하여 행로표 매칭 **/
 function getPathFolder(teamKey, dateStr, code) {
-  const day = parseLocalDate(dateStr).getDay(); const isHol = isHolidayDate(dateStr);
-  if (isNightStartCode(teamKey, code)) { if (isHol || day === 0) return "hol_nor"; if (day >= 1 && day <= 4) return "nor"; if (day === 5) return "nor_sat"; if (day === 6) return "sat_hol"; }
-  if (isNightEndCode(teamKey, code)) { if (day === 1 && isHolidayDate(addDays(dateStr, -1))) return "hol_nor"; if (day >= 2 && day <= 5) return "nor"; if (day === 6) return "nor_sat"; if (day === 0 || isHol) return "sat_hol"; if (day === 1) return "hol_nor"; }
-  if (isDayShiftCode(teamKey, code)) { if (isHol || day === 0) return "hol"; if (day === 6) return "sat"; return "nor"; }
-  if (isHol || day === 0) return "hol"; if (day === 6) return "sat"; return "nor";
+  const isTilde = String(code || "").includes("~");
+  const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
+  
+  const d = parseLocalDate(targetDate);
+  const day = d.getDay();
+  const isHol = isHolidayDate(targetDate);
+
+  if (isNightStartCode(teamKey, code) || isNightEndCode(teamKey, code)) {
+    if (isHol || day === 0) return "hol_nor";
+    if (day >= 1 && day <= 4) return "nor";
+    if (day === 5) return "nor_sat";
+    if (day === 6) return "sat_hol";
+  }
+
+  if (isHol || day === 0) return "hol";
+  if (day === 6) return "sat";
+  return "nor";
 }
 
 function findPathImage(team, dateStr, code) {
@@ -503,7 +517,7 @@ function App() {
   const isSwipingRef = useRef(false);
 
   const onTouchStart = (e) => {
-    const target = e.target.closest('.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4, .month-header-bar, .all-header, .date-grid');
+    const target = e.target.closest('.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4, .month-calendar, .all-header, .date-grid');
     if (target) return;
     touchStartX.current = e.targetTouches[0].clientX;
     touchStartY.current = e.targetTouches[0].clientY;
@@ -712,7 +726,6 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
         
-        /** 🚀 지능형 필터링: 새벽 열차(2000~2100)는 오늘 출근자(d) 결과에서 배제 **/
         if (isTrainMatch && isNightStartCode(teamKey, item.code)) {
             const trainNum = parseInt(searchQuery);
             if (trainNum >= 2000 && trainNum <= 2100) return false;
@@ -727,14 +740,12 @@ function App() {
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
 
-        /** 🚀 지능형 필터링: 새벽 열차만 어제 출근자 결과로 인정 **/
         if (isTrainMatch) {
             const trainNum = parseInt(searchQuery);
             if (trainNum >= 2000 && trainNum <= 2100) return true;
         }
         return false;
       }).map(item => {
-          /** 🚀 표시 보정: 어제 25d는 오늘 25~로 표시 **/
           const todayCode = item.code.replace('d', '~');
           return { ...item, code: todayCode, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr };
       });
@@ -891,7 +902,7 @@ function App() {
     setOverrides(next); saveOverrides(next); setEditOpen(false); setEditingCell(null); setEditColor(""); setEditAlias(""); setIsWorktimeEditOpen(false); setEditStartHour(""); setEditStartMin(""); setEditEndHour(""); setEditEndMin("");
   }
 
-  function openPathDialog(item, dateStr = todayStr) { if (!effectiveData || !item?.code) return; const currentTeamKey = item.teamKey || viewTeam; const team = effectiveData[currentTeamKey]; /** 🚀 보정: 검색에서 넘겨받은 교번(~)의 실제 행로 이미지(d) 찾기 **/ const realCode = item.code.replace('~', 'd'); const image = findPathImage(team, dateStr, realCode); setPathTeamKey(currentTeamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
+  function openPathDialog(item, dateStr = todayStr) { if (!effectiveData || !item?.code) return; const currentTeamKey = item.teamKey || viewTeam; const team = effectiveData[currentTeamKey]; const realCode = item.code.replace('~', 'd'); const image = findPathImage(team, dateStr, realCode); setPathTeamKey(currentTeamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { const team = effectiveData?.[teamKey]; if (!team || !item?.code) return; const image = findPathImage(team, dateStr, item.code); setViewTeam(teamKey); setPathTeamKey(teamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
@@ -1164,13 +1175,11 @@ function App() {
                         );
                       })}
                     </div>
-                    {/* 🚀 검색 시 하단 행로표 노출 영역 */}
                     {searchQuery && visibleAllGrid.length > 0 && (
                       <div className="search-img-panel" style={{ marginTop: '20px', paddingBottom: '30px' }}>
                         {visibleAllGrid.map((item, idx) => {
                           const imgTeam = effectiveData ? effectiveData[item.teamKey] : null;
                           const imgDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
-                          /** 🚀 보정: 표시된 교번(~)의 실제 행로표 이미지 파일(d) 찾기 **/
                           const searchCode = item.code.replace('~', 'd');
                           const imgSrc = imgTeam ? findPathImage(imgTeam, imgDate, searchCode) : null;
                           if (!imgSrc) return null;
