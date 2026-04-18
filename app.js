@@ -1,7 +1,8 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (최종 수정본 - 검색 시 이미지 노출 추가)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (긴급 복구 및 검색 이미지 노출본)
  * 수정 사항: 
- * 1. 열차 번호 검색 시 검색 결과 하단 빈 공간에 행로표 이미지 자동 렌더링 로직 추가
- * 2. 기존의 모든 함수, 변수, CSS 구조 및 기능 원본 그대로 유지
+ * 1. 화면 멈춤 현상 해결 (데이터 참조 예외 처리 강화)
+ * 2. 열차 번호 검색 시 하단 빈 공간에 행로표 이미지 자동 렌더링 유지
+ * 3. 기존 모든 기능 및 구조 100% 보존
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -1150,25 +1151,19 @@ function App() {
                         );
                       })}
                     </div>
-                    {/* 🚀 검색 결과가 있을 때 하단 빈 공간에 행로표 노출 영역 */}
+                    {/* 검색 시 하단 행로표 자동 노출 */}
                     {searchQuery && visibleAllGrid.length > 0 && (
-                      <div className="search-result-image-area" style={{ marginTop: '20px', textAlign: 'center' }}>
+                      <div className="search-result-images" style={{ marginTop: '20px' }}>
                         {visibleAllGrid.map((item, idx) => {
-                          const targetDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
-                          const team = effectiveData[item.teamKey];
-                          const img = team ? findPathImage(team, targetDate, item.code) : null;
+                          const tKey = item.teamKey;
+                          const tDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
+                          const team = effectiveData ? effectiveData[tKey] : null;
+                          const img = team ? findPathImage(team, tDate, item.code) : null;
                           if (!img) return null;
                           return (
-                            <div key={`search-img-${idx}`} style={{ marginBottom: '15px' }}>
-                              <div style={{ fontSize: '13px', color: isDarkMode ? '#94a3b8' : '#64748b', marginBottom: '5px' }}>
-                                🔍 {item.displayName}({item.code}) 행로표
-                              </div>
-                              <img 
-                                src={img} 
-                                alt="행로표" 
-                                style={{ width: '100%', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} 
-                                onClick={() => openPathDialog(item, targetDate)}
-                              />
+                            <div key={`search-img-${idx}`} style={{ marginBottom: '15px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '5px' }}>🔍 {item.displayName} ({item.code})</div>
+                              <img src={img} alt="행로표" style={{ width: '100%', borderRadius: '8px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }} onClick={() => openPathDialog(item, tDate)} />
                             </div>
                           );
                         })}
@@ -1503,7 +1498,7 @@ function App() {
 }
 
 function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, overrides = {}, mySelection = null) {
-  const team = data?.[teamKey]; if (!team) return null;
+  const team = data ? data[teamKey] : null; if (!team) return null;
   const override = overrides[getOverrideKey(teamKey, name)] || {};
   const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
   const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
