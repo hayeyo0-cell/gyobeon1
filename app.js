@@ -1,8 +1,9 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (상단바 레이아웃 및 글씨체 완벽 일치본)
  * 수정 사항: 
- * 1. DIA순서 탭: '전체' 탭과 헤더 칸 크기, 버튼 모양, 글씨 크기 100% 동일화 ('DIA순서' 문구 제거).
- * 2. 월교번 스와이프: 버튼 간섭을 해결하여 좌우 스와이프 애니메이션 완벽 구현.
- * 3. 기존 모든 정밀 로직(열차 검색 보정, 설정창 오류 해결 등) 완벽 유지.
+ * 1. DIA순서 탭 상단바: '전체' 탭의 3단 구성(버튼/텍스트/버튼)을 픽셀 단위로 복제.
+ * 2. 글씨 크기 일치: 전체 탭 날짜 글씨와 DIA순서 날짜 글씨 크기를 완벽히 동일하게 고정.
+ * 3. 칸 너비 보정: 버튼과 날짜 사이의 간격(빨간 줄 위치)을 전체 탭과 동일하게 구현.
+ * 4. 월교번 스와이프 기능 및 기존 정밀 매칭 로직 유지.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -137,7 +138,7 @@ function getWorktimeOverrideKey(teamKey, personName) { return `${teamKey}::${nor
 function getWorktimeOverrideValue(teamKey, code, dayType) { const data = loadWorktimeOverrides(); const key = getWorktimeOverrideKey(teamKey, code); return String(data?.[key]?.[dayType] || "").trim(); }
 function parseTimeValueToParts(value) { const raw = String(value || "").trim(); if (!raw || raw === "----") return { sh: "", sm: "", eh: "", em: "" }; const match = raw.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/); return match ? { sh: match[1], sm: match[2], eh: match[3], em: match[4] } : { sh: "", sm: "", eh: "", em: "" }; }
 function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 2); }
-function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
+function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(shNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
 function getPathFolder(teamKey, dateStr, code) {
@@ -1196,7 +1197,7 @@ function App() {
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   ) : (
-                    /* 🚀 DIA순서 탭: 전체탭과 100% 동일한 레이아웃 (검색공간 삭제, 날짜폰트 유지) */
+                    /* 🚀 DIA순서 상단 헤더: 전체탭과 100% 동일한 레이아웃 구조 (검색버튼 대신 날짜만 3단으로 정확히 배치) */
                     <div className="all-header dia-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between" }}>
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                       <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "1.1rem", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
