@@ -1,9 +1,10 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 로직 "끝판왕" 해결본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (설정창 오류 및 검색 필터 완전 복구본)
  * 수정 사항: 
- * 1. 2000번대 열차 검색 필터 강화: 2000~2199 검색 시 오늘 출근자(d)는 검색 리스트에서 완전히 제외
- * 2. 야간 근무자 우선 매칭: 야간 열차 검색 결과는 무조건 어제 출근자로부터 파생된 비번(~) 근무자만 표시
- * 3. getPathFolder 로직 유지: ~기호 포함 시 무조건 어제 기준으로 폴더 판정 (토휴 등 매칭 보장)
- * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
+ * 1. 설정창 하얀 화면 해결: SavingSharedConfig 오타 수정 (대문자 -> 소문자)
+ * 2. 검색 필터 통합 복구: 2000~2199 열차 포함 모든 열번이 오늘(d)/어제(~) 리스트에서 정상 검색되도록 복구
+ * 3. 비번(~) 근무자 우선 정렬: 검색 결과 중 오늘 아침 퇴근자(~)를 리스트 맨 처음에 배치하여 편의성 강화
+ * 4. getPathFolder 최우선 순위: 교번에 ~기호가 있으면 숫자와 상관없이 무조건 '어제'를 기준으로 폴더 판정
+ * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -123,6 +124,7 @@ function parseShiftCode(code) {
 
 function getNightRange(teamKey) { return NIGHT_RANGE_BY_TEAM[teamKey] || { start: 22, end: 29 }; }
 
+// 야간 근무 여부 판정 (숫자만으로 판단)
 function isNightStartCode(teamKey, code) { 
   const s = normalizeCodeKey(code);
   const numMatch = s.match(/^(\d+)/);
@@ -141,23 +143,31 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
+/** 🚀 폴더 판정 로직 최종 수정: 교본 기호(~ 여부)를 최우선으로 날짜 보정 수행 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
+  
+  // 🚀 비번(~)일 경우 숫자 범위와 상관없이 실제 출근 요일인 '어제'를 먼저 확정
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
   const d = parseLocalDate(targetDate);
   const day = d.getDay(); 
   const isHol = isHolidayDate(targetDate);
+
+  // 야간 근무자 범위(경산 21~29 등) 확인
   if (isNightStartCode(teamKey, code)) {
-    if (isHol || day === 0) return "hol_nor"; 
-    if (day === 6) return "sat_hol";          
-    if (day === 5) return "nor_sat";          
-    return "nor";                             
+    if (isHol || day === 0) return "hol_nor"; // 어제가 휴일 -> 오늘 휴평
+    if (day === 6) return "sat_hol";          // 어제가 토요일 -> 오늘 토휴
+    if (day === 5) return "nor_sat";          // 어제가 금요일 -> 오늘 평토
+    return "nor";                             // 어제가 평일 -> 오늘 평일
   }
+
+  // 주간 근무
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
 }
 
+/** 🚀 이미지 찾기: 원본 code를 전달하여 ~ 판정이 정확히 getPathFolder에서 일어나게 함 **/
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
   const folder = getPathFolder(team.key, dateStr, code);
@@ -208,6 +218,7 @@ function parseZipToData(parsedFiles) {
     const clean = path.replace(/^\/+/, ""); const parts = clean.split("/"); const teamKey = parts.find((p) => TEAM_ORDER.includes(p)); if (!teamKey) return;
     const team = result[teamKey]; const fileName = parts[parts.length - 1]; const parent = parts[parts.length - 2]; const gyobunOrder = team.gyobun.length ? team.gyobun : DEFAULT_GYOBUN;
     if (fileName === "nor_worktime.txt") team.worktimes.nor = parseWorktime(content, gyobunOrder); if (fileName === "sat_worktime.txt") team.worktimes.sat = parseWorktime(content, gyobunOrder); if (fileName === "hol_worktime.txt") team.worktimes.hol = parseWorktime(content, gyobunOrder);
+
     if (parts.includes("train_data") && fileName.endsWith(".txt")) {
         const type = fileName.replace("_train_data.txt", "").replace(".txt", ""); 
         const lines = parseLines(content);
@@ -220,6 +231,7 @@ function parseZipToData(parsedFiles) {
         if (!team.trainData) team.trainData = {};
         team.trainData[type] = mapping;
     }
+
     if (parts.includes("path") && /\.(png|jpg|jpeg)$/i.test(fileName)) { const kind = parent; if (team.paths[kind]) { const originalName = fileName; const lowerName = fileName.toLowerCase(); const baseName = lowerName.replace(/\.(png|jpg|jpeg)$/i, ""); team.paths[kind][originalName] = content; team.paths[kind][lowerName] = content; team.paths[kind][baseName] = content; } }
   });
   return result;
@@ -738,8 +750,8 @@ function App() {
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
         : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
 
-      // 1. 오늘 출근자 검색 (🚀 수정: 야간 열차 검색 시 오늘 출근자는 무조건 제외)
-      const matchedToday = isNightTrainSearch ? [] : teamGrid.filter(item => {
+      // 1. 오늘 출근자 검색 (🚀 로직 복구: 열번 검색 시 오늘/어제 가리지 않고 모두 검색)
+      const matchedToday = teamGrid.filter(item => {
         const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
@@ -747,15 +759,12 @@ function App() {
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      // 2. 어제 출근자 검색
+      // 2. 어제 출근자 검색 (🚀 어제 야간 근무자로부터 오늘 퇴근하는 비번 파생)
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
-        
         const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
-        
-        if (isNightTrainSearch) return isTrainMatch;
         return (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery) || isTrainMatch;
       }).map(item => {
           const todayCode = normalizeCodeKey(item.code).replace(/d$/, "") + "~";
@@ -771,6 +780,7 @@ function App() {
         if (!uniqueMap.has(key)) uniqueMap.set(key, item);
     });
 
+    // 🚀 비번(~) 근무자를 우선 순위로 둠
     return Array.from(uniqueMap.values()).sort((a, b) => {
         const aIsTilde = a.code.includes("~");
         const bIsTilde = b.code.includes("~");
@@ -1438,8 +1448,8 @@ function App() {
                 <label className="label">공용 기준일</label>
                 <input className="input" type="date" value={remoteBaseDate} onChange={(e) => setRemoteBaseDate(e.target.value)} />
                 <div className="modal-actions">
-                  <button className="modal-btn" onClick={publishRoster} disabled={SavingSharedConfig}>{savingSharedConfig ? "처리중..." : "현재배정 배포"}</button>
-                  <button className="modal-btn primary" onClick={saveSharedConfig} disabled={SavingSharedConfig}>{savingSharedConfig ? "저장중..." : "공용 기준일 저장"}</button>
+                  <button className="modal-btn" onClick={publishRoster} disabled={savingSharedConfig}>{savingSharedConfig ? "처리중..." : "현재배정 배포"}</button>
+                  <button className="modal-btn primary" onClick={saveSharedConfig} disabled={savingSharedConfig}>{savingSharedConfig ? "저장중..." : "공용 기준일 저장"}</button>
                 </div>
               </div>
             )}
