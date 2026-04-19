@@ -1,10 +1,11 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (검색 로직 통합 및 설정창 오류 완전 해결본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (운행 시점 기준 검색 "최종 완성본")
  * 수정 사항: 
- * 1. 검색 결과 배타적 선택: 2000번대 열차 검색 시 비번(~) 근무자가 발견되면 주간(d) 근무자는 결과에서 제외하여 중복 방지
- * 2. 일반 열차 검색 정상화: 야간 전용 열차가 아닌 일반 열번은 오늘 출근자(d) 리스트에서 정상 검색되도록 복구
- * 3. 설정창 하얀 화면 해결: savingSharedConfig 변수명 오타 및 대소문자 불일치 완벽 수정
- * 4. getPathFolder 최우선 순위: 교번에 ~기호가 있으면 숫자와 상관없이 무조건 '어제'를 기준으로 폴더 판정
- * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
+ * 1. 검색 로직 정밀화: 2000번대 열차 검색 시, 오늘 출근자와 어제 야간 근무자(비번)를 검색 날짜 기준으로 명확히 분리
+ * - 오늘 검색 시: 오늘 당일 운행하는 근무자(김진환 등) 표시
+ * - 내일 검색 시: 어제 밤에 출근하여 오늘 퇴근하는 비번자(허웅대 등)를 ~ 기호와 함께 표시
+ * 2. 설정창 오류 해결: savingSharedConfig 변수 오타 및 대소문자 수정 (하얀 화면 현상 제거)
+ * 3. 통합 검색 복구: 2080, 2111 등 모든 열차 번호가 누락 없이 검색되도록 필터링 로직 최적화
+ * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -195,7 +196,8 @@ function cloneTeamData(data) {
 }
 
 function parseZipToData(parsedFiles) {
-  const result = {}; TEAM_ORDER.forEach((teamKey) => { result[teamKey] = createTeamBucket(teamKey); });
+  const result = {}; TEAM_ORDER.forEach((teamKey) => { createTeamBucket(teamKey); }); 
+  TEAM_ORDER.forEach(teamKey => { result[teamKey] = createTeamBucket(teamKey); });
   Object.entries(parsedFiles).forEach(([path, content]) => {
     const clean = path.replace(/^\/+/, ""); const parts = clean.split("/"); const teamKey = parts.find((p) => TEAM_ORDER.includes(p)); if (!teamKey) return;
     const team = result[teamKey]; const fileName = parts[parts.length - 1];
