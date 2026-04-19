@@ -1,10 +1,10 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (운행 시점 기준 검색 "최종 완성본")
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (실시간 운행 시점 기준 검색 완성본)
  * 수정 사항: 
- * 1. 검색 로직 정밀화: 2000번대 열차 검색 시, 오늘 출근자와 어제 야간 근무자(비번)를 검색 날짜 기준으로 명확히 분리
- * - 오늘 검색 시: 오늘 당일 운행하는 근무자(김진환 등) 표시
- * - 내일 검색 시: 어제 밤에 출근하여 오늘 퇴근하는 비번자(허웅대 등)를 ~ 기호와 함께 표시
- * 2. 설정창 오류 해결: savingSharedConfig 변수 오타 및 대소문자 수정 (하얀 화면 현상 제거)
- * 3. 통합 검색 복구: 2080, 2111 등 모든 열차 번호가 누락 없이 검색되도록 필터링 로직 최적화
+ * 1. 실시간 검색 필터: 현재 시각이 오전 09:00 이후라면, 이미 운행이 끝난 오늘 아침 비번자(~)는 검색 결과에서 제외
+ * - 09:00 이후 '2035' 검색 시: 오늘 밤 출근하는 야간 근무자(d)만 검색됨
+ * - 09:00 이전 '2035' 검색 시: 오늘 아침 퇴근하는 비번자(~)가 검색됨
+ * 2. 설정창 오류 해결: savingSharedConfig 변수명 오타 및 대소문자 불일치 해결
+ * 3. getPathFolder 최우선 순위: 교번에 ~기호가 있으면 숫자와 상관없이 무조건 '어제'를 기준으로 폴더 판정
  * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
@@ -150,20 +150,17 @@ function getPathFolder(teamKey, dateStr, code) {
   const d = parseLocalDate(targetDate);
   const day = d.getDay(); 
   const isHol = isHolidayDate(targetDate);
-
   if (isNightStartCode(teamKey, code)) {
     if (isHol || day === 0) return "hol_nor"; 
     if (day === 6) return "sat_hol";          
     if (day === 5) return "nor_sat";          
     return "nor";                             
   }
-
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
 }
 
-/** 🚀 이미지 찾기: 원본 code를 전달하여 ~ 판정이 정확히 getPathFolder에서 일어나게 함 **/
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
   const folder = getPathFolder(team.key, dateStr, code);
@@ -196,8 +193,7 @@ function cloneTeamData(data) {
 }
 
 function parseZipToData(parsedFiles) {
-  const result = {}; TEAM_ORDER.forEach((teamKey) => { createTeamBucket(teamKey); }); 
-  TEAM_ORDER.forEach(teamKey => { result[teamKey] = createTeamBucket(teamKey); });
+  const result = {}; TEAM_ORDER.forEach((teamKey) => { result[teamKey] = createTeamBucket(teamKey); });
   Object.entries(parsedFiles).forEach(([path, content]) => {
     const clean = path.replace(/^\/+/, ""); const parts = clean.split("/"); const teamKey = parts.find((p) => TEAM_ORDER.includes(p)); if (!teamKey) return;
     const team = result[teamKey]; const fileName = parts[parts.length - 1];
@@ -732,8 +728,11 @@ function App() {
 
     const yesterdayStr = addDays(browseDate, -1);
     let crossTeamResults = [];
-    const trainNum = parseInt(searchQuery);
-    const isNightTrainSearch = !isNaN(trainNum) && trainNum >= 2000 && trainNum <= 2199;
+    
+    // 🚀 현재 검색 시각 기준 설정 (오전 09:00 기준)
+    const now = getKoreaNow();
+    const currentHour = now.getHours();
+    const isEarlyMorning = currentHour < 9; // 오전 9시 이전이면 오늘 아침 비번자 위주
 
     TEAM_ORDER.forEach(teamKey => {
       const team = effectiveData[teamKey];
@@ -752,25 +751,32 @@ function App() {
         if (!isNightStartCode(teamKey, item.code)) return false;
         const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
-        return trains.some(t => String(t) === searchQuery);
+        const isTrainMatch = trains.some(t => String(t) === searchQuery);
+        
+        // 🚀 핵심 로직: 열번 검색 시 오전 9시 이전이면 비번자 표시, 이후면 생략
+        if (isTrainMatch) return isEarlyMorning;
+        
+        // 이름이나 교번 검색은 언제나 표시
+        return (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
       }).map(item => {
           const todayCode = normalizeCodeKey(item.code).replace(/d$/, "") + "~";
           return { ...item, code: todayCode, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr };
       });
 
-      // 🚀 배타적 로직 적용: 만약 비번(~) 근무자가 한 명이라도 발견되었다면 오늘 리스트(d)는 생략
-      if (matchedYesterday.length > 0) {
-        crossTeamResults = [...crossTeamResults, ...matchedYesterday];
-      } else {
-        // 2. 오늘 출근자 검색 (비번 결과가 없을 때만 수행)
-        const matchedToday = teamGrid.filter(item => {
-          const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
-          const folder = getPathFolder(teamKey, browseDate, item.code);
-          const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
-          return basicMatch || trains.some(t => String(t) === searchQuery);
-        }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
-        crossTeamResults = [...crossTeamResults, ...matchedToday];
-      }
+      // 2. 오늘 출근자 검색
+      const matchedToday = teamGrid.filter(item => {
+        const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
+        const folder = getPathFolder(teamKey, browseDate, item.code);
+        const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
+        const isTrainMatch = trains.some(t => String(t) === searchQuery);
+        
+        // 🚀 핵심 로직: 야간 열번(2000대) 검색 시, 오전 9시 이후라면 오늘 야간 근무자(내일 아침 운행)만 표시
+        if (isTrainMatch && parseInt(searchQuery) >= 2000) return !isEarlyMorning;
+
+        return basicMatch || isTrainMatch;
+      }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
+
+      crossTeamResults = [...crossTeamResults, ...matchedYesterday, ...matchedToday];
     });
 
     const uniqueMap = new Map();
