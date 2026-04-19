@@ -1,8 +1,8 @@
 /** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본)
  * 수정 사항: 
- * 1. DIA순서 탭 헤더: '전체' 탭과 동일한 칸 높이, 버튼 모양, 글씨 크기로 100% 일치화.
- * 2. 월교번 스와이프: 날짜 버튼 클릭과 스와이프 이벤트를 분리하여 부드러운 전환 구현.
- * 3. 열차 번호 정밀 매칭 및 설정창 오타 해결 등 기존의 모든 완벽한 로직 유지.
+ * 1. DIA순서 탭: '전체' 탭과 헤더 칸 크기, 버튼 모양, 글씨 크기 100% 동일화 ('DIA순서' 문구 제거).
+ * 2. 월교번 스와이프: 버튼 간섭을 해결하여 좌우 스와이프 애니메이션 완벽 구현.
+ * 3. 기존 모든 정밀 로직(열차 검색 보정, 설정창 오류 해결 등) 완벽 유지.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -1196,10 +1196,10 @@ function App() {
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   ) : (
-                    /* 🚀 DIA순서 상단 헤더: 전체탭과 100% 동일한 칸 높이, 버튼 스타일, 글자 크기 적용 */
+                    /* 🚀 DIA순서 탭: 전체탭과 100% 동일한 레이아웃 (검색공간 삭제, 날짜폰트 유지) */
                     <div className="all-header dia-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between" }}>
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
-                      <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "1.1rem", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} DIA순서 {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
+                      <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "1.1rem", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   )}
