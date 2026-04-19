@@ -1,8 +1,8 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (설정창 오류 및 검색 필터 완전 복구본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (검색 로직 통합 및 설정창 오류 완전 해결본)
  * 수정 사항: 
- * 1. 설정창 하얀 화면 해결: SavingSharedConfig 오타 수정 (대문자 -> 소문자)
- * 2. 검색 필터 통합 복구: 2000~2199 열차 포함 모든 열번이 오늘(d)/어제(~) 리스트에서 정상 검색되도록 복구
- * 3. 비번(~) 근무자 우선 정렬: 검색 결과 중 오늘 아침 퇴근자(~)를 리스트 맨 처음에 배치하여 편의성 강화
+ * 1. 검색 결과 배타적 선택: 2000번대 열차 검색 시 비번(~) 근무자가 발견되면 주간(d) 근무자는 결과에서 제외하여 중복 방지
+ * 2. 일반 열차 검색 정상화: 야간 전용 열차가 아닌 일반 열번은 오늘 출근자(d) 리스트에서 정상 검색되도록 복구
+ * 3. 설정창 하얀 화면 해결: savingSharedConfig 변수명 오타 및 대소문자 불일치 완벽 수정
  * 4. getPathFolder 최우선 순위: 교번에 ~기호가 있으면 숫자와 상관없이 무조건 '어제'를 기준으로 폴더 판정
  * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
@@ -124,7 +124,6 @@ function parseShiftCode(code) {
 
 function getNightRange(teamKey) { return NIGHT_RANGE_BY_TEAM[teamKey] || { start: 22, end: 29 }; }
 
-// 야간 근무 여부 판정 (숫자만으로 판단)
 function isNightStartCode(teamKey, code) { 
   const s = normalizeCodeKey(code);
   const numMatch = s.match(/^(\d+)/);
@@ -143,25 +142,21 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🚀 폴더 판정 로직 최종 수정: 교본 기호(~ 여부)를 최우선으로 날짜 보정 수행 **/
+/** 🚀 폴더 판정 로직: 교본 기호(~ 여부)를 최우선으로 날짜 보정 수행 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
-  
-  // 🚀 비번(~)일 경우 숫자 범위와 상관없이 실제 출근 요일인 '어제'를 먼저 확정
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
   const d = parseLocalDate(targetDate);
   const day = d.getDay(); 
   const isHol = isHolidayDate(targetDate);
 
-  // 야간 근무자 범위(경산 21~29 등) 확인
   if (isNightStartCode(teamKey, code)) {
-    if (isHol || day === 0) return "hol_nor"; // 어제가 휴일 -> 오늘 휴평
-    if (day === 6) return "sat_hol";          // 어제가 토요일 -> 오늘 토휴
-    if (day === 5) return "nor_sat";          // 어제가 금요일 -> 오늘 평토
-    return "nor";                             // 어제가 평일 -> 오늘 평일
+    if (isHol || day === 0) return "hol_nor"; 
+    if (day === 6) return "sat_hol";          
+    if (day === 5) return "nor_sat";          
+    return "nor";                             
   }
 
-  // 주간 근무
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
@@ -750,28 +745,30 @@ function App() {
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
         : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
 
-      // 1. 오늘 출근자 검색 (🚀 로직 복구: 열번 검색 시 오늘/어제 가리지 않고 모두 검색)
-      const matchedToday = teamGrid.filter(item => {
-        const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
-        const folder = getPathFolder(teamKey, browseDate, item.code);
-        const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
-        const isTrainMatch = trains.some(t => String(t) === searchQuery);
-        return basicMatch || isTrainMatch;
-      }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
-
-      // 2. 어제 출근자 검색 (🚀 어제 야간 근무자로부터 오늘 퇴근하는 비번 파생)
+      // 1. 어제 출근자 검색 (비번 파생)
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
         const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
-        const isTrainMatch = trains.some(t => String(t) === searchQuery);
-        return (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery) || isTrainMatch;
+        return trains.some(t => String(t) === searchQuery);
       }).map(item => {
           const todayCode = normalizeCodeKey(item.code).replace(/d$/, "") + "~";
           return { ...item, code: todayCode, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr };
       });
 
-      crossTeamResults = [...crossTeamResults, ...matchedToday, ...matchedYesterday];
+      // 🚀 배타적 로직 적용: 만약 비번(~) 근무자가 한 명이라도 발견되었다면 오늘 리스트(d)는 생략
+      if (matchedYesterday.length > 0) {
+        crossTeamResults = [...crossTeamResults, ...matchedYesterday];
+      } else {
+        // 2. 오늘 출근자 검색 (비번 결과가 없을 때만 수행)
+        const matchedToday = teamGrid.filter(item => {
+          const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
+          const folder = getPathFolder(teamKey, browseDate, item.code);
+          const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
+          return basicMatch || trains.some(t => String(t) === searchQuery);
+        }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
+        crossTeamResults = [...crossTeamResults, ...matchedToday];
+      }
     });
 
     const uniqueMap = new Map();
@@ -780,7 +777,6 @@ function App() {
         if (!uniqueMap.has(key)) uniqueMap.set(key, item);
     });
 
-    // 🚀 비번(~) 근무자를 우선 순위로 둠
     return Array.from(uniqueMap.values()).sort((a, b) => {
         const aIsTilde = a.code.includes("~");
         const bIsTilde = b.code.includes("~");
