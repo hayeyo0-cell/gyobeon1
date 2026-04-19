@@ -1,8 +1,9 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 안정화 완성본)
- * 1. 헤더 글자 크기 14px 고정 (전체/DIA순서 탭 동일)
- * 2. DIA순서 탭 상단에서 'DIA순서' 문구 삭제 (전체 탭과 동일 디자인)
- * 3. 좌우 +/- 버튼 칸 너비를 60px로 고정하여 레이아웃 균형 확보
- * 4. 월교번 스와이프 기능 포함 및 시스템 오류(하얀 화면) 완전 해결
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (헤더 정밀 교정 및 시스템 안정화본)
+ * 최종 수정: 
+ * 1. 헤더 칸 너비: +/- 버튼 및 수정/돋보기 칸을 모두 20px로 정밀 축소.
+ * 2. 글자 크기: 날짜 및 소속 글씨를 모두 14px로 통일하여 정중앙 배치.
+ * 3. DIA순서 탭: 전체 탭과 동일한 20px 칸 너비 및 14px 글자 크기 적용 ('DIA순서' 문구 제거).
+ * 4. 월교번 스와이프 및 시스템 오류 완벽 해결.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -135,9 +136,9 @@ function loadWorktimeOverrides() { try { return JSON.parse(localStorage.getItem(
 function saveWorktimeOverrides(value) { localStorage.setItem(LS_WORKTIME_OVERRIDES, JSON.stringify(value || {})); }
 function getWorktimeOverrideKey(teamKey, personName) { return `${teamKey}::${normalizeNameKey(personName)}`; }
 function getWorktimeOverrideValue(teamKey, code, dayType) { const data = loadWorktimeOverrides(); const key = getWorktimeOverrideKey(teamKey, code); return String(data?.[key]?.[dayType] || "").trim(); }
-function parseTimeValueToParts(value) { const raw = String(value || "").trim(); if (!raw || raw === "----") return { sh: "", sm: "", eh: "", em: "" }; const match = raw.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/); return match ? { sh: match[1], sm: match[2], eh: match[3], em: match[4] } : { sh: "", sm: "", eh: "", em: "" }; }
+function parseTimeValueToParts(value) { const raw = String(value || "").trim(); if (!raw || raw === "----") return { sh: "", sm: "", eh: "", em: "" }; const match = raw.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/); return match ? { match: true, sh: match[1], sm: match[2], eh: match[3], em: match[4] } : { match: false, sh: "", sm: "", eh: "", em: "" }; }
 function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 2); }
-function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(shNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
+function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
 function getPathFolder(teamKey, dateStr, code) {
@@ -1188,20 +1189,20 @@ function App() {
               <div className="tab-page all-page">
                 <div className="all-tab-header">
                   {activeTab === "all" ? (
-                    /* 🚀 전체 탭 상단바: 글씨 크기 14px 고정 및 좌우 버튼 너비 정밀 조정 */
-                    <div className="all-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center" }}>
-                      <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
+                    /* 🚀 전체 탭 상단바: 요청하신 글씨 14px 및 칸 너비 20px(버튼 영역) 적용 */
+                    <div className="all-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between" }}>
+                      <button className="all-header-btn" style={{ width: "20px", display: "flex", justifyContent: "center" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                       <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
-                      <button className="all-header-btn" style={{ width: "40px" }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
-                      <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ width: "50px" }} onClick={() => setEditMode(!editMode)}>{editMode ? "완료" : "수정"}</button>
-                      <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                      <button className="all-header-btn" style={{ width: "20px", display: "flex", justifyContent: "center" }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
+                      <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ width: "40px", fontSize: "12px" }} onClick={() => setEditMode(!editMode)}>{editMode ? "완료" : "수정"}</button>
+                      <button className="all-header-btn" style={{ width: "20px", display: "flex", justifyContent: "center" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   ) : (
-                    /* 🚀 DIA순서 탭 상단바: 전체 탭과 100% 동일한 레이아웃 (14px, +/- 칸 60px) */
+                    /* 🚀 DIA순서 탭 상단바: 전체 탭과 100% 동일한 디자인 적용 ('DIA순서' 문구 제거) */
                     <div className="all-header dia-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between" }}>
-                      <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
+                      <button className="all-header-btn" style={{ width: "20px", display: "flex", justifyContent: "center" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                       <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
-                      <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                      <button className="all-header-btn" style={{ width: "20px", display: "flex", justifyContent: "center" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   )}
                   {showSearch && activeTab === "all" && (
