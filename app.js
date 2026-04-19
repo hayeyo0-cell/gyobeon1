@@ -1,10 +1,12 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (검색 중복 및 설정창 오류 완전 해결본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (중복 검색 및 설정창 오류 "완전 정복" 해결본)
  * 수정 사항: 
- * 1. 열차 번호 검색 중복 제거: 비번(~) 근무자와 주간(d) 근무자가 동일 열번을 가질 경우 비번자만 노출
- * 2. 설정창 하얀 화면 해결: savingSharedConfig 변수명 오타 및 대소문자 일관성 수정
- * 3. 2000대/2100대 열차 검색 최적화: 시점에 맞는 정확한 운행자 매칭 로직 적용
- * 4. getPathFolder 최우선 순위: ~기호 포함 시 숫자 상관없이 무조건 '어제' 날짜 폴더 판정
- * 5. 원본의 모든 기능, 레이아웃, 관리 로직 100% 그대로 유지
+ * 1. 2000번대 열차 검색 중복 완벽 제거 (배타적 필터링 적용): 
+ * - 검색 결과에 비번(~) 근무자가 단 한 명이라도 존재하면, 동일 열번을 가진 주간/야간(d) 근무자는 결과에서 즉시 삭제.
+ * - 야간 열번(2000~2199) 검색 시 오늘 야간 출근자(d)는 검색 대상에서 원천 배제.
+ * 2. 설정창 하얀 화면 해결: savingSharedConfig 변수명 오타 및 대소문자 불일치 전체 수정.
+ * 3. getPathFolder 최우선 순위: 교번에 ~기호가 있으면 숫자와 상관없이 무조건 '어제'를 기준으로 폴더 판정.
+ * 4. 통합 검색 유지: 2080, 2111 등 일반 열차 번호는 현재 요일에 맞춰 정상 검색되도록 유지.
+ * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -162,7 +164,6 @@ function getPathFolder(teamKey, dateStr, code) {
   return "nor";
 }
 
-/** 🚀 이미지 찾기: 원본 code를 전달하여 ~ 판정이 정확히 getPathFolder에서 일어나게 함 **/
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
   const folder = getPathFolder(team.key, dateStr, code);
@@ -756,20 +757,28 @@ function App() {
           return { ...item, code: todayCode, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr };
       });
 
-      // 2. 오늘 출근자 검색
+      // 2. 오늘 출근자 검색 (🚀 핵심 보정: 야간 열번 검색 시 오늘 야간 출근자(d)는 결과에서 제외)
       const matchedToday = teamGrid.filter(item => {
         const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
-        
-        // 🚀 최종 보정: 야간 열번 검색 시 비번자가 있으면 오늘 출근자 중 동일 열번 소지자는 제외
-        if (isNightTrainSearch && isTrainMatch && matchedYesterday.length > 0) return false;
+
+        // 🚀 최종 배타적 필터: 야간 열차 번호이고, 오늘 야간 출근자라면 (내일 아침 운행이므로) 오늘 검색에서 차단
+        if (isNightTrainSearch && isTrainMatch && isNightStartCode(teamKey, item.code)) return false;
 
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      crossTeamResults = [...crossTeamResults, ...matchedYesterday, ...matchedToday];
+      // 🚀 만약 비번(~) 근무자가 이미 한 명이라도 발견되었다면 오늘 리스트(d) 중 동일 열번 소지자는 무조건 생략 (중복 방지 쐐기)
+      let resultsForTeam = [];
+      if (isNightTrainSearch && matchedYesterday.length > 0) {
+          resultsForTeam = [...matchedYesterday];
+      } else {
+          resultsForTeam = [...matchedYesterday, ...matchedToday];
+      }
+      
+      crossTeamResults = [...crossTeamResults, ...resultsForTeam];
     });
 
     const uniqueMap = new Map();
