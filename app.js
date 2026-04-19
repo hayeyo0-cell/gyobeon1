@@ -1,12 +1,11 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (중복 검색 및 설정창 오류 "완전 정복" 해결본)
+/** * 대구교통공사 기관사용 교번/행로 조회 앱 (검색 중복 및 설정창 오류 완전 해결본)
  * 수정 사항: 
- * 1. 2000번대 열차 검색 중복 완벽 제거 (배타적 필터링 적용): 
- * - 검색 결과에 비번(~) 근무자가 단 한 명이라도 존재하면, 동일 열번을 가진 주간/야간(d) 근무자는 결과에서 즉시 삭제.
- * - 야간 열번(2000~2199) 검색 시 오늘 야간 출근자(d)는 검색 대상에서 원천 배제.
+ * 1. 열차 번호별 운행 시점 정밀 매칭 (2230, 2030 등 중복 완전 해결):
+ * - 저녁/밤 열차(2100번대 이상) 검색 시: 오늘 밤 출근자(d)를 우선 표시하고, 비번자(~)의 과거 기록은 무시.
+ * - 새벽/아침 열차(2000~2060번대) 검색 시: 오늘 아침 비번자(~)를 우선 표시하고, 오늘 밤 출근자(d)의 익일 기록은 무시.
  * 2. 설정창 하얀 화면 해결: savingSharedConfig 변수명 오타 및 대소문자 불일치 전체 수정.
- * 3. getPathFolder 최우선 순위: 교번에 ~기호가 있으면 숫자와 상관없이 무조건 '어제'를 기준으로 폴더 판정.
- * 4. 통합 검색 유지: 2080, 2111 등 일반 열차 번호는 현재 요일에 맞춰 정상 검색되도록 유지.
- * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지.
+ * 3. getPathFolder 최우선 순위: 교번에 ~기호가 있으면 무조건 '어제'를 기준으로 폴더 판정.
+ * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -151,14 +150,12 @@ function getPathFolder(teamKey, dateStr, code) {
   const d = parseLocalDate(targetDate);
   const day = d.getDay(); 
   const isHol = isHolidayDate(targetDate);
-
   if (isNightStartCode(teamKey, code)) {
     if (isHol || day === 0) return "hol_nor"; 
     if (day === 6) return "sat_hol";          
     if (day === 5) return "nor_sat";          
     return "nor";                             
   }
-
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
@@ -394,7 +391,7 @@ const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
   const calendarEl = element.querySelector('.month-calendar');
   const calBg = calendarEl ? calendarEl.style.background : '';
   const calTransform = calendarEl ? calendarEl.style.transform : '';
-  if (calendarEl) { calendarEl.style.transform = 'none'; calendarEl.style.background = isDarkMode ? '#1e293b' : '#ffffff'; }
+  if (calendarEl) { calendarEl.style.transform = 'none'; calendarEl.style.background = isDarkMode ? '#0f172a' : '#eef1f6'; }
   await new Promise(res => setTimeout(res, 50));
   try {
     const canvas = await window.html2canvas(element, { scale: 3, backgroundColor: isDarkMode ? '#0f172a' : '#eef1f6', useCORS: true });
@@ -732,7 +729,12 @@ function App() {
     const yesterdayStr = addDays(browseDate, -1);
     let crossTeamResults = [];
     const trainNum = parseInt(searchQuery);
-    const isNightTrainSearch = !isNaN(trainNum) && trainNum >= 2000 && trainNum <= 2199;
+
+    // 🚀 시간대 구분을 위한 열차 번호 정의
+    // 새벽/아침 운행 열차 (어제 출근한 비번자가 우선 검색되어야 함)
+    const isEarlyMorningTrain = !isNaN(trainNum) && trainNum >= 2001 && trainNum <= 2060;
+    // 저녁/밤 운행 열차 (오늘 출근하는 근무자가 우선 검색되어야 함)
+    const isNightLaunchTrain = !isNaN(trainNum) && trainNum >= 2100 && trainNum <= 2299;
 
     TEAM_ORDER.forEach(teamKey => {
       const team = effectiveData[teamKey];
@@ -751,29 +753,37 @@ function App() {
         if (!isNightStartCode(teamKey, item.code)) return false;
         const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
-        return trains.some(t => String(t) === searchQuery);
+        const isTrainMatch = trains.some(t => String(t) === searchQuery);
+        
+        // 🚀 보정: 검색한 열차가 '저녁 열차(2230 등)'인데 지금 비번자의 과거 기록이라면 제외
+        if (isTrainMatch && isNightLaunchTrain) return false;
+
+        return isTrainMatch || (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
       }).map(item => {
           const todayCode = normalizeCodeKey(item.code).replace(/d$/, "") + "~";
           return { ...item, code: todayCode, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr };
       });
 
-      // 2. 오늘 출근자 검색 (🚀 핵심 보정: 야간 열번 검색 시 오늘 야간 출근자(d)는 결과에서 제외)
+      // 2. 오늘 출근자 검색
       const matchedToday = teamGrid.filter(item => {
         const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
 
-        // 🚀 최종 배타적 필터: 야간 열차 번호이고, 오늘 야간 출근자라면 (내일 아침 운행이므로) 오늘 검색에서 차단
-        if (isNightTrainSearch && isTrainMatch && isNightStartCode(teamKey, item.code)) return false;
+        // 🚀 보정: 검색한 열차가 '아침 열차(2030 등)'인데 오늘 야간 근무자의 미래 기록이라면 제외
+        if (isTrainMatch && isEarlyMorningTrain && isNightStartCode(teamKey, item.code)) return false;
 
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      // 🚀 만약 비번(~) 근무자가 이미 한 명이라도 발견되었다면 오늘 리스트(d) 중 동일 열번 소지자는 무조건 생략 (중복 방지 쐐기)
+      // 🚀 배타적 선택: 만약 비번(~) 근무자가 아침 열차로 검색되었다면 오늘 출근자는 리스트에서 제거
       let resultsForTeam = [];
-      if (isNightTrainSearch && matchedYesterday.length > 0) {
+      if (isEarlyMorningTrain && matchedYesterday.length > 0) {
           resultsForTeam = [...matchedYesterday];
+      } else if (isNightLaunchTrain) {
+          // 저녁 열차는 오늘 출근자 위주로 표시
+          resultsForTeam = [...matchedToday];
       } else {
           resultsForTeam = [...matchedYesterday, ...matchedToday];
       }
@@ -863,7 +873,7 @@ function App() {
       const nextSetupData = applyRemoteRosterNamesForSetup(nextData, rosterForApply || getEmptyRemoteRoster());
       if (!keepSavedSelection) {
         setAllowProfileEdit(true); const defaultTeam = mySelection?.teamKey || selectedTeam || "ks"; const defaultName = String(mySelection?.name || "").trim() || nextSetupData?.[defaultTeam]?.info?.baseName || nextSetupData?.[defaultTeam]?.people?.[0]?.name || "";
-        const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(nextData, rosterForApply || getEmptyRemoteRoster(), defaultTeam, defaultName, mySelection); setTeamAnchors(autoAnchors); setDraftTeam(defaultTeam); setDraftName(""); setDraftCode(""); setSelectedTeam(defaultTeam);
+        const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData || nextData, rosterForApply || getEmptyRemoteRoster(), defaultTeam, defaultName, mySelection); setTeamAnchors(autoAnchors); setDraftTeam(defaultTeam); setDraftName(""); setDraftCode(""); setSelectedTeam(defaultTeam);
       }
     } catch (e) { setError("ZIP 파일을 읽는 중 오류가 발생했습니다."); } finally { if (showBusy) setLoading(false); }
   }
