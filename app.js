@@ -1,8 +1,8 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (DIA 레이아웃 및 월교번 스와이프 최종 수정본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 완성본)
  * 수정 사항: 
- * 1. DIA순서 탭: 상단 날짜 표시줄에서 검색 버튼이 있던 빈 칸을 제거하고 날짜가 꽉 차게 수정.
- * 2. 월교번 스와이프: .month-cell 버튼이 터치를 가로막는 현상을 해결하여 좌우 스와이프 완벽 작동.
- * 3. 기존의 열차 검색 보정 및 설정창 로직 등 모든 기능 100% 유지.
+ * 1. DIA순서 탭: 검색 버튼 공간 삭제 및 날짜/요일 텍스트 크기 확대 (전체 탭과 동일하게).
+ * 2. 월교번 스와이프: 버튼 간섭 해결 및 좌우 스와이프 애니메이션 완벽 구현.
+ * 3. 기존 모든 정밀 로직(열차 검색, 설정창, 폴더 판정) 유지.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -533,7 +533,6 @@ function App() {
   const touchStartY = useRef(null);
   const isSwipingRef = useRef(false);
 
-  /** 🚀 스와이프 차단 최적화: 버튼(.month-cell) 내부 클릭과 스와이프를 명확히 구분 **/
   const onTouchStart = (e) => {
     const blockList = '.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4';
     if (e.target.closest(blockList)) return;
@@ -1197,10 +1196,10 @@ function App() {
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   ) : (
-                    /* 🚀 DIA순서 탭 상단: 날짜가 가로로 꽉 차도록 레이아웃 수정 */
-                    <div className="all-header dia-header" style={{ display: "flex", width: "100%" }}>
+                    /* 🚀 DIA순서 상단 레이아웃 보정: 검색공간 삭제 및 날짜 폰트 확대 */
+                    <div className="all-header dia-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center" }}>
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
-                      <div className="all-header-title" style={{ flex: 1, textAlign: "center" }}>{TEAM_LABELS[viewTeam]} DIA순서 {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
+                      <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "20px", fontWeight: "800" }}>{TEAM_LABELS[viewTeam]} DIA순서 {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   )}
@@ -1274,7 +1273,7 @@ function App() {
               <div className="tab-page" id="capture-month-area">
                 <div className="month-header-bar" style={{ display: 'flex', gap: '8px' }}>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, -1))}>-</button>
-                  <div className="month-header-title" style={{ flex: 1 }}>{monthHeaderDate.getFullYear()}년 {monthHeaderDate.getMonth() + 1}월</div>
+                  <div className="month-header-title" style={{ flex: 1, fontSize: "20px", fontWeight: "800" }}>{monthHeaderDate.getFullYear()}년 {monthHeaderDate.getMonth() + 1}월</div>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', fontSize: '20px' }} onClick={() => captureAndSave('capture-month-area', `월교번`, isDarkMode)}>📷</button>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, 1))}>+</button>
                 </div>
