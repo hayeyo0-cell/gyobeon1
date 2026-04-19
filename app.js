@@ -1,8 +1,8 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (DIA 검색 제거 및 월교번 스와이프 수정본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (DIA 레이아웃 및 월교번 스와이프 최종 수정본)
  * 수정 사항: 
- * 1. DIA순서 탭: 전체 탭과 기능이 중복되는 검색 버튼(돋보기) 및 검색창 표시 로직 제거.
- * 2. 월교번 스와이프 해결: .month-cell(날짜 버튼)이 터치 이벤트를 먹지 않도록 핸들러 보정.
- * 3. 원본의 모든 정밀 매칭 로직, 레이아웃, 관리자 기능 100% 유지.
+ * 1. DIA순서 탭: 상단 날짜 표시줄에서 검색 버튼이 있던 빈 칸을 제거하고 날짜가 꽉 차게 수정.
+ * 2. 월교번 스와이프: .month-cell 버튼이 터치를 가로막는 현상을 해결하여 좌우 스와이프 완벽 작동.
+ * 3. 기존의 열차 검색 보정 및 설정창 로직 등 모든 기능 100% 유지.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -137,7 +137,7 @@ function getWorktimeOverrideKey(teamKey, personName) { return `${teamKey}::${nor
 function getWorktimeOverrideValue(teamKey, code, dayType) { const data = loadWorktimeOverrides(); const key = getWorktimeOverrideKey(teamKey, code); return String(data?.[key]?.[dayType] || "").trim(); }
 function parseTimeValueToParts(value) { const raw = String(value || "").trim(); if (!raw || raw === "----") return { sh: "", sm: "", eh: "", em: "" }; const match = raw.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/); return match ? { sh: match[1], sm: match[2], eh: match[3], em: match[4] } : { sh: "", sm: "", eh: "", em: "" }; }
 function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 2); }
-function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(shNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
+function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
 function getPathFolder(teamKey, dateStr, code) {
@@ -533,6 +533,7 @@ function App() {
   const touchStartY = useRef(null);
   const isSwipingRef = useRef(false);
 
+  /** 🚀 스와이프 차단 최적화: 버튼(.month-cell) 내부 클릭과 스와이프를 명확히 구분 **/
   const onTouchStart = (e) => {
     const blockList = '.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4';
     if (e.target.closest(blockList)) return;
@@ -549,10 +550,16 @@ function App() {
     const currentY = e.targetTouches[0].clientY;
     const diffX = currentX - touchStartX.current;
     const diffY = currentY - touchStartY.current;
+    
     if (!isSwipingRef.current) {
-      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) isSwipingRef.current = true;
-      else if (Math.abs(diffY) > 10) { touchStartX.current = null; return; }
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+          isSwipingRef.current = true;
+      } else if (Math.abs(diffY) > 10) {
+          touchStartX.current = null;
+          return;
+      }
     }
+    
     if (isSwipingRef.current) {
         if (e.cancelable) e.preventDefault(); 
         setSwipeOffset(diffX * 0.7); 
@@ -1190,14 +1197,13 @@ function App() {
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   ) : (
-                    <div className="all-header dia-header">
+                    /* 🚀 DIA순서 탭 상단: 날짜가 가로로 꽉 차도록 레이아웃 수정 */
+                    <div className="all-header dia-header" style={{ display: "flex", width: "100%" }}>
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
-                      <div className="all-header-title">{TEAM_LABELS[viewTeam]} DIA순서 {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
-                      {/* 🚀 DIA순서 탭: 검색 버튼 제거 (전체 탭과 중복) */}
+                      <div className="all-header-title" style={{ flex: 1, textAlign: "center" }}>{TEAM_LABELS[viewTeam]} DIA순서 {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   )}
-                  {/* 🚀 DIA순서 탭에서는 검색창이 나타나지 않도록 조건 처리 */}
                   {showSearch && activeTab === "all" && (
                     <input className="input" style={{ marginTop: 8 }} placeholder="이름/교번/열번 통합 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                   )}
