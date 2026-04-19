@@ -483,7 +483,7 @@ function App() {
 
   const [teamAnchors, setTeamAnchors] = useState({ ks: { name: "", code: "", anchorDate: todayStr }, my: { name: "", code: "", anchorDate: todayStr }, wb: { name: "", code: "", anchorDate: todayStr }, as: { name: "", code: "", anchorDate: todayStr } });
   const [remoteBaseDate, setRemoteBaseDate] = useState(cachedShared?.baseDate || "");
-  const [savingSharedConfig, setSavingSharedConfig] = useState(SavingSharedConfig => false);
+  const [savingSharedConfig, setSavingSharedConfig] = useState(false);
   const [overrides, setOverrides] = useState({});
   const [editMode, setEditMode] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
