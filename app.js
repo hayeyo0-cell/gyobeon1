@@ -1,9 +1,9 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (디자인 통합 및 시스템 안정화본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (디자인 최적화 및 시스템 안정화본)
  * 최종 수정: 
- * 1. 전체 탭: 상단 헤더 글자 잘림 해결 및 이전의 깔끔한 디자인으로 복구.
- * 2. DIA순서 탭: 상단 +/- 버튼 칸 너비를 전체 탭과 똑같이(60px) 맞추고 날짜 글씨 크기도 동일화.
- * 3. 문구 수정: DIA순서 탭 상단에서 'DIA순서' 단어 삭제.
- * 4. 월교번 스와이프: 버튼 간섭 없이 완벽 작동.
+ * 1. 상단 헤더: 글자 크기를 14px로 고정하고, 전체/DIA순서 탭의 레이아웃을 완벽 통일.
+ * 2. 중앙 배치: +/- 버튼(좌우 50px)과 가운데 날짜 영역의 균형을 맞춰 시각적 편안함 제공.
+ * 3. DIA순서 탭: 'DIA순서' 문구 삭제 및 전체 탭과 동일한 디자인 적용.
+ * 4. 월교번 스와이프: 버튼 간섭 없는 부드러운 작동 및 검은 화면 오류 방지.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -612,7 +612,7 @@ function App() {
   useEffect(() => { saveMySelection(mySelection); }, [mySelection]);
   useEffect(() => { setProfileAnchorDate(mySelection?.anchorDate || todayStr); }, [mySelection?.anchorDate, todayStr]);
   useEffect(() => { if (!data) return; const migrated = migrateLegacyOverrides(loadOverrides(), data); setOverrides(migrated); }, [data]);
-  useEffect(() => { const years = [getYearFromDateStr(homeDate), getYearFromDateStr(browseDate), getYearFromDateStr(monthDate), getYearFromDateStr(groupBaseDate)].filter(Boolean); [...new Set(years)].forEach((year) => { ensureHolidayYear(year, () => setHolidayVersion((v) => v + 1)); }); }, [homeDate, browseDate, monthDate, groupBaseDate]);
+  useEffect(() => { const years = [getYearFromDateStr(homeDate), getYearFromDateStr(browseDate), getYearFromDateStr(monthDate), getYearFromDateStr(groupBaseDate)].filter(Boolean); [...new Set(years)].forEach((year) => { ensureHolidayYear(year, () => setHolidayVersion((v) => v + 1); }))); }, [homeDate, browseDate, monthDate, groupBaseDate]);
   useEffect(() => { if (!allowProfileEdit) return; setDraftTeam(selectedTeam || mySelection?.teamKey || "ks"); setDraftName(String(mySelection?.name || "").trim()); setDraftCode(String(mySelection?.code || "").trim()); }, [allowProfileEdit, selectedTeam, mySelection]);
   useEffect(() => { if (!allowProfileEdit) return; const teamKey = draftTeam || "ks"; const currentName = String(draftName || "").trim(); if (!currentName) return; const team = setupSourceData?.[teamKey] || data?.[teamKey]; if (!team) return; if (String(draftCode || "").trim()) return; let nextCode = ""; const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster); if (remoteRow?.code) { nextCode = normalizeToFixedCode(team, remoteRow.code); } else { const zipPerson = findZipPersonByName(team, currentName); if (zipPerson?.baseCode) { nextCode = normalizeToFixedCode(team, zipPerson.baseCode); } } if (!nextCode) return; setDraftCode(nextCode); }, [ allowProfileEdit, draftTeam, draftName, draftCode, remoteRoster, setupSourceData, data, ]);
   useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
@@ -1189,19 +1189,20 @@ function App() {
               <div className="tab-page all-page">
                 <div className="all-tab-header">
                   {activeTab === "all" ? (
-                    <div className="all-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center" }}>
-                      <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
-                      <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "16px", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
-                      <button className="all-header-btn" style={{ width: "40px" }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
-                      <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ width: "50px" }} onClick={() => setEditMode(!editMode)}>{editMode ? "완료" : "수정"}</button>
-                      <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                    /* 🚀 전체 탭 상단바: 디자인 완전 일치화 (글씨 14px 고정 및 균형 조정) */
+                    <div className="all-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between" }}>
+                      <button className="all-header-btn" style={{ width: "50px" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
+                      <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
+                      <button className="all-header-btn" style={{ width: "35px" }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
+                      <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ width: "45px" }} onClick={() => setEditMode(!editMode)}>{editMode ? "완료" : "수정"}</button>
+                      <button className="all-header-btn" style={{ width: "50px" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   ) : (
-                    /* 🚀 DIA순서 탭: 전체 탭 디자인 100% 복원 (문구 제거, 글자 크기 16px, +/- 버튼 영역 60px) */
+                    /* 🚀 DIA순서 탭 상단바: 전체 탭 디자인과 100% 동일화 (14px, +/- 칸 50px) */
                     <div className="all-header dia-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between" }}>
-                      <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
-                      <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "16px", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
-                      <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                      <button className="all-header-btn" style={{ width: "50px" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
+                      <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
+                      <button className="all-header-btn" style={{ width: "50px" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   )}
                   {showSearch && activeTab === "all" && (
@@ -1209,7 +1210,7 @@ function App() {
                   )}
                 </div>
                 <div className="all-team-tabs">
-                  {TEAM_ORDER.map((key) => { const isActive = viewTeam === key; const isMyTeam = selectedTeam === key; return (<button key={key} className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`} style={{ fontSize: "16px" }} onClick={() => setViewTeam(key)}>{TEAM_LABELS[key]}{isActive && <span className="view-dot" />}</button>); })}
+                  {TEAM_ORDER.map((key) => { const isActive = viewTeam === key; const isMyTeam = selectedTeam === key; return (<button key={key} className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`} style={{ fontSize: "14px" }} onClick={() => setViewTeam(key)}>{TEAM_LABELS[key]}{isActive && <span className="view-dot" />}</button>); })}
                 </div>
                 
                 {activeTab === "all" ? (
@@ -1274,7 +1275,7 @@ function App() {
               <div className="tab-page" id="capture-month-area">
                 <div className="month-header-bar" style={{ display: 'flex', gap: '8px' }}>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, -1))}>-</button>
-                  <div className="month-header-title" style={{ flex: 1, fontSize: "16px", fontWeight: "700" }}>{monthHeaderDate.getFullYear()}년 {monthHeaderDate.getMonth() + 1}월</div>
+                  <div className="month-header-title" style={{ flex: 1, fontSize: "14px", fontWeight: "700" }}>{monthHeaderDate.getFullYear()}년 {monthHeaderDate.getMonth() + 1}월</div>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', fontSize: '20px' }} onClick={() => captureAndSave('capture-month-area', `월교번`, isDarkMode)}>📷</button>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, 1))}>+</button>
                 </div>
