@@ -3,7 +3,7 @@
  * 1. getPathFolder 최우선 순위 변경: 교번에 ~기호가 있으면 숫자와 상관없이 무조건 '어제'를 기준으로 폴더 판정
  * - 일요일(4.19)에 '21~' 검색 -> ~가 있으므로 즉시 '어제(토요일)' 판정 -> 'sat_hol'(토휴) 강제 확정
  * - 월요일(4.20)에 '21~' 검색 -> ~가 있으므로 즉시 '어제(일요일)' 판정 -> 'hol_nor'(휴평) 강제 확정
- * 2. 검색 필터 유지: 2000대 열차 검색 시 searchOrigin을 통해 이미지 뷰어까지 어제 날짜 정보 전달
+ * 2. 검색 필터 보정: 2000대/2100대 검색 기능을 이전처럼 유지하면서, 비번(~) 결과 클릭 시 전날 행로표 매칭 보장
  * 3. 변수 선언 보정: getMonthMatrix 내 year 변수 선언 누락 재확인 및 수정
  * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
@@ -766,29 +766,20 @@ function App() {
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
-        
-        if (isTrainMatch) {
-            const trainNum = parseInt(searchQuery);
-            if (trainNum >= 2000 && trainNum <= 2199) return false; 
-        }
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      // 2. 어제 출근자 검색 (🚀 핵심 보정: 폴더 판정을 반드시 '어제' 기준으로 수행하여 토휴 등 매칭)
+      // 2. 어제 출근자 검색 (🚀 제안 반영: 어제 야간 열차 검색 시 교번에 ~를 붙여서 비번 로직 태움)
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
         
         const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
-
-        if (isTrainMatch) {
-            const trainNum = parseInt(searchQuery);
-            if (trainNum >= 2000 && trainNum <= 2199) return true;
-        }
-        return false;
+        return isTrainMatch;
       }).map(item => {
-          const todayCode = item.code.replace('d', '~');
+          // 어제 출근자의 야간 근무이므로 교번 명칭을 ~로 변경 (예: 21d -> 21~)
+          const todayCode = normalizeCodeKey(item.code).replace(/d$/, "") + "~";
           return { ...item, code: todayCode, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr };
       });
 
@@ -934,8 +925,8 @@ function App() {
   function handleAllCellTap(item) { 
     if (editMode) openEditDialog(item); 
     else {
-      const targetDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
-      openPathDialog(item, targetDate); 
+      // 🚀 제안 반영: item.code가 이미 ~를 포함하고 있으므로 openPathDialog 내부의 findPathImage가 알아서 어제 날짜로 처리함
+      openPathDialog(item, browseDate); 
     }
   }
 
@@ -1240,8 +1231,7 @@ function App() {
                       <div className="search-img-panel" style={{ marginTop: '20px', paddingBottom: '30px' }}>
                         {visibleAllGrid.map((item, idx) => {
                           const imgTeam = effectiveData ? effectiveData[item.teamKey] : null;
-                          const imgDate = item.searchOrigin === 'yesterday' ? item.browseDate : browseDate;
-                          const imgSrc = imgTeam ? findPathImage(imgTeam, imgDate, item.code) : null;
+                          const imgSrc = imgTeam ? findPathImage(imgTeam, browseDate, item.code) : null;
                           if (!imgSrc) return null;
                           return (
                             <div key={`s-img-${idx}`} style={{ marginBottom: '20px', textAlign: 'center' }}>
