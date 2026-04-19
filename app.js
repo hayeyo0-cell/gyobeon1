@@ -2,8 +2,7 @@
  * 수정 사항: 
  * 1. getPathFolder 최우선 순위 변경: 교번에 ~기호가 있으면 숫자와 상관없이 무조건 '어제'를 기준으로 폴더 판정
  * - 일요일(4.19)에 '21~' 검색 -> ~가 있으므로 즉시 '어제(토요일)' 판정 -> 'sat_hol'(토휴) 강제 확정
- * - 월요일(4.20)에 '21~' 검색 -> ~가 있으므로 즉시 '어제(일요일)' 판정 -> 'hol_nor'(휴평) 강제 확정
- * 2. 검색 필터 보정: 2000대/2100대 검색 기능을 이전처럼 유지하면서, 비번(~) 결과 클릭 시 전날 행로표 매칭 보장
+ * 2. 검색 시 비번(~) 우선순위 부여: 검색 결과에 ~가 포함된 교번이 있으면 해당 행로표를 우선적으로 자동 호출
  * 3. 변수 선언 보정: getMonthMatrix 내 year 변수 선언 누락 재확인 및 수정
  * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
@@ -760,7 +759,6 @@ function App() {
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
         : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
 
-      // 1. 오늘 출근자 검색
       const matchedToday = teamGrid.filter(item => {
         const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
@@ -769,16 +767,13 @@ function App() {
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      // 2. 어제 출근자 검색 (🚀 제안 반영: 어제 야간 열차 검색 시 교번에 ~를 붙여서 비번 로직 태움)
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
-        
         const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
         return isTrainMatch;
       }).map(item => {
-          // 어제 출근자의 야간 근무이므로 교번 명칭을 ~로 변경 (예: 21d -> 21~)
           const todayCode = normalizeCodeKey(item.code).replace(/d$/, "") + "~";
           return { ...item, code: todayCode, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr };
       });
@@ -786,7 +781,14 @@ function App() {
       crossTeamResults = [...crossTeamResults, ...matchedToday, ...matchedYesterday];
     });
 
-    return crossTeamResults;
+    // 🚀 수정된 부분: 비번(~)이 포함된 결과를 최상단으로 정렬
+    return crossTeamResults.sort((a, b) => {
+        const aIsTilde = a.code.includes("~");
+        const bIsTilde = b.code.includes("~");
+        if (aIsTilde && !bIsTilde) return -1;
+        if (!aIsTilde && bIsTilde) return 1;
+        return 0;
+    });
   }, [allGrid, searchQuery, browseDate, effectiveData, remoteRoster, overrides, teamAnchors]);
 
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
@@ -921,11 +923,10 @@ function App() {
   function cancelReconfigureProfile() { if (mySelection?.teamKey) { setSelectedTeam(mySelection.teamKey); setViewTeam(mySelection.teamKey); } setProfileAnchorDate(mySelection?.anchorDate || todayStr); setAllowProfileEdit(false); }
   function resetMyProfile() { const today = getKoreaToday(); clearMySelection(); setMySelection({ teamKey: "ks", name: "", code: "", anchorDate: today }); setDraftTeam("ks"); setDraftName(""); setDraftCode(""); setProfileAnchorDate(today); setAllowProfileEdit(true); setSelectedTeam("ks"); setViewTeam("ks"); setInitialRemoteChecked(false); setHomeDate(today); setBrowseDate(today); setMonthDate(today); setGroupBaseDate(today); setGroupMonth(getDisplayMonthValue(today)); setSelectedGroupDate(""); }
 
-  // 🚀 터치 시 이미지 호출 날짜를 searchOrigin에 따라 보정
   function handleAllCellTap(item) { 
     if (editMode) openEditDialog(item); 
     else {
-      // 🚀 제안 반영: item.code가 이미 ~를 포함하고 있으므로 openPathDialog 내부의 findPathImage가 알아서 어제 날짜로 처리함
+      // 🚀 제안 반영: 클릭한 교번에 ~가 있으면 findPathImage가 자동으로 어제 폴더를 매칭함
       openPathDialog(item, browseDate); 
     }
   }
