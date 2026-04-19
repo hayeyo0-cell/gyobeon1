@@ -1,8 +1,8 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (월교번 스와이프 완전 해결본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (DIA 검색 제거 및 월교번 스와이프 수정본)
  * 수정 사항: 
- * 1. onTouchStart 핸들러 수정: 월교번 날짜 버튼(.month-cell) 위에서도 스와이프가 시작되도록 허용.
- * 2. 월교번 본체(.month-calendar)에 swipeStyle을 적용하여 시각적 피드백 제공.
- * 3. 기존의 열차 번호 검색 보정 및 설정창 로직은 100% 유지.
+ * 1. DIA순서 탭: 전체 탭과 기능이 중복되는 검색 버튼(돋보기) 및 검색창 표시 로직 제거.
+ * 2. 월교번 스와이프 해결: .month-cell(날짜 버튼)이 터치 이벤트를 먹지 않도록 핸들러 보정.
+ * 3. 원본의 모든 정밀 매칭 로직, 레이아웃, 관리자 기능 100% 유지.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -137,10 +137,9 @@ function getWorktimeOverrideKey(teamKey, personName) { return `${teamKey}::${nor
 function getWorktimeOverrideValue(teamKey, code, dayType) { const data = loadWorktimeOverrides(); const key = getWorktimeOverrideKey(teamKey, code); return String(data?.[key]?.[dayType] || "").trim(); }
 function parseTimeValueToParts(value) { const raw = String(value || "").trim(); if (!raw || raw === "----") return { sh: "", sm: "", eh: "", em: "" }; const match = raw.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/); return match ? { sh: match[1], sm: match[2], eh: match[3], em: match[4] } : { sh: "", sm: "", eh: "", em: "" }; }
 function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 2); }
-function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
+function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(shNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🚀 폴더 판정 로직 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
@@ -512,7 +511,6 @@ function App() {
 
   const isAdminUser = samePersonName(mySelection?.name, ADMIN_NAME);
   const isKsUser = mySelection?.teamKey === "ks";
-  const currentEditDayType = guessDayType(browseDate);
 
   const groupAddCandidates = useMemo(() => {
     const team = effectiveData?.[groupAddTeam];
@@ -535,9 +533,7 @@ function App() {
   const touchStartY = useRef(null);
   const isSwipingRef = useRef(false);
 
-  /** 🚀 스와이프 차단 해제: 월교번의 날짜 칸(.month-cell)에서도 스와이프가 시작되도록 수정 **/
   const onTouchStart = (e) => {
-    // 스와이프를 명확히 방해하는 요소(탭바, 설정 버튼, 입력창 등)만 제외하고는 모두 허용
     const blockList = '.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4';
     if (e.target.closest(blockList)) return;
     
@@ -558,7 +554,7 @@ function App() {
       else if (Math.abs(diffY) > 10) { touchStartX.current = null; return; }
     }
     if (isSwipingRef.current) {
-        if (e.cancelable) e.preventDefault(); // 스와이프 중에는 브라우저 스크롤 방지
+        if (e.cancelable) e.preventDefault(); 
         setSwipeOffset(diffX * 0.7); 
     }
   };
@@ -814,11 +810,6 @@ function App() {
   }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection]);
 
   function findDiaOrder(team) { return team?.diaOrder?.length ? team.diaOrder : getGyobunOrder(team); }
-
-  const filteredDiaList = useMemo(() => {
-    if (!searchQuery) return diaList;
-    return diaList.filter(item => (item.displayName || item.name).includes(searchQuery) || (item.code || "").includes(searchQuery));
-  }, [diaList, searchQuery]);
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthDate), [monthDate]);
   const monthHeaderDate = parseLocalDate(monthDate);
@@ -1202,11 +1193,14 @@ function App() {
                     <div className="all-header dia-header">
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                       <div className="all-header-title">{TEAM_LABELS[viewTeam]} DIA순서 {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
-                      <button className="all-header-btn" onClick={() => setShowSearch(!showSearch)}>🔍</button>
+                      {/* 🚀 DIA순서 탭: 검색 버튼 제거 (전체 탭과 중복) */}
                       <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   )}
-                  {showSearch && <input className="input" style={{ marginTop: 8 }} placeholder="이름/교번/열번 통합 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />}
+                  {/* 🚀 DIA순서 탭에서는 검색창이 나타나지 않도록 조건 처리 */}
+                  {showSearch && activeTab === "all" && (
+                    <input className="input" style={{ marginTop: 8 }} placeholder="이름/교번/열번 통합 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                  )}
                 </div>
                 <div className="all-team-tabs">
                   {TEAM_ORDER.map((key) => { const isActive = viewTeam === key; const isMyTeam = selectedTeam === key; return (<button key={key} className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`} onClick={() => setViewTeam(key)}>{TEAM_LABELS[key]}{isActive && <span className="view-dot" />}</button>); })}
@@ -1256,10 +1250,10 @@ function App() {
                   </div>
                 ) : (
                   <div className="card" style={{ padding: 0, overflow: "hidden", ...swipeStyle }}>
-                    {filteredDiaList.map((item, idx) => {
+                    {diaList.map((item, idx) => {
                       const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                       return (
-                        <div key={`${idx}`} onClick={() => openPathDialog(item, browseDate)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 16px", borderBottom: idx === filteredDiaList.length - 1 ? "none" : (isDarkMode ? "1px solid #334155" : "1px solid #e5e7eb"), fontSize: 18, background: isMine ? (isDarkMode ? "rgba(56, 189, 248, 0.15)" : "#eef6ff") : "transparent", borderLeft: isMine ? (isDarkMode ? "4px solid #38bdf8" : "4px solid #3b82f6") : "4px solid transparent", cursor: "pointer" }}>
+                        <div key={`${idx}`} onClick={() => openPathDialog(item, browseDate)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 16px", borderBottom: idx === diaList.length - 1 ? "none" : (isDarkMode ? "1px solid #334155" : "1px solid #e5e7eb"), fontSize: 18, background: isMine ? (isDarkMode ? "rgba(56, 189, 248, 0.15)" : "#eef6ff") : "transparent", borderLeft: isMine ? (isDarkMode ? "4px solid #38bdf8" : "4px solid #3b82f6") : "4px solid transparent", cursor: "pointer" }}>
                           <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
                           <div style={{ fontWeight: 600 }}>{item.displayName || item.name}</div>
                         </div>
@@ -1278,7 +1272,6 @@ function App() {
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', fontSize: '20px' }} onClick={() => captureAndSave('capture-month-area', `월교번`, isDarkMode)}>📷</button>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, 1))}>+</button>
                 </div>
-                {/* 🚀 월교번 본체에 swipeStyle 적용하여 부드러운 애니메이션 구현 */}
                 <div className="month-calendar" style={swipeStyle}>
                   <div className="month-weekdays">
                     <div className="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="sat">토</div>
