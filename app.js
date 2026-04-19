@@ -1,8 +1,7 @@
 /** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 로직 "끝판왕" 해결본)
  * 수정 사항: 
- * 1. getPathFolder 최우선 순위 변경: 교번에 ~기호가 있으면 숫자와 상관없이 무조건 '어제'를 기준으로 폴더 판정
- * - 일요일(4.19)에 '21~' 검색 -> ~가 있으므로 즉시 '어제(토요일)' 판정 -> 'sat_hol'(토휴) 강제 확정
- * 2. 검색 시 비번(~) 우선순위 부여: 검색 결과에 ~가 포함된 교번이 있으면 해당 행로표를 우선적으로 자동 호출
+ * 1. 검색 결과 정밀화: 2000번대 열차 검색 시 오늘 출근자(d)는 제외하고 어제 야간 근무자(~)만 표시하도록 필터 강화
+ * 2. getPathFolder 최우선 순위: 교번에 ~기호가 있으면 무조건 '어제'를 기준으로 폴더 판정 (토휴 등 완벽 매칭)
  * 3. 변수 선언 보정: getMonthMatrix 내 year 변수 선언 누락 재확인 및 수정
  * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
@@ -746,6 +745,8 @@ function App() {
 
     const yesterdayStr = addDays(browseDate, -1);
     let crossTeamResults = [];
+    const trainNum = parseInt(searchQuery);
+    const isNightTrainSearch = !isNaN(trainNum) && trainNum >= 2000 && trainNum <= 2199;
 
     TEAM_ORDER.forEach(teamKey => {
       const team = effectiveData[teamKey];
@@ -759,7 +760,8 @@ function App() {
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
         : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
 
-      const matchedToday = teamGrid.filter(item => {
+      // 1. 오늘 출근자 검색 (야간 열차 검색 중이라면 제외)
+      const matchedToday = isNightTrainSearch ? [] : teamGrid.filter(item => {
         const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
@@ -767,12 +769,18 @@ function App() {
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
+      // 2. 어제 출근자 검색 (야간 열차 검색 시에만 수행하거나 야간 근무자 필터링)
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
+        
         const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
-        return isTrainMatch;
+        
+        // 야간 열차 검색 시에는 열차 번호 일치만 찾음
+        if (isNightTrainSearch) return isTrainMatch;
+        // 일반 검색 시 이름/교번 일치 포함
+        return (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery) || isTrainMatch;
       }).map(item => {
           const todayCode = normalizeCodeKey(item.code).replace(/d$/, "") + "~";
           return { ...item, code: todayCode, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr };
@@ -781,8 +789,14 @@ function App() {
       crossTeamResults = [...crossTeamResults, ...matchedToday, ...matchedYesterday];
     });
 
-    // 🚀 수정된 부분: 비번(~)이 포함된 결과를 최상단으로 정렬
-    return crossTeamResults.sort((a, b) => {
+    // 중복 제거 및 결과 정제
+    const uniqueMap = new Map();
+    crossTeamResults.forEach(item => {
+        const key = `${item.teamKey}-${item.name}-${item.code}`;
+        if (!uniqueMap.has(key)) uniqueMap.set(key, item);
+    });
+
+    return Array.from(uniqueMap.values()).sort((a, b) => {
         const aIsTilde = a.code.includes("~");
         const bIsTilde = b.code.includes("~");
         if (aIsTilde && !bIsTilde) return -1;
@@ -926,7 +940,6 @@ function App() {
   function handleAllCellTap(item) { 
     if (editMode) openEditDialog(item); 
     else {
-      // 🚀 제안 반영: 클릭한 교번에 ~가 있으면 findPathImage가 자동으로 어제 폴더를 매칭함
       openPathDialog(item, browseDate); 
     }
   }
