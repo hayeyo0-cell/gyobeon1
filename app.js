@@ -1,11 +1,12 @@
 /** * 대구교통공사 기관사용 교번/행로 조회 앱 (운행 시점 기준 검색 "끝판왕" 완성본)
  * 수정 사항: 
- * 1. 2000번대 열차 검색 최적화: 동일 열번이 오늘 출근자(d)와 어제 출근 비번자(~)에 중복될 경우, 비번자(~)만 표시
- * - 일요일에 2030 검색 시: 오늘 밤 출근자(d)는 숨기고, 오늘 아침 운행을 마친 비번자(~)만 결과에 노출
- * 2. 설정창 오류 해결: savingSharedConfig 변수명 오타 및 대소문자 불일치 완벽 수정 (하얀 화면 해결)
- * 3. getPathFolder 로직 고정: 교번에 ~기호가 있으면 숫자와 상관없이 무조건 '어제'를 기준으로 폴더 판정
- * 4. 일반 열차 검색 유지: 2000번대가 아닌 일반 열차 번호는 오늘 출근자 리스트에서 정상 검색
- * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
+ * 1. 2000번대 열차 검색 중복 완벽 제거: 
+ * - 오늘 야간 출근자(d)가 가진 내일 아침용 열차는 오늘 검색 결과에서 제외.
+ * - 오직 어제 출근하여 오늘 아침에 운행을 마친 비번자(~)와 오늘 주간 근무자만 표시.
+ * 2. 설정창 하얀 화면 해결: savingSharedConfig 변수명 오타 및 대소문자 불일치 수정.
+ * 3. getPathFolder 최우선 순위: 교번에 ~기호가 있으면 숫자와 상관없이 무조건 '어제'를 기준으로 폴더 판정.
+ * 4. 통합 검색 유지: 2080, 2111 등 모든 열차 번호가 누락 없이 시점에 맞춰 검색되도록 보정.
+ * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -682,7 +683,7 @@ function App() {
 
   useEffect(() => {
     if (!effectiveData) return;
-    if (mySelection?.teamKey && String(mySelection?.name || "").trim()) { const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, mySelection.teamKey, mySelection.name, mySelection); setTeamAnchors(autoAnchors); setSelectedTeam(mySelection.teamKey); if (activeTabRef.current === "home") setViewTeam(mySelection.teamKey); return; }
+    if (mySelection?.teamKey && String(mySelection?.name || "").trim()) { const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, mySelection.teamKey, mySelection.name, mySelection); setTeamAnchors(autoAnchors); setSelectedTeam(mySelection.teamKey); if (activeTabRef.current === "home") setViewTeam(mySelection.teamKey); return; return; }
     const nextAnchors = {}; TEAM_ORDER.forEach((teamKey) => { const team = effectiveData[teamKey]; nextAnchors[teamKey] = buildTeamAnchorFromZip(team); }); setTeamAnchors(nextAnchors);
   }, [effectiveData, remoteRoster, mySelection]);
 
@@ -754,18 +755,23 @@ function App() {
           return { ...item, code: todayCode, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr };
       });
 
-      // 2. 오늘 출근자 검색 (d교번)
+      // 2. 오늘 출근자 검색
       const matchedToday = teamGrid.filter(item => {
         const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
-        return basicMatch || trains.some(t => String(t) === searchQuery);
+        const isTrainMatch = trains.some(t => String(t) === searchQuery);
+
+        // 🚀 최종 보정 로직: 야간 열번(2000대) 검색 시, 
+        // 해당 열차가 오늘 야간 출근자(d)의 행로에 있다면 (내일 아침 운행이므로) 오늘 결과에서는 제외
+        if (isNightTrainSearch && isTrainMatch && isNightStartCode(teamKey, item.code)) return false;
+
+        return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      // 🚀 배타적 로직 적용: 야간 전용 열번 검색 시, 비번 결과가 있다면 오늘 출근자(d) 중 해당 열번을 가진 사람은 결과에서 제외
+      // 🚀 비번 근무자가 한 명이라도 발견되었다면 오늘 리스트(d) 중 동일 열번 소지자는 생략
       let resultsForTeam = [];
       if (isNightTrainSearch && matchedYesterday.length > 0) {
-          // 비번자만 결과에 추가 (오늘 출근자 중 동일 열번 소지자 필터링)
           const matchedTodayFiltered = matchedToday.filter(t => {
               const f = getPathFolder(teamKey, browseDate, t.code);
               const trs = team.trainData?.[f]?.[normalizeCodeKey(t.code)] || [];
