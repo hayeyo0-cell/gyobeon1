@@ -1,9 +1,10 @@
 /** * 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 매칭 로직 "끝판왕" 해결본)
  * 수정 사항: 
- * 1. 검색 결과 정밀화: 2000번대 열차 검색 시 오늘 출근자(d)는 제외하고 어제 야간 근무자(~)만 표시하도록 필터 강화
- * 2. getPathFolder 최우선 순위: 교번에 ~기호가 있으면 무조건 '어제'를 기준으로 폴더 판정 (토휴 등 완벽 매칭)
- * 3. 변수 선언 보정: getMonthMatrix 내 year 변수 선언 누락 재확인 및 수정
- * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
+ * 1. 검색 로직 통합 복구: 어제 야간 근무자(~)와 오늘 출근자(d)를 가리지 않고 모든 열차 번호가 검색되도록 복구
+ * 2. 정렬 우선순위 적용: 검색 결과에 비번(~)과 주간(d)이 섞여 있을 경우, 비번자(~)를 리스트 맨 처음에 배치
+ * 3. getPathFolder 최우선 순위: 교번에 ~기호가 있으면 무조건 '어제'를 기준으로 폴더 판정 (토휴 등 완벽 매칭)
+ * 4. 변수 선언 보정: getMonthMatrix 내 year 변수 선언 누락 재확인 및 수정
+ * 5. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -123,7 +124,6 @@ function parseShiftCode(code) {
 
 function getNightRange(teamKey) { return NIGHT_RANGE_BY_TEAM[teamKey] || { start: 22, end: 29 }; }
 
-// 야간 근무 여부 판정 (숫자만으로 판단)
 function isNightStartCode(teamKey, code) { 
   const s = normalizeCodeKey(code);
   const numMatch = s.match(/^(\d+)/);
@@ -142,31 +142,26 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🚀 폴더 판정 로직 최종 수정: 교본 기호(~ 여부)를 최우선으로 날짜 보정 수행 **/
+/** 🚀 폴더 판정 로직: 교본 기호(~ 여부)를 최우선으로 날짜 보정 수행 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
-  
-  // 🚀 비번(~)일 경우 숫자 범위와 상관없이 실제 출근 요일인 '어제'를 먼저 확정
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
   const d = parseLocalDate(targetDate);
   const day = d.getDay(); 
   const isHol = isHolidayDate(targetDate);
 
-  // 야간 근무자 범위(경산 21~29 등) 확인
   if (isNightStartCode(teamKey, code)) {
-    if (isHol || day === 0) return "hol_nor"; // 어제가 휴일 -> 오늘 휴평
-    if (day === 6) return "sat_hol";          // 어제가 토요일 -> 오늘 토휴
-    if (day === 5) return "nor_sat";          // 어제가 금요일 -> 오늘 평토
-    return "nor";                             // 어제가 평일 -> 오늘 평일
+    if (isHol || day === 0) return "hol_nor"; 
+    if (day === 6) return "sat_hol";          
+    if (day === 5) return "nor_sat";          
+    return "nor";                             
   }
 
-  // 주간 근무
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
   return "nor";
 }
 
-/** 🚀 이미지 찾기: 원본 code를 전달하여 ~ 판정이 정확히 getPathFolder에서 일어나게 함 **/
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
   const folder = getPathFolder(team.key, dateStr, code);
@@ -348,7 +343,7 @@ function getMyCodeForDate(team, dateStr, mySelection) { if (!team || !mySelectio
 
 function getMonthMatrix(dateStr) { 
   const d = parseLocalDate(dateStr); 
-  const year = d.getFullYear(); // 🚀 year 변수 선언 보장
+  const year = d.getFullYear(); 
   const month = d.getMonth(); 
   const first = new Date(year, month, 1); 
   const firstDay = first.getDay(); 
@@ -390,32 +385,21 @@ const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
     await new Promise(r => setTimeout(r, 500));
     if (!window.html2canvas) return alert("캡처 도구를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
   }
-  
   const element = document.getElementById(elementId);
   if (!element) return;
-
   const originalAnimation = element.style.animation;
   element.style.animation = 'none';
   const calendarEl = element.querySelector('.month-calendar');
   const calBg = calendarEl ? calendarEl.style.background : '';
   const calTransform = calendarEl ? calendarEl.style.transform : '';
-
-  if (calendarEl) {
-    calendarEl.style.transform = 'none';
-    calendarEl.style.background = isDarkMode ? '#1e293b' : '#ffffff';
-  }
-
+  if (calendarEl) { calendarEl.style.transform = 'none'; calendarEl.style.background = isDarkMode ? '#1e293b' : '#ffffff'; }
   await new Promise(res => setTimeout(res, 50));
-
   try {
     const canvas = await window.html2canvas(element, { scale: 3, backgroundColor: isDarkMode ? '#0f172a' : '#eef1f6', useCORS: true });
     const timestamp = new Date().toLocaleTimeString('ko-KR', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '');
     const filename = `${filenamePrefix}_${timestamp}.png`;
     const link = document.createElement("a"); link.download = filename; link.href = canvas.toDataURL("image/png"); link.click();
-  } catch (e) { alert("캡처에 실패했습니다."); } finally {
-    element.style.animation = originalAnimation;
-    if (calendarEl) { calendarEl.style.background = calBg; calendarEl.style.transform = calTransform; }
-  }
+  } catch (e) { alert("캡처에 실패했습니다."); } finally { element.style.animation = originalAnimation; if (calendarEl) { calendarEl.style.background = calBg; calendarEl.style.transform = calTransform; } }
 };
 
 function fetchJsonp(params = {}, timeoutMs = 15000) {
@@ -760,8 +744,8 @@ function App() {
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
         : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
 
-      // 1. 오늘 출근자 검색 (야간 열차 검색 중이라면 제외)
-      const matchedToday = isNightTrainSearch ? [] : teamGrid.filter(item => {
+      // 1. 오늘 출근자 검색 (🚀 수정: 열차 번호 일치 시 d교번도 포함)
+      const matchedToday = teamGrid.filter(item => {
         const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
@@ -769,17 +753,14 @@ function App() {
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      // 2. 어제 출근자 검색 (야간 열차 검색 시에만 수행하거나 야간 근무자 필터링)
+      // 2. 어제 출근자 검색
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
-        
         const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
         
-        // 야간 열차 검색 시에는 열차 번호 일치만 찾음
         if (isNightTrainSearch) return isTrainMatch;
-        // 일반 검색 시 이름/교번 일치 포함
         return (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery) || isTrainMatch;
       }).map(item => {
           const todayCode = normalizeCodeKey(item.code).replace(/d$/, "") + "~";
@@ -789,7 +770,6 @@ function App() {
       crossTeamResults = [...crossTeamResults, ...matchedToday, ...matchedYesterday];
     });
 
-    // 중복 제거 및 결과 정제
     const uniqueMap = new Map();
     crossTeamResults.forEach(item => {
         const key = `${item.teamKey}-${item.name}-${item.code}`;
