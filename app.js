@@ -1,9 +1,9 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (디자인 통합 및 시스템 안정화본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (디자인 및 시스템 최종 안정화본)
  * 최종 수정: 
- * 1. 전체 탭: 상단 헤더 글자 잘림 해결 및 이전의 깔끔한 디자인으로 복구.
- * 2. DIA순서 탭: 상단 +/- 버튼 칸 너비를 전체 탭과 똑같이(60px) 맞추고 날짜 글씨 크기도 동일화.
- * 3. 문구 수정: DIA순서 탭 상단에서 'DIA순서' 단어 삭제.
- * 4. 월교번 스와이프: 버튼 간섭 없이 완벽 작동.
+ * 1. 전체 탭: 글자 잘림 해결 및 이전의 깔끔한 디자인(16px)으로 완전 복구.
+ * 2. DIA순서 탭: 상단 +/- 버튼 칸 너비를 전체 탭과 동일하게(60px) 맞추고 날짜 글씨도 똑같이 축소.
+ * 3. 레이아웃 통일: DIA순서 탭에서 'DIA순서' 단어 삭제 및 3단 구성 레이아웃 일치.
+ * 4. 월교번 스와이프: 버튼 간섭 없는 부드러운 작동 유지.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -1189,6 +1189,7 @@ function App() {
               <div className="tab-page all-page">
                 <div className="all-tab-header">
                   {activeTab === "all" ? (
+                    /* 🚀 전체 탭 상단바: 디자인 완전 복원 (글씨 16px 고정) */
                     <div className="all-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center" }}>
                       <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                       <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "16px", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
@@ -1197,7 +1198,7 @@ function App() {
                       <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   ) : (
-                    /* 🚀 DIA순서 탭: 전체 탭 디자인 100% 복원 (문구 제거, 글자 크기 16px, +/- 버튼 영역 60px) */
+                    /* 🚀 DIA순서 탭 상단바: 전체 탭 디자인과 100% 일치 (글씨 16px, +/- 버튼 영역 60px) */
                     <div className="all-header dia-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between" }}>
                       <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                       <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "16px", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
