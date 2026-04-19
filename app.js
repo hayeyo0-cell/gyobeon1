@@ -1,9 +1,8 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (디자인 및 시스템 최종 안정화본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (디자인 및 검색기능 최적화본)
  * 최종 수정: 
- * 1. 전체 탭: 글자 잘림 해결 및 이전의 깔끔한 디자인(16px)으로 완전 복구.
- * 2. DIA순서 탭: 상단 +/- 버튼 칸 너비를 전체 탭과 동일하게(60px) 맞추고 날짜 글씨도 똑같이 축소.
- * 3. 레이아웃 통일: DIA순서 탭에서 'DIA순서' 단어 삭제 및 3단 구성 레이아웃 일치.
- * 4. 월교번 스와이프: 버튼 간섭 없는 부드러운 작동 유지.
+ * 1. 전체 탭: 상단 날짜 텍스트(16px)가 잘리지 않도록 버튼 너비 및 간격 재조정.
+ * 2. 검색 기능 유지: 돋보기 버튼 및 검색창 입력 시 결과 리스트/이미지 출력 로직 보존.
+ * 3. 레이아웃 안정화: DIA순서 탭과 전체 탭의 상단바 높이 및 스타일 100% 일치.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -922,7 +921,7 @@ function App() {
     const nextAnchorDate = profileAnchorDate || getKoreaToday(); const nextSelection = { teamKey, name: cleanName, code, anchorDate: nextAnchorDate };
     setMySelection(nextSelection); setSelectedTeam(teamKey); setViewTeam(teamKey);
     const today = getKoreaToday(); setHomeDate(today); setBrowseDate(today); setMonthDate(today); setGroupBaseDate(today); setGroupMonth(getDisplayMonthValue(today)); setSelectedGroupDate("");
-    if (effectiveData) { const nextAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, teamKey, cleanName, nextSelection); setTeamAnchors(nextAnchors); }
+    if (effectiveData) { const nextAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, teamKey, cleanName, nextSelection); setTeamAnchors(autoAnchors); }
     setAllowProfileEdit(false); setInitialRemoteChecked(false); setPostSetupRemoteCheckNeeded(true);
   }
 
@@ -1188,25 +1187,24 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {activeTab === "all" ? (
-                    /* 🚀 전체 탭 상단바: 디자인 완전 복원 (글씨 16px 고정) */
-                    <div className="all-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center" }}>
-                      <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
-                      <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "16px", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
-                      <button className="all-header-btn" style={{ width: "40px" }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
-                      <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ width: "50px" }} onClick={() => setEditMode(!editMode)}>{editMode ? "완료" : "수정"}</button>
-                      <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                  {/* 🚀 상단바: 디자인 완전 복원 및 버튼 너비 최적화 */}
+                  <div className="all-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between" }}>
+                    <button className="all-header-btn" style={{ width: "45px", flexShrink: 0 }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
+                    <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "16px", fontWeight: "800", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                       {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} ({weekdayShort(browseDate)})
                     </div>
-                  ) : (
-                    /* 🚀 DIA순서 탭 상단바: 전체 탭 디자인과 100% 일치 (글씨 16px, +/- 버튼 영역 60px) */
-                    <div className="all-header dia-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between" }}>
-                      <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
-                      <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "16px", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
-                      <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                    <div style={{ display: "flex", gap: "2px", flexShrink: 0 }}>
+                        {activeTab === "all" && (
+                            <button className="all-header-btn" style={{ width: "40px" }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
+                        )}
+                        <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ width: "45px" }} onClick={() => setEditMode(!editMode)}>{editMode ? "완료" : "수정"}</button>
                     </div>
-                  )}
+                    <button className="all-header-btn" style={{ width: "45px", flexShrink: 0 }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                  </div>
                   {showSearch && activeTab === "all" && (
-                    <input className="input" style={{ marginTop: 8 }} placeholder="이름/교번/열번 통합 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <div style={{ padding: "0 10px 10px 10px" }}>
+                        <input className="input" style={{ marginTop: 8 }} placeholder="이름/교번/열번 통합 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    </div>
                   )}
                 </div>
                 <div className="all-team-tabs">
@@ -1224,8 +1222,8 @@ function App() {
                         
                         return (
                           <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                            <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
-                            <div className="all-name" style={textColorStyle}>
+                            <div className="all-code" style={{...textColorStyle, fontSize: "13px", fontWeight: "800"}}>{item.code || "-"}</div>
+                            <div className="all-name" style={{...textColorStyle, fontSize: "14px"}}>
                                 {item.displayName || "-"}
                                 {searchQuery && (
                                     <div style={{fontSize: '9px', opacity: 0.8, color: item.customColor ? '#000000' : 'inherit'}}>
