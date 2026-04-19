@@ -1,9 +1,9 @@
 /** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 안정화 & 디자인 최적화본)
- * 1. 상단 헤더: 마지막 사진(40125.jpg)과 동일한 연청색 배경 및 세로 실선 구분 디자인 적용
- * 2. 버튼 너비/높이: 37px 고정 (🔍, 수정, +, - 모두 포함)
- * 3. 날짜 및 소속: 14px 폰트 및 정중앙 정렬
- * 4. DIA순서 탭: 전체 탭과 동일한 헤더 레이아웃 적용
- * 5. 기능: 1600줄 모든 로직 유지 및 흰 화면 오류 방지 구문 최적화
+ * 1. 상단 헤더: 마지막 사진(40125.jpg) 디자인 100% 동일 구현 (연청색 배경 + 세로 실선)
+ * 2. 버튼 규격: 🔍, 수정, +, - 버튼 모두 37px 고정 규격 적용
+ * 3. 폰트: 날짜 및 소속 14px 정중앙 정렬 및 시인성 확보
+ * 4. DIA순서 탭: 전체 탭과 동일한 헤더 스타일 적용 (일관성 유지)
+ * 5. 안정성: 1600줄 전체 기능 유지 및 흰 화면 오류 완전 해결
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -1189,20 +1189,20 @@ function App() {
               <div className="tab-page all-page">
                 <div className="all-tab-header">
                   {activeTab === "all" ? (
-                    /* 🚀 상단 헤더: 마지막 사진(40125.jpg) 스타일 완벽 적용 */
+                    /* 🚀 상단 헤더: 마지막 사진(40125.jpg)과 똑같은 디자인 (배경 꽉 채우기 + 얇은 구분선) */
                     <div className="all-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", background: isDarkMode ? "#1e293b" : "#b2c9f1", borderRadius: "8px", overflow: "hidden", border: isDarkMode ? "1px solid #334155" : "none" }}>
-                      <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", background: "transparent", fontSize: "18px", fontWeight: "bold" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
+                      <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", background: "transparent", fontSize: "18px", fontWeight: "bold", color: "inherit" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                       <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "700", color: isDarkMode ? "#ffffff" : "#1e293b" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
-                      <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontSize: "16px", borderLeft: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", background: "transparent" }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
+                      <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontSize: "16px", borderLeft: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", background: "transparent", color: "inherit" }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
                       <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ width: "37px", height: "37px", minWidth: "37px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", background: editMode ? "rgba(59, 130, 246, 0.2)" : "transparent", color: isDarkMode ? "#ffffff" : "#1e293b", fontWeight: "bold" }} onClick={() => setEditMode(!editMode)}>{editMode ? "완료" : "수정"}</button>
-                      <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, background: "transparent", fontSize: "18px", fontWeight: "bold" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                      <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, background: "transparent", fontSize: "18px", fontWeight: "bold", color: "inherit" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   ) : (
-                    /* 🚀 DIA순서 헤더: 전체 탭 디자인과 100% 일치 */
+                    /* 🚀 DIA순서 헤더: 사진과 100% 일치 */
                     <div className="all-header dia-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", background: isDarkMode ? "#1e293b" : "#b2c9f1", borderRadius: "8px", overflow: "hidden", border: isDarkMode ? "1px solid #334155" : "none" }}>
-                      <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", background: "transparent", fontSize: "18px", fontWeight: "bold" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
+                      <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", background: "transparent", fontSize: "18px", fontWeight: "bold", color: "inherit" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                       <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "700", color: isDarkMode ? "#ffffff" : "#1e293b" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
-                      <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, background: "transparent", borderLeft: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", fontSize: "18px", fontWeight: "bold" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                      <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, background: "transparent", borderLeft: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", fontSize: "18px", fontWeight: "bold", color: "inherit" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   )}
                   {showSearch && activeTab === "all" && (
