@@ -1,9 +1,9 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (디자인 통합 및 최적화 최종본)
- * 수정 사항: 
- * 1. 전체 탭: 글자 잘림 없는 이전의 정상적인 상단 헤더 디자인으로 100% 복구.
- * 2. DIA순서 탭: 상단 헤더의 날짜 글씨 크기를 전체 탭과 동일하게 맞춤 (팀 버튼 크기).
- * 3. 칸 너비 통일: DIA순서 탭의 +/- 버튼 칸 너비를 전체 탭과 픽셀 단위로 일치화.
- * 4. 월교번 스와이프: 버튼 간섭 없는 부드러운 좌우 스와이프 기능 포함.
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (디자인 통합 및 시스템 안정화본)
+ * 최종 수정: 
+ * 1. 전체 탭: 상단 헤더 글자 잘림 해결 및 이전의 깔끔한 디자인으로 복구.
+ * 2. DIA순서 탭: 상단 +/- 버튼 칸 너비를 전체 탭과 똑같이(60px) 맞추고 날짜 글씨 크기도 동일화.
+ * 3. 문구 수정: DIA순서 탭 상단에서 'DIA순서' 단어 삭제.
+ * 4. 월교번 스와이프: 버튼 간섭 없이 완벽 작동.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -292,7 +292,7 @@ function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrid
     const fallback = originalPeople.find((p) => normalizeCodeKey(shiftCodeByDays(team, p.baseCode || "", dayOffset)) === normalizeCodeKey(slotCode)) || originalPeople[idx] || null;
     const name = String(found?.name || fallback?.name || "").trim(); if (!name || shouldHideName(name)) return null;
     const override = overrides[getOverrideKey(teamKey, name)] || {};
-    return { idx: fallback?.idx ?? idx, name, displayName: override.alias || name, code: slotCode, customColor: override.color || "", employeeId: found?.employeeId || fallback?.employeeId || "", teamKey };
+    return { idx: fallback?.idx ?? idx, name, displayName: override.alias || name, code: slotCode, customColor: override.color || "", employeeId: found?.employeeId || fallback?.employeeId || "", teamKey: teamKey };
   }).filter(Boolean);
 }
 
@@ -612,7 +612,7 @@ function App() {
   useEffect(() => { saveMySelection(mySelection); }, [mySelection]);
   useEffect(() => { setProfileAnchorDate(mySelection?.anchorDate || todayStr); }, [mySelection?.anchorDate, todayStr]);
   useEffect(() => { if (!data) return; const migrated = migrateLegacyOverrides(loadOverrides(), data); setOverrides(migrated); }, [data]);
-  useEffect(() => { const years = [getYearFromDateStr(homeDate), getYearFromDateStr(browseDate), getYearFromDateStr(monthDate), getYearFromDateStr(groupBaseDate)].filter(Boolean); [...new Set(years)].forEach((year) => { ensureHolidayYear(year, () => setHolidayVersion((v) => v + 1); }))); }, [homeDate, browseDate, monthDate, groupBaseDate]);
+  useEffect(() => { const years = [getYearFromDateStr(homeDate), getYearFromDateStr(browseDate), getYearFromDateStr(monthDate), getYearFromDateStr(groupBaseDate)].filter(Boolean); [...new Set(years)].forEach((year) => { ensureHolidayYear(year, () => setHolidayVersion((v) => v + 1)); }); }, [homeDate, browseDate, monthDate, groupBaseDate]);
   useEffect(() => { if (!allowProfileEdit) return; setDraftTeam(selectedTeam || mySelection?.teamKey || "ks"); setDraftName(String(mySelection?.name || "").trim()); setDraftCode(String(mySelection?.code || "").trim()); }, [allowProfileEdit, selectedTeam, mySelection]);
   useEffect(() => { if (!allowProfileEdit) return; const teamKey = draftTeam || "ks"; const currentName = String(draftName || "").trim(); if (!currentName) return; const team = setupSourceData?.[teamKey] || data?.[teamKey]; if (!team) return; if (String(draftCode || "").trim()) return; let nextCode = ""; const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster); if (remoteRow?.code) { nextCode = normalizeToFixedCode(team, remoteRow.code); } else { const zipPerson = findZipPersonByName(team, currentName); if (zipPerson?.baseCode) { nextCode = normalizeToFixedCode(team, zipPerson.baseCode); } } if (!nextCode) return; setDraftCode(nextCode); }, [ allowProfileEdit, draftTeam, draftName, draftCode, remoteRoster, setupSourceData, data, ]);
   useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
@@ -1189,7 +1189,6 @@ function App() {
               <div className="tab-page all-page">
                 <div className="all-tab-header">
                   {activeTab === "all" ? (
-                    /* 🚀 전체 탭: 정상 상태 복구 (버튼 60px/40px/50px/60px 구성) */
                     <div className="all-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center" }}>
                       <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                       <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "16px", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
@@ -1198,7 +1197,7 @@ function App() {
                       <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                     </div>
                   ) : (
-                    /* 🚀 DIA순서 탭: 전체 탭 디자인 100% 복제 (문구 제거, 글자 크기 16px로 축소, 버튼 너비 60px로 확대) */
+                    /* 🚀 DIA순서 탭: 전체 탭 디자인 100% 복원 (문구 제거, 글자 크기 16px, +/- 버튼 영역 60px) */
                     <div className="all-header dia-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between" }}>
                       <button className="all-header-btn" style={{ width: "60px" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                       <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "16px", fontWeight: "700" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
