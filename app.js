@@ -1,11 +1,8 @@
-/** * 대구교통공사 기관사용 교번/행로 조회 앱 (검색 중복 및 설정창 오류 완전 해결본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (월교번 스와이프 기능 보완본)
  * 수정 사항: 
- * 1. 열차 번호별 운행 시점 정밀 매칭 (2230, 2030 등 중복 완전 해결):
- * - 저녁/밤 열차(2100번대 이상) 검색 시: 오늘 밤 출근자(d)를 우선 표시하고, 비번자(~)의 과거 기록은 무시.
- * - 새벽/아침 열차(2000~2060번대) 검색 시: 오늘 아침 비번자(~)를 우선 표시하고, 오늘 밤 출근자(d)의 익일 기록은 무시.
- * 2. 설정창 하얀 화면 해결: savingSharedConfig 변수명 오타 및 대소문자 불일치 전체 수정.
- * 3. getPathFolder 최우선 순위: 교번에 ~기호가 있으면 무조건 '어제'를 기준으로 폴더 판정.
- * 4. 원본의 모든 기능, 레이아웃, 관리자 및 그룹 로직 100% 그대로 유지.
+ * 1. 월교번(Month Calendar) 영역에 'swipeStyle' 적용 (좌우 스와이프 시 부드러운 이동 효과 추가)
+ * 2. 기존의 열차 번호 정밀 매칭 및 설정창 오류 해결 로직 100% 유지
+ * 3. 코드 압축 없이 가독성 유지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -539,7 +536,7 @@ function App() {
   const isSwipingRef = useRef(false);
 
   const onTouchStart = (e) => {
-    const target = e.target.closest('.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4, .month-calendar, .all-header, .date-grid');
+    const target = e.target.closest('.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4, .month-calendar button, .all-header, .date-grid');
     if (target) return;
     touchStartX.current = e.targetTouches[0].clientX;
     touchStartY.current = e.targetTouches[0].clientY;
@@ -730,10 +727,7 @@ function App() {
     let crossTeamResults = [];
     const trainNum = parseInt(searchQuery);
 
-    // 🚀 시간대 구분을 위한 열차 번호 정의
-    // 새벽/아침 운행 열차 (어제 출근한 비번자가 우선 검색되어야 함)
     const isEarlyMorningTrain = !isNaN(trainNum) && trainNum >= 2001 && trainNum <= 2060;
-    // 저녁/밤 운행 열차 (오늘 출근하는 근무자가 우선 검색되어야 함)
     const isNightLaunchTrain = !isNaN(trainNum) && trainNum >= 2100 && trainNum <= 2299;
 
     TEAM_ORDER.forEach(teamKey => {
@@ -748,14 +742,12 @@ function App() {
         ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
         : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
 
-      // 1. 어제 출근자 검색 (비번 파생)
       const matchedYesterday = yesterdayGrid.filter(item => {
         if (!isNightStartCode(teamKey, item.code)) return false;
         const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
         const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
         
-        // 🚀 보정: 검색한 열차가 '저녁 열차(2230 등)'인데 지금 비번자의 과거 기록이라면 제외
         if (isTrainMatch && isNightLaunchTrain) return false;
 
         return isTrainMatch || (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
@@ -764,25 +756,21 @@ function App() {
           return { ...item, code: todayCode, teamKey, searchOrigin: 'yesterday', browseDate: yesterdayStr };
       });
 
-      // 2. 오늘 출근자 검색
       const matchedToday = teamGrid.filter(item => {
         const basicMatch = (item.displayName || "").includes(searchQuery) || (item.code || "").includes(searchQuery);
         const folder = getPathFolder(teamKey, browseDate, item.code);
         const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
         const isTrainMatch = trains.some(t => String(t) === searchQuery);
 
-        // 🚀 보정: 검색한 열차가 '아침 열차(2030 등)'인데 오늘 야간 근무자의 미래 기록이라면 제외
         if (isTrainMatch && isEarlyMorningTrain && isNightStartCode(teamKey, item.code)) return false;
 
         return basicMatch || isTrainMatch;
       }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
 
-      // 🚀 배타적 선택: 만약 비번(~) 근무자가 아침 열차로 검색되었다면 오늘 출근자는 리스트에서 제거
       let resultsForTeam = [];
       if (isEarlyMorningTrain && matchedYesterday.length > 0) {
           resultsForTeam = [...matchedYesterday];
       } else if (isNightLaunchTrain) {
-          // 저녁 열차는 오늘 출근자 위주로 표시
           resultsForTeam = [...matchedToday];
       } else {
           resultsForTeam = [...matchedYesterday, ...matchedToday];
@@ -1284,6 +1272,7 @@ function App() {
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', fontSize: '20px' }} onClick={() => captureAndSave('capture-month-area', `월교번`, isDarkMode)}>📷</button>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, 1))}>+</button>
                 </div>
+                {/* 🚀 월교번 달력 본체에 swipeStyle 적용 */}
                 <div className="month-calendar" style={swipeStyle}>
                   <div className="month-weekdays">
                     <div className="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="sat">토</div>
@@ -1599,4 +1588,3 @@ function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, over
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<App />);
-
