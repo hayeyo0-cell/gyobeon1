@@ -1,8 +1,8 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (월교번 스와이프 기능 보완본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (월교번 스와이프 완전 해결본)
  * 수정 사항: 
- * 1. 월교번(Month Calendar) 영역에 'swipeStyle' 적용 (좌우 스와이프 시 부드러운 이동 효과 추가)
- * 2. 기존의 열차 번호 정밀 매칭 및 설정창 오류 해결 로직 100% 유지
- * 3. 코드 압축 없이 가독성 유지
+ * 1. onTouchStart 핸들러 수정: 월교번 날짜 버튼(.month-cell) 위에서도 스와이프가 시작되도록 허용.
+ * 2. 월교번 본체(.month-calendar)에 swipeStyle을 적용하여 시각적 피드백 제공.
+ * 3. 기존의 열차 번호 검색 보정 및 설정창 로직은 100% 유지.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -140,7 +140,7 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-/** 🚀 폴더 판정 로직: 교본 기호(~ 여부)를 최우선으로 날짜 보정 수행 **/
+/** 🚀 폴더 판정 로직 **/
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
@@ -535,9 +535,12 @@ function App() {
   const touchStartY = useRef(null);
   const isSwipingRef = useRef(false);
 
+  /** 🚀 스와이프 차단 해제: 월교번의 날짜 칸(.month-cell)에서도 스와이프가 시작되도록 수정 **/
   const onTouchStart = (e) => {
-    const target = e.target.closest('.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4, .month-calendar button, .all-header, .date-grid');
-    if (target) return;
+    // 스와이프를 명확히 방해하는 요소(탭바, 설정 버튼, 입력창 등)만 제외하고는 모두 허용
+    const blockList = '.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4';
+    if (e.target.closest(blockList)) return;
+    
     touchStartX.current = e.targetTouches[0].clientX;
     touchStartY.current = e.targetTouches[0].clientY;
     isSwipingRef.current = false;
@@ -554,7 +557,10 @@ function App() {
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) isSwipingRef.current = true;
       else if (Math.abs(diffY) > 10) { touchStartX.current = null; return; }
     }
-    if (isSwipingRef.current) setSwipeOffset(diffX * 0.7); 
+    if (isSwipingRef.current) {
+        if (e.cancelable) e.preventDefault(); // 스와이프 중에는 브라우저 스크롤 방지
+        setSwipeOffset(diffX * 0.7); 
+    }
   };
 
   const onTouchEndHandler = () => {
@@ -1272,7 +1278,7 @@ function App() {
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', fontSize: '20px' }} onClick={() => captureAndSave('capture-month-area', `월교번`, isDarkMode)}>📷</button>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, 1))}>+</button>
                 </div>
-                {/* 🚀 월교번 달력 본체에 swipeStyle 적용 */}
+                {/* 🚀 월교번 본체에 swipeStyle 적용하여 부드러운 애니메이션 구현 */}
                 <div className="month-calendar" style={swipeStyle}>
                   <div className="month-weekdays">
                     <div className="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="sat">토</div>
