@@ -132,21 +132,20 @@ button:active { transform: scale(0.97); }
 .all-page .all-tab-grid-wrap { flex: 0 0 auto; min-height: 0; }
 .all-tab-header { margin-bottom: 8px; }
 
-/* 🚀 [디자인 일원화 및 입체감] 상단바: 하단 탭 진한 파랑(#3b82f6) 일치 + 사각형 16px */
+/* 🚀 [최종 수정 핵심] 상단 헤더: 하단 탭 진한 파랑(#3b82f6) 일치 + 사각형 16px + 입체감 */
 .all-header { 
     height: 60px; 
     display: grid; 
     grid-template-columns: 44px 1fr 44px 62px 44px; 
-    background: #3b82f6 !important; /* 하단 탭 전체 테마 색상과 통일 */
+    background: #3b82f6 !important; 
     background-image: none !important; 
     color: #ffffff !important; 
-    border-radius: 16px !important; /* 검색창 r값 16px 적용 */
+    border-radius: 16px !important; 
     overflow: hidden; 
     box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important; 
     border: 1px solid rgba(0,0,0,0.15) !important;
 }
 
-/* 🚀 [DIA 탭] 상단바 디자인 일체화 */
 .dia-header { 
     grid-template-columns: 44px 1fr 44px 44px !important; 
     background: #3b82f6 !important; 
@@ -169,34 +168,32 @@ button:active { transform: scale(0.97); }
     white-space: nowrap;
 }
 
-/* 🚀 [수정중 강조] 배경 파랑 유지, 버튼 글자만 빨갛게 강조 */
+/* 🚀 [수정중 강조] 버튼 글자만 빨갛게 */
 .all-edit-btn.active { 
     color: #ff3333 !important; 
     text-shadow: 0 0 8px rgba(255,0,0,0.3);
 }
 
 .all-header-btn:last-child { border-right: none !important; }
-.all-header-title { padding: 0 6px; font-size: 17px; line-height: 1.08; font-weight: 800; word-break: keep-all; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.all-header-title { padding: 0 6px; font-size: 17px; line-height: 1.08; font-weight: 800; }
 .all-edit-btn { font-size: 14px; }
 
 .all-team-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; margin-bottom: 8px; }
 
-/* 🚀 [소속 버튼 수정] 흰색 배경 삭제 -> 파란 배경 유지 + 도트(view-dot)로만 구분 */
+/* 🚀 [소속 버튼 수정] 흰색 배경 효과 삭제 -> 파란 배경 유지 + 도트로 구분 */
 .all-team-tab { 
     position: relative; 
     border: 1px solid rgba(255,255,255,0.2) !important; 
-    background: #3b82f6 !important; /* 항상 파란 배경 고정 */
+    background: #3b82f6 !important; 
     color: #ffffff !important; 
     font-size: 15px; 
     font-weight: 800; 
     padding: 11px 0; 
     border-radius: 18px; 
     cursor: pointer; 
-    line-height: 1; 
     box-shadow: 0 4px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2) !important; 
 }
 
-/* 활성화 시에도 배경 변경 없이 입체감만 강조 */
 .all-team-tab.active { 
     border: 1px solid rgba(255,255,255,0.5) !important;
     box-shadow: 0 6px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3) !important; 
@@ -206,7 +203,7 @@ button:active { transform: scale(0.97); }
 
 .all-team-tab.my-team { background: #10b981 !important; }
 
-/* 🚀 [도트 요구사항 반영] 배경이 파랑이므로 도트를 흰색 광택으로 처리 */
+/* 🚀 [도트 요구사항 반영] */
 .view-dot { 
     position: absolute; 
     top: 6px; 
@@ -214,12 +211,11 @@ button:active { transform: scale(0.97); }
     width: 6px; 
     height: 6px; 
     border-radius: 50%; 
-    background: #ffffff !important; /* 파란 배경 위에서 가장 잘 보이는 흰색 도트 */
+    background: #ffffff !important; 
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
     display: none; 
 }
 
-/* 선택된 버튼에서만 도트 노출 */
 .all-team-tab.active .view-dot { display: block !important; }
 
 .all-tab-grid-wrap { overflow: visible; background: linear-gradient(180deg, rgba(194, 211, 245, 0.78) 0%, rgba(178, 198, 238, 0.72) 100%); border-radius: 28px; padding: 8px; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.38); margin-bottom: 12px; transition: background 0.2s ease; }
@@ -275,7 +271,7 @@ button:active { transform: scale(0.97); }
 
 @keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(34, 199, 216, 0.18), 0 8px 16px rgba(34, 199, 216, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.76); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 3px rgba(34, 199, 216, 0.28), 0 12px 24px rgba(34, 199, 216, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.82); } }
 
-/* 🌙 다크 모드 오버라이드 (입체감 및 색상 유지) */
+/* 🌙 다크 모드 오버라이드 (직전 요청 반영) */
 body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .card, .dark-mode .main-panel, .dark-mode .month-calendar, .dark-mode .group-table-wrap, .dark-mode .group-top-bar-v4 { background: rgba(30, 41, 59, 0.95); border-color: #334155; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
 .dark-mode .input, .dark-mode .select, .dark-mode .group-select-display { background: #1e293b; border-color: #475569; color: #f8fafc; }
@@ -310,12 +306,13 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .home-path-preview img { background: #1e293b; border-color: #334155; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }
 .dark-mode .preview-label { color: #94a3b8; background: rgba(30, 41, 59, 0.8); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05); }
 
-/* 🚀 다크모드 상단바/소속버튼 입체감 유지 */
+/* 🚀 다크모드 상단바/소속/다이아 배경 정밀 튜닝 */
 .dark-mode .all-header { background: #1e293b !important; box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important; color: #ffffff !important; }
-.dark-mode .all-team-tab { background: #1e293b !important; color: #94a3b8 !important; border: 1px solid #334155 !important; }
-.dark-mode .all-team-tab.active { background: #1e293b !important; color: #ffffff !important; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5) !important; border: 1px solid #3b82f6 !important; }
+.dark-mode .all-team-tab { background: #1e293b !important; color: #f8fafc !important; border: 1px solid #334155 !important; }
+.dark-mode .all-team-tab.active { background: #1e293b !important; color: #ffffff !important; box-shadow: 0 0 15px rgba(59, 130, 246, 0.6) !important; border: 1px solid #3b82f6 !important; }
 .dark-mode .all-header-btn, .dark-mode .all-edit-btn, .dark-mode .all-header-title { color: #f8fafc !important; }
 .dark-mode .all-edit-btn.active { color: #ff4d4d !important; }
+.dark-mode .tab-page div.card { background: #1e293b !important; border: 1px solid #334155 !important; }
 
 @media (max-width: 420px) {
   .container { padding: 22px 6px 20px; touch-action: pan-y; }
@@ -347,6 +344,7 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .month-time-line { font-size: 11px; }
   .all-page { padding-bottom: 20px; }
   .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
+  .dia-header { grid-template-columns: 40px 1fr 38px 40px; }
   .all-header-btn { height: 52px; font-size: 18px; }
   .all-edit-btn { height: 52px; font-size: 12px; }
   .all-header-title { font-size: 14px; padding: 0 5px; }
