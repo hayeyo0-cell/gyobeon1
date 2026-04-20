@@ -114,7 +114,7 @@ button:active { transform: scale(0.97); }
 
 .group-add-btn-v4 { flex: 1; min-width: 0; height: 100%; background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%); color: #fff; border: none; padding: 8px 4px; border-radius: 12px; font-weight: 800; font-size: 13px; text-align: center; box-shadow: 0 4px 10px rgba(124, 58, 237, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: center; }
 
-/* 🚀 [최종병기] DIA순서 탭의 모든 테이블 셀에 월교번 색상(#c8d2e3) 강제 주입 */
+/* 🚀 [DIA 구분선 최종병기] 모든 테이블 칸에 월교번 색상(#c8d2e3) 무조건 강제 적용 */
 .tab-page table, .tab-page th, .tab-page td, .group-table td, .group-table th { border: 1px solid #c8d2e3 !important; border-collapse: collapse !important; }
 .group-table-wrap { overflow: hidden; border-radius: 18px; background: #ffffff; border: 1px solid #c8d2e3 !important; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .group-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
@@ -266,7 +266,7 @@ button:active { transform: scale(0.97); }
 .all-name { margin: 0; margin-top: 1px; font-size: 13.5px; line-height: 1; font-weight: 800; color: #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 98%; transition: color 0.2s ease; }
 
 .all-cell-real[style] { background-image: none !important; }
-/* 🚀 [내 교번 강조 강화] 내 셀의 강조 선과 배경을 요청하신 25% 농도(#10b98140)로 상향 수정 */
+/* 🚀 [내 교번 강조 강화] 내 셀의 강조 배경을 요청하신 25% 농도(#10b981)로 상향 수정 */
 .cell-my { border: 3px solid #059669 !important; background: rgba(16, 185, 129, 0.25) !important; transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.25), 0 4px 8px rgba(16, 185, 129, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.72); z-index: 2; position: relative; transition: all 0.2s ease; }
 .cell-my-today { animation: myCellBlink 1.4s ease-in-out infinite; }
 
