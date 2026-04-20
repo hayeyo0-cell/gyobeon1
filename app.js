@@ -1553,13 +1553,13 @@ function App() {
             <div className="modal-sub">{TEAM_LABELS[editingCell?.teamKey || viewTeam]} {editingCell?.code} {editingCell?.name}</div>
             <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="비워두면 원래 이름 사용" />
-            <label className="label" style={{ marginTop: 12 }}>색상</label>
-          <div style={{ marginTop: '8px' }}>
+           <label className="label" style={{ marginTop: 12 }}>색상 선택</label>
+<div style={{ marginTop: '8px' }}>
   <select 
     className="select" 
     value={editColor} 
     onChange={(e) => setEditColor(e.target.value)}
-    style={{ width: '100%' }}
+    style={{ width: '100%', height: '48px' }}
   >
     {COLOR_OPTIONS.map((item) => (
       <option key={item.label} value={item.value}>
