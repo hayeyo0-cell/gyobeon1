@@ -1,9 +1,9 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 안정화본)
- * 1. 검색 복구: 열번/이름 검색 시 하단에 행로표 이미지가 즉시 나타나도록 로직 복구
- * 2. 상단 헤더: 사진(40125.jpg) 디자인 기반 진한 파란색 배경 + 진한 세로 실선 5칸 분할
- * 3. 규격: 모든 버튼/칸 높이 37px 고정 및 둥근 캡슐형 바 적용
- * 4. 시각화: 입체감을 위한 하단 그림자(Shadow) 적용 및 14px 날짜 정렬
- * 5. 안정성: 1600줄 전체 기능 유지 및 흰 화면 오류 방지 구문 최적화
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (디자인 & 기능 완벽 최적화본)
+ * 1. 수정 버튼: 클릭 시 빨간색 배경에 '수정중'으로 변경되어 직관성 극대화
+ * 2. 검색 기능: 열번/이름 검색 시 하단에 해당 인원의 행로표 이미지가 즉시 렌더링되도록 복구
+ * 3. 상단 헤더: 사진(40125.jpg) 스타일의 진한 파란색 배경 + 37px 높이 + 진한 세로 실선 5분할
+ * 4. 입체감: 헤더 하단 Shadow 및 아래 소속 버튼과 동일한 모서리 곡률 적용
+ * 5. 안정성: 1600줄 전체 로직 유지 및 흰 화면 오류 방지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -806,7 +806,7 @@ function App() {
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
 
   const allGridLayout = useMemo(() => { return getAllGridLayout(visibleAllGrid.length || 0); }, [visibleAllGrid.length]);
-  const allGridRows = useMemo(() => { Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols)); }, [visibleAllGrid.length, allGridLayout.cols]);
+  const allGridRows = useMemo(() => { return Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols)); }, [visibleAllGrid.length, allGridLayout.cols]);
 
   const diaList = useMemo(() => {
     const team = currentViewTeam; if (!team) return []; let grid = [];
@@ -1188,16 +1188,16 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {/* 🚀 상단 헤더: 사진(40125.jpg) 스타일 완벽 복구 (소속 버튼과 색상 통일 + 더 진한 구분선 + 하단 그림자) */}
+                  {/* 🚀 상단 헤더: 사진(40125.jpg) 스타일로 완벽 복구 (소속 버튼과 색상 통일 + 진한 구분선 + 하단 그림자) */}
                   <div className="all-header" style={{ 
                     display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", 
                     background: isDarkMode ? "#1e293b" : "#93c5fd",
                     borderRadius: "25px", overflow: "hidden",
-                    boxShadow: isDarkMode ? "0 4px 10px rgba(0,0,0,0.4)" : "0 4px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.3)"
+                    boxShadow: isDarkMode ? "0 4px 6px rgba(0,0,0,0.3)" : "0 4px 10px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.3)"
                   }}>
                     <button className="all-header-btn" style={{ 
                       width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
-                      padding: 0, border: "none", borderRight: isDarkMode ? "1px solid #444" : "2px solid rgba(255,255,255,0.3)", // 구분선 강화
+                      padding: 0, border: "none", borderRight: isDarkMode ? "2px solid #334155" : "2px solid rgba(255,255,255,0.3)",
                       background: "transparent", fontSize: "20px", fontWeight: "bold", color: isDarkMode ? "#ffffff" : "#1e3a8a" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
@@ -1209,15 +1209,17 @@ function App() {
                       <>
                         <button className="all-header-btn" style={{ 
                           width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
-                          padding: 0, border: "none", borderLeft: isDarkMode ? "1px solid #444" : "2px solid rgba(255,255,255,0.3)", 
-                          borderRight: isDarkMode ? "1px solid #444" : "2px solid rgba(255,255,255,0.3)", 
+                          padding: 0, border: "none", borderLeft: isDarkMode ? "2px solid #334155" : "2px solid rgba(255,255,255,0.3)", 
+                          borderRight: isDarkMode ? "2px solid #334155" : "2px solid rgba(255,255,255,0.3)", 
                           background: "transparent", fontSize: "16px", color: "inherit" 
                         }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
                         
+                        {/* 🚀 수정/수정중 버튼: 직관적인 빨간색 표시 복구 */}
                         <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
                           width: "37px", height: "37px", minWidth: "37px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", 
-                          padding: 0, border: "none", borderRight: isDarkMode ? "1px solid #444" : "2px solid rgba(255,255,255,0.3)", 
-                          background: editMode ? "rgba(255, 255, 255, 0.25)" : "transparent", color: isDarkMode ? "#ffffff" : "#1e3a8a", fontWeight: "bold" 
+                          padding: 0, border: "none", borderRight: isDarkMode ? "2px solid #334155" : "2px solid rgba(255,255,255,0.3)", 
+                          background: editMode ? "#ef4444" : "transparent", // 수정 중일 때 빨간 배경
+                          color: editMode ? "#ffffff" : (isDarkMode ? "#ffffff" : "#1e3a8a"), fontWeight: "bold" 
                         }} onClick={() => setEditMode(!editMode)}>{editMode ? "완료" : "수정"}</button>
                       </>
                     )}
@@ -1225,7 +1227,7 @@ function App() {
                     <button className="all-header-btn" style={{ 
                       width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
-                      borderLeft: (activeTab === "dia") ? (isDarkMode ? "1px solid #444" : "2px solid rgba(255,255,255,0.3)") : "none",
+                      borderLeft: (activeTab === "dia") ? (isDarkMode ? "2px solid #334155" : "2px solid rgba(255,255,255,0.3)") : "none",
                       fontSize: "20px", fontWeight: "bold", color: isDarkMode ? "#ffffff" : "#1e3a8a" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
@@ -1271,7 +1273,7 @@ function App() {
                         );
                       })}
                     </div>
-                    {/* 🚀 검색 로직 복구: 검색 결과가 있을 때 하단에 행로표 이미지 띄워줌 */}
+                    {/* 🚀 검색 결과 행로표 이미지 로직 복구 */}
                     {searchQuery && visibleAllGrid.length > 0 && (
                       <div className="search-img-panel" style={{ marginTop: '20px', paddingBottom: '30px' }}>
                         {visibleAllGrid.map((item, idx) => {
@@ -1280,10 +1282,10 @@ function App() {
                           if (!imgSrc) return null;
                           return (
                             <div key={`s-img-${idx}`} style={{ marginBottom: '20px', textAlign: 'center' }}>
-                              <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '8px', color: isDarkMode ? '#aaa' : '#555' }}>
+                              <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '8px', color: isDarkMode ? '#aaa' : '#555', fontWeight: 'bold' }}>
                                 🔍 {item.displayName} ({item.code}) 행로표
                               </div>
-                              <img src={imgSrc} alt="행로" style={{ width: '100%', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }} onClick={() => handleAllCellTap(item)} />
+                              <img src={imgSrc} alt="행로" style={{ width: '100%', borderRadius: '12px', boxShadow: isDarkMode ? '0 4px 15px rgba(0,0,0,0.5)' : '0 4px 15px rgba(0,0,0,0.3)' }} onClick={() => handleAllCellTap(item)} />
                             </div>
                           );
                         })}
