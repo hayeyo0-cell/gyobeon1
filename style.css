@@ -412,3 +412,32 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .modal-title { font-size: 22px; }
   .modal-sub { font-size: 16px; }
 }
+/* 🚀 [DIA순서 탭 전용] 월교번과 동일한 구분선(#c8d2e3) 및 내 교번 강조 강화 */
+
+/* 1. DIA순서 리스트의 구분선을 월교번과 똑같은 색상으로 변경 */
+[onClick*="openPathDialog"] {
+    border-bottom: 1px solid #c8d2e3 !important; /* 월교번 표와 동일한 색상 */
+}
+
+/* 마지막 리스트는 선을 없애서 깔끔하게 마감 */
+[onClick*="openPathDialog"]:last-child {
+    border-bottom: none !important;
+}
+
+/* 2. 내 교번(강조색) 색상을 10% 더 진하게 수정 */
+/* 라이트모드 강조색 심화 */
+[style*="#eef6ff"] {
+    background-color: #d9e9ff !important; /* 기존 #eef6ff보다 약 10% 진한 하늘색 */
+    border-left: 5px solid #2563eb !important; /* 왼쪽 선도 더 진한 파랑으로 강조 */
+}
+
+/* 다크모드 강조색 심화 */
+.dark-mode [style*="rgba(56, 189, 248, 0.15)"] {
+    background-color: rgba(56, 189, 248, 0.25) !important; /* 농도를 15%에서 25%로 강화 */
+    border-left: 5px solid #38bdf8 !important;
+}
+
+/* 3. 다크모드 시 DIA순서 구분선도 월교번 다크모드와 일치 (#334155) */
+.dark-mode [onClick*="openPathDialog"] {
+    border-bottom: 1px solid #334155 !important;
+}
