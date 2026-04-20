@@ -95,7 +95,6 @@ button:active { transform: scale(0.97); }
 .bottom-tab.active { color: #ffffff; background: rgba(255, 255, 255, 0.08); font-size: 16px; font-weight: 700; }
 .bottom-tab.active::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: 5px; height: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.95); }
 
-/* 그룹 UI */
 .group-page { background: transparent; border-radius: 0; padding: 0; box-shadow: none; border: none; }
 .group-top-bar-v4 { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 10px; background: rgba(255, 255, 255, 0.95); border-radius: 20px; border: 1px solid rgba(203, 213, 225, 0.8); box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8); margin-bottom: 12px; width: 100%; transition: background-color 0.2s ease, border-color 0.2s ease; }
 .nav-btn-v4 { flex: 0 0 auto; padding: 8px 12px; background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); border: none; border-radius: 12px; font-size: 16px; color: white; cursor: pointer; font-weight: 800; box-shadow: 0 4px 10px rgba(47, 97, 220, 0.2); }
@@ -133,6 +132,7 @@ button:active { transform: scale(0.97); }
 .month-header-title { height: 48px; display: flex; align-items: center; justify-content: center; background: #ffffff; border-radius: 16px; font-size: 24px; font-weight: 800; border: 1px solid #d7dce5; transition: background-color 0.2s ease, border-color 0.2s ease; }
 .all-page { padding-bottom: 20px; }
 .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
+.dia-header { grid-template-columns: 40px 1fr 38px 40px; }
 .all-header-btn { height: 52px; font-size: 18px; }
 .all-edit-btn { height: 52px; font-size: 12px; }
 .all-header-title { font-size: 14px; padding: 0 5px; }
@@ -147,7 +147,8 @@ button:active { transform: scale(0.97); }
 .nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
 .group-select-display { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
 .group-add-btn-v4 { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
-.group-table { font-size: 12px; }
+/* 🚀 [DIA 순서 개선] 리스트 행 간 구분선을 더 명확하게(#e2e8f0) 조정 */
+.group-table { font-size: 12px; border-bottom: 1px solid #e2e8f0; }
 .group-table th:first-child, .group-table td:first-child, .group-name-cell { width: 68px; min-width: 68px; max-width: 68px; }
 .day-name { font-size: 13px; }
 .day-date { font-size: 10px; }
@@ -254,7 +255,8 @@ button:active { transform: scale(0.97); }
 .all-name { margin: 0; margin-top: 1px; font-size: 13.5px; line-height: 1; font-weight: 800; color: #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 98%; transition: color 0.2s ease; }
 
 .all-cell-real[style] { background-image: none !important; }
-.cell-my { border: 2px solid #22c7d8 !important; background-image: none !important; transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 20px rgba(34, 199, 216, 0.25), 0 4px 8px rgba(34, 199, 216, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.72); z-index: 2; position: relative; transition: all 0.2s ease; }
+/* 🚀 [내 교번 강조 강화] 내 셀의 강조 선과 색상을 더 진하게(#10b981) 수정 */
+.cell-my { border: 3px solid #10b981 !important; background: rgba(16, 185, 129, 0.05) !important; transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.25), 0 4px 8px rgba(16, 185, 129, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.72); z-index: 2; position: relative; transition: all 0.2s ease; }
 .cell-my-today { animation: myCellBlink 1.4s ease-in-out infinite; }
 
 .month-calendar { background: rgba(255, 255, 255, 0.76); border-radius: 24px; padding: 10px; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7); transition: background-color 0.2s ease, border-color 0.2s ease; }
@@ -310,6 +312,7 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .all-tab-grid-wrap { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155; }
 .dark-mode .all-cell-real { background: linear-gradient(180deg, #334155 0%, #1e293b 100%); border-color: #475569; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); }
 .dark-mode .all-code, .dark-mode .all-name { color: #ffffff; }
+/* 🚀 [DIA 다크모드 가독성] 다크모드에서도 구분선을 확실하게(#334155) 유지 */
 .dark-mode .group-table th, .dark-mode .group-table td { border-color: #334155; color: #f8fafc; }
 .dark-mode .group-table th { background: #1e293b; color: #f8fafc; }
 .dark-mode .group-table th.sticky-col, .dark-mode .group-table td.sticky-col, .dark-mode .group-name-cell { background-color: #1e293b !important; border-right-color: #475569 !important; }
@@ -399,11 +402,3 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .modal-title { font-size: 22px; }
   .modal-sub { font-size: 16px; }
 }
-이걸 마지막으로해서 수정해줘~부탁할게~그만 괴롭히고 싶다 ㅠㅠ 조절 부탁해~어떻게든 340줄가량 맞춰줘~줄어드는건 주석때문인것 같으니 내가 추가한 주석도 100% 반영해줘~줄어들면 다시 해야하니 제발 부탁이야 ㅠㅠ 
-
-내소속은 다른색 파란색도트 구분 상단바 16px 파란색 일원화 
-다크모드일때 글씨 선명하게 상단 소속 글씨 선명하게 
-다이아 순서 톤 조절 
-그룹 날짜이동버튼 파란색 유지
-
-모두 반영해서 한방에 끝내자 ㅠㅠ 눈에 편하게 조절도하고!!! 힘내자 ㅠㅠ
