@@ -114,13 +114,13 @@ button:active { transform: scale(0.97); }
 
 .group-add-btn-v4 { flex: 1; min-width: 0; height: 100%; background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%); color: #fff; border: none; padding: 8px 4px; border-radius: 12px; font-weight: 800; font-size: 13px; text-align: center; box-shadow: 0 4px 10px rgba(124, 58, 237, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: center; }
 
-/* 🚀 [최종 해결책] dialist.txt 데이터를 포함한 앱 내 모든 테이블 요소 강제 수정 */
-table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !important; border-collapse: collapse !important; }
-.group-table-wrap { overflow: hidden; border-radius: 18px; background: #ffffff; border: 1px solid #c8d2e3 !important; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
+.group-table-wrap { overflow: hidden; border-radius: 18px; background: #ffffff; border: 1px solid rgba(203, 213, 225, 0.9); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .group-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+/* 🚀 [DIA 구분선] 색상을 월교번과 동일한 #c8d2e3 색상, 요청하신 25% 농도 적용 */
+.group-table th, .group-table td { border-bottom: 1px solid rgba(200, 210, 227, 0.25); border-right: 1px solid rgba(200, 210, 227, 0.25); padding: 0; text-align: center; vertical-align: middle; color: #000000; font-weight: 700; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
 
-.group-table th:last-child, .group-table td:last-child { border-right: none !important; }
-.group-table tr:last-child td { border-bottom: none !important; }
+.group-table th:last-child, .group-table td:last-child { border-right: none; }
+.group-table tr:last-child td { border-bottom: none; }
 .group-table th.sticky-col, .group-table td.sticky-col { position: sticky; left: 0; background: #ffffff; z-index: 2; box-shadow: 2px 0 5px rgba(0,0,0,0.06); border-right: 2px solid #e2e8f0 !important; transition: background-color 0.2s ease, border-color 0.2s ease; padding: 8px 4px !important; }
 .group-table th.sticky-col { z-index: 3; background: rgba(248, 250, 252, 0.98); }
 .group-table th:first-child, .group-table td:first-child, .group-name-cell { width: 76px; min-width: 76px; max-width: 76px; padding: 6px 2px !important; }
@@ -152,147 +152,25 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 .all-team-tabs { gap: 4px; margin-top: 6px; margin-bottom: 6px; }
 .all-team-tab { font-size: 13px; padding: 9px 0; border-radius: 14px; }
 .all-tab-grid-wrap { padding: 6px; border-radius: 22px; margin-bottom: 10px; }
+.all-cell-real { min-height: 48px; border-radius: 8px; padding: 2px 1px; }
 
-/* 🚀 [DIA 순서 카드형 패러다임 전환] 리스트를 독립된 카드로 정밀 수정 */
-.all-grid-real { 
-  display: flex; 
-  flex-direction: column; 
-  width: 100%; 
-  gap: 10px; 
-  padding: 4px; 
-}
-.all-cell-real { 
-  width: 100%; 
-  min-height: 64px; 
-  background: #ffffff; 
-  border-radius: 18px; 
-  padding: 12px 16px; 
-  display: flex; 
-  flex-direction: row; 
-  align-items: center; 
-  justify-content: space-between; 
-  border: 1px solid #3b82f6; 
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  transition: transform 0.14s ease, box-shadow 0.14s ease;
-  cursor: pointer;
-  overflow: hidden;
-  position: relative;
-}
-.all-cell-real:active { transform: scale(0.975); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-.all-code { margin: 0; font-size: 22px; font-weight: 900; color: #3b82f6; line-height: 1; transition: color 0.2s ease; }
-.all-name { margin: 0; font-size: 16px; font-weight: 800; color: #111827; margin-left: auto; margin-right: 12px; line-height: 1; transition: color 0.2s ease; }
+.all-grid-real.density-4 .all-code { font-size: 17px; } .all-grid-real.density-4 .all-name { font-size: 12.5px; }
+.all-grid-real.density-5 .all-code { font-size: 15px; } .all-grid-real.density-5 .all-name { font-size: 11.5px; }
+.all-grid-real.density-6 .all-code { font-size: 14px; } .all-grid-real.density-6 .all-name { font-size: 10px; }
 
-/* 🚀 [내 교번 강조 강화] 민트색 광택 + 선명한 초록 테두리 */
-.cell-my { 
-  border: 3px solid #10b981 !important; 
-  background: rgba(16, 185, 129, 0.12) !important; 
-  box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2), inset 0 0 15px rgba(16, 185, 129, 0.1);
-  transform: translateY(-2px);
-  z-index: 2;
-}
-.cell-my .all-code { color: #059669 !important; }
-.cell-my-today { animation: myCellBlink 1.4s ease-in-out infinite; }
+.group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
+.nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
+.group-select-display { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
+.group-add-btn-v4 { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
 
-.all-tab-grid-wrap { overflow: visible; background: linear-gradient(180deg, rgba(194, 211, 245, 0.78) 0%, rgba(178, 198, 238, 0.72) 100%); border-radius: 28px; padding: 8px; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.38); margin-bottom: 12px; transition: background 0.2s ease; }
+.code-txt { font-size: 13px; }
+.row-del-btn-text { padding: 3px 10px; font-size: 10px; border-radius: 10px; }
 
-.all-grid-real.density-4 .all-code { font-size: 22px; } .all-grid-real.density-4 .all-name { font-size: 16px; }
-.all-grid-real.density-5 .all-code { font-size: 20px; } .all-grid-real.density-5 .all-name { font-size: 15px; }
-.all-grid-real.density-6 .all-code { font-size: 18px; } .all-grid-real.density-6 .all-name { font-size: 14px; }
+.modal { padding: 16px; border-radius: 20px; }
+.modal-title { font-size: 22px; }
+.modal-sub { font-size: 16px; }
 
-.month-calendar { background: rgba(255, 255, 255, 0.76); border-radius: 24px; padding: 10px; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7); transition: background-color 0.2s ease, border-color 0.2s ease; }
-.month-weekdays, .month-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; }
-.month-weekdays { margin-bottom: 4px; }
-.month-weekdays > div { text-align: center; font-size: 17px; font-weight: 800; padding: 8px 0; }
-/* 🚀 [월교번 라이트모드 가독성 수정 복구] 사용자님 쨍한 디자인(#c8d2e3) 복원 */
-.month-cell { border: 1px solid #c8d2e3 !important; background: #ffffff; min-height: 116px; padding: 0; cursor: pointer; border-radius: 0; box-shadow: none; transition: background-color 0.16s ease, border-color 0.16s ease; display: block; overflow: hidden; }
-.month-cell:hover { background: #fbfcff; }
-.month-cell.selected { border: 2px solid #60a5fa !important; background: rgba(59, 130, 246, 0.15) !important; }
-.month-cell.other-month { opacity: 0.34; border-style: dashed; }
-.month-cell-inner { width: 100%; min-height: 114px; padding: 6px 6px 4px; display: grid; grid-template-rows: 18px 28px 1fr; align-items: start; justify-items: stretch; }
-/* 🟢 [쨍한 글씨 디자인 복구] 색상과 굵기를 원본(`#111827`, `800`)으로 복구 */
-.month-day { font-size: 15px; font-weight: 800; color: #111827; transition: color 0.2s ease; }
-.month-code-line { margin-top: 4px; font-size: 16.5px; font-weight: 800; color: #111827; white-space: nowrap; transition: color 0.2s ease; }
-.month-time-wrap { width: 100%; display: grid; grid-template-rows: 24px 24px; align-content: start; margin-top: 2px; }
-.month-time-line { font-size: 12px; color: #111827; white-space: nowrap; transition: color 0.2s ease; }
-.tone-normal { color: #111827 !important; transition: color 0.2s ease; }
-.tone-sun { color: #ef4444 !important; transition: color 0.2s ease; }
-.tone-sat { color: #3b82f6 !important; transition: color 0.2s ease; }
-.month-weekdays .sun { color: #ef4444 !important; }
-.month-weekdays .sat { color: #3b82f6 !important; }
-
-.modal-backdrop { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.34); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 4000; padding: 16px; animation: fadeIn 0.18s ease; }
-.modal { width: 100%; max-width: 520px; background: rgba(255, 255, 255, 0.95); border-radius: 24px; padding: 20px; max-height: 90vh; overflow: auto; box-shadow: 0 24px 50px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.78); border: 1px solid rgba(255, 255, 255, 0.86); animation: modalUp 0.2s ease; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes modalUp { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
-.modal-title { font-size: 26px; font-weight: 800; margin-bottom: 14px; }
-.modal-sub { font-size: 18px; margin-bottom: 16px; }
-.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
-.modal-btn { min-width: 88px; height: 42px; border: 1px solid rgba(203, 213, 225, 0.95); background: rgba(255, 255, 255, 0.92); cursor: pointer; border-radius: 14px; font-weight: 700; font-size: 15px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; color: inherit; }
-.modal-btn.primary { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); color: white; border-color: transparent; box-shadow: 0 8px 16px rgba(47, 97, 220, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
-.modal-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.color-preview { height: 40px; border-radius: 14px; border: 1px solid #cbd5e1; margin-top: 8px; background: white; }
-
-.viewer-page { position: fixed; inset: 0; background: #f3f4f6; z-index: 3000; overflow: auto; }
-.viewer-header { position: sticky; top: 0; background: rgba(243, 244, 246, 0.84); backdrop-filter: blur(12px); padding: 12px 16px; border-bottom: 1px solid #d1d5db; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
-.viewer-title { font-size: 22px; font-weight: 800; color: #111827; }
-.viewer-body { padding: 16px; overflow: visible; color: #111827; }
-.fullscreen-image { width: 100%; max-width: 950px; display: block; margin: 0 auto; background: white; border: 1px solid #cbd5e1; box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08); }
-.empty-box { border: 1px dashed #94a3b8; padding: 40px 16px; background: white; border-radius: 16px; color: #64748b; text-align: center; }
-
-@keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(34, 199, 216, 0.18), 0 8px 16px rgba(34, 199, 216, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.76); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 3px rgba(34, 199, 216, 0.28), 0 12px 24px rgba(34, 199, 216, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.82); } }
-
-/* 🌙 다크 모드 오버라이드 (입체감 유지) */
-body.dark-mode { background: #0f172a; color: #f8fafc; }
-.dark-mode .card, .dark-mode .main-panel, .dark-mode .month-calendar, .dark-mode .group-table-wrap, .dark-mode .group-top-bar-v4 { background: rgba(30, 41, 59, 0.95); border-color: #334155; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-.dark-mode .input, .dark-mode .select, .dark-mode .group-select-display { background: #1e293b; border-color: #475569; color: #f8fafc; }
-.dark-mode .date-box { background: rgba(30, 41, 59, 0.95); border-color: #334155; }
-.dark-mode .date-btn { background: #334155; color: #f8fafc; }
-.dark-mode .date-value { background: #1e293b; color: #f8fafc; }
-.dark-mode .main-subinfo, .dark-mode .help-text { color: #94a3b8; }
-.dark-mode .all-tab-grid-wrap { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155; padding: 8px; }
-
-/* 🚀 [DIA 카드형 다크모드 정밀 대응] */
-.dark-mode .all-cell-real { background: #1e293b; border-color: #3b82f6; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-.dark-mode .all-code { color: #60a5fa; }
-.dark-mode .all-name { color: #ffffff; }
-.dark-mode .cell-my { background: rgba(16, 185, 129, 0.15) !important; border-color: #10b981 !important; box-shadow: 0 8px 16px rgba(16, 185, 129, 0.25); }
-
-/* 🚀 [최종 해결책] dialist.txt 데이터를 포함한 앱 내 모든 테이블 요소 강제 수정 (다크모드) */
-.dark-mode table, .dark-mode th, .dark-mode td, .dark-mode .group-table th, .dark-mode .group-table td { border-color: #334155 !important; color: #f8fafc; }
-.dark-mode .group-table th { background: #1e293b; color: #f8fafc; }
-.dark-mode .group-table th.sticky-col, .dark-mode .group-table td.sticky-col, .dark-mode .group-name-cell { background-color: #1e293b !important; border-right-color: #475569 !important; }
-.dark-mode .group-table th.sticky-col { background-color: #0f172a !important; }
-.dark-mode .group-table th.active-col { background: #374151 !important; }
-.dark-mode .group-table th.today-col { background: rgba(245, 158, 11, 0.2) !important; border-bottom: 3px solid #f59e0b !important; }
-
-/* 🚀 [다크모드 그룹 날짜이동 버튼 파란색 유지 수정] 상단 바 파란색 버튼 복구 */
-.dark-mode .nav-btn-v4 { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%) !important; color: white !important; border: none !important; }
-.dark-mode .month-header-title { background: #1e293b; color: #f8fafc; border-color: #475569; }
-.dark-mode .month-cell { background: #1e293b; border-color: #334155; }
-.dark-mode .month-cell.selected { border: 2px solid #60a5fa !important; background: rgba(59, 130, 246, 0.15) !important; }
-.dark-mode .month-day, .dark-mode .month-code-line, .dark-mode .month-time-line, .dark-mode .tone-normal { color: #f8fafc !important; }
-.dark-mode .month-cell:hover { background: #334155; }
-.dark-mode .notice-box { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border-color: rgba(59, 130, 246, 0.3); }
-.dark-mode .modal { background: #1e293b; color: #f8fafc; border-color: #334155; }
-.dark-mode .modal-btn { background: #334155; border-color: #475569; color: #f8fafc; }
-.dark-mode .modal-title, .dark-mode .label { color: #e2e8f0; }
-.dark-mode .empty-msg { color: #94a3b8; }
-/* 🚀 [복구] 다크모드 행로표 미리보기 썸네일 스타일 */
-.dark-mode .home-path-preview img { background: #1e293b; border-color: #334155; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }
-.dark-mode .preview-label { color: #94a3b8; background: rgba(30, 41, 59, 0.8); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05); }
-
-/* 🚀 다크모드 상단바/소속 가독성 및 다이아 배경 최적화 (사진 40216.jpg 스타일 복구) */
-.dark-mode .all-header { background: #1e293b !important; box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important; color: #ffffff !important; }
-.dark-mode .all-team-tab { background: #3b82f6 !important; color: #ffffff !important; border: 1px solid rgba(255,255,255,0.1) !important; }
-/* 🟢 [내 소속 컬러 다크모드 복구] 사진 스타일대로 초록색 유지 */
-.dark-mode .all-team-tab.my-team { background: #10b981 !important; }
-.dark-mode .all-team-tab.active { box-shadow: 0 0 15px rgba(59, 130, 246, 0.6) !important; border: 1px solid #ffffff !important; }
-.dark-mode .all-header-btn, .dark-mode .all-edit-btn, .dark-mode .all-header-title { color: #ffffff !important; }
-.dark-mode .all-edit-btn.active { color: #ff4d4d !important; }
-/* 🚀 [다이아 순서 탭 배경 수정] 구분선 가독성을 위해 배경톤 조정 */
-.dark-mode .tab-page div.card { background: #1e293b !important; border: 1px solid #334155 !important; }
-
-/* 🚀 상단 헤더: 하단 탭 진한 파랑(#3b82f6) 일치 + 사각형 16px */
+/* 🚀 [최종 수정 핵심 복구] 상단 헤더: 하단 탭 진한 파랑(#3b82f6) 일치 + 사각형 16px */
 .all-header { 
     height: 60px; 
     display: grid; 
@@ -339,11 +217,11 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 
 .all-team-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; margin-bottom: 8px; }
 
-/* 🚀 [소속 버튼 수정] 항상 파란 배경 유지 + 도트로 구분 */
+/* 🚀 [소속 버튼 수정] 흰색 배경 효과 삭제 -> 항상 파란 배경 유지 + 도트로 구분 */
 .all-team-tab { 
     position: relative; 
     border: 1px solid rgba(255,255,255,0.2) !important; 
-    background: #3b82f6 !important; 
+    background: #3b82f6 !important; /* 항상 파란 배경 고정 */
     color: #ffffff !important; 
     font-size: 15px; 
     font-weight: 800; 
@@ -361,6 +239,7 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
     z-index: 5;
 }
 
+/* 🟢 [내 소속 컬러 복구] 사진 스타일대로 경산(내 소속)은 선명한 초록색 유지 */
 .all-team-tab.my-team { background: #10b981 !important; }
 
 .view-dot { 
@@ -376,6 +255,107 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 }
 
 .all-team-tab.active .view-dot { display: block !important; }
+
+.all-tab-grid-wrap { overflow: visible; background: linear-gradient(180deg, rgba(194, 211, 245, 0.78) 0%, rgba(178, 198, 238, 0.72) 100%); border-radius: 28px; padding: 8px; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.38); margin-bottom: 12px; transition: background 0.2s ease; }
+.all-grid-real { display: grid; width: 100%; height: auto; gap: 2px; align-items: stretch; }
+
+.all-cell-real { min-width: 0; min-height: 52px; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border-radius: 10px; padding: 2px 1px; text-align: center; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0px; user-select: none; touch-action: manipulation; border: 1px solid #c8d6f0; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.92); transition: transform 0.12s ease, border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease; }
+.all-cell-real:hover { background: linear-gradient(180deg, #ffffff 0%, #f3f8ff 100%); }
+.all-cell-real:active { transform: scale(0.985); }
+.all-code { margin: 0; font-size: 18.5px; line-height: 1; font-weight: 900; color: #000000; white-space: nowrap; transition: color 0.2s ease; }
+.all-name { margin: 0; margin-top: 1px; font-size: 13.5px; line-height: 1; font-weight: 800; color: #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 98%; transition: color 0.2s ease; }
+
+.all-cell-real[style] { background-image: none !important; }
+/* 🚀 [내 교번 강조 강화] 내 셀의 강조 선과 배경을 요청하신 15% 농도(#10b981)로 설정 */
+.cell-my { border: 3px solid #059669 !important; background: rgba(16, 185, 129, 0.15) !important; transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.25), 0 4px 8px rgba(16, 185, 129, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.72); z-index: 2; position: relative; transition: all 0.2s ease; }
+.cell-my-today { animation: myCellBlink 1.4s ease-in-out infinite; }
+
+.month-calendar { background: rgba(255, 255, 255, 0.76); border-radius: 24px; padding: 10px; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7); transition: background-color 0.2s ease, border-color 0.2s ease; }
+.month-weekdays, .month-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; }
+.month-weekdays { margin-bottom: 4px; }
+.month-weekdays > div { text-align: center; font-size: 17px; font-weight: 800; padding: 8px 0; }
+/* 🚀 [월교번 라이트모드 가독성 수정 복구] 사용자님 쨍한 디자인(#c8d2e3) 복원 */
+.month-cell { border: 1px solid #c8d2e3; background: #ffffff; min-height: 116px; padding: 0; cursor: pointer; border-radius: 0; box-shadow: none; transition: background-color 0.16s ease, border-color 0.16s ease; display: block; overflow: hidden; }
+.month-cell:hover { background: #fbfcff; }
+.month-cell.selected { border: 2px solid #8bb9ff; background: #f8fbff; }
+.month-cell.other-month { opacity: 0.34; border-style: dashed; }
+.month-cell-inner { width: 100%; min-height: 114px; padding: 6px 6px 4px; display: grid; grid-template-rows: 18px 28px 1fr; align-items: start; justify-items: stretch; }
+/* 🟢 [쨍한 글씨 디자인 복구] 색상과 굵기를 원본(`#111827`, `800`)으로 복구 */
+.month-day { font-size: 15px; font-weight: 800; color: #111827; transition: color 0.2s ease; }
+.month-code-line { margin-top: 4px; font-size: 16.5px; font-weight: 800; color: #111827; white-space: nowrap; transition: color 0.2s ease; }
+.month-time-wrap { width: 100%; display: grid; grid-template-rows: 24px 24px; align-content: start; margin-top: 2px; }
+.month-time-line { font-size: 12px; color: #111827; white-space: nowrap; transition: color 0.2s ease; }
+.tone-normal { color: #111827 !important; transition: color 0.2s ease; }
+.tone-sun { color: #ef4444 !important; transition: color 0.2s ease; }
+.tone-sat { color: #3b82f6 !important; transition: color 0.2s ease; }
+.month-weekdays .sun { color: #ef4444 !important; }
+.month-weekdays .sat { color: #3b82f6 !important; }
+
+.modal-backdrop { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.34); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 4000; padding: 16px; animation: fadeIn 0.18s ease; }
+.modal { width: 100%; max-width: 520px; background: rgba(255, 255, 255, 0.95); border-radius: 24px; padding: 20px; max-height: 90vh; overflow: auto; box-shadow: 0 24px 50px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.78); border: 1px solid rgba(255, 255, 255, 0.86); animation: modalUp 0.2s ease; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modalUp { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.modal-title { font-size: 26px; font-weight: 800; margin-bottom: 14px; }
+.modal-sub { font-size: 18px; margin-bottom: 16px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.modal-btn { min-width: 88px; height: 42px; border: 1px solid rgba(203, 213, 225, 0.95); background: rgba(255, 255, 255, 0.92); cursor: pointer; border-radius: 14px; font-weight: 700; font-size: 15px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; color: inherit; }
+.modal-btn.primary { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); color: white; border-color: transparent; box-shadow: 0 8px 16px rgba(47, 97, 220, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.modal-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.color-preview { height: 40px; border-radius: 14px; border: 1px solid #cbd5e1; margin-top: 8px; background: white; }
+
+.viewer-page { position: fixed; inset: 0; background: #f3f4f6; z-index: 3000; overflow: auto; }
+.viewer-header { position: sticky; top: 0; background: rgba(243, 244, 246, 0.84); backdrop-filter: blur(12px); padding: 12px 16px; border-bottom: 1px solid #d1d5db; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+.viewer-title { font-size: 22px; font-weight: 800; color: #111827; }
+.viewer-body { padding: 16px; overflow: visible; color: #111827; }
+.fullscreen-image { width: 100%; max-width: 950px; display: block; margin: 0 auto; background: white; border: 1px solid #cbd5e1; box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08); }
+.empty-box { border: 1px dashed #94a3b8; padding: 40px 16px; background: white; border-radius: 16px; color: #64748b; text-align: center; }
+
+@keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(34, 199, 216, 0.18), 0 8px 16px rgba(34, 199, 216, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.76); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 3px rgba(34, 199, 216, 0.28), 0 12px 24px rgba(34, 199, 216, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.82); } }
+
+/* 🌙 다크 모드 오버라이드 (입체감 유지) */
+body.dark-mode { background: #0f172a; color: #f8fafc; }
+.dark-mode .card, .dark-mode .main-panel, .dark-mode .month-calendar, .dark-mode .group-table-wrap, .dark-mode .group-top-bar-v4 { background: rgba(30, 41, 59, 0.95); border-color: #334155; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+.dark-mode .input, .dark-mode .select, .dark-mode .group-select-display { background: #1e293b; border-color: #475569; color: #f8fafc; }
+.dark-mode .date-box { background: rgba(30, 41, 59, 0.95); border-color: #334155; }
+.dark-mode .date-btn { background: #334155; color: #f8fafc; }
+.dark-mode .date-value { background: #1e293b; color: #f8fafc; }
+.dark-mode .main-subinfo, .dark-mode .help-text { color: #94a3b8; }
+.dark-mode .all-tab-grid-wrap { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155; }
+.dark-mode .all-cell-real { background: linear-gradient(180deg, #334155 0%, #1e293b 100%); border-color: #475569; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); }
+.dark-mode .all-code, .dark-mode .all-name { color: #ffffff; }
+/* 🚀 [DIA 다크모드 가독성] 다크모드에서도 구분선을 확실하게(#334155) 유지 */
+.dark-mode .group-table th, .dark-mode .group-table td { border-color: #334155; color: #f8fafc; }
+.dark-mode .group-table th { background: #1e293b; color: #f8fafc; }
+.dark-mode .group-table th.sticky-col, .dark-mode .group-table td.sticky-col, .dark-mode .group-name-cell { background-color: #1e293b !important; border-right-color: #475569 !important; }
+.dark-mode .group-table th.sticky-col { background-color: #0f172a !important; }
+.dark-mode .group-table th.active-col { background: #374151 !important; }
+.dark-mode .group-table th.today-col { background: rgba(245, 158, 11, 0.2) !important; border-bottom: 3px solid #f59e0b !important; }
+/* 🚀 [다크모드 그룹 날짜이동 버튼 파란색 유지 수정] 상단 바 파란색 버튼 복구 */
+.dark-mode .nav-btn-v4 { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%) !important; color: white !important; border: none !important; }
+.dark-mode .month-header-title { background: #1e293b; color: #f8fafc; border-color: #475569; }
+.dark-mode .month-cell { background: #1e293b; border-color: #334155; }
+.dark-mode .month-cell.selected { border: 2px solid #60a5fa !important; background: rgba(59, 130, 246, 0.15) !important; }
+.dark-mode .month-day, .dark-mode .month-code-line, .dark-mode .month-time-line, .dark-mode .tone-normal { color: #f8fafc !important; }
+.dark-mode .month-cell:hover { background: #334155; }
+.dark-mode .notice-box { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border-color: rgba(59, 130, 246, 0.3); }
+.dark-mode .modal { background: #1e293b; color: #f8fafc; border-color: #334155; }
+.dark-mode .modal-btn { background: #334155; border-color: #475569; color: #f8fafc; }
+.dark-mode .modal-title, .dark-mode .label { color: #e2e8f0; }
+.dark-mode .empty-msg { color: #94a3b8; }
+/* 🚀 [복구] 다크모드 행로표 미리보기 썸네일 스타일 */
+.dark-mode .home-path-preview img { background: #1e293b; border-color: #334155; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }
+.dark-mode .preview-label { color: #94a3b8; background: rgba(30, 41, 59, 0.8); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05); }
+
+/* 🚀 다크모드 상단바/소속 가독성 및 다이아 배경 최적화 (사진 40216.jpg 스타일 복구) */
+.dark-mode .all-header { background: #1e293b !important; box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important; color: #ffffff !important; }
+.dark-mode .all-team-tab { background: #3b82f6 !important; color: #ffffff !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+/* 🟢 [내 소속 컬러 다크모드 복구] 사진 스타일대로 초록색 유지 */
+.dark-mode .all-team-tab.my-team { background: #10b981 !important; }
+.dark-mode .all-team-tab.active { box-shadow: 0 0 15px rgba(59, 130, 246, 0.6) !important; border: 1px solid #ffffff !important; }
+.dark-mode .all-header-btn, .dark-mode .all-edit-btn, .dark-mode .all-header-title { color: #ffffff !important; }
+.dark-mode .all-edit-btn.active { color: #ff4d4d !important; }
+/* 🚀 [다이아 순서 탭 배경 수정] 구분선 가독성을 위해 배경톤 조정 */
+.dark-mode .tab-page div.card { background: #1e293b !important; border: 1px solid #334155 !important; }
 
 @media (max-width: 420px) {
   .container { padding: 22px 6px 20px; touch-action: pan-y; }
@@ -407,18 +387,16 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .month-time-line { font-size: 11px; }
   .all-page { padding-bottom: 20px; }
   .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
-  .dia-header { grid-template-columns: 40px 1fr 38px 40px; }
   .all-header-btn { height: 52px; font-size: 18px; }
   .all-edit-btn { height: 52px; font-size: 12px; }
   .all-header-title { font-size: 14px; padding: 0 5px; }
   .all-team-tabs { gap: 4px; margin-top: 6px; margin-bottom: 6px; }
   .all-team-tab { font-size: 13px; padding: 9px 0; border-radius: 14px; }
   .all-tab-grid-wrap { padding: 6px; border-radius: 22px; margin-bottom: 10px; }
-  /* 모바일 카드형 최적화 */
-  .all-cell-real { min-height: 60px; padding: 10px 14px; border-radius: 14px; gap: 4px; }
-  .all-grid-real.density-4 .all-code { font-size: 19px; } .all-grid-real.density-4 .all-name { font-size: 14px; }
-  .all-grid-real.density-5 .all-code { font-size: 17px; } .all-grid-real.density-5 .all-name { font-size: 13px; }
-  .all-grid-real.density-6 .all-code { font-size: 15px; } .all-grid-real.density-6 .all-name { font-size: 12px; }
+  .all-cell-real { min-height: 48px; border-radius: 8px; padding: 2px 1px; }
+  .all-grid-real.density-4 .all-code { font-size: 17px; } .all-grid-real.density-4 .all-name { font-size: 12.5px; }
+  .all-grid-real.density-5 .all-code { font-size: 15px; } .all-grid-real.density-5 .all-name { font-size: 11.5px; }
+  .all-grid-real.density-6 .all-code { font-size: 14px; } .all-grid-real.density-6 .all-name { font-size: 10px; }
   .group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
   .nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
   .group-select-display { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
@@ -429,7 +407,6 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .day-date { font-size: 10px; }
   .name-txt { font-size: 13px; }
   .team-badge { font-size: 10px; margin-bottom: 4px; }
-  .code-txt { font-size: 13px; }
   .row-del-btn-text { padding: 3px 10px; font-size: 10px; border-radius: 10px; }
   .modal { padding: 16px; border-radius: 20px; }
   .modal-title { font-size: 22px; }
