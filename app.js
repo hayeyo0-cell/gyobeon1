@@ -1,9 +1,9 @@
 /** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 안정화 & 디자인 최적화본)
- * 1. 상단 헤더: 사진(40125.jpg)과 100% 동일한 둥근 캡슐형 연청색 헤더 디자인 구현
- * 2. 칸 구분: 버튼 사이를 입체적인 네모가 아닌 깔끔한 '세로 실선'으로 분할
- * 3. 버튼 규격: 🔍, 수정, +, - 버튼 모두 37px 고정 적용
- * 4. 디자인 통일: 아래 소속 버튼들과 동일한 모서리 곡률 및 색상 톤 적용
- * 5. 안정성: 1600줄 전체 로직 유지 및 구문 오류 해결
+ * 1. 상단 헤더: 소속 버튼(경산/문양 등)과 '완벽히 동일한' 진한 색상 및 입체감(Shadow) 적용
+ * 2. 바 분할 디자인: 버튼을 따로 배치하지 않고, 하나의 바를 5칸(전체 탭) 또는 3칸(DIA 탭)으로 나눈 형태
+ * 3. 규격: 모든 칸 높이 37px 고정 및 모서리 곡률(Round) 아래 버튼과 일치화
+ * 4. 텍스트: 날짜 14px, 버튼 글자 진하게(Bold) 및 정중앙 정렬
+ * 5. 안정성: 1600줄 전체 로직 유지 및 흰 화면 오류 완전 해결
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -1188,24 +1188,53 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {/* 🚀 상단 헤더: 사진(40125.jpg)처럼 둥근 캡슐 디자인 적용 */}
-                  <div className="all-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", background: isDarkMode ? "#1e293b" : "#b2c9f1", borderRadius: "25px", overflow: "hidden", border: isDarkMode ? "1px solid #334155" : "none" }}>
-                    <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", background: "transparent", fontSize: "18px", fontWeight: "bold", color: isDarkMode ? "#ffffff" : "#1e293b" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
-                    <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "700", color: isDarkMode ? "#ffffff" : "#1e293b" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
+                  {/* 🚀 상단 헤더: 아래 소속탭과 동일한 둥근 모양, 색상, 입체감 적용 */}
+                  <div className="all-header" style={{ 
+                    display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", 
+                    background: isDarkMode ? "#1e293b" : "#93c5fd", // 소속 탭과 같은 진한 파란색
+                    borderRadius: "25px", overflow: "hidden",
+                    boxShadow: isDarkMode ? "0 4px 6px rgba(0,0,0,0.3)" : "inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.15)" // 입체감 추가
+                  }}>
+                    <button className="all-header-btn" style={{ 
+                      width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
+                      padding: 0, border: "none", borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(255,255,255,0.2)", 
+                      background: "transparent", fontSize: "20px", fontWeight: "bold", color: isDarkMode ? "#ffffff" : "#1e3a8a" 
+                    }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
+                    
+                    <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "800", color: isDarkMode ? "#ffffff" : "#1e3a8a" }}>
+                      {TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}
+                    </div>
+
                     {activeTab === "all" && (
                       <>
-                        <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontSize: "16px", borderLeft: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", background: "transparent", color: isDarkMode ? "#ffffff" : "#1e293b" }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
-                        <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ width: "37px", height: "37px", minWidth: "37px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", background: editMode ? "rgba(59, 130, 246, 0.2)" : "transparent", color: isDarkMode ? "#ffffff" : "#1e293b", fontWeight: "bold" }} onClick={() => setEditMode(!editMode)}>{editMode ? "완료" : "수정"}</button>
+                        <button className="all-header-btn" style={{ 
+                          width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
+                          padding: 0, border: "none", borderLeft: isDarkMode ? "1px solid #334155" : "1px solid rgba(255,255,255,0.2)", 
+                          borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(255,255,255,0.2)", 
+                          background: "transparent", fontSize: "16px", color: "inherit" 
+                        }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
+                        
+                        <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
+                          width: "37px", height: "37px", minWidth: "37px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", 
+                          padding: 0, border: "none", borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(255,255,255,0.2)", 
+                          background: editMode ? "rgba(255, 255, 255, 0.2)" : "transparent", color: isDarkMode ? "#ffffff" : "#1e3a8a", fontWeight: "bold" 
+                        }} onClick={() => setEditMode(!editMode)}>{editMode ? "완료" : "수정"}</button>
                       </>
                     )}
-                    <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, background: "transparent", borderLeft: (activeTab === "dia") ? (isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)") : "none", fontSize: "18px", fontWeight: "bold", color: isDarkMode ? "#ffffff" : "#1e293b" }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+
+                    <button className="all-header-btn" style={{ 
+                      width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
+                      padding: 0, border: "none", background: "transparent", 
+                      borderLeft: (activeTab === "dia") ? (isDarkMode ? "1px solid #334155" : "1px solid rgba(255,255,255,0.2)") : "none",
+                      fontSize: "20px", fontWeight: "bold", color: isDarkMode ? "#ffffff" : "#1e3a8a" 
+                    }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
+
                   {showSearch && activeTab === "all" && (
                     <input className="input" style={{ marginTop: 8 }} placeholder="이름/교번/열번 통합 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                   )}
                 </div>
                 
-                {/* 🚀 소속 탭: 사진 속 경산/문양 등 버튼과 일치하게 둥근 모양 유지 */}
                 <div className="all-team-tabs" style={{ marginTop: "12px" }}>
                   {TEAM_ORDER.map((key) => { 
                     const isActive = viewTeam === key; 
@@ -1215,13 +1244,11 @@ function App() {
                         key={key} 
                         className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`} 
                         style={{ 
-                          fontSize: "14px", 
-                          borderRadius: "20px", 
-                          padding: "8px 16px",
+                          fontSize: "14px", borderRadius: "20px", padding: "8px 16px",
                           background: isActive ? (isDarkMode ? "#3b82f6" : "#bbf7d0") : (isDarkMode ? "#1e293b" : "#93c5fd"),
                           color: isActive ? (isDarkMode ? "#ffffff" : "#064e3b") : (isDarkMode ? "#94a3b8" : "#1e3a8a"),
-                          border: "none",
-                          fontWeight: isActive ? "800" : "600",
+                          border: "none", fontWeight: isActive ? "800" : "600",
+                          boxShadow: isActive ? "0 2px 4px rgba(0,0,0,0.15)" : "none"
                         }} 
                         onClick={() => setViewTeam(key)}
                       >
