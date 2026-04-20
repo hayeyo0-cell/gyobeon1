@@ -182,7 +182,7 @@ button:active { transform: scale(0.97); }
 .all-team-tab { 
     position: relative; 
     border: 1px solid rgba(255,255,255,0.2) !important; 
-    background: #3b82f6 !important; /* 항상 파란 배경 고정 */
+    background: #3b82f6 !important; 
     color: #ffffff !important; 
     font-size: 15px; 
     font-weight: 800; 
@@ -292,9 +292,7 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .name-txt { color: #f8fafc !important; }
 .dark-mode .team-badge { color: #94a3b8 !important; }
 .dark-mode .day-date { color: #94a3b8 !important; }
-/* 🚀 [다크모드 그룹 날짜이동 버튼 파란색 유지 수정] 상단 바 파란색 버튼 복구 */
-.dark-mode .nav-btn-v4 { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%) !important; color: white !important; border: none !important; }
-.dark-mode .month-header-title { background: #1e293b; color: #f8fafc; border-color: #475569; }
+.dark-mode .nav-btn-v4, .dark-mode .month-header-title { background: #1e293b; color: #f8fafc; border-color: #475569; }
 .dark-mode .month-cell { background: #1e293b; border-color: #334155; }
 .dark-mode .month-cell.selected { border: 2px solid #60a5fa !important; background: rgba(59, 130, 246, 0.15) !important; }
 .dark-mode .month-day, .dark-mode .month-code-line, .dark-mode .month-time-line, .dark-mode .tone-normal { color: #f8fafc !important; }
