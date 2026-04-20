@@ -128,25 +128,25 @@ button:active { transform: scale(0.97); }
 .all-page .all-tab-grid-wrap { flex: 0 0 auto; min-height: 0; }
 .all-tab-header { margin-bottom: 8px; }
 
-/* 🚀 [핵심 수정] 상단 헤더: 각진 사각형 + 소속 버튼과 100% 동일한 진한 파랑(#93c5fd) 단색 적용 */
+/* 🚀 [최종 수정] 상단 헤더: 각진 사각형(16px) + 소속 버튼과 100% 동일한 진한 파랑(#93c5fd) 단색 적용 */
 .all-header { 
     height: 60px; 
     display: grid; 
     grid-template-columns: 44px 1fr 44px 56px 44px; 
-    background: #93c5fd !important; /* 그라데이션 제거 후 소속 버튼과 동일한 단색 고정 */
+    background: #93c5fd !important; /* 그라데이션 완전 제거 후 단색 고정 */
     background-image: none !important; 
     color: #1e3a8a; 
-    border-radius: 4px !important; /* 검색창처럼 각진 사각형 */
+    border-radius: 16px !important; /* 검색창과 동일한 r값(16px) 적용 */
     overflow: hidden; 
     box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.3); 
     border: 1px solid rgba(0,0,0,0.1);
     transition: background 0.3s ease;
 }
 
-/* DIA 탭용 4분할 사각형 헤더 */
+/* DIA 탭용 4분할 사각형 헤더 (16px) */
 .dia-header { 
     grid-template-columns: 44px 1fr 44px 44px !important; 
-    border-radius: 4px !important; 
+    border-radius: 16px !important; 
     background: #93c5fd !important; 
     background-image: none !important;
 }
@@ -293,7 +293,7 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .month-time-wrap { grid-template-rows: 20px 20px; }
   .month-time-line { font-size: 11px; }
   .all-page { padding-bottom: 20px; }
-  .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 48px 40px; border-radius: 4px !important; }
+  .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 48px 40px; border-radius: 16px !important; } /* 모바일도 r값 16px 고정 */
   .dia-header { grid-template-columns: 40px 1fr 38px 40px; }
   .all-header-btn { height: 52px; font-size: 18px; }
   .all-edit-btn { height: 52px; font-size: 12px; }
