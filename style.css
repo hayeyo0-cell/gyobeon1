@@ -1,13 +1,7 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-/* 🟢 [디자인 철학 복구] 불필요하게 글씨를 얇게 깎아먹던 폰트 스무딩 옵션을 제거하여 쨍한 화질 복구! */
-/* (라이트모드에서 글씨가 더 쨍하게 보이도록 복구) */
-html, body {
-  margin: 0; width: 100%; height: 100%; overflow: hidden; overflow-x: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", sans-serif;
-  background: #eef1f6; color: #111827;
-  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; /* 🚀 [쨍한 화질 핵심 복구] */
-}
+/* 🟢 불필요하게 글씨를 얇게 깎아먹던 폰트 스무딩 옵션을 제거하여 쨍한 화질 복구! */
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; overflow-x: hidden; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", sans-serif; background: #eef1f6; color: #111827; }
 body { overscroll-behavior: none; transition: background-color 0.2s ease, color 0.2s ease; }
 button, input, select { font: inherit; }
 button { transition: transform 0.14s ease, opacity 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
@@ -330,8 +324,10 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .preview-label { color: #94a3b8; background: rgba(30, 41, 59, 0.8); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05); }
 
 /* 🚀 다크모드 상단바/소속 가독성 및 다이아 배경 최적화 (사진 40216.jpg 스타일 복구) */
-.dark-mode .all-header { background: #1e293b !important; box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important; color: #ffffff !important; }
+.dark-mode .all-header { background: #3b82f6 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important; color: #ffffff !important; }
+/* 🟢 [내 소속 컬러 다크모드 복구] 사진 스타일대로 초록색 유지 */
 .dark-mode .all-team-tab { background: #3b82f6 !important; color: #ffffff !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+.dark-mode .all-team-tab.my-team { background: #10b981 !important; }
 .dark-mode .all-team-tab.active { box-shadow: 0 0 15px rgba(59, 130, 246, 0.6) !important; border: 1px solid #ffffff !important; }
 .dark-mode .all-header-btn, .dark-mode .all-edit-btn, .dark-mode .all-header-title { color: #ffffff !important; }
 .dark-mode .all-edit-btn.active { color: #ff4d4d !important; }
