@@ -116,7 +116,7 @@ button:active { transform: scale(0.97); }
 
 .group-table-wrap { overflow: hidden; border-radius: 18px; background: #ffffff; border: 1px solid rgba(203, 213, 225, 0.9); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .group-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
-/* 🚀 [DIA 구분선] 색상을 월교번과 동일한 #c8d2e3 색상, 요청하신 25% 농도 적용 */
+/* 🚀 [DIA 구분선] 월교번과 동일한 색상(#c8d2e3), 25% 농도 적용 */
 .group-table th, .group-table td { border-bottom: 1px solid rgba(200, 210, 227, 0.25); border-right: 1px solid rgba(200, 210, 227, 0.25); padding: 0; text-align: center; vertical-align: middle; color: #000000; font-weight: 700; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
 
 .group-table th:last-child, .group-table td:last-child { border-right: none; }
@@ -387,6 +387,7 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .month-time-line { font-size: 11px; }
   .all-page { padding-bottom: 20px; }
   .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
+  .dia-header { grid-template-columns: 40px 1fr 38px 40px; }
   .all-header-btn { height: 52px; font-size: 18px; }
   .all-edit-btn { height: 52px; font-size: 12px; }
   .all-header-title { font-size: 14px; padding: 0 5px; }
