@@ -1188,20 +1188,21 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {/* 🚀 상단 헤더: 색상 고정 및 빨간색 '수정중' 버튼 로직 적용 */}
+                  {/* 🚀 상단 헤더: 요청하신 진한 파란색(#93c5fd)과 수정 모드 시 빨간색 배경 적용 */}
                   <div className="all-header" style={{ 
                     display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", 
-                    background: "#93c5fd", // 아래 소속 탭과 완벽 동일 색상 고정
+                    background: editMode ? "#ef4444" : "#93c5fd", // 수정 시 빨강, 기본 진한 파랑
                     borderRadius: "25px", overflow: "hidden",
-                    boxShadow: "0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)"
+                    boxShadow: "0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)",
+                    transition: "background 0.3s ease"
                   }}>
                     <button className="all-header-btn" style={{ 
                       width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)",
-                      background: "transparent", fontSize: "20px", fontWeight: "bold", color: "#1e3a8a" 
+                      background: "transparent", fontSize: "20px", fontWeight: "bold", color: editMode ? "#ffffff" : "#1e3a8a" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
-                    <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#1e3a8a" }}>
+                    <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "800", color: editMode ? "#ffffff" : "#1e3a8a" }}>
                       {TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}
                     </div>
 
@@ -1210,13 +1211,13 @@ function App() {
                         <button className="all-header-btn" style={{ 
                           width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
                           padding: 0, border: "none", borderLeft: "2px solid rgba(0,0,0,0.2)", borderRight: "2px solid rgba(0,0,0,0.2)", 
-                          background: "transparent", fontSize: "16px", color: "#1e3a8a" 
+                          background: "transparent", fontSize: "16px", color: editMode ? "#ffffff" : "#1e3a8a" 
                         }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
                         
                         <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
                           width: "37px", height: "37px", minWidth: "37px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", 
                           padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)", 
-                          background: editMode ? "#ef4444" : "transparent",
+                          background: "transparent",
                           color: editMode ? "#ffffff" : "#1e3a8a", fontWeight: "bold" 
                         }} onClick={() => setEditMode(!editMode)}>{editMode ? "수정중" : "수정"}</button>
                       </>
@@ -1226,7 +1227,7 @@ function App() {
                       width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
                       borderLeft: (activeTab === "dia") ? "2px solid rgba(0,0,0,0.2)" : "none",
-                      fontSize: "20px", fontWeight: "bold", color: "#1e3a8a" 
+                      fontSize: "20px", fontWeight: "bold", color: editMode ? "#ffffff" : "#1e3a8a" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
 
@@ -1271,19 +1272,19 @@ function App() {
                         );
                       })}
                     </div>
-                    {/* 🚀 검색 결과 행로표 이미지 자동 렌더링 */}
+                    {/* 🚀 검색 복구: 검색 시 해당 행로표 이미지를 즉시 리스트 하단에 렌더링 */}
                     {searchQuery && visibleAllGrid.length > 0 && (
-                      <div className="search-img-panel" style={{ marginTop: '20px', paddingBottom: '30px' }}>
+                      <div className="search-img-panel" style={{ marginTop: '20px', paddingBottom: '40px' }}>
                         {visibleAllGrid.map((item, idx) => {
                           const imgTeam = effectiveData ? effectiveData[item.teamKey] : null;
                           const imgSrc = imgTeam ? findPathImage(imgTeam, browseDate, item.code) : null;
                           if (!imgSrc) return null;
                           return (
-                            <div key={`s-img-${idx}`} style={{ marginBottom: '20px', textAlign: 'center' }}>
-                              <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '8px', color: isDarkMode ? '#aaa' : '#555', fontWeight: 'bold' }}>
-                                🔍 {item.displayName} ({item.code}) 행로표
+                            <div key={`s-img-${idx}`} style={{ marginBottom: '25px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '13px', opacity: 0.9, marginBottom: '10px', color: isDarkMode ? '#cbd5e1' : '#1e3a8a', fontWeight: '800' }}>
+                                📂 {item.displayName} ({item.code}) 행로표
                               </div>
-                              <img src={imgSrc} alt="행로" style={{ width: '100%', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }} onClick={() => handleAllCellTap(item)} />
+                              <img src={imgSrc} alt="행로" style={{ width: '100%', borderRadius: '15px', border: '1px solid rgba(0,0,0,0.1)', boxShadow: '0 8px 20px rgba(0,0,0,0.2)' }} onClick={() => handleAllCellTap(item)} />
                             </div>
                           );
                         })}
@@ -1524,7 +1525,7 @@ function App() {
               <button className="modal-btn" style={{ width: 'auto', padding: '0 14px', margin: 0, color: '#ef4444', borderColor: '#fca5a5', background: '#fef2f2' }} onClick={deleteCurrentGroup} disabled={!currentGroup}>🗑️ 삭제</button>
             </div>
             <label className="label">3. 선택된 그룹에 인원 추가</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+            <div style={{ gridTemplateColumns: '1fr 1fr', display: 'grid', gap: '8px', marginBottom: '12px' }}>
               <div>
                 <select className="select" value={groupAddTeam} onChange={(e) => { setGroupAddTeam(e.target.value); setGroupAddName(""); }}>
                   {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
