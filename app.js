@@ -1,9 +1,8 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (다크모드 색상 고정 & 검색 복구본)
- * 1. 상단 헤더: 다크 모드 여부와 상관없이 사진(#93c5fd)과 동일한 색상 및 입체감 유지
- * 2. 수정 버튼: 클릭 시 빨간색 배경에 '수정중'으로 변경 (직관성 강화)
- * 3. 검색 기능: 열번/이름 검색 시 하단에 해당 인원의 행로표 이미지가 즉시 나타나도록 복구
- * 4. 규격: 모든 버튼/칸 높이 37px 고정, 진한 세로 실선 구분, 하단 그림자 적용
- * 5. 안정성: 1600줄 전체 로직 유지 및 흰 화면 오류 완전 해결
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 안정화본)
+ * 1. 상단 헤더: 아래 소속 탭과 완벽히 동일한 진한 파란색(#93c5fd)으로 고정
+ * 2. 버튼 문구: 수정 모드 진입 시 '수정중'으로 표시 및 빨간색 배경 적용
+ * 3. 기능 보존: 열번/이름 검색 시 하단 행로표 자동 렌더링 로직 및 1600줄 전체 기능 유지
+ * 4. 규격 유지: 모든 버튼 높이 37px 및 둥근 캡슐형 디자인 고수
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -1188,7 +1187,7 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {/* 🚀 상단 헤더: 다크 모드에서도 색상 고정 및 빨간색 '수정중' 버튼 로직 적용 */}
+                  {/* 🚀 상단 헤더: 사진(40125.jpg)과 같이 둥근 캡슐 디자인 적용 및 색상 고정 */}
                   <div className="all-header" style={{ 
                     display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", 
                     background: "#93c5fd", // 다크 모드에서도 사진의 그 색상 유지
@@ -1213,12 +1212,13 @@ function App() {
                           background: "transparent", fontSize: "16px", color: "#1e3a8a" 
                         }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
                         
+                        {/* 🚀 수정/수정중 버튼: 직관적인 빨간색 표시 및 문구 변경 복구 */}
                         <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
                           width: "37px", height: "37px", minWidth: "37px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", 
                           padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.15)", 
-                          background: editMode ? "#ef4444" : "transparent", // 수정 중일 때 빨간 배경 적용
+                          background: editMode ? "#ef4444" : "transparent",
                           color: editMode ? "#ffffff" : "#1e3a8a", fontWeight: "bold" 
-                        }} onClick={() => setEditMode(!editMode)}>{editMode ? "완료" : "수정"}</button>
+                        }} onClick={() => setEditMode(!editMode)}>{editMode ? "수정중" : "수정"}</button>
                       </>
                     )}
 
@@ -1271,7 +1271,7 @@ function App() {
                         );
                       })}
                     </div>
-                    {/* 🚀 검색 로직 복구: 검색 결과가 있을 때 하단에 행로표 이미지 자동 표시 */}
+                    {/* 🚀 검색 결과 행로표 이미지 로직 보존 */}
                     {searchQuery && visibleAllGrid.length > 0 && (
                       <div className="search-img-panel" style={{ marginTop: '20px', paddingBottom: '30px' }}>
                         {visibleAllGrid.map((item, idx) => {
@@ -1295,7 +1295,7 @@ function App() {
                     {diaList.map((item, idx) => {
                       const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                       return (
-                        <div key={`${idx}`} onClick={() => openPathDialog(item, browseDate)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 20px", borderBottom: idx === diaList.length - 1 ? "none" : (isDarkMode ? "1px solid #334155" : "1px solid #f1f5f9"), fontSize: 18, background: isMine ? (isDarkMode ? "rgba(56, 189, 248, 0.15)" : "#eef6ff") : "transparent", cursor: "pointer" }}>
+                        <div key={`${idx}`} onClick={() => openPathDialog(item, browseDate)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 20px", borderBottom: idx === diaList.length - 1 ? "none" : (isDarkMode ? "1px solid #334155" : "1px solid #f1f5f9"), fontSize: 18, background: isMine ? (isDarkMode ? "rgba(56, 189, 248, 0.15)" : "#eef6ff") : "transparent", borderLeft: isMine ? (isDarkMode ? "4px solid #38bdf8" : "4px solid #3b82f6") : "4px solid transparent", cursor: "pointer" }}>
                           <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
                           <div style={{ fontWeight: 600 }}>{item.displayName || item.name}</div>
                         </div>
