@@ -1554,11 +1554,20 @@ function App() {
             <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="비워두면 원래 이름 사용" />
             <label className="label" style={{ marginTop: 12 }}>색상</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                {COLOR_OPTIONS.map((item) => (
-                    <button key={item.label} className={`color-dot ${editColor === item.value ? 'active' : ''}`} style={{ backgroundColor: item.value || '#ffffff', border: item.value ? 'none' : '1px solid #ddd' }} onClick={() => setEditColor(item.value)} title={item.label} />
-                ))}
-            </div>
+          <div style={{ marginTop: '8px' }}>
+  <select 
+    className="select" 
+    value={editColor} 
+    onChange={(e) => setEditColor(e.target.value)}
+    style={{ width: '100%' }}
+  >
+    {COLOR_OPTIONS.map((item) => (
+      <option key={item.label} value={item.value}>
+        {item.label}
+      </option>
+    ))}
+  </select>
+</div>
             <button className="modal-btn" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsWorktimeEditOpen((prev) => !prev)}>출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}</button>
             {isWorktimeEditOpen && (
               <div style={{ marginTop: 12 }}>
