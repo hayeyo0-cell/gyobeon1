@@ -116,11 +116,11 @@ button:active { transform: scale(0.97); }
 
 .group-table-wrap { overflow: hidden; border-radius: 18px; background: #ffffff; border: 1px solid rgba(203, 213, 225, 0.9); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .group-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
-/* 🚀 [DIA 구분선] 월교번 사진(40277.jpg)과 100% 동일한 선명한 격자(#c8d2e3)로 일원화 */
-.group-table th, .group-table td { border-bottom: 1px solid #c8d2e3; border-right: 1px solid #c8d2e3; padding: 0; text-align: center; vertical-align: middle; color: #000000; font-weight: 700; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
+/* 🚀 [DIA 구분선] 월교번 사진(40277.jpg)과 100% 동일한 선명한 격자(#c8d2e3) 무조건 강제 적용 */
+.group-table th, .group-table td { border-bottom: 1px solid #c8d2e3 !important; border-right: 1px solid #c8d2e3 !important; padding: 0; text-align: center; vertical-align: middle; color: #000000; font-weight: 700; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
 
-.group-table th:last-child, .group-table td:last-child { border-right: none; }
-.group-table tr:last-child td { border-bottom: none; }
+.group-table th:last-child, .group-table td:last-child { border-right: none !important; }
+.group-table tr:last-child td { border-bottom: none !important; }
 .group-table th.sticky-col, .group-table td.sticky-col { position: sticky; left: 0; background: #ffffff; z-index: 2; box-shadow: 2px 0 5px rgba(0,0,0,0.06); border-right: 2px solid #e2e8f0 !important; transition: background-color 0.2s ease, border-color 0.2s ease; padding: 8px 4px !important; }
 .group-table th.sticky-col { z-index: 3; background: rgba(248, 250, 252, 0.98); }
 .group-table th:first-child, .group-table td:first-child, .group-name-cell { width: 76px; min-width: 76px; max-width: 76px; padding: 6px 2px !important; }
@@ -266,8 +266,8 @@ button:active { transform: scale(0.97); }
 .all-name { margin: 0; margin-top: 1px; font-size: 13.5px; line-height: 1; font-weight: 800; color: #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 98%; transition: color 0.2s ease; }
 
 .all-cell-real[style] { background-image: none !important; }
-/* 🚀 [내 교번 강조 강화] 내 셀의 강조 선과 배경을 요청하신 15% 농도(#10b981)로 설정 */
-.cell-my { border: 3px solid #059669 !important; background: rgba(16, 185, 129, 0.15) !important; transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.25), 0 4px 8px rgba(16, 185, 129, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.72); z-index: 2; position: relative; transition: all 0.2s ease; }
+/* 🚀 [내 교번 강조 강화] 내 셀의 강조 선과 배경을 요청하신 25% 농도(#10b98140)로 상향 수정 */
+.cell-my { border: 3px solid #059669 !important; background: rgba(16, 185, 129, 0.25) !important; transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.25), 0 4px 8px rgba(16, 185, 129, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.72); z-index: 2; position: relative; transition: all 0.2s ease; }
 .cell-my-today { animation: myCellBlink 1.4s ease-in-out infinite; }
 
 .month-calendar { background: rgba(255, 255, 255, 0.76); border-radius: 24px; padding: 10px; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7); transition: background-color 0.2s ease, border-color 0.2s ease; }
@@ -277,7 +277,7 @@ button:active { transform: scale(0.97); }
 /* 🚀 [월교번 라이트모드 가독성 수정 복구] 사용자님 쨍한 디자인(#c8d2e3) 복원 */
 .month-cell { border: 1px solid #c8d2e3; background: #ffffff; min-height: 116px; padding: 0; cursor: pointer; border-radius: 0; box-shadow: none; transition: background-color 0.16s ease, border-color 0.16s ease; display: block; overflow: hidden; }
 .month-cell:hover { background: #fbfcff; }
-.month-cell.selected { border: 2px solid #8bb9ff; background: #f8fbff; }
+.month-cell.selected { border: 2px solid #60a5fa !important; background: rgba(59, 130, 246, 0.15) !important; }
 .month-cell.other-month { opacity: 0.34; border-style: dashed; }
 .month-cell-inner { width: 100%; min-height: 114px; padding: 6px 6px 4px; display: grid; grid-template-rows: 18px 28px 1fr; align-items: start; justify-items: stretch; }
 /* 🟢 [쨍한 글씨 디자인 복구] 색상과 굵기를 원본(`#111827`, `800`)으로 복구 */
@@ -324,7 +324,7 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .all-cell-real { background: linear-gradient(180deg, #334155 0%, #1e293b 100%); border-color: #475569; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); }
 .dark-mode .all-code, .dark-mode .all-name { color: #ffffff; }
 /* 🚀 [DIA 다크모드 가독성] 다크모드에서도 구분선을 확실하게(#334155) 유지 */
-.dark-mode .group-table th, .dark-mode .group-table td { border-color: #334155; color: #f8fafc; }
+.dark-mode .group-table th, .dark-mode .group-table td { border-color: #334155 !important; color: #f8fafc; }
 .dark-mode .group-table th { background: #1e293b; color: #f8fafc; }
 .dark-mode .group-table th.sticky-col, .dark-mode .group-table td.sticky-col, .dark-mode .group-name-cell { background-color: #1e293b !important; border-right-color: #475569 !important; }
 .dark-mode .group-table th.sticky-col { background-color: #0f172a !important; }
