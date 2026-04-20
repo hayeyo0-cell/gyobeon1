@@ -269,7 +269,7 @@ button:active { transform: scale(0.97); }
 
 @keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(34, 199, 216, 0.18), 0 8px 16px rgba(34, 199, 216, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.76); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 3px rgba(34, 199, 216, 0.28), 0 12px 24px rgba(34, 199, 216, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.82); } }
 
-/* 🌙 다크 모드 오버라이드 (원본 디자인 복구 및 입체감 유지) */
+/* 🌙 다크 모드 오버라이드 (입체감 유지) */
 body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .card, .dark-mode .main-panel, .dark-mode .month-calendar, .dark-mode .group-table-wrap, .dark-mode .group-top-bar-v4 { background: rgba(30, 41, 59, 0.95); border-color: #334155; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
 .dark-mode .input, .dark-mode .select, .dark-mode .group-select-display { background: #1e293b; border-color: #475569; color: #f8fafc; }
@@ -304,12 +304,7 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .home-path-preview img { background: #1e293b; border-color: #334155; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }
 .dark-mode .preview-label { color: #94a3b8; background: rgba(30, 41, 59, 0.8); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05); }
 
-/* 🚀 다크모드 상단바/소속 가독성 및 다이아 배경 최적화 (사진 40216.jpg 스타일 복구) */
-.dark-mode .all-header { background: #1e293b !important; box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important; color: #ffffff !important; }
-.dark-mode .all-team-tab { background: #3b82f6 !important; color: #ffffff !important; border: 1px solid rgba(255,255,255,0.1) !important; }
-.dark-mode .all-team-tab.active { box-shadow: 0 0 15px rgba(59, 130, 246, 0.6) !important; border: 1px solid #ffffff !important; }
-.dark-mode .all-header-btn, .dark-mode .all-edit-btn, .dark-mode .all-header-title { color: #ffffff !important; }
-.dark-mode .all-edit-btn.active { color: #ff4d4d !important; }
+/* 🚀 다이아 순서 탭 배경 가독성 개선 */
 .dark-mode .tab-page div.card { background: #1e293b !important; border: 1px solid #334155 !important; }
 
 @media (max-width: 420px) {
