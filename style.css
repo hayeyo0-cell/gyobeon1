@@ -233,7 +233,8 @@ button:active { transform: scale(0.97); }
 .month-weekdays, .month-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; }
 .month-weekdays { margin-bottom: 4px; }
 .month-weekdays > div { text-align: center; font-size: 17px; font-weight: 800; padding: 8px 0; }
-.month-cell { border: 1px solid #c8d2e3; background: #ffffff; min-height: 116px; padding: 0; cursor: pointer; border-radius: 0; box-shadow: none; transition: background-color 0.16s ease, border-color 0.16s ease; display: block; overflow: hidden; }
+/* 🚀 [월교번 라이트모드 가독성 수정] 테두리를 더 선명하게(#94a3b8) 조정 */
+.month-cell { border: 1px solid #94a3b8; background: #ffffff; min-height: 116px; padding: 0; cursor: pointer; border-radius: 0; box-shadow: none; transition: background-color 0.16s ease, border-color 0.16s ease; display: block; overflow: hidden; }
 .month-cell:hover { background: #fbfcff; }
 .month-cell.selected { border: 2px solid #8bb9ff; background: #f8fbff; }
 .month-cell.other-month { opacity: 0.34; border-style: dashed; }
@@ -304,7 +305,12 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .home-path-preview img { background: #1e293b; border-color: #334155; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }
 .dark-mode .preview-label { color: #94a3b8; background: rgba(30, 41, 59, 0.8); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05); }
 
-/* 🚀 다이아 순서 탭 배경 가독성 개선 */
+/* 🚀 다크모드 상단바/소속 가독성 및 다이아 배경 최적화 (사진 40216.jpg 스타일 복구) */
+.dark-mode .all-header { background: #1e293b !important; box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important; color: #ffffff !important; }
+.dark-mode .all-team-tab { background: #3b82f6 !important; color: #ffffff !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+.dark-mode .all-team-tab.active { box-shadow: 0 0 15px rgba(59, 130, 246, 0.6) !important; border: 1px solid #ffffff !important; }
+.dark-mode .all-header-btn, .dark-mode .all-edit-btn, .dark-mode .all-header-title { color: #ffffff !important; }
+.dark-mode .all-edit-btn.active { color: #ff4d4d !important; }
 .dark-mode .tab-page div.card { background: #1e293b !important; border: 1px solid #334155 !important; }
 
 @media (max-width: 420px) {
@@ -337,6 +343,7 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .month-time-line { font-size: 11px; }
   .all-page { padding-bottom: 20px; }
   .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
+  .dia-header { grid-template-columns: 40px 1fr 38px 40px; }
   .all-header-btn { height: 52px; font-size: 18px; }
   .all-edit-btn { height: 52px; font-size: 12px; }
   .all-header-title { font-size: 14px; padding: 0 5px; }
