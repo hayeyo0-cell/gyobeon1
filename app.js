@@ -1,8 +1,9 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 안정화본)
- * 1. 상단 헤더: 아래 소속 탭과 완벽히 동일한 진한 파란색(#93c5fd)으로 고정
- * 2. 버튼 문구: 수정 모드 진입 시 '수정중'으로 표시 및 빨간색 배경 적용
- * 3. 기능 보존: 열번/이름 검색 시 하단 행로표 자동 렌더링 로직 및 1600줄 전체 기능 유지
- * 4. 규격 유지: 모든 버튼 높이 37px 및 둥근 캡슐형 디자인 고수
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (상단바 색상 강화 & 최종 완성본)
+ * 1. 상단 헤더: 아래 소속 버튼과 '완벽히 동일한' 진한 파란색(#93c5fd)으로 배경색 강화
+ * 2. 수정 모드: 클릭 시 배경은 빨간색, 문구는 '수정중'으로 변경되어 직관성 확보
+ * 3. 검색 복구: 열번 또는 이름 검색 시 하단에 해당 행로표 이미지가 즉시 표시됨
+ * 4. 입체감: 헤더 하단 Shadow 및 37px 고정 5분할 칸 디자인 유지
+ * 5. 안정성: 1600줄 전체 로직 유지 및 흰 화면 오류 방지
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -291,7 +292,7 @@ function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrid
     const fallback = originalPeople.find((p) => normalizeCodeKey(shiftCodeByDays(team, p.baseCode || "", dayOffset)) === normalizeCodeKey(slotCode)) || originalPeople[idx] || null;
     const name = String(found?.name || fallback?.name || "").trim(); if (!name || shouldHideName(name)) return null;
     const override = overrides[getOverrideKey(teamKey, name)] || {};
-    return { idx: fallback?.idx ?? idx, name, displayName: override.alias || name, code: slotCode, customColor: override.color || "", employeeId: found?.employeeId || fallback?.employeeId || "", teamKey: teamKey };
+    return { idx: fallback?.idx ?? idx, name, displayName: override.alias || name, code: slotCode, customColor: override.color || "", employeeId: found?.employeeId || fallback?.employeeId || "" };
   }).filter(Boolean);
 }
 
@@ -1187,16 +1188,16 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {/* 🚀 상단 헤더: 사진(40125.jpg)과 같이 둥근 캡슐 디자인 적용 및 색상 고정 */}
+                  {/* 🚀 상단 헤더: 색상 고정 및 빨간색 '수정중' 버튼 로직 적용 */}
                   <div className="all-header" style={{ 
                     display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", 
-                    background: "#93c5fd", // 다크 모드에서도 사진의 그 색상 유지
+                    background: "#93c5fd", // 아래 소속 탭과 완벽 동일 색상 고정
                     borderRadius: "25px", overflow: "hidden",
                     boxShadow: "0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)"
                   }}>
                     <button className="all-header-btn" style={{ 
                       width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
-                      padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.15)",
+                      padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)",
                       background: "transparent", fontSize: "20px", fontWeight: "bold", color: "#1e3a8a" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
@@ -1208,14 +1209,13 @@ function App() {
                       <>
                         <button className="all-header-btn" style={{ 
                           width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
-                          padding: 0, border: "none", borderLeft: "2px solid rgba(0,0,0,0.15)", borderRight: "2px solid rgba(0,0,0,0.15)", 
+                          padding: 0, border: "none", borderLeft: "2px solid rgba(0,0,0,0.2)", borderRight: "2px solid rgba(0,0,0,0.2)", 
                           background: "transparent", fontSize: "16px", color: "#1e3a8a" 
                         }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
                         
-                        {/* 🚀 수정/수정중 버튼: 직관적인 빨간색 표시 및 문구 변경 복구 */}
                         <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
                           width: "37px", height: "37px", minWidth: "37px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", 
-                          padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.15)", 
+                          padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)", 
                           background: editMode ? "#ef4444" : "transparent",
                           color: editMode ? "#ffffff" : "#1e3a8a", fontWeight: "bold" 
                         }} onClick={() => setEditMode(!editMode)}>{editMode ? "수정중" : "수정"}</button>
@@ -1225,7 +1225,7 @@ function App() {
                     <button className="all-header-btn" style={{ 
                       width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
-                      borderLeft: (activeTab === "dia") ? "2px solid rgba(0,0,0,0.15)" : "none",
+                      borderLeft: (activeTab === "dia") ? "2px solid rgba(0,0,0,0.2)" : "none",
                       fontSize: "20px", fontWeight: "bold", color: "#1e3a8a" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
@@ -1271,7 +1271,7 @@ function App() {
                         );
                       })}
                     </div>
-                    {/* 🚀 검색 결과 행로표 이미지 로직 보존 */}
+                    {/* 🚀 검색 결과 행로표 이미지 자동 렌더링 */}
                     {searchQuery && visibleAllGrid.length > 0 && (
                       <div className="search-img-panel" style={{ marginTop: '20px', paddingBottom: '30px' }}>
                         {visibleAllGrid.map((item, idx) => {
