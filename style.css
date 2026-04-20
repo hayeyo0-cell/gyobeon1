@@ -132,7 +132,6 @@ button:active { transform: scale(0.97); }
 .month-header-title { height: 48px; display: flex; align-items: center; justify-content: center; background: #ffffff; border-radius: 16px; font-size: 24px; font-weight: 800; border: 1px solid #d7dce5; transition: background-color 0.2s ease, border-color 0.2s ease; }
 .all-page { padding-bottom: 20px; }
 .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
-.dia-header { grid-template-columns: 40px 1fr 38px 40px; }
 .all-header-btn { height: 52px; font-size: 18px; }
 .all-edit-btn { height: 52px; font-size: 12px; }
 .all-header-title { font-size: 14px; padding: 0 5px; }
@@ -147,8 +146,8 @@ button:active { transform: scale(0.97); }
 .nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
 .group-select-display { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
 .group-add-btn-v4 { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
-/* 🚀 [DIA 순서 개선] 리스트 행 간 구분선을 더 명확하게(#e2e8f0) 조정 */
-.group-table { font-size: 12px; border-bottom: 1px solid #e2e8f0; }
+/* 🚀 [DIA 순서 개선] 리스트 행 간 구분선을 적당히 선명하게(#e2e8f0) 조정 */
+.group-table { font-size: 12px; border-bottom: 1px solid rgba(0, 0, 0, 0.12); }
 .group-table th:first-child, .group-table td:first-child, .group-name-cell { width: 68px; min-width: 68px; max-width: 68px; }
 .day-name { font-size: 13px; }
 .day-date { font-size: 10px; }
@@ -178,6 +177,7 @@ button:active { transform: scale(0.97); }
     grid-template-columns: 44px 1fr 44px 44px !important; 
     background: #3b82f6 !important; 
     border-radius: 16px !important; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
 }
 
 .all-header-btn, .all-edit-btn, .all-header-title { 
