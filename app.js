@@ -1,9 +1,9 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 안정화 & 디자인 최적화본)
- * 1. 상단 헤더: 소속 버튼(경산/문양 등)과 '완벽히 동일한' 진한 색상 및 입체감(Shadow) 적용
- * 2. 바 분할 디자인: 버튼을 따로 배치하지 않고, 하나의 바를 5칸(전체 탭) 또는 3칸(DIA 탭)으로 나눈 형태
- * 3. 규격: 모든 칸 높이 37px 고정 및 모서리 곡률(Round) 아래 버튼과 일치화
- * 4. 텍스트: 날짜 14px, 버튼 글자 진하게(Bold) 및 정중앙 정렬
- * 5. 안정성: 1600줄 전체 로직 유지 및 흰 화면 오류 완전 해결
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 안정화본)
+ * 1. 검색 복구: 열번/이름 검색 시 하단에 행로표 이미지가 즉시 나타나도록 로직 복구
+ * 2. 상단 헤더: 사진(40125.jpg) 디자인 기반 진한 파란색 배경 + 진한 세로 실선 5칸 분할
+ * 3. 규격: 모든 버튼/칸 높이 37px 고정 및 둥근 캡슐형 바 적용
+ * 4. 시각화: 입체감을 위한 하단 그림자(Shadow) 적용 및 14px 날짜 정렬
+ * 5. 안정성: 1600줄 전체 기능 유지 및 흰 화면 오류 방지 구문 최적화
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -806,7 +806,7 @@ function App() {
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
 
   const allGridLayout = useMemo(() => { return getAllGridLayout(visibleAllGrid.length || 0); }, [visibleAllGrid.length]);
-  const allGridRows = useMemo(() => { return Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols)); }, [visibleAllGrid.length, allGridLayout.cols]);
+  const allGridRows = useMemo(() => { Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols)); }, [visibleAllGrid.length, allGridLayout.cols]);
 
   const diaList = useMemo(() => {
     const team = currentViewTeam; if (!team) return []; let grid = [];
@@ -1188,16 +1188,16 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {/* 🚀 상단 헤더: 아래 소속탭과 동일한 둥근 모양, 색상, 입체감 적용 */}
+                  {/* 🚀 상단 헤더: 사진(40125.jpg) 스타일 완벽 복구 (소속 버튼과 색상 통일 + 더 진한 구분선 + 하단 그림자) */}
                   <div className="all-header" style={{ 
                     display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", 
-                    background: isDarkMode ? "#1e293b" : "#93c5fd", // 소속 탭과 같은 진한 파란색
+                    background: isDarkMode ? "#1e293b" : "#93c5fd",
                     borderRadius: "25px", overflow: "hidden",
-                    boxShadow: isDarkMode ? "0 4px 6px rgba(0,0,0,0.3)" : "inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.15)" // 입체감 추가
+                    boxShadow: isDarkMode ? "0 4px 10px rgba(0,0,0,0.4)" : "0 4px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.3)"
                   }}>
                     <button className="all-header-btn" style={{ 
                       width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
-                      padding: 0, border: "none", borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(255,255,255,0.2)", 
+                      padding: 0, border: "none", borderRight: isDarkMode ? "1px solid #444" : "2px solid rgba(255,255,255,0.3)", // 구분선 강화
                       background: "transparent", fontSize: "20px", fontWeight: "bold", color: isDarkMode ? "#ffffff" : "#1e3a8a" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
@@ -1209,15 +1209,15 @@ function App() {
                       <>
                         <button className="all-header-btn" style={{ 
                           width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
-                          padding: 0, border: "none", borderLeft: isDarkMode ? "1px solid #334155" : "1px solid rgba(255,255,255,0.2)", 
-                          borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(255,255,255,0.2)", 
+                          padding: 0, border: "none", borderLeft: isDarkMode ? "1px solid #444" : "2px solid rgba(255,255,255,0.3)", 
+                          borderRight: isDarkMode ? "1px solid #444" : "2px solid rgba(255,255,255,0.3)", 
                           background: "transparent", fontSize: "16px", color: "inherit" 
                         }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
                         
                         <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
                           width: "37px", height: "37px", minWidth: "37px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", 
-                          padding: 0, border: "none", borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(255,255,255,0.2)", 
-                          background: editMode ? "rgba(255, 255, 255, 0.2)" : "transparent", color: isDarkMode ? "#ffffff" : "#1e3a8a", fontWeight: "bold" 
+                          padding: 0, border: "none", borderRight: isDarkMode ? "1px solid #444" : "2px solid rgba(255,255,255,0.3)", 
+                          background: editMode ? "rgba(255, 255, 255, 0.25)" : "transparent", color: isDarkMode ? "#ffffff" : "#1e3a8a", fontWeight: "bold" 
                         }} onClick={() => setEditMode(!editMode)}>{editMode ? "완료" : "수정"}</button>
                       </>
                     )}
@@ -1225,7 +1225,7 @@ function App() {
                     <button className="all-header-btn" style={{ 
                       width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
-                      borderLeft: (activeTab === "dia") ? (isDarkMode ? "1px solid #334155" : "1px solid rgba(255,255,255,0.2)") : "none",
+                      borderLeft: (activeTab === "dia") ? (isDarkMode ? "1px solid #444" : "2px solid rgba(255,255,255,0.3)") : "none",
                       fontSize: "20px", fontWeight: "bold", color: isDarkMode ? "#ffffff" : "#1e3a8a" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
@@ -1240,19 +1240,8 @@ function App() {
                     const isActive = viewTeam === key; 
                     const isMyTeam = selectedTeam === key; 
                     return (
-                      <button 
-                        key={key} 
-                        className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`} 
-                        style={{ 
-                          fontSize: "14px", borderRadius: "20px", padding: "8px 16px",
-                          background: isActive ? (isDarkMode ? "#3b82f6" : "#bbf7d0") : (isDarkMode ? "#1e293b" : "#93c5fd"),
-                          color: isActive ? (isDarkMode ? "#ffffff" : "#064e3b") : (isDarkMode ? "#94a3b8" : "#1e3a8a"),
-                          border: "none", fontWeight: isActive ? "800" : "600",
-                          boxShadow: isActive ? "0 2px 4px rgba(0,0,0,0.15)" : "none"
-                        }} 
-                        onClick={() => setViewTeam(key)}
-                      >
-                        {TEAM_LABELS[key]}{isActive && <span className="view-dot" style={{ background: isDarkMode ? "#ffffff" : "#059669" }} />}
+                      <button key={key} className={`all-team-tab ${isMyTeam ? "my-team" : ""} ${isActive ? "active" : ""}`} style={{ fontSize: "14px" }} onClick={() => setViewTeam(key)}>
+                        {TEAM_LABELS[key]}{isActive && <span className="view-dot" />}
                       </button>
                     ); 
                   })}
@@ -1282,9 +1271,27 @@ function App() {
                         );
                       })}
                     </div>
+                    {/* 🚀 검색 로직 복구: 검색 결과가 있을 때 하단에 행로표 이미지 띄워줌 */}
+                    {searchQuery && visibleAllGrid.length > 0 && (
+                      <div className="search-img-panel" style={{ marginTop: '20px', paddingBottom: '30px' }}>
+                        {visibleAllGrid.map((item, idx) => {
+                          const imgTeam = effectiveData ? effectiveData[item.teamKey] : null;
+                          const imgSrc = imgTeam ? findPathImage(imgTeam, browseDate, item.code) : null;
+                          if (!imgSrc) return null;
+                          return (
+                            <div key={`s-img-${idx}`} style={{ marginBottom: '20px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '8px', color: isDarkMode ? '#aaa' : '#555' }}>
+                                🔍 {item.displayName} ({item.code}) 행로표
+                              </div>
+                              <img src={imgSrc} alt="행로" style={{ width: '100%', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }} onClick={() => handleAllCellTap(item)} />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="card" style={{ padding: 0, overflow: "hidden", ...swipeStyle, borderRadius: "20px", marginTop: "15px" }}>
+                  <div className="card" style={{ padding: 0, overflow: "hidden", ...swipeStyle, borderRadius: "10px", marginTop: "15px" }}>
                     {diaList.map((item, idx) => {
                       const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                       return (
@@ -1548,13 +1555,7 @@ function App() {
             <label className="label" style={{ marginTop: 12 }}>색상</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
                 {COLOR_OPTIONS.map((item) => (
-                    <button 
-                        key={item.label} 
-                        className={`color-dot ${editColor === item.value ? 'active' : ''}`}
-                        style={{ backgroundColor: item.value || '#ffffff', border: item.value ? 'none' : '1px solid #ddd', width: 40, height: 40, borderRadius: '50%' }}
-                        onClick={() => setEditColor(item.value)}
-                        title={item.label}
-                    />
+                    <button key={item.label} className={`color-dot ${editColor === item.value ? 'active' : ''}`} style={{ backgroundColor: item.value || '#ffffff', border: item.value ? 'none' : '1px solid #ddd' }} onClick={() => setEditColor(item.value)} title={item.label} />
                 ))}
             </div>
             <button className="modal-btn" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsWorktimeEditOpen((prev) => !prev)}>출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}</button>
