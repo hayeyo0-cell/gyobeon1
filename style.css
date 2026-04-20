@@ -270,7 +270,26 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 
 .all-cell-real[style] { background-image: none !important; }
 /* 🚀 [내 교번 강조 강화] 내 셀의 강조 선과 배경을 요청하신 25% 농도(#10b981)로 설정 */
-.cell-my { border: 3px solid #059669 !important; background: rgba(16, 185, 129, 0.25) !important; transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.25), 0 4px 8px rgba(16, 185, 129, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.72); z-index: 2; position: relative; transition: all 0.2s ease; }
+/* 🚀 [내 교번 강조] 쨍한 초록 그라데이션과 흰색 글씨로 복구 */
+.cell-my { 
+  border: 4px solid #10b981 !important; 
+  background: linear-gradient(180deg, #2ecc81 0%, #1db954 100%) !important; 
+  box-shadow: 0 10px 20px rgba(16, 185, 129, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  transform: translateY(-3px) scale(1.02) !important; 
+  z-index: 5;
+  position: relative;
+  display: flex !important; 
+  flex-direction: row !important; 
+  justify-content: space-between !important;
+  padding: 0 20px !important;
+}
+
+/* 글씨를 선명한 흰색으로 강제 고정 */
+.cell-my .all-code, .cell-my .all-name { 
+  color: #ffffff !important; 
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2); 
+}
+
 .cell-my-today { animation: myCellBlink 1.4s ease-in-out infinite; }
 
 .month-calendar { background: rgba(255, 255, 255, 0.76); border-radius: 24px; padding: 10px; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7); transition: background-color 0.2s ease, border-color 0.2s ease; }
