@@ -114,10 +114,10 @@ button:active { transform: scale(0.97); }
 
 .group-add-btn-v4 { flex: 1; min-width: 0; height: 100%; background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%); color: #fff; border: none; padding: 8px 4px; border-radius: 12px; font-weight: 800; font-size: 13px; text-align: center; box-shadow: 0 4px 10px rgba(124, 58, 237, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: center; }
 
-.group-table-wrap { overflow: hidden; border-radius: 18px; background: #ffffff; border: 1px solid rgba(203, 213, 225, 0.9); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
+/* 🚀 [최종병기] DIA순서 탭의 모든 테이블 셀에 월교번 색상(#c8d2e3) 강제 주입 */
+.tab-page table, .tab-page th, .tab-page td, .group-table td, .group-table th { border: 1px solid #c8d2e3 !important; border-collapse: collapse !important; }
+.group-table-wrap { overflow: hidden; border-radius: 18px; background: #ffffff; border: 1px solid #c8d2e3 !important; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .group-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
-/* 🚀 [DIA 구분선] 월교번 사진(40277.jpg)과 100% 동일한 선명한 격자(#c8d2e3) 무조건 강제 적용 */
-.group-table th, .group-table td { border-bottom: 1px solid #c8d2e3 !important; border-right: 1px solid #c8d2e3 !important; padding: 0; text-align: center; vertical-align: middle; color: #000000; font-weight: 700; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
 
 .group-table th:last-child, .group-table td:last-child { border-right: none !important; }
 .group-table tr:last-child td { border-bottom: none !important; }
