@@ -1,7 +1,13 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-/* 🟢 불필요하게 글씨를 얇게 깎아먹던 폰트 스무딩 옵션을 제거하여 쨍한 화질 복구! */
-html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; overflow-x: hidden; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", sans-serif; background: #eef1f6; color: #111827; }
+/* 🟢 [디자인 철학 복구] 불필요하게 글씨를 얇게 깎아먹던 폰트 스무딩 옵션을 제거하여 쨍한 화질 복구! */
+/* (라이트모드에서 글씨가 더 쨍하게 보이도록 복구) */
+html, body {
+  margin: 0; width: 100%; height: 100%; overflow: hidden; overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", sans-serif;
+  background: #e9ecf1; color: #111827; /* 🚀 [눈부심 방지] 배경색 미세 톤다운 */
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; /* 🚀 [쨍한 화질 핵심 복구] */
+}
 body { overscroll-behavior: none; transition: background-color 0.2s ease, color 0.2s ease; }
 button, input, select { font: inherit; }
 button { transition: transform 0.14s ease, opacity 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
@@ -13,7 +19,8 @@ button:active { transform: scale(0.97); }
 .container::after { content: ""; display: block; height: calc(86px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; }
 
 .card, .main-panel, .month-header-bar, .month-calendar, .all-tab-header, .all-team-tabs, .all-tab-grid-wrap, .group-page, .group-table-wrap { width: 100%; margin-left: auto; margin-right: auto; }
-.card { background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 24px; padding: 14px; margin-bottom: 10px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.78); transition: background-color 0.2s ease, border-color 0.2s ease; }
+/* 🚀 [눈부심 방지] 순백색 카드 배경을 미세하게 차분한 톤으로 조정 */
+.card { background: rgba(252, 253, 255, 0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 24px; padding: 14px; margin-bottom: 10px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.78); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .card-title { font-size: 20px; font-weight: 800; margin-bottom: 10px; }
 .help-text { color: #6b7280; font-size: 14px; line-height: 1.5; margin-top: 6px; }
 .notice-box { background: rgba(233, 242, 255, 0.95); border: 1px solid rgba(189, 210, 255, 0.95); color: #2146a6; border-radius: 16px; padding: 10px 12px; margin-top: 10px; font-size: 13px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7); }
@@ -35,7 +42,7 @@ button:active { transform: scale(0.97); }
 .date-btn { width: 100%; height: 46px; border: 0; background: rgba(215, 220, 230, 0.55); font-size: 26px; font-weight: 800; cursor: pointer; color: inherit; transition: background-color 0.2s ease; }
 .date-value { background: rgba(255, 255, 255, 0.95); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 23px; line-height: 1.15; padding: 4px; white-space: nowrap; word-break: keep-all; transition: background-color 0.2s ease, color 0.2s ease; }
 
-.main-panel { min-height: 210px; background: rgba(255, 255, 255, 0.84); border-radius: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: 0; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72); border: 1px solid rgba(255, 255, 255, 0.8); transition: background-color 0.2s ease, border-color 0.2s ease; }
+.main-panel { min-height: 210px; background: rgba(252, 253, 255, 0.87); border-radius: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: 0; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72); border: 1px solid rgba(255, 255, 255, 0.8); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .center-view { text-align: center; padding: 0; width: 100%; }
 .main-code { font-size: clamp(40px, 9vw, 56px); line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
 .main-time { margin-top: 14px; font-size: clamp(24px, 6vw, 36px); line-height: 1.15; font-weight: 700; }
@@ -125,6 +132,7 @@ button:active { transform: scale(0.97); }
 .month-header-title { height: 48px; display: flex; align-items: center; justify-content: center; background: #ffffff; border-radius: 16px; font-size: 24px; font-weight: 800; border: 1px solid #d7dce5; transition: background-color 0.2s ease, border-color 0.2s ease; }
 .all-page { padding-bottom: 20px; }
 .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
+.dia-header { grid-template-columns: 40px 1fr 38px 40px; }
 .all-header-btn { height: 52px; font-size: 18px; }
 .all-edit-btn { height: 52px; font-size: 12px; }
 .all-header-title { font-size: 14px; padding: 0 5px; }
@@ -325,8 +333,8 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 
 /* 🚀 다크모드 상단바/소속 가독성 및 다이아 배경 최적화 (사진 40216.jpg 스타일 복구) */
 .dark-mode .all-header { background: #3b82f6 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important; color: #ffffff !important; }
-/* 🟢 [내 소속 컬러 다크모드 복구] 사진 스타일대로 초록색 유지 */
 .dark-mode .all-team-tab { background: #3b82f6 !important; color: #ffffff !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+/* 🟢 [내 소속 컬러 다크모드 복구] 사진 스타일대로 초록색 유지 */
 .dark-mode .all-team-tab.my-team { background: #10b981 !important; }
 .dark-mode .all-team-tab.active { box-shadow: 0 0 15px rgba(59, 130, 246, 0.6) !important; border: 1px solid #ffffff !important; }
 .dark-mode .all-header-btn, .dark-mode .all-edit-btn, .dark-mode .all-header-title { color: #ffffff !important; }
