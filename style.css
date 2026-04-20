@@ -447,3 +447,46 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .modal-title { font-size: 22px; }
   .modal-sub { font-size: 16px; }
 }
+/* 🚀 색상 변경 모달 내 드롭다운(Select) 디자인 최적화 */
+/* (기존 코드를 건드리지 않고 덮어쓰는 방식입니다) */
+
+/* 1. 라이트모드 스타일 */
+select.select {
+  width: 100% !important;
+  height: 48px !important; /* 터치하기 편한 높이 */
+  padding: 0 14px !important;
+  border-radius: 16px !important;
+  border: 1px solid #cbd5e1 !important;
+  background-color: #ffffff !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+  outline: none !important;
+  cursor: pointer !important;
+  
+  /* 투박한 화살표 대신 쨍한 SVG 화살표 삽입 */
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234b5563'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 18px !important;
+  
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.02) !important;
+  transition: all 0.2s ease !important;
+  margin-top: 8px !important;
+}
+
+select.select:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12) !important;
+}
+
+/* 2. 다크모드 스타일 */
+body.dark-mode select.select {
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+  color: #f8fafc !important;
+  /* 흰색 화살표로 변경 */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+}
