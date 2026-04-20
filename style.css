@@ -19,10 +19,12 @@ button:active { transform: scale(0.97); }
 .container::after { content: ""; display: block; height: calc(86px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; }
 
 .card, .main-panel, .month-header-bar, .month-calendar, .all-tab-header, .all-team-tabs, .all-tab-grid-wrap, .group-page, .group-table-wrap { width: 100%; margin-left: auto; margin-right: auto; }
+
 /* 🚀 [눈부심 방지] 카드의 흰색을 조금 더 차분한 미색으로 조정하여 가독성 확보 */
 .card { background: rgba(250, 250, 248, 0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 24px; padding: 14px; margin-bottom: 10px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.65); border: 1px solid rgba(0, 0, 0, 0.05); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .card-title { font-size: 20px; font-weight: 800; margin-bottom: 10px; }
 .help-text { color: #6b7280; font-size: 14px; line-height: 1.5; margin-top: 6px; }
+
 .notice-box { background: rgba(233, 242, 255, 0.95); border: 1px solid rgba(189, 210, 255, 0.95); color: #2146a6; border-radius: 16px; padding: 10px 12px; margin-top: 10px; font-size: 13px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7); }
 .label { display: block; margin-bottom: 6px; color: #4b5563; font-size: 14px; font-weight: 700; }
 .input, .select { width: 100%; padding: 11px 12px; border-radius: 16px; border: 1px solid rgba(203, 213, 225, 0.95); background: rgba(255, 255, 255, 0.95); outline: none; box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.02); transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease; }
@@ -56,6 +58,7 @@ button:active { transform: scale(0.97); }
   cursor: pointer;
   animation: fadeIn 0.3s ease;
 }
+
 .home-path-preview img {
   width: 100%;
   max-width: 240px; 
@@ -67,9 +70,11 @@ button:active { transform: scale(0.97); }
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
   transition: transform 0.15s ease;
 }
+
 .home-path-preview:active img {
   transform: scale(0.96);
 }
+
 .preview-label {
   margin-top: 8px;
   font-size: 11px;
@@ -87,14 +92,17 @@ button:active { transform: scale(0.97); }
 .bottom-tabs { position: fixed; left: 0; right: 0; bottom: 0; height: calc(60px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); background: rgba(39, 82, 191, 0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid rgba(255, 255, 255, 0.16); box-shadow: 0 -6px 22px rgba(15, 23, 42, 0.12); z-index: 50; overflow: hidden; }
 .bottom-tabs.tabs-5 { display: flex !important; width: 100%; }
 .bottom-tabs.tabs-5 .bottom-tab { flex: 1 1 20% !important; width: 20% !important; min-width: 0; }
+
 .bottom-tabs.home-theme { background: rgba(39, 82, 191, 0.92); }
 .bottom-tabs.all-theme { background: rgba(59, 130, 246, 0.92); }
 .bottom-tabs.month-theme { background: rgba(16, 185, 129, 0.92); }
 .bottom-tabs.group-theme { background: rgba(139, 92, 246, 0.92); }
+
 .bottom-tab { height: 60px; border: 0; background: transparent; color: rgba(255, 255, 255, 0.84); font-size: 15px; font-weight: 600; cursor: pointer; line-height: 1; position: relative; padding: 0 2px; white-space: nowrap; text-align: center; box-sizing: border-box; display: flex; justify-content: center; align-items: center; }
 .bottom-tab.active { color: #ffffff; background: rgba(255, 255, 255, 0.08); font-size: 16px; font-weight: 700; }
 .bottom-tab.active::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: 5px; height: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.95); }
 
+/* 그룹 UI */
 .group-page { background: transparent; border-radius: 0; padding: 0; box-shadow: none; border: none; }
 .group-top-bar-v4 { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 10px; background: rgba(255, 255, 255, 0.95); border-radius: 20px; border: 1px solid rgba(203, 213, 225, 0.8); box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8); margin-bottom: 12px; width: 100%; transition: background-color 0.2s ease, border-color 0.2s ease; }
 .nav-btn-v4 { flex: 0 0 auto; padding: 8px 12px; background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); border: none; border-radius: 12px; font-size: 16px; color: white; cursor: pointer; font-weight: 800; box-shadow: 0 4px 10px rgba(47, 97, 220, 0.2); }
@@ -108,6 +116,7 @@ button:active { transform: scale(0.97); }
 .group-table-wrap { overflow: hidden; border-radius: 18px; background: #ffffff; border: 1px solid rgba(203, 213, 225, 0.9); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .group-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
 .group-table th, .group-table td { border-bottom: 1px solid rgba(203, 213, 225, 0.6); border-right: 1px solid rgba(203, 213, 225, 0.6); padding: 0; text-align: center; vertical-align: middle; color: #000000; font-weight: 700; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
+
 .group-table th:last-child, .group-table td:last-child { border-right: none; }
 .group-table tr:last-child td { border-bottom: none; }
 .group-table th.sticky-col, .group-table td.sticky-col { position: sticky; left: 0; background: #ffffff; z-index: 2; box-shadow: 2px 0 5px rgba(0,0,0,0.06); border-right: 2px solid #e2e8f0 !important; transition: background-color 0.2s ease, border-color 0.2s ease; padding: 8px 4px !important; }
@@ -130,25 +139,30 @@ button:active { transform: scale(0.97); }
 .month-header-bar { display: grid; gap: 8px; align-items: center; margin-bottom: 10px; grid-template-columns: 48px 1fr 48px 48px; }
 .month-nav-btn { height: 48px; border: 0; background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); color: white; border-radius: 16px; font-size: 24px; font-weight: 800; cursor: pointer; box-shadow: 0 8px 18px rgba(47, 97, 220, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.18); display: flex; justify-content: center; align-items: center; }
 .month-header-title { height: 48px; display: flex; align-items: center; justify-content: center; background: #ffffff; border-radius: 16px; font-size: 24px; font-weight: 800; border: 1px solid #d7dce5; transition: background-color 0.2s ease, border-color 0.2s ease; }
+
 .all-page { padding-bottom: 20px; }
 .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
 .dia-header { grid-template-columns: 40px 1fr 38px 40px; }
 .all-header-btn { height: 52px; font-size: 18px; }
 .all-edit-btn { height: 52px; font-size: 12px; }
 .all-header-title { font-size: 14px; padding: 0 5px; }
+
 .all-team-tabs { gap: 4px; margin-top: 6px; margin-bottom: 6px; }
 .all-team-tab { font-size: 13px; padding: 9px 0; border-radius: 14px; }
 .all-tab-grid-wrap { padding: 6px; border-radius: 22px; margin-bottom: 10px; }
 .all-cell-real { min-height: 48px; border-radius: 8px; padding: 2px 1px; }
+
 .all-grid-real.density-4 .all-code { font-size: 17px; } .all-grid-real.density-4 .all-name { font-size: 12.5px; }
 .all-grid-real.density-5 .all-code { font-size: 15px; } .all-grid-real.density-5 .all-name { font-size: 11.5px; }
 .all-grid-real.density-6 .all-code { font-size: 14px; } .all-grid-real.density-6 .all-name { font-size: 10px; }
+
 .group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
 .nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
 .group-select-display { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
 .group-add-btn-v4 { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
-/* 🚀 [DIA 순서 개선] 리스트 행 간 구분선을 사진처럼 아주 선명하게(#d1d5db) 조정 */
-.group-table { font-size: 12px; border-bottom: 1px solid #d1d5db; }
+
+/* 🚀 [DIA 순서 개선] 리스트 행 간 구분선을 요청하신 25% 농도(#00000040)로 설정 */
+.group-table { font-size: 12px; border-bottom: 1px solid rgba(0, 0, 0, 0.25); }
 .group-table th:first-child, .group-table td:first-child, .group-name-cell { width: 68px; min-width: 68px; max-width: 68px; }
 .day-name { font-size: 13px; }
 .day-date { font-size: 10px; }
@@ -156,6 +170,7 @@ button:active { transform: scale(0.97); }
 .team-badge { font-size: 10px; margin-bottom: 4px; }
 .code-txt { font-size: 13px; }
 .row-del-btn-text { padding: 3px 10px; font-size: 10px; border-radius: 10px; }
+
 .modal { padding: 16px; border-radius: 20px; }
 .modal-title { font-size: 22px; }
 .modal-sub { font-size: 16px; }
@@ -256,8 +271,8 @@ button:active { transform: scale(0.97); }
 .all-name { margin: 0; margin-top: 1px; font-size: 13.5px; line-height: 1; font-weight: 800; color: #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 98%; transition: color 0.2s ease; }
 
 .all-cell-real[style] { background-image: none !important; }
-/* 🚀 [내 교번 강조 강화] 내 셀의 강조 선과 색상을 더 확실하게(#059669) 수정 */
-.cell-my { border: 3px solid #059669 !important; background: rgba(16, 185, 129, 0.1) !important; transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.25), 0 4px 8px rgba(16, 185, 129, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.72); z-index: 2; position: relative; transition: all 0.2s ease; }
+/* 🚀 [내 교번 강조 강화] 내 셀의 강조 선과 배경을 요청하신 15% 농도(#10b981)로 설정 */
+.cell-my { border: 3px solid #059669 !important; background: rgba(16, 185, 129, 0.15) !important; transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.25), 0 4px 8px rgba(16, 185, 129, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.72); z-index: 2; position: relative; transition: all 0.2s ease; }
 .cell-my-today { animation: myCellBlink 1.4s ease-in-out infinite; }
 
 .month-calendar { background: rgba(255, 255, 255, 0.76); border-radius: 24px; padding: 10px; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7); transition: background-color 0.2s ease, border-color 0.2s ease; }
