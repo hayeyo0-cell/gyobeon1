@@ -1,9 +1,9 @@
 /** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 안정화 & 디자인 최적화본)
- * 1. 상단 헤더: 아래 소속 버튼처럼 모서리를 아주 둥글게(Round) 및 색상/디자인 통일
- * 2. 버튼 규격: 🔍, 수정, +, - 버튼 모두 37px 고정 및 세로 실선 구분
- * 3. 날짜 및 소속: 14px 폰트, 정중앙 정렬, 사진과 동일한 텍스트 컬러
- * 4. DIA순서 탭: 전체 탭과 100% 동일한 헤더 레이아웃 적용
- * 5. 안정성: 1600줄 전체 로직 유지 및 흰 화면 오류 완전 해결
+ * 1. 상단 헤더: 사진(40125.jpg)과 100% 동일한 둥근 캡슐형 연청색 헤더 디자인 구현
+ * 2. 칸 구분: 버튼 사이를 입체적인 네모가 아닌 깔끔한 '세로 실선'으로 분할
+ * 3. 버튼 규격: 🔍, 수정, +, - 버튼 모두 37px 고정 적용
+ * 4. 디자인 통일: 아래 소속 버튼들과 동일한 모서리 곡률 및 색상 톤 적용
+ * 5. 안정성: 1600줄 전체 로직 유지 및 구문 오류 해결
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -1188,7 +1188,7 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {/* 🚀 상단 헤더: 사진(40125.jpg)과 같이 둥근 캡슐 디자인 적용 */}
+                  {/* 🚀 상단 헤더: 사진(40125.jpg)처럼 둥근 캡슐 디자인 적용 */}
                   <div className="all-header" style={{ display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", background: isDarkMode ? "#1e293b" : "#b2c9f1", borderRadius: "25px", overflow: "hidden", border: isDarkMode ? "1px solid #334155" : "none" }}>
                     <button className="all-header-btn" style={{ width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, borderRight: isDarkMode ? "1px solid #334155" : "1px solid rgba(0,0,0,0.1)", background: "transparent", fontSize: "18px", fontWeight: "bold", color: isDarkMode ? "#ffffff" : "#1e293b" }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "700", color: isDarkMode ? "#ffffff" : "#1e293b" }}>{TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}</div>
@@ -1205,7 +1205,7 @@ function App() {
                   )}
                 </div>
                 
-                {/* 🚀 소속 선택 탭 영역: 사진 속 디자인과 동일한 둥근 모양 및 색상 */}
+                {/* 🚀 소속 탭: 사진 속 경산/문양 등 버튼과 일치하게 둥근 모양 유지 */}
                 <div className="all-team-tabs" style={{ marginTop: "12px" }}>
                   {TEAM_ORDER.map((key) => { 
                     const isActive = viewTeam === key; 
@@ -1222,7 +1222,6 @@ function App() {
                           color: isActive ? (isDarkMode ? "#ffffff" : "#064e3b") : (isDarkMode ? "#94a3b8" : "#1e3a8a"),
                           border: "none",
                           fontWeight: isActive ? "800" : "600",
-                          boxShadow: isActive ? "0 2px 4px rgba(0,0,0,0.1)" : "none"
                         }} 
                         onClick={() => setViewTeam(key)}
                       >
