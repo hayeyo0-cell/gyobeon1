@@ -132,6 +132,7 @@ button:active { transform: scale(0.97); }
 .month-header-title { height: 48px; display: flex; align-items: center; justify-content: center; background: #ffffff; border-radius: 16px; font-size: 24px; font-weight: 800; border: 1px solid #d7dce5; transition: background-color 0.2s ease, border-color 0.2s ease; }
 .all-page { padding-bottom: 20px; }
 .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
+.dia-header { grid-template-columns: 40px 1fr 38px 40px; }
 .all-header-btn { height: 52px; font-size: 18px; }
 .all-edit-btn { height: 52px; font-size: 12px; }
 .all-header-title { font-size: 14px; padding: 0 5px; }
@@ -146,8 +147,8 @@ button:active { transform: scale(0.97); }
 .nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
 .group-select-display { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
 .group-add-btn-v4 { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
-/* 🚀 [DIA 순서 개선] 리스트 행 간 구분선을 적당히 선명하게(#e2e8f0) 조정 */
-.group-table { font-size: 12px; border-bottom: 1px solid rgba(0, 0, 0, 0.12); }
+/* 🚀 [DIA 순서 개선] 리스트 행 간 구분선을 사진처럼 아주 선명하게(#d1d5db) 조정 */
+.group-table { font-size: 12px; border-bottom: 1px solid #d1d5db; }
 .group-table th:first-child, .group-table td:first-child, .group-name-cell { width: 68px; min-width: 68px; max-width: 68px; }
 .day-name { font-size: 13px; }
 .day-date { font-size: 10px; }
@@ -255,8 +256,8 @@ button:active { transform: scale(0.97); }
 .all-name { margin: 0; margin-top: 1px; font-size: 13.5px; line-height: 1; font-weight: 800; color: #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 98%; transition: color 0.2s ease; }
 
 .all-cell-real[style] { background-image: none !important; }
-/* 🚀 [내 교번 강조 강화] 내 셀의 강조 선과 색상을 더 진하게(#10b981) 수정 */
-.cell-my { border: 3px solid #10b981 !important; background: rgba(16, 185, 129, 0.05) !important; transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.25), 0 4px 8px rgba(16, 185, 129, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.72); z-index: 2; position: relative; transition: all 0.2s ease; }
+/* 🚀 [내 교번 강조 강화] 내 셀의 강조 선과 색상을 더 확실하게(#059669) 수정 */
+.cell-my { border: 3px solid #059669 !important; background: rgba(16, 185, 129, 0.1) !important; transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.25), 0 4px 8px rgba(16, 185, 129, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.72); z-index: 2; position: relative; transition: all 0.2s ease; }
 .cell-my-today { animation: myCellBlink 1.4s ease-in-out infinite; }
 
 .month-calendar { background: rgba(255, 255, 255, 0.76); border-radius: 24px; padding: 10px; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7); transition: background-color 0.2s ease, border-color 0.2s ease; }
