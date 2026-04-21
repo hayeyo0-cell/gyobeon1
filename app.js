@@ -714,56 +714,29 @@ function App() {
   }, [effectiveData, homeDate, myInfo?.code, mySelection, selectedTeam]);
 
   const allGrid = useMemo(() => {
-    if (!currentViewTeam) return []; 
-    let grid = [];
-    
-    // 1. 기본 그리드 데이터 생성 로직
-    if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { 
-      grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides); 
-    } else {
-      let anchorName = ""; 
-      let anchorCode = ""; 
-      let anchorDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
+    if (!currentViewTeam) return []; let grid = [];
+    if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides); } else {
+      let anchorName = ""; let anchorCode = ""; let anchorDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
       const canUseMyAnchorForTeam = mySelection?.teamKey === viewTeam && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(currentViewTeam, mySelection.name);
-      
-      if (canUseMyAnchorForTeam) { 
-        anchorName = mySelection.name; 
-        anchorCode = normalizeToFixedCode(currentViewTeam, mySelection.code); 
-        anchorDate = mySelection.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster); 
-      } else { 
-        const teamAnchor = buildTeamAnchorFromZip(currentViewTeam); 
-        anchorName = teamAnchor?.name || ""; 
-        anchorCode = normalizeToFixedCode(currentViewTeam, teamAnchor?.code || ""); 
-        anchorDate = teamAnchor?.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster); 
-      }
-      
-      if (!anchorName || !anchorCode) { 
-        grid = buildAssignedGrid(currentViewTeam, "", "", 0, overrides); 
-      } else { 
-        const dayOffset = diffDays(anchorDate, browseDate); 
-        grid = buildAssignedGrid(currentViewTeam, anchorName, anchorCode, dayOffset, overrides); 
-      }
+      if (canUseMyAnchorForTeam) { anchorName = mySelection.name; anchorCode = normalizeToFixedCode(currentViewTeam, mySelection.code); anchorDate = mySelection.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster); } else { const teamAnchor = buildTeamAnchorFromZip(currentViewTeam); anchorName = teamAnchor?.name || ""; anchorCode = normalizeToFixedCode(currentViewTeam, teamAnchor?.code || ""); anchorDate = teamAnchor?.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster); }
+      if (!anchorName || !anchorCode) { grid = buildAssignedGrid(currentViewTeam, "", "", 0, overrides); } else { const dayOffset = diffDays(anchorDate, browseDate); grid = buildAssignedGrid(currentViewTeam, anchorName, anchorCode, dayOffset, overrides); }
     }
-
-    // 2. [핵심수정] 내 칸(권재림) 데이터에 설정한 색상(customColor) 주입
     if (mySelection?.teamKey === viewTeam && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
       const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection));
-      grid = grid.map((cell) => { 
-        if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) {
-          return { 
-            ...cell, 
-            name: mySelection.name, 
-            displayName: mySelection.name,
-            customColor: myInfo?.customColor // 여기서 색상 신호를 연결합니다.
-          }; 
-        }
-        return cell; 
-      });
+     grid = grid.map((cell) => { 
+  if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) {
+    return { 
+      ...cell, 
+      name: mySelection.name, 
+      displayName: mySelection.name, 
+      customColor: myInfo?.customColor // ◀ 색상 정보가 사라지지 않게 여기서 다시 넣어줍니다.
+    }; 
+  }
+  return cell; 
+});
     }
-    
-    // 3. 최종 반환 (모든 아이템에 teamKey와 색상을 유지하며 반환)
-    return grid.map(item => ({ ...item, teamKey: viewTeam, customColor: item.customColor })); 
-  }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection, myInfo]);
+    return grid.map(item => ({ ...item, teamKey: viewTeam })); 
+  }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
 
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
