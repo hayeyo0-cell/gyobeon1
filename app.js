@@ -723,14 +723,19 @@ function App() {
     }
     if (mySelection?.teamKey === viewTeam && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
       const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection));
-     grid = grid.map((cell) => { 
+    grid = grid.map((cell) => { 
   if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) {
     return { 
       ...cell, 
       name: mySelection.name, 
-      displayName: mySelection.name, 
-      customColor: myInfo?.customColor // ◀ 색상 정보가 사라지지 않게 여기서 다시 넣어줍니다.
+      displayName: mySelection.name,
+      customColor: myInfo?.customColor // 데이터가 확실히 전달되도록 함
     }; 
+  }
+  return cell; 
+});
+// 아래 한 줄도 꼭 확인 (item에 색상이 박혀있어야 합니다)
+return grid.map(item => ({ ...item, teamKey: viewTeam, customColor: item.customColor }));
   }
   return cell; 
 });
