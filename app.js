@@ -148,9 +148,9 @@ function getPathFolder(teamKey, dateStr, code) {
   const isHol = isHolidayDate(targetDate);
   if (isNightStartCode(teamKey, code)) {
     if (isHol || day === 0) return "hol_nor"; 
-    if (day === 6) return "sat_hol";          
+    if (day === 6) return "sat_hol";           
     if (day === 5) return "nor_sat";          
-    return "nor";                             
+    return "nor";                               
   }
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
@@ -1287,25 +1287,27 @@ function App() {
                         const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
                         
-                        // [핵심 로직] 각 인원이 각자 설정한 색상을 정확히 실시간으로 찾아옵니다.
-                        const currentCellKey = getOverrideKey(item.teamKey || viewTeam, item.name);
-                        const cellColor = overrides[currentCellKey]?.color || item.customColor;
+                        /* 🚀 핵심 교정: 개별 색상 실시간 추적 로직 */
+                        const cellKey = getOverrideKey(item.teamKey, item.name);
+                        const currentOverride = overrides[cellKey];
+                        const cellColor = currentOverride?.color || item.customColor || "";
                         
-                        // [디자인 로직] 색상이 있으면 CSS 그라데이션을 걷어내고 선명하게 표시
-                        const customStyle = cellColor 
-                          ? { background: cellColor, backgroundImage: "none" } 
-                          : undefined;
+                        /* 🚀 핵심 교정: 색상이 있을 때만 인라인 스타일 주입 */
+                        const customStyle = cellColor ? { 
+                            backgroundColor: cellColor,
+                            backgroundImage: 'none' // CSS 그라데이션 제거
+                        } : {};
                         
-                        const textColorStyle = cellColor ? { color: "#000000" } : undefined;
+                        const textColorStyle = cellColor ? { color: "#000000", fontWeight: "700" } : {};
                         
                         return (
-                          <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
+                          <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
                             <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
                             <div className="all-name" style={textColorStyle}>
-                                {item.displayName || "-"}
+                                {currentOverride?.alias || item.displayName || "-"}
                                 {searchQuery && (
                                   <div style={{fontSize: '9px', opacity: 0.8, color: cellColor ? '#000000' : 'inherit'}}>
-                                      [{TEAM_LABELS[item.teamKey]}]
+                                    [{TEAM_LABELS[item.teamKey]}]
                                   </div>
                                 )}
                             </div>
