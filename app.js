@@ -151,7 +151,7 @@ function getPathFolder(teamKey, dateStr, code) {
     if (isHol || day === 0) return "hol_nor"; 
     if (day === 6) return "sat_hol";          
     if (day === 5) return "nor_sat";          
-    return "nor";                             
+    return "nor";                               
   }
   if (isHol || day === 0) return "hol";
   if (day === 6) return "sat";
@@ -723,20 +723,20 @@ function App() {
     }
     if (mySelection?.teamKey === viewTeam && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
       const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection));
-     grid = grid.map((cell) => { 
-  if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) {
-    return { 
-      ...cell, 
-      name: mySelection.name, 
-      displayName: mySelection.name, 
-      customColor: myInfo?.customColor // ◀ 색상 정보가 사라지지 않게 여기서 다시 넣어줍니다.
-    }; 
-  }
-  return cell; 
-});
+      grid = grid.map((cell) => { 
+        if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) {
+          return { 
+            ...cell, 
+            name: mySelection.name, 
+            displayName: mySelection.name,
+            customColor: myInfo?.customColor // ◀ 내 색상 정보 유지
+          }; 
+        }
+        return cell; 
+      });
     }
     return grid.map(item => ({ ...item, teamKey: viewTeam })); 
-  }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
+  }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection, myInfo]);
 
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
@@ -1265,17 +1265,15 @@ function App() {
                         const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
                         
-                        // 내 칸(isMine)일 때 설정된 색상(myInfo.customColor)을 가져오도록 수정
-                        // 1. 저장된 설정 데이터를 직접 강제로 가져옵니다.
-const allOverrides = loadOverrides(); 
-const myOverrideKey = getOverrideKey(item.teamKey || viewTeam, item.name);
-const myStoredColor = allOverrides[myOverrideKey]?.color;
-
-// 2. 내 칸이거나 아이템 자체에 색상이 있다면 적용합니다.
-const finalColor = (isMine && myStoredColor) || item.customColor;
-const customStyle = finalColor ? { background: finalColor, backgroundImage: "none" } : undefined;
+                        // 🚀 [색상 수정 핵심 로직] 내 설정색(myInfo) 혹은 타인 수정색(item.customColor) 통합
+                        const targetColor = (isMine && myInfo?.customColor) || item.customColor;
                         
-                        const textColorStyle = ((isMine && myInfo?.customColor) || item.customColor) ? { color: "#000000" } : undefined;
+                        // 🚀 CSS의 linear-gradient를 뚫기 위해 backgroundImage: "none"을 명시적으로 추가
+                        const customStyle = targetColor 
+                          ? { background: targetColor, backgroundImage: "none" } 
+                          : undefined;
+                        
+                        const textColorStyle = targetColor ? { color: "#000000" } : undefined;
                         
                         return (
                           <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
@@ -1283,7 +1281,7 @@ const customStyle = finalColor ? { background: finalColor, backgroundImage: "non
                             <div className="all-name" style={textColorStyle}>
                                 {item.displayName || "-"}
                                 {searchQuery && (
-                                  <div style={{fontSize: '9px', opacity: 0.8, color: (isMine && myInfo?.customColor) || item.customColor ? '#000000' : 'inherit'}}>
+                                  <div style={{fontSize: '9px', opacity: 0.8, color: targetColor ? '#000000' : 'inherit'}}>
                                       [{TEAM_LABELS[item.teamKey]}]
                                   </div>
                                 )}
