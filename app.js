@@ -717,6 +717,7 @@ function App() {
     if (!currentViewTeam) return []; 
     let grid = [];
     
+    // 1. 기본 그리드 데이터 생성
     if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { 
       grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides); 
     } else {
@@ -744,7 +745,7 @@ function App() {
       }
     }
 
-    // 내 교번 칸에 색상 데이터 주입 및 동기화
+    // 2. [핵심] 내 칸 데이터에 색상 정보(customColor) 강제 주입
     if (mySelection?.teamKey === viewTeam && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
       const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection));
       grid = grid.map((cell) => { 
@@ -753,13 +754,14 @@ function App() {
             ...cell, 
             name: mySelection.name, 
             displayName: mySelection.name,
-            customColor: myInfo?.customColor // 여기서 색상 정보를 연결합니다.
+            customColor: myInfo?.customColor // 여기서 색상 신호가 연결됩니다!
           }; 
         }
         return cell; 
       });
     }
     
+    // 3. 최종 데이터 반환 (teamKey 추가)
     return grid.map(item => ({ ...item, teamKey: viewTeam })); 
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection, myInfo]);
 
