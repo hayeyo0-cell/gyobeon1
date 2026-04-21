@@ -754,17 +754,19 @@ function App() {
             ...cell, 
             name: mySelection.name, 
             displayName: mySelection.name,
-            customColor: myInfo?.customColor // ◀ 여기서 색상 데이터가 비로소 연결됩니다!
+            customColor: myInfo?.customColor // 여기서 색상을 확실히 보존
           }; 
         }
         return cell; 
       });
     }
-    
-    // 3. 전체 데이터에 소속(teamKey) 정보를 입혀 반환
-    return grid.map(item => ({ ...item, teamKey: viewTeam })); 
+    // 범인이었던 중복 맵핑을 제거하고, 데이터를 안전하게 반환합니다.
+    return grid.map(item => ({ 
+      ...item, 
+      teamKey: viewTeam, 
+      customColor: item.customColor // 색상 데이터를 최종 단계까지 끌고 가기
+    })); 
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection, myInfo]);
-
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
