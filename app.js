@@ -1266,15 +1266,9 @@ function App() {
                         const isToday = browseDate === getKoreaToday();
                         
                         // 내 칸(isMine)일 때 설정된 색상(myInfo.customColor)을 가져오도록 수정
-                        const customStyle = (isMine && myInfo?.customColor) 
-  ? { 
-      background: myInfo.customColor, // backgroundColor가 아니라 background를 써서 그라데이션을 덮어버림
-      backgroundImage: "none" 
-    } 
-  : (item.customColor ? { 
-      background: item.customColor, 
-      backgroundImage: "none" 
-    } : undefined);
+                        const customStyle = item.customColor 
+  ? { background: item.customColor, backgroundImage: "none" } 
+  : undefined;
                         
                         const textColorStyle = ((isMine && myInfo?.customColor) || item.customColor) ? { color: "#000000" } : undefined;
                         
