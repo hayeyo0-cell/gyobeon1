@@ -697,10 +697,7 @@ function App() {
   const myInfo = useMemo(() => {
     const myTeamKey = mySelection?.teamKey || selectedTeam; const myName = String(mySelection?.name || "").trim(); const team = effectiveData?.[myTeamKey]; if (!team || !myName) return null;
     const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
-    if (mySelection?.teamKey === myTeamKey && mySelection?.code) { 
-        const code = getMyCodeForDate(team, homeDate, mySelection); 
-        return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; 
-    }
+    if (mySelection?.teamKey === myTeamKey && mySelection?.code) { const code = getMyCodeForDate(team, homeDate, mySelection); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; }
     const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster); if (remoteRow?.code) { const anchorDate = getRemoteAnchorBaseDate(team); const dayOffset = diffDays(anchorDate, homeDate); const code = shiftCodeByDays(team, remoteRow.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; }
     const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, myName, mySelection); if (!anchor?.code) return null;
     const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color };
@@ -1165,24 +1162,12 @@ function App() {
                   <div className="date-box"><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() + 1); setHomeDate(formatDate(d)); }}>+</button><div className="date-value">{parseLocalDate(homeDate).getMonth() + 1}월</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
                   <div className="date-box"><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, 1))}>+</button><div className="date-value">{parseLocalDate(homeDate).getDate()}일</div><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, -1))}>-</button></div>
                 </div>
-                <div 
-                  className="card main-panel" 
-                  style={{
-                    ...swipeStyle,
-                    backgroundColor: myInfo?.customColor || undefined,
-                    backgroundImage: myInfo?.customColor ? 'none' : undefined
-                  }}
-                >
+                {/* 🚀 [디자인 보존] 홈 화면 메인 패널 - 원본 미색 디자인 유지 */}
+                <div className="card main-panel" style={swipeStyle}>
                   <div className="center-view">
-                    <div className="main-code" style={{ color: myInfo?.customColor ? "#000000" : getDateBasedColor(homeDate) }}>
-                      {myInfo?.code || "-"} {weekdayName(homeDate)}
-                    </div>
-                    <div className="main-time" style={{ color: myInfo?.customColor ? "#000000" : getDateBasedColor(homeDate) }}>
-                      {myInfo?.time || "----"}
-                    </div>
-                    <div className="main-subinfo" style={{ color: myInfo?.customColor ? "rgba(0,0,0,0.6)" : undefined }}>
-                      {TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}
-                    </div>
+                    <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
+                    <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
+                    <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
                     
                     {homePathImage && (
                       <div 
@@ -1200,13 +1185,13 @@ function App() {
                 </div>
               </>
             )}
+
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {/* 🚀 상단 헤더: 요청하신 진한 파란색(#93c5fd)과 수정 모드 시 빨간색 배경 적용 */}
                   <div className="all-header" style={{ 
                     display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", 
-                    background: editMode ? "#ef4444" : "#93c5fd", // 수정 시 빨강, 기본 진한 파랑
+                    background: editMode ? "#ef4444" : "#93c5fd", 
                     borderRadius: "25px", overflow: "hidden",
                     boxShadow: "0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)",
                     transition: "background 0.3s ease"
@@ -1269,8 +1254,13 @@ function App() {
                       {visibleAllGrid.map((item, idx) => {
                         const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
-                        const customStyle = item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined;
-                        const textColorStyle = item.customColor ? { color: "#000000" } : undefined;
+                        
+                        /* 🚀 [전체 탭 색상 적용] 내 칸일 때 설정한 색상(myInfo.customColor) 우선 적용 */
+                        const customStyle = (isMine && myInfo?.customColor) 
+                          ? { backgroundColor: myInfo.customColor, backgroundImage: "none" } 
+                          : (item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined);
+                        
+                        const textColorStyle = ((isMine && myInfo?.customColor) || item.customColor) ? { color: "#000000" } : undefined;
                         
                         return (
                           <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
@@ -1278,16 +1268,15 @@ function App() {
                             <div className="all-name" style={textColorStyle}>
                                 {item.displayName || "-"}
                                 {searchQuery && (
-                                    <div style={{fontSize: '9px', opacity: 0.8, color: item.customColor ? '#000000' : 'inherit'}}>
-                                        [{TEAM_LABELS[item.teamKey]}]
-                                    </div>
+                                  <div style={{fontSize: '9px', opacity: 0.8, color: (isMine && myInfo?.customColor) || item.customColor ? '#000000' : 'inherit'}}>
+                                      [{TEAM_LABELS[item.teamKey]}]
+                                  </div>
                                 )}
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                    {/* 🚀 검색 복구: 검색 시 해당 행로표 이미지를 즉시 리스트 하단에 렌더링 */}
                     {searchQuery && visibleAllGrid.length > 0 && (
                       <div className="search-img-panel" style={{ marginTop: '20px', paddingBottom: '40px' }}>
                         {visibleAllGrid.map((item, idx) => {
@@ -1568,7 +1557,7 @@ function App() {
             <div className="modal-sub">{TEAM_LABELS[editingCell?.teamKey || viewTeam]} {editingCell?.code} {editingCell?.name}</div>
             <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="비워두면 원래 이름 사용" />
-           <label className="label" style={{ marginTop: 12 }}>색상 선택</label>
+            <label className="label" style={{ marginTop: 12 }}>색상 선택</label>
 <div style={{ marginTop: '8px' }}>
   <select 
     className="select" 
