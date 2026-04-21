@@ -1165,11 +1165,24 @@ function App() {
                   <div className="date-box"><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() + 1); setHomeDate(formatDate(d)); }}>+</button><div className="date-value">{parseLocalDate(homeDate).getMonth() + 1}월</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
                   <div className="date-box"><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, 1))}>+</button><div className="date-value">{parseLocalDate(homeDate).getDate()}일</div><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, -1))}>-</button></div>
                 </div>
-                <div className="card main-panel" style={swipeStyle}>
+                <div 
+                  className="card main-panel" 
+                  style={{
+                    ...swipeStyle,
+                    backgroundColor: myInfo?.customColor || undefined,
+                    backgroundImage: myInfo?.customColor ? 'none' : undefined
+                  }}
+                >
                   <div className="center-view">
-                    <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
-                    <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
-                    <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
+                    <div className="main-code" style={{ color: myInfo?.customColor ? "#000000" : getDateBasedColor(homeDate) }}>
+                      {myInfo?.code || "-"} {weekdayName(homeDate)}
+                    </div>
+                    <div className="main-time" style={{ color: myInfo?.customColor ? "#000000" : getDateBasedColor(homeDate) }}>
+                      {myInfo?.time || "----"}
+                    </div>
+                    <div className="main-subinfo" style={{ color: myInfo?.customColor ? "rgba(0,0,0,0.6)" : undefined }}>
+                      {TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}
+                    </div>
                     
                     {homePathImage && (
                       <div 
@@ -1187,7 +1200,6 @@ function App() {
                 </div>
               </>
             )}
-
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
