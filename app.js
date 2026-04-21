@@ -1262,20 +1262,21 @@ function App() {
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
                     <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
                      {visibleAllGrid.map((item, idx) => {
+                        // 1. 사용자님 코드에 정의된 함수와 변수명을 그대로 사용합니다.
                         const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
                         
-                        // 내 칸(isMine)일 때 설정된 색상(myInfo.customColor)을 가져오도록 수정
-                        // 1. 저장된 설정 데이터를 직접 강제로 가져옵니다.
-const allOverrides = loadOverrides(); 
-const myOverrideKey = getOverrideKey(item.teamKey || viewTeam, item.name);
-const myStoredColor = allOverrides[myOverrideKey]?.color;
-
-// 2. 내 칸이거나 아이템 자체에 색상이 있다면 적용합니다.
-const finalColor = (isMine && myStoredColor) || item.customColor;
-const customStyle = finalColor ? { background: finalColor, backgroundImage: "none" } : undefined;
+                        // 2. 저장소에서 데이터를 직접 낚아챕니다. (중간 경로 무시)
+                        const storedOverrides = JSON.parse(localStorage.getItem("gyobeon_overrides") || "{}");
+                        const cellKey = `${item.teamKey}::${item.name.trim().toLowerCase().replace(/\s+/g, "")}`;
+                        const forceColor = storedOverrides[cellKey]?.color;
                         
-                        const textColorStyle = ((isMine && myInfo?.customColor) || item.customColor) ? { color: "#000000" } : undefined;
+                        // 3. CSS 그라데이션을 완전히 덮어버리는 background 설정
+                        const customStyle = forceColor 
+                          ? { background: forceColor, backgroundImage: "none" } 
+                          : undefined;
+                        
+                        const textColorStyle = forceColor ? { color: "#000000" } : undefined;
                         
                         return (
                           <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
