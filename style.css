@@ -44,7 +44,8 @@ button:active { transform: scale(0.97); }
 .date-btn { width: 100%; height: 46px; border: 0; background: rgba(215, 220, 230, 0.55); font-size: 26px; font-weight: 800; cursor: pointer; color: inherit; transition: background-color 0.2s ease; }
 .date-value { background: rgba(255, 255, 255, 0.95); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 23px; line-height: 1.15; padding: 4px; white-space: nowrap; word-break: keep-all; transition: background-color 0.2s ease, color 0.2s ease; }
 
-.main-panel { min-height: 210px; background: rgba(250, 250, 248, 0.92); border-radius: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: 0; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72); border: 1px solid rgba(255, 255, 255, 0.8); transition: background-color 0.2s ease, border-color 0.2s ease; }
+/* 🚀 [수정] background: 단축 속성을 background-color:로 변경하여 JS 커스텀 색상이 덮어씌워지도록 수정 */
+.main-panel { min-height: 210px; background-color: rgba(250, 250, 248, 0.92); border-radius: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: 0; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72); border: 1px solid rgba(255, 255, 255, 0.8); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .center-view { text-align: center; padding: 0; width: 100%; }
 .main-code { font-size: clamp(40px, 9vw, 56px); line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
 .main-time { margin-top: 14px; font-size: clamp(24px, 6vw, 36px); line-height: 1.15; font-weight: 700; }
@@ -334,7 +335,8 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 
 /* 🌙 다크 모드 오버라이드 (입체감 유지) */
 body.dark-mode { background: #0f172a; color: #f8fafc; }
-.dark-mode .card, .dark-mode .main-panel, .dark-mode .month-calendar, .dark-mode .group-table-wrap, .dark-mode .group-top-bar-v4 { background: rgba(30, 41, 59, 0.95); border-color: #334155; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+/* 🚀 [수정] 다크모드에서도 배경색 JS 주입이 가능하도록 background-color: 사용 */
+.dark-mode .card, .dark-mode .main-panel, .dark-mode .month-calendar, .dark-mode .group-table-wrap, .dark-mode .group-top-bar-v4 { background-color: rgba(30, 41, 59, 0.95); border-color: #334155; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
 .dark-mode .input, .dark-mode .select, .dark-mode .group-select-display { background: #1e293b; border-color: #475569; color: #f8fafc; }
 .dark-mode .date-box { background: rgba(30, 41, 59, 0.95); border-color: #334155; }
 .dark-mode .date-btn { background: #334155; color: #f8fafc; }
