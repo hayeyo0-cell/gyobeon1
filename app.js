@@ -1266,7 +1266,14 @@ function App() {
                         const isToday = browseDate === getKoreaToday();
                         
                         // 내 칸(isMine)일 때 설정된 색상(myInfo.customColor)을 가져오도록 수정
-                        const customStyle = (isMine && myInfo?.customColor) || item.customColor ? { background: (isMine && myInfo?.customColor) || item.customColor, backgroundImage: "none" } : undefined;
+                        // 1. 저장된 설정 데이터를 직접 강제로 가져옵니다.
+const allOverrides = loadOverrides(); 
+const myOverrideKey = getOverrideKey(item.teamKey || viewTeam, item.name);
+const myStoredColor = allOverrides[myOverrideKey]?.color;
+
+// 2. 내 칸이거나 아이템 자체에 색상이 있다면 적용합니다.
+const finalColor = (isMine && myStoredColor) || item.customColor;
+const customStyle = finalColor ? { background: finalColor, backgroundImage: "none" } : undefined;
                         
                         const textColorStyle = ((isMine && myInfo?.customColor) || item.customColor) ? { color: "#000000" } : undefined;
                         
