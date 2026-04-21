@@ -1271,12 +1271,15 @@ function App() {
                         const forceColor = overrides[myCellKey]?.color;
                         
                         // 3. [핵심] CSS 그라데이션을 뚫기 위해 background를 사용하고 이미지를 제거(none)합니다.
-                        const customStyle = forceColor 
-                          ? { background: forceColor, backgroundImage: "none" } 
-                          : undefined;
-                        
-                        const textColorStyle = forceColor ? { color: "#000000" } : undefined;
-                        
+                        // 1. 현재 칸의 저장소 키를 생성합니다.
+const overrideKey = getOverrideKey(item.teamKey || viewTeam, item.name);
+
+// 2. 중간 경로 다 무시하고, 브라우저 저장소(overrides)에서 색상을 즉시 가져옵니다.
+const forceColor = overrides[overrideKey]?.color;
+
+// 3. 색상이 있으면 CSS 그라데이션을 강제로 삭제(backgroundImage: "none")하고 보라색을 칠합니다.
+const customStyle = forceColor ? { background: forceColor, backgroundImage: "none" } : undefined;
+const textColorStyle = forceColor ? { color: "#000000" } : undefined;
                         return (
                           <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
                             <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
