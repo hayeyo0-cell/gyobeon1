@@ -1265,14 +1265,8 @@ function App() {
                         const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
                         
-                        // 1. 색상 데이터 확보 (데이터 통로 일원화)
-                        // 저장소 직접 확인 또는 아이템에 심어진 색상 확인
-                        const finalColor = item.customColor || (isMine && myInfo?.customColor);
-                        
-                        // 2. CSS 그라데이션을 완전히 덮어쓰기 위한 background 설정
-                        const customStyle = finalColor 
-                          ? { background: finalColor, backgroundImage: "none" } 
-                          : undefined;
+const myTargetColor = item.customColor || (isMine && myInfo?.customColor);
+const customStyle = myTargetColor? { background: myTargetColor, backgroundImage: "none" }: undefined;
                         
                         const textColorStyle = finalColor ? { color: "#000000" } : undefined;
                         
