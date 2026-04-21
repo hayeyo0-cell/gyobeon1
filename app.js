@@ -700,7 +700,7 @@ function App() {
     if (mySelection?.teamKey === myTeamKey && mySelection?.code) { const code = getMyCodeForDate(team, homeDate, mySelection); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName,customColor: override.color // }; }
     const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster); if (remoteRow?.code) { const anchorDate = getRemoteAnchorBaseDate(team); const dayOffset = diffDays(anchorDate, homeDate); const code = shiftCodeByDays(team, remoteRow.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName }; }
     const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, myName, mySelection); if (!anchor?.code) return null;
-    const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName };
+    const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName,customColor: override.color // };
   }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, worktimeVersion, overrides]);
 
   const homePathImage = useMemo(() => {
