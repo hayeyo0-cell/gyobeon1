@@ -1265,25 +1265,27 @@ function App() {
                         const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
                         
-                        // 내 칸(isMine)일 때 설정된 색상(myInfo.customColor)을 가져오도록 수정
-                        // 1. 저장된 설정 데이터를 직접 강제로 가져옵니다.
-const allOverrides = loadOverrides(); 
-const myOverrideKey = getOverrideKey(item.teamKey || viewTeam, item.name);
-const myStoredColor = allOverrides[myOverrideKey]?.color;
-
-// 2. 내 칸이거나 아이템 자체에 색상이 있다면 적용합니다.
-const finalColor = (isMine && myStoredColor) || item.customColor;
-const customStyle = finalColor ? { background: finalColor, backgroundImage: "none" } : undefined;
+                        // 1. 색상 데이터 확보 (데이터 통로 일원화)
+                        // 저장소 직접 확인 또는 아이템에 심어진 색상 확인
+                        const finalColor = item.customColor || (isMine && myInfo?.customColor);
                         
-                        const textColorStyle = ((isMine && myInfo?.customColor) || item.customColor) ? { color: "#000000" } : undefined;
+                        // 2. CSS 그라데이션을 완전히 덮어쓰기 위한 background 설정
+                        const customStyle = finalColor 
+                          ? { background: finalColor, backgroundImage: "none" } 
+                          : undefined;
+                        
+                        const textColorStyle = finalColor ? { color: "#000000" } : undefined;
                         
                         return (
-                          <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
+                          <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} 
+                               className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} 
+                               style={customStyle} 
+                               onClick={() => handleAllCellTap(item)}>
                             <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
                             <div className="all-name" style={textColorStyle}>
                                 {item.displayName || "-"}
                                 {searchQuery && (
-                                  <div style={{fontSize: '9px', opacity: 0.8, color: (isMine && myInfo?.customColor) || item.customColor ? '#000000' : 'inherit'}}>
+                                  <div style={{fontSize: '9px', opacity: 0.8, color: finalColor ? '#000000' : 'inherit'}}>
                                       [{TEAM_LABELS[item.teamKey]}]
                                   </div>
                                 )}
