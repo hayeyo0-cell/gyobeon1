@@ -717,7 +717,7 @@ function App() {
     if (!currentViewTeam) return []; 
     let grid = [];
     
-    // 1. 기본 바둑판 데이터 생성 로직
+    // 1. 기본 그리드 데이터 생성
     if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { 
       grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides); 
     } else {
@@ -745,28 +745,27 @@ function App() {
       }
     }
 
-    // 2. [핵심] 내 칸(권재림)을 찾아 색상 정보(customColor)를 확실하게 주입
+    // 2. [핵심 수정] 내 칸을 찾아 색상을 입히고, 그 결과를 변수에 다시 담음
     if (mySelection?.teamKey === viewTeam && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
       const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection));
+      // 중요: grid = grid.map(...) 형식으로 결과를 꼭 저장해야 합니다!
       grid = grid.map((cell) => { 
         if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) {
           return { 
             ...cell, 
             name: mySelection.name, 
             displayName: mySelection.name,
-            customColor: myInfo?.customColor // 여기서 색상을 확실히 보존
+            customColor: myInfo?.customColor // 여기서 색상 데이터가 주입됩니다.
           }; 
         }
         return cell; 
       });
     }
-    // 범인이었던 중복 맵핑을 제거하고, 데이터를 안전하게 반환합니다.
-    return grid.map(item => ({ 
-      ...item, 
-      teamKey: viewTeam, 
-      customColor: item.customColor // 색상 데이터를 최종 단계까지 끌고 가기
-    })); 
+    
+    // 3. 마지막 단계: 모든 아이템에 소속 정보를 입혀서 최종 반환
+    return grid.map(item => ({ ...item, teamKey: viewTeam })); 
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection, myInfo]);
+  
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
