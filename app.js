@@ -1251,15 +1251,14 @@ function App() {
                 {activeTab === "all" ? (
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
                     <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
-                      {visibleAllGrid.map((item, idx) => {
+                     {visibleAllGrid.map((item, idx) => {
                         const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
                         
-                        /* 🚀 [전체 탭 색상 적용] 내 칸일 때 설정한 색상(myInfo.customColor) 우선 적용 */
-                        const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
-const customStyle = (isMine && myInfo?.customColor) 
-    ? { backgroundColor: myInfo.customColor, backgroundImage: "none" } 
-    : (item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined);
+                        // 내 칸(isMine)일 때 설정된 색상(myInfo.customColor)을 가져오도록 수정
+                        const customStyle = (isMine && myInfo?.customColor) 
+                          ? { backgroundColor: myInfo.customColor, backgroundImage: "none" } 
+                          : (item.customColor ? { backgroundColor: item.customColor, backgroundImage: "none" } : undefined);
                         
                         const textColorStyle = ((isMine && myInfo?.customColor) || item.customColor) ? { color: "#000000" } : undefined;
                         
