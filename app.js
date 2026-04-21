@@ -1300,9 +1300,13 @@ const myStoredColor = allOverrides[myOverrideKey]?.color;
 
 // 2. 내 칸이거나 아이템 자체에 색상이 있다면 적용합니다.
 const finalColor = (isMine && myStoredColor) || item.customColor;
-const customStyle = finalColor ? { background: finalColor, backgroundImage: "none" } : undefined;
-                        
-                        const textColorStyle = ((isMine && myInfo?.customColor) || item.customColor) ? { color: "#000000" } : undefined;
+// 1269행 부근 교체
+const forceStoredData = JSON.parse(localStorage.getItem("gyobeon_overrides") || "{}");
+const forceColor = forceStoredData[`${item.teamKey}::${item.name.trim().toLowerCase().replace(/\s+/g, "")}`]?.color;
+
+const customStyle = forceColor 
+  ? { background: forceColor, backgroundImage: "none" } 
+  : undefined;
                         
                         return (
                           <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
