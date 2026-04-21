@@ -269,12 +269,13 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 .all-code { margin: 0; font-size: 18.5px; line-height: 1; font-weight: 900; color: #000000; white-space: nowrap; transition: color 0.2s ease; }
 .all-name { margin: 0; margin-top: 1px; font-size: 13.5px; line-height: 1; font-weight: 800; color: #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 98%; transition: color 0.2s ease; }
 
-/* JS에서 배경색이 들어오면 기존의 모든 배경 설정을 강제로 무력화함 */
+/* 🚀 [중요 핵심 수정] JS에서 배경색(보라, 연두 등)이 들어오면 기존 그라데이션 시트지를 강제로 떼어버림 */
 .all-cell-real[style] { 
   background-image: none !important; 
-  background-color: transparent !important; /* 추가 */
-  background: inherit !important; /* 추가: JS가 준 background 속성을 최우선 적용 */
+  background-color: inherit !important; 
+  background: inherit !important; 
 }
+
 /* 🚀 [내 교번 강조 교정] 전체 탭 바둑판 구조 호환형 디자인 (이름 가려짐 방지) */
 .cell-my { 
   border: 3px solid #059669 !important; 
@@ -476,5 +477,5 @@ body.dark-mode select.select {
   background-color: #1e293b !important;
   border-color: #475569 !important;
   color: #f8fafc !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
 }
