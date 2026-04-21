@@ -714,56 +714,30 @@ function App() {
   }, [effectiveData, homeDate, myInfo?.code, mySelection, selectedTeam]);
 
   const allGrid = useMemo(() => {
-    if (!currentViewTeam) return []; 
-    let grid = [];
-    
-    if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { 
-      grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides); 
-    } else {
-      let anchorName = ""; 
-      let anchorCode = ""; 
-      let anchorDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
+    if (!currentViewTeam) return []; let grid = [];
+    if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides); } else {
+      let anchorName = ""; let anchorCode = ""; let anchorDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
       const canUseMyAnchorForTeam = mySelection?.teamKey === viewTeam && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(currentViewTeam, mySelection.name);
-      
-      if (canUseMyAnchorForTeam) { 
-        anchorName = mySelection.name; 
-        anchorCode = normalizeToFixedCode(currentViewTeam, mySelection.code); 
-        anchorDate = mySelection.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster); 
-      } else { 
-        const teamAnchor = buildTeamAnchorFromZip(currentViewTeam); 
-        anchorName = teamAnchor?.name || ""; 
-        anchorCode = normalizeToFixedCode(currentViewTeam, teamAnchor?.code || ""); 
-        anchorDate = teamAnchor?.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster); 
-      }
-      
-      if (!anchorName || !anchorCode) { 
-        grid = buildAssignedGrid(currentViewTeam, "", "", 0, overrides); 
-      } else { 
-        const dayOffset = diffDays(anchorDate, browseDate); 
-        grid = buildAssignedGrid(currentViewTeam, anchorName, anchorCode, dayOffset, overrides); 
-      }
+      if (canUseMyAnchorForTeam) { anchorName = mySelection.name; anchorCode = normalizeToFixedCode(currentViewTeam, mySelection.code); anchorDate = mySelection.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster); } else { const teamAnchor = buildTeamAnchorFromZip(currentViewTeam); anchorName = teamAnchor?.name || ""; anchorCode = normalizeToFixedCode(currentViewTeam, teamAnchor?.code || ""); anchorDate = teamAnchor?.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster); }
+      if (!anchorName || !anchorCode) { grid = buildAssignedGrid(currentViewTeam, "", "", 0, overrides); } else { const dayOffset = diffDays(anchorDate, browseDate); grid = buildAssignedGrid(currentViewTeam, anchorName, anchorCode, dayOffset, overrides); }
     }
-
-    // [핵심 수정] 꼬여있던 데이터 전달 경로를 완전히 뚫었습니다.
     if (mySelection?.teamKey === viewTeam && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
       const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection));
-      grid = grid.map((cell) => { 
-        if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) {
-          return { 
-            ...cell, 
-            name: mySelection.name, 
-            displayName: mySelection.name,
-            customColor: myInfo?.customColor // 여기서 색상 정보를 실어 보냅니다.
-          }; 
-        }
-        return cell; 
-      });
+     grid = grid.map((cell) => { 
+  if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) {
+    return { 
+      ...cell, 
+      name: mySelection.name, 
+      displayName: mySelection.name, 
+      customColor: myInfo?.customColor // ◀ 색상 정보가 사라지지 않게 여기서 다시 넣어줍니다.
+    }; 
+  }
+  return cell; 
+});
     }
-    
-    // 최종 결과물에 모든 정보를 담아서 반환합니다.
     return grid.map(item => ({ ...item, teamKey: viewTeam })); 
-  }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection, myInfo]);
-  
+  }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
+
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
@@ -1288,20 +1262,20 @@ function App() {
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
                     <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
                      {visibleAllGrid.map((item, idx) => {
-                        const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (same_name(item.name, mySelection?.name));
+                        const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
                         
-                        // 1. 중간 과정 다 무시하고, 저장된 설정 데이터를 직접 강제로 가져옵니다.
-                        const storedOverrides = JSON.parse(localStorage.getItem("gyobeon_overrides") || "{}");
-                        const cellKey = `${item.teamKey}::${item.name.trim().toLowerCase().replace(/\s+/g, "")}`;
-                        const forceColor = storedOverrides[cellKey]?.color;
+                        // 내 칸(isMine)일 때 설정된 색상(myInfo.customColor)을 가져오도록 수정
+                        // 1. 저장된 설정 데이터를 직접 강제로 가져옵니다.
+const allOverrides = loadOverrides(); 
+const myOverrideKey = getOverrideKey(item.teamKey || viewTeam, item.name);
+const myStoredColor = allOverrides[myOverrideKey]?.color;
+
+// 2. 내 칸이거나 아이템 자체에 색상이 있다면 적용합니다.
+const finalColor = (isMine && myStoredColor) || item.customColor;
+const customStyle = finalColor ? { background: finalColor, backgroundImage: "none" } : undefined;
                         
-                        // 2. 색상이 있다면 CSS 그라데이션을 완전히 걷어내고 사용자색을 입힙니다.
-                        const customStyle = forceColor 
-                          ? { background: forceColor, backgroundImage: "none" } 
-                          : undefined;
-                        
-                        const textColorStyle = forceColor ? { color: "#000000" } : undefined;
+                        const textColorStyle = ((isMine && myInfo?.customColor) || item.customColor) ? { color: "#000000" } : undefined;
                         
                         return (
                           <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
