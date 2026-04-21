@@ -1300,7 +1300,16 @@ const myStoredColor = allOverrides[myOverrideKey]?.color;
 
 // 2. 내 칸이거나 아이템 자체에 색상이 있다면 적용합니다.
 const finalColor = (isMine && myStoredColor) || item.customColor;
-const customStyle = finalColor ? { background: finalColor, backgroundImage: "none" } : undefined;
+// 1. 색상 정보를 변수에 확실히 담습니다.
+const targetColor = (isMine && myInfo?.customColor) || item.customColor;
+
+// 2. [핵심] background 속성을 사용하여 CSS의 그라데이션을 강제로 밀어내고 칠합니다.
+const customStyle = targetColor 
+  ? { background: targetColor, backgroundImage: "none" } 
+  : undefined;
+
+// 3. 색상이 있을 때 글자색을 검정으로 고정합니다.
+const textColorStyle = targetColor ? { color: "#000000" } : undefined;
                         
                         const textColorStyle = ((isMine && myInfo?.customColor) || item.customColor) ? { color: "#000000" } : undefined;
                         
