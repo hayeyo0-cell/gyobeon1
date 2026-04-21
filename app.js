@@ -1262,16 +1262,15 @@ function App() {
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
                     <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
                      {visibleAllGrid.map((item, idx) => {
-                        // 1. 내 칸인지 정확히 판정 (기존 함수 활용)
+                        // 1. 내 칸인지 정확히 판정
                         const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
                         
-                        // 2. [강제 주입] 데이터 전달 경로 무시하고 저장소에서 직접 색상을 꺼내옵니다.
-                        const storedOverrides = JSON.parse(localStorage.getItem("gyobeon_overrides") || "{}");
-                        const cellKey = `${item.teamKey}::${item.name.trim().toLowerCase().replace(/\s+/g, "")}`;
-                        const forceColor = storedOverrides[cellKey]?.color;
+                        // 2. [필살기] 데이터 배달 사고를 무시하고, 원천 저장소(overrides)에서 직접 색상을 낚아챕니다.
+                        const myCellKey = getOverrideKey(item.teamKey || viewTeam, item.name);
+                        const forceColor = overrides[myCellKey]?.color;
                         
-                        // 3. CSS 그라데이션을 뚫고 강제로 칠하기 위한 background 설정
+                        // 3. [핵심] CSS 그라데이션을 뚫기 위해 background를 사용하고 이미지를 제거(none)합니다.
                         const customStyle = forceColor 
                           ? { background: forceColor, backgroundImage: "none" } 
                           : undefined;
