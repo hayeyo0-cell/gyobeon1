@@ -1262,24 +1262,21 @@ function App() {
                   <div className="all-tab-grid-wrap" style={swipeStyle}>
                     <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
                      {visibleAllGrid.map((item, idx) => {
-                        // 1. 내 칸인지 정확히 판정
                         const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
                         
-                        // 2. [필살기] 데이터 배달 사고를 무시하고, 원천 저장소(overrides)에서 직접 색상을 낚아챕니다.
-                        const myCellKey = getOverrideKey(item.teamKey || viewTeam, item.name);
-                        const forceColor = overrides[myCellKey]?.color;
+                        // 내 칸(isMine)일 때 설정된 색상(myInfo.customColor)을 가져오도록 수정
+                        // 1. 저장된 설정 데이터를 직접 강제로 가져옵니다.
+const allOverrides = loadOverrides(); 
+const myOverrideKey = getOverrideKey(item.teamKey || viewTeam, item.name);
+const myStoredColor = allOverrides[myOverrideKey]?.color;
+
+// 2. 내 칸이거나 아이템 자체에 색상이 있다면 적용합니다.
+const finalColor = (isMine && myStoredColor) || item.customColor;
+const customStyle = finalColor ? { background: finalColor, backgroundImage: "none" } : undefined;
                         
-                        // 3. [핵심] CSS 그라데이션을 뚫기 위해 background를 사용하고 이미지를 제거(none)합니다.
-                        // 1. 현재 칸의 저장소 키를 생성합니다.
-const overrideKey = getOverrideKey(item.teamKey || viewTeam, item.name);
-
-// 2. 중간 경로 다 무시하고, 브라우저 저장소(overrides)에서 색상을 즉시 가져옵니다.
-const forceColor = overrides[overrideKey]?.color;
-
-// 3. 색상이 있으면 CSS 그라데이션을 강제로 삭제(backgroundImage: "none")하고 보라색을 칠합니다.
-const customStyle = forceColor ? { background: forceColor, backgroundImage: "none" } : undefined;
-const textColorStyle = forceColor ? { color: "#000000" } : undefined;
+                        const textColorStyle = ((isMine && myInfo?.customColor) || item.customColor) ? { color: "#000000" } : undefined;
+                        
                         return (
                           <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
                             <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
