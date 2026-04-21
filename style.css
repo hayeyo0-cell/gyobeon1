@@ -353,6 +353,10 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode table, .dark-mode th, .dark-mode td, .dark-mode .group-table th, .dark-mode .group-table td { border-color: #334155 !important; color: #f8fafc; }
 .dark-mode .group-table th { background: #1e293b; color: #f8fafc; }
 .dark-mode .group-table th.sticky-col, .dark-mode .group-table td.sticky-col, .dark-mode .group-name-cell { background-color: #1e293b !important; border-right-color: #475569 !important; }
+
+/* 🚀 [교정] 다크모드 그룹 탭 이름 색상 보정 (#000000 -> #ffffff) */
+.dark-mode .name-txt { color: #ffffff !important; font-weight: 800; }
+
 .dark-mode .group-table th.sticky-col { background-color: #0f172a !important; }
 .dark-mode .group-table th.active-col { background: #374151 !important; }
 .dark-mode .group-table th.today-col { background: rgba(245, 158, 11, 0.2) !important; border-bottom: 3px solid #f59e0b !important; }
