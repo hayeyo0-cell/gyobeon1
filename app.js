@@ -723,7 +723,17 @@ function App() {
     }
     if (mySelection?.teamKey === viewTeam && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
       const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection));
-      grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; });
+     grid = grid.map((cell) => { 
+  if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) {
+    return { 
+      ...cell, 
+      name: mySelection.name, 
+      displayName: mySelection.name, 
+      customColor: myInfo?.customColor // ◀ 색상 정보가 사라지지 않게 여기서 다시 넣어줍니다.
+    }; 
+  }
+  return cell; 
+});
     }
     return grid.map(item => ({ ...item, teamKey: viewTeam })); 
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection]);
