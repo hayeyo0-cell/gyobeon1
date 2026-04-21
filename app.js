@@ -1265,21 +1265,25 @@ function App() {
                         const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                         const isToday = browseDate === getKoreaToday();
                         
-const myTargetColor = item.customColor || (isMine && myInfo?.customColor);
-const customStyle = myTargetColor? { background: myTargetColor, backgroundImage: "none" }: undefined;
+                        // 내 칸(isMine)일 때 설정된 색상(myInfo.customColor)을 가져오도록 수정
+                        // 1. 저장된 설정 데이터를 직접 강제로 가져옵니다.
+const allOverrides = loadOverrides(); 
+const myOverrideKey = getOverrideKey(item.teamKey || viewTeam, item.name);
+const myStoredColor = allOverrides[myOverrideKey]?.color;
+
+// 2. 내 칸이거나 아이템 자체에 색상이 있다면 적용합니다.
+const finalColor = (isMine && myStoredColor) || item.customColor;
+const customStyle = finalColor ? { background: finalColor, backgroundImage: "none" } : undefined;
                         
-                        const textColorStyle = finalColor ? { color: "#000000" } : undefined;
+                        const textColorStyle = ((isMine && myInfo?.customColor) || item.customColor) ? { color: "#000000" } : undefined;
                         
                         return (
-                          <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} 
-                               className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} 
-                               style={customStyle} 
-                               onClick={() => handleAllCellTap(item)}>
+                          <div key={`${idx}-${item.code}-${item.displayName}-${item.teamKey}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
                             <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
                             <div className="all-name" style={textColorStyle}>
                                 {item.displayName || "-"}
                                 {searchQuery && (
-                                  <div style={{fontSize: '9px', opacity: 0.8, color: finalColor ? '#000000' : 'inherit'}}>
+                                  <div style={{fontSize: '9px', opacity: 0.8, color: (isMine && myInfo?.customColor) || item.customColor ? '#000000' : 'inherit'}}>
                                       [{TEAM_LABELS[item.teamKey]}]
                                   </div>
                                 )}
