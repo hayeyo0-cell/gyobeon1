@@ -137,7 +137,10 @@ body.dark-mode .group-table th.active-col { background: rgba(0, 242, 255, 0.05) 
 body.dark-mode .group-table th.today-col { border-bottom: 4px solid #00f2ff !important; background: rgba(0, 242, 255, 0.1) !important; }
 
 /* 🚀 [중요] 선택된 행(tr) 전체 가로 하이라이트 배경색 정의 */
-.group-table tr.active-row td { background-color: #f0f9ff !important; }
+/* 행 전체의 칸(td)들을 직접 색칠함 */
+.group-table tr.active-row td { 
+    background-color: #e0f2fe !important; 
+}
 body.dark-mode .group-table tr.active-row td { background-color: rgba(0, 242, 255, 0.08) !important; }
 
 /* 이름이 있는 고정 칸도 함께 하이라이트 */
