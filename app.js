@@ -762,23 +762,19 @@ function App() {
     return grid.map(item => ({ ...item, teamKey: viewTeam })); 
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection, myInfo]);
 
-  /* 🚀 [교정] 이름 검색 시 중복 방지를 위해 오늘 데이터만 필터링 */
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
-
     const q = String(searchQuery || "").trim().toLowerCase();
     const trainNum = parseInt(q);
     const isTrainSearch = !isNaN(trainNum) && q.length >= 4 && (
       (trainNum >= 2001 && trainNum <= 2060) || (trainNum >= 2100 && trainNum <= 2299)
     );
-
     if (isTrainSearch) {
       const yesterdayStr = addDays(browseDate, -1);
       const isEarlyMorningTrain = trainNum >= 2001 && trainNum <= 2060;
       const isNightLaunchTrain = trainNum >= 2100 && trainNum <= 2299;
       let crossTeamResults = [];
-
       TEAM_ORDER.forEach(teamKey => {
         const team = effectiveData[teamKey];
         if (!team) return;
@@ -1281,7 +1277,7 @@ function App() {
                         const currentCellKey = getOverrideKey(item.teamKey, item.name);
                         const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                         
-                        /* 🚀 [지능형 글자색] 배경색 유무와 다크모드 여부에 따라 색상 결정 */
+                        /* 🚀 [교정] 지능형 글자색: 배경색 유무와 다크모드 여부에 따라 색상 결정 */
                         const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                         const textColorStyle = cellColor ? { color: "#000000", fontWeight: "900" } : { color: isDarkMode ? "#ffffff" : "#000000" };
                         
@@ -1343,8 +1339,8 @@ function App() {
                         const cellKey = getOverrideKey(targetTeamKey, mySelection?.name);
                         const cellColor = overrides[cellKey]?.color || "";
                         
-                        /* 🚀 [월교번 다크모드 네이비 원복] 배경색은 CSS에서 제어하도록 JS 인라인 스타일 최소화 */
-                        const monthCellStyle = (!isDarkMode && cellColor) ? { backgroundColor: cellColor } : undefined;
+                        /* 🚀 [교정] 월교번 배경색 간섭 제거: 다크모드일 땐 항상 네이비(#1e293b), 라이트모드일 때만 개별색상 적용 */
+                        const monthCellStyle = (isDarkMode) ? undefined : (cellColor ? { backgroundColor: cellColor } : undefined);
                         const textColorStyle = (isDarkMode) ? { color: "#ffffff" } : (cellColor ? { color: "#000000" } : {});
 
                         return (
@@ -1428,8 +1424,8 @@ function App() {
                               const memberKey = getOverrideKey(member.team, member.name);
                               const memberColor = overrides[memberKey]?.color || "";
                               
-                              /* 🚀 [교정] 그룹 탭 글자색 가변 로직 반영 */
-                              const groupCellStyle = memberColor ? { backgroundColor: memberColor, color: "#000000" } : { color: isDarkMode ? "#ffffff" : "#000000" };
+                              /* 🚀 [교정] 그룹 탭 배경색 간섭 제거: 다크모드일 땐 항상 기본배경 적용 */
+                              const groupCellStyle = (!isDarkMode && memberColor) ? { backgroundColor: memberColor, color: "#000000" } : { color: isDarkMode ? "#ffffff" : "#000000" };
 
                               return (
                                 <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', ...groupCellStyle, transition: "background-color 0.18s ease" }}>
