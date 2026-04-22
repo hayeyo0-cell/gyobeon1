@@ -113,14 +113,18 @@ button:active { transform: scale(0.97); }
 
 .group-add-btn-v4 { flex: 1; min-width: 0; height: 100%; background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%); color: #fff; border: none; padding: 8px 4px; border-radius: 12px; font-weight: 800; font-size: 13px; text-align: center; box-shadow: 0 4px 10px rgba(124, 58, 237, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: center; }
 
-/* 🚀 [교정] 원래의 예쁜 격자 표 디자인 유지 */
+/* 🚀 [교정] 모든 테이블 요소 테두리 및 사진(40459.jpg)처럼 깨끗한 흰색 배경 구현 */
 table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !important; border-collapse: collapse !important; }
 .group-table-wrap { overflow: hidden; border-radius: 18px; background: #ffffff; border: 1px solid #c8d2e3 !important; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
-.group-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+.group-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; background-color: #ffffff; }
 
 .group-table th:last-child, .group-table td:last-child { border-right: none !important; }
 .group-table tr:last-child td { border-bottom: none !important; }
+
+/* 🚀 [교정] 이름 헤더 다크모드 배경 네이비 통일 */
 .group-table th.sticky-col, .group-table td.sticky-col { position: sticky; left: 0; background: #ffffff; z-index: 2; box-shadow: 2px 0 5px rgba(0,0,0,0.06); border-right: 2px solid #e2e8f0 !important; transition: background-color 0.2s ease, border-color 0.2s ease; padding: 8px 4px !important; }
+body.dark-mode .group-table th.sticky-col, body.dark-mode .group-table td.sticky-col { background-color: #1e293b !important; border-right-color: #334155 !important; }
+
 .group-table th.sticky-col { z-index: 3; background: rgba(248, 250, 252, 0.98); }
 .group-table th:first-child, .group-table td:first-child, .group-name-cell { width: 76px; min-width: 76px; max-width: 76px; padding: 6px 2px !important; }
 .group-name-cell-inner { display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -265,10 +269,10 @@ body.dark-mode .group-table tr.active-row td { background-color: rgba(0, 242, 25
 
 .all-team-tab.active .view-dot { display: block !important; }
 
-.all-tab-grid-wrap { overflow: visible; background: linear-gradient(180deg, rgba(194, 211, 245, 0.78) 0%, rgba(178, 198, 238, 0.72) 100%); border-radius: 28px; padding: 8px; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255,255,255,0.38); margin-bottom: 12px; transition: background 0.2s ease; }
+.all-tab-grid-wrap { overflow: visible; background: linear-gradient(180deg, rgba(194, 211, 245, 0.78) 0%, rgba(178, 198, 238, 0.72) 100%); border-radius: 28px; padding: 8px; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.38); margin-bottom: 12px; transition: background 0.2s ease; }
 .all-grid-real { display: grid; width: 100%; height: auto; gap: 2px; align-items: stretch; }
 
-.all-cell-real { min-width: 0; min-height: 52px; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border-radius: 10px; padding: 2px 1px; text-align: center; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0px; user-select: none; touch-action: manipulation; border: 1px solid #c8d6f0; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255,255,255,0.92); transition: transform 0.12s ease, border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease; }
+.all-cell-real { min-width: 0; min-height: 52px; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border-radius: 10px; padding: 2px 1px; text-align: center; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0px; user-select: none; touch-action: manipulation; border: 1px solid #c8d6f0; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.92); transition: transform 0.12s ease, border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease; }
 .all-cell-real:hover { background: linear-gradient(180deg, #ffffff 0%, #f3f8ff 100%); }
 .all-cell-real:active { transform: scale(0.985); }
 .all-code { margin: 0; font-size: 18.5px; line-height: 1; font-weight: 900; color: #000000; white-space: nowrap; transition: color 0.2s ease; }
@@ -406,7 +410,7 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   .date-box { grid-template-rows: 42px 1fr 42px; border-radius: 18px; }
   .date-btn { height: 42px; font-size: 22px; }
   .date-value { font-size: 19px; }
-  .settings-row { min-height: 46px; margin-bottom: 4px; gap: 6px; }
+  .settings-row { min-height: 46px; margin-bottom: 46px; gap: 6px; }
   .quick-links { gap: 6px; }
   .settings-btn, .install-btn, .quick-btn { height: 38px; padding: 0 11px; font-size: 13px; border-radius: 14px; gap: 5px; }
   .quick-icon { width: 24px; height: 24px; }
