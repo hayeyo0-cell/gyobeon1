@@ -497,4 +497,4 @@ body.dark-mode select.select {
   border-color: #475569 !important;
   color: #f8fafc !important;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
-}
+} 이코드인데 너가 자꾸 다크모드 배경색을 임의로 바꿔버리니까 라이트모드에 보라색 색깔입혀지는것까지 건드리는거야~다크모드 배경색문제만 정확히 해결해줘
