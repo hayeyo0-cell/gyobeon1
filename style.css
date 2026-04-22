@@ -46,6 +46,7 @@ button:active { transform: scale(0.97); }
 .main-panel { min-height: 210px; background-color: rgba(250, 250, 248, 0.92); border-radius: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: 0; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72); border: 1px solid rgba(255, 255, 255, 0.8); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .center-view { text-align: center; padding: 0; width: 100%; }
 .main-code { font-size: clamp(40px, 9vw, 56px); line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
+.main-code { font-size: clamp(40px, 9vw, 56px); line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
 .main-time { margin-top: 14px; font-size: clamp(24px, 6vw, 36px); line-height: 1.15; font-weight: 700; }
 .main-subinfo { margin-top: 12px; font-size: 15px; font-weight: 700; color: #64748b; letter-spacing: -0.01em; transition: color 0.2s ease; }
 
@@ -349,14 +350,21 @@ body.dark-mode .name-txt { color: #ffffff !important; }
 
 @keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(0, 242, 255, 0.2); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.4); } }
 
-/* 🌙 다크 모드 (완벽 보존 및 그룹 테이블 배경색 고정) */
+/* 🌙 다크 모드 (사진 3, 4번 오리지널 네이비 원복) */
 body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .card, .dark-mode .main-panel, .dark-mode .month-calendar, .dark-mode .group-top-bar-v4 { 
   background-color: #1e293b !important; 
   border-color: #334155 !important; 
 }
 
-/* [핵심 수정] 다크 모드 그룹 테이블 배경 네이비 고정 */
+/* 🚀 다크모드 설정창(모달) 배경색 네이비 고정 */
+.dark-mode .modal { 
+  background-color: #1e293b !important; 
+  border-color: #334155 !important; 
+  color: #f8fafc !important;
+}
+
+/* 🚀 다크모드 그룹 탭 전용 배경색 및 글자색 고정 */
 .dark-mode .group-table-wrap, 
 .dark-mode .group-table, 
 .dark-mode .group-table th, 
@@ -365,14 +373,14 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
   border-color: #334155 !important; 
 }
 
-/* [핵심 수정] 사용자 색상이 없는 일반 셀의 글자색만 흰색으로 고정 */
+/* 🚀 사용자 색상이 없는 일반 셀의 글자색만 흰색으로 고정 */
 body.dark-mode .month-cell:not([style*="background-color"]),
 body.dark-mode .group-table td:not([style*="background-color"]),
 body.dark-mode .all-cell-real:not([style*="background-color"]) {
   color: #ffffff !important;
 }
 
-/* [핵심 수정] 사용자 색상이 입혀진 셀은 검은 글씨로 가독성 확보 (검게 변하는 현상 방지) */
+/* 🚀 사용자 색상이 입혀진 셀은 검은 글씨로 가독성 확보 */
 body.dark-mode .month-cell[style*="background-color"], 
 body.dark-mode .group-table td[style*="background-color"],
 body.dark-mode .all-cell-real[style*="background-color"] { 
@@ -390,7 +398,6 @@ body.dark-mode .all-cell-real[style*="background-color"] {
 .dark-mode .all-cell-real:not([style*="background-color"]) { 
   background: linear-gradient(180deg, #334155 0%, #1e293b 100%); 
 }
-.dark-mode .all-code, .dark-mode .all-name { transition: none; }
 
 /* 다크모드 이름 칸 고정 (네이비 복구) */
 body.dark-mode .group-table th.sticky-col, body.dark-mode .group-table td.sticky-col { background-color: #1e293b !important; border-right-color: #475569 !important; }
@@ -404,7 +411,6 @@ body.dark-mode .group-table td.active-col { background-color: rgba(59, 130, 246,
 .dark-mode .month-weekdays > div { color: #f8fafc; }
 .dark-mode .month-cell:hover { background: #0f172a !important; }
 .dark-mode .month-cell.selected { border-color: #00f2ff !important; background: rgba(0, 242, 255, 0.05) !important; }
-.dark-mode .month-day, .dark-mode .month-code-line, .dark-mode .tone-normal { transition: none; }
 .dark-mode .month-time-line { color: #94a3b8; font-weight: 700; }
 
 .dark-mode .nav-btn-v4 { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%) !important; color: white !important; }
