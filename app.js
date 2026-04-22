@@ -774,6 +774,7 @@ function App() {
     if (isTrainSearch) {
       const yesterdayStr = addDays(browseDate, -1);
       const isEarlyMorningTrain = trainNum >= 2001 && trainNum <= 2060;
+      const isNightLaunchTrain = trainNum >= 2100 && trainNum <= 2299;
       let crossTeamResults = [];
 
       TEAM_ORDER.forEach(teamKey => {
@@ -792,7 +793,7 @@ function App() {
           if (!isNightStartCode(teamKey, item.code)) return false;
           const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
           const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
-          return trains.some(t => String(t) === q);
+          return trains.some(t => String(t) === q) && !isNightLaunchTrain;
         }).map(item => ({ 
           ...item, 
           code: normalizeCodeKey(item.code).replace(/d$/, "") + "~", 
