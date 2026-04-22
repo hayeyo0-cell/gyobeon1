@@ -372,7 +372,7 @@ body.dark-mode .group-table th.sticky-col, body.dark-mode .group-table td.sticky
 .dark-mode .group-table th.active-col { background: #374151 !important; }
 /* 🚀 [교정] 다크모드 세로 하이라이트 (아이스 블루) */
 body.dark-mode .group-table td.active-col { background-color: rgba(0, 242, 255, 0.15) !important; }
-.dark-mode .group-table th.today-col { background: rgba(0, 242, 255, 0.1) !important; border-bottom: 3px solid #00f2ff !important; }
+.dark-mode .group-table th.today-col { background: rgba(0, 242, 255, 0.1) !important; border-bottom: 4px solid #00f2ff !important; }
 
 /* 🚀 다크모드 월교번: 네이비 배경 유지 */
 .dark-mode .month-calendar { background: #1e293b !important; border-color: #334155 !important; }
@@ -390,6 +390,8 @@ body.dark-mode .group-table td.active-col { background-color: rgba(0, 242, 255, 
 .dark-mode .notice-box { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border-color: rgba(59, 130, 246, 0.3); }
 .dark-mode .modal { background: #1e293b; color: #f8fafc; border-color: #334155; }
 .dark-mode .modal-btn { background: #334155; border-color: #475569; color: #f8fafc; }
+/* 🚀 시작하기 버튼 활성화 교정: 잠금 상태에서도 클릭 가능하게 투명도 및 포인터 보정 */
+.modal-btn:disabled { opacity: 0.95; cursor: pointer; background: #3b82f6; color: white; }
 .dark-mode .modal-title, .dark-mode .label { color: #e2e8f0; }
 .dark-mode .empty-msg { color: #94a3b8; }
 .dark-mode .home-path-preview img { background: #1e293b; border-color: #334155; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }
@@ -494,5 +496,5 @@ body.dark-mode select.select {
   background-color: #1e293b !important;
   border-color: #475569 !important;
   color: #f8fafc !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
 }
