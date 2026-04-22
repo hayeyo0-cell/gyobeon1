@@ -774,7 +774,6 @@ function App() {
     if (isTrainSearch) {
       const yesterdayStr = addDays(browseDate, -1);
       const isEarlyMorningTrain = trainNum >= 2001 && trainNum <= 2060;
-      const isNightLaunchTrain = trainNum >= 2100 && trainNum <= 2299;
       let crossTeamResults = [];
 
       TEAM_ORDER.forEach(teamKey => {
@@ -793,15 +792,24 @@ function App() {
           if (!isNightStartCode(teamKey, item.code)) return false;
           const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
           const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
-          return trains.some(t => String(t) === q) && !isNightLaunchTrain;
-        }).map(item => ({ ...item, code: normalizeCodeKey(item.code).replace(/d$/, "") + "~", teamKey, searchOrigin: 'yesterday' }));
+          return trains.some(t => String(t) === q);
+        }).map(item => ({ 
+          ...item, 
+          code: normalizeCodeKey(item.code).replace(/d$/, "") + "~", 
+          teamKey, 
+          searchOrigin: 'yesterday' 
+        }));
 
         const matchedToday = teamGrid.filter(item => {
           const folder = getPathFolder(teamKey, browseDate, item.code);
           const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
           const isMatch = trains.some(t => String(t) === q);
           return isMatch && !(isEarlyMorningTrain && isNightStartCode(teamKey, item.code));
-        }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
+        }).map(item => ({ 
+          ...item, 
+          teamKey, 
+          searchOrigin: 'today' 
+        }));
 
         crossTeamResults = [...crossTeamResults, ...matchedYesterday, ...matchedToday];
       });
@@ -826,7 +834,11 @@ function App() {
           const cellKey = getOverrideKey(teamKey, item.name);
           const displayName = overrides[cellKey]?.alias || item.displayName || item.name;
           return (displayName || "").toLowerCase().includes(q) || (item.code || "").toLowerCase().includes(q);
-        }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
+        }).map(item => ({ 
+          ...item, 
+          teamKey, 
+          searchOrigin: 'today' 
+        }));
         crossTeamNameResults = [...crossTeamNameResults, ...matched];
       });
       return crossTeamNameResults;
