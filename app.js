@@ -845,6 +845,25 @@ function App() {
     }
   }, [allGrid, searchQuery, browseDate, effectiveData, remoteRoster, overrides, teamAnchors]);
 
+  // 💡 [추가된 로직] 검색 결과가 있으면 첫 번째 항목의 행로표를 자동으로 설정
+  useEffect(() => {
+    if (activeTab === 'all' && searchQuery && visibleAllGrid.length > 0) {
+      const firstItem = visibleAllGrid[0];
+      const targetTeam = effectiveData[firstItem.teamKey];
+      const image = findPathImage(targetTeam, browseDate, firstItem.code);
+      if (image) {
+        setPathTeamKey(firstItem.teamKey);
+        setPathTarget(firstItem);
+        setPathDate(browseDate);
+        setPathImage(image);
+      } else {
+        setPathImage("");
+      }
+    } else if (!searchQuery) {
+      setPathImage("");
+    }
+  }, [searchQuery, visibleAllGrid, browseDate, activeTab, effectiveData]);
+
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
 
   const allGridLayout = useMemo(() => { return getAllGridLayout(visibleAllGrid.length || 0); }, [visibleAllGrid.length]);
