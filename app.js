@@ -1171,7 +1171,7 @@ function App() {
             <label className="label" style={{ marginTop: 12 }}>기준 날짜</label>
             <input className="input" type="date" value={profileAnchorDate} onChange={(e) => { const nextDate = e.target.value || getKoreaToday(); setProfileAnchorDate(nextDate); }} />
             <div className="modal-actions">
-              <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() || !draftCode}>시작하기</button>
+              <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() && !draftCode}>시작하기</button>
             </div>
           </div>
         ) : (
