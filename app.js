@@ -953,7 +953,7 @@ function App() {
     const nextSelection = { teamKey, name: cleanName, code, anchorDate: nextAnchorDate };
     setMySelection(nextSelection); setSelectedTeam(teamKey); setViewTeam(teamKey);
     const today = getKoreaToday(); setHomeDate(today); setBrowseDate(today); setMonthDate(today); setGroupBaseDate(today); setGroupMonth(getDisplayMonthValue(today)); setSelectedGroupDate("");
-    if (effectiveData) { const nextAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, teamKey, cleanName, nextSelection); setTeamAnchors(autoAnchors); }
+    if (effectiveData) { const nextAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, teamKey, cleanName, nextSelection); setTeamAnchors(nextAnchors); }
     setAllowProfileEdit(false); setInitialRemoteChecked(false); setPostSetupRemoteCheckNeeded(true);
   }
 
@@ -1502,7 +1502,7 @@ function App() {
                 <input className="input" type="date" value={profileAnchorDate} onChange={(e) => { const nextDate = e.target.value || getKoreaToday(); setProfileAnchorDate(nextDate); }} />
                 <div className="modal-actions">
                   <button className="modal-btn" onClick={cancelReconfigureProfile}>취소</button>
-                  <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() || !draftCode}>저장</button>
+                  <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() && !draftCode}>저장</button>
                 </div>
               </>
             )}
