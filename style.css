@@ -115,23 +115,23 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 .group-table th:last-child, .group-table td:last-child { border-right: none !important; }
 .group-table tr:last-child td { border-bottom: none !important; }
 
-/* 💡 [핵심] 이름 칸 고정 디자인 - 하이라이트가 침범하지 않게 배경색 고정 */
-.group-table th.sticky-col, .group-table td.sticky-col, .group-name-cell { 
-  position: sticky; left: 0; 
+/* 💡 [핵심] 이름 칸 고정 디자인 - 하이라이트 침범 방지 */
+.group-table th.sticky-col, .group-table td.sticky-col, .group-name-cell {
+  position: sticky; left: 0;
   background-color: #ffffff !important; /* 👈 라이트모드 미색 고정 */
   z-index: 10; border-right: 2px solid #e2e8f0 !important; padding: 8px 4px !important; transition: background-color 0.2s ease;
 }
-body.dark-mode .group-table th.sticky-col, body.dark-mode .group-table td.sticky-col { 
+body.dark-mode .group-table th.sticky-col, body.dark-mode .group-table td.sticky-col {
   background-color: #1e293b !important; /* 👈 다크모드 네이비 고정 */
 }
 
 /* 💡 [핵심] 세로 하이라이트 디자인 - 사진 속 연한 하늘색 구현 */
-.group-table th.active-col, .group-table td.active-col { 
-  background-color: #f0f9ff !important; 
+.group-table th.active-col, .group-table td.active-col {
+  background-color: #f0f9ff !important;
   transition: background-color 0.15s ease;
 }
-body.dark-mode .group-table th.active-col, body.dark-mode .group-table td.active-col { 
-  background-color: rgba(0, 242, 255, 0.15) !important; 
+body.dark-mode .group-table th.active-col, body.dark-mode .group-table td.active-col {
+  background-color: rgba(0, 242, 255, 0.15) !important;
 }
 
 .group-table th:first-child, .group-table td:first-child, .group-name-cell { width: 76px; min-width: 76px; max-width: 76px; padding: 6px 2px !important; }
@@ -188,43 +188,43 @@ body.dark-mode .name-txt { color: #ffffff !important; }
 .modal-sub { font-size: 16px; }
 
 /* 🚀 상단 헤더 복구 */
-.all-header { 
-    height: 60px; 
-    display: grid; 
-    grid-template-columns: 44px 1fr 44px 62px 44px; 
-    background: #3b82f6 !important; 
-    background-image: none !important; 
-    color: #ffffff !important; 
-    border-radius: 16px !important; 
-    overflow: hidden; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important; 
+.all-header {
+    height: 60px;
+    display: grid;
+    grid-template-columns: 44px 1fr 44px 62px 44px;
+    background: #3b82f6 !important;
+    background-image: none !important;
+    color: #ffffff !important;
+    border-radius: 16px !important;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
     border: 1px solid rgba(0,0,0,0.15) !important;
 }
 
-.dia-header { 
-    grid-template-columns: 44px 1fr 44px 44px !important; 
-    background: #3b82f6 !important; 
-    border-radius: 16px !important; 
+.dia-header {
+    grid-template-columns: 44px 1fr 44px 44px !important;
+    background: #3b82f6 !important;
+    border-radius: 16px !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
 }
 
-.all-header-btn, .all-edit-btn, .all-header-title { 
+.all-header-btn, .all-edit-btn, .all-header-title {
     border: none !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.2) !important; 
-    background: transparent !important; 
-    font-size: 22px; 
-    font-weight: 800; 
-    cursor: pointer; 
-    height: 60px; 
-    color: #ffffff !important; 
+    border-right: 1px solid rgba(255, 255, 255, 0.2) !important;
+    background: transparent !important;
+    font-size: 22px;
+    font-weight: 800;
+    cursor: pointer;
+    height: 60px;
+    color: #ffffff !important;
     display: flex;
     align-items: center;
     justify-content: center;
     white-space: nowrap;
 }
 
-.all-edit-btn.active { 
-    color: #ff3333 !important; 
+.all-edit-btn.active {
+    color: #ff3333 !important;
     text-shadow: 0 0 8px rgba(255,0,0,0.3);
 }
 
@@ -234,39 +234,39 @@ body.dark-mode .name-txt { color: #ffffff !important; }
 
 .all-team-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; margin-bottom: 8px; }
 
-.all-team-tab { 
-    position: relative; 
-    border: 1px solid rgba(255,255,255,0.2) !important; 
-    background: #3b82f6 !important; 
-    color: #ffffff !important; 
-    font-size: 15px; 
-    font-weight: 800; 
-    padding: 11px 0; 
-    border-radius: 18px; 
-    cursor: pointer; 
-    line-height: 1; 
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2) !important; 
+.all-team-tab {
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    background: #3b82f6 !important;
+    color: #ffffff !important;
+    font-size: 15px;
+    font-weight: 800;
+    padding: 11px 0;
+    border-radius: 18px;
+    cursor: pointer;
+    line-height: 1;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2) !important;
 }
 
-.all-team-tab.active { 
+.all-team-tab.active {
     border: 1px solid rgba(255,255,255,0.5) !important;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3) !important; 
+    box-shadow: 0 6px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3) !important;
     transform: translateY(-1px);
     z-index: 5;
 }
 
 .all-team-tab.my-team { background: #10b981 !important; }
 
-.view-dot { 
-    position: absolute; 
-    top: 6px; 
-    right: 8px; 
-    width: 6px; 
-    height: 6px; 
-    border-radius: 50%; 
-    background: #ffffff !important; 
+.view-dot {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ffffff !important;
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
-    display: none; 
+    display: none;
 }
 
 .all-team-tab.active .view-dot { display: block !important; }
@@ -280,15 +280,15 @@ body.dark-mode .name-txt { color: #ffffff !important; }
 .all-code { margin: 0; font-size: 18.5px; line-height: 1; font-weight: 900; color: #000000; white-space: nowrap; transition: color 0.2s ease; }
 .all-name { margin: 0; margin-top: 1px; font-size: 13.5px; line-height: 1; font-weight: 800; color: #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 98%; transition: color 0.2s ease; }
 
-.all-cell-real[style*="background-color"] { 
-  background-image: none !important; 
+.all-cell-real[style*="background-color"] {
+  background-image: none !important;
 }
 
 /* 🚀 [교정] 내 교번 강조: 둥둥 뜨는 효과 제거 + 아이스 블루 테두리 */
-.cell-my { 
+.cell-my {
   border: 3.5px solid #00f2ff !important; /* 아이스 블루 */
-  z-index: 5; 
-  position: relative; 
+  z-index: 5;
+  position: relative;
   box-shadow: 0 8px 16px rgba(0, 242, 255, 0.3);
   display: flex !important;
   flex-direction: column !important;
@@ -296,8 +296,8 @@ body.dark-mode .name-txt { color: #ffffff !important; }
   transform: none !important; /* 둥둥 뜨는 효과 제거 */
 }
 
-.cell-my .all-code, .cell-my .all-name { 
-  color: #000000 !important; 
+.cell-my .all-code, .cell-my .all-name {
+  color: #000000 !important;
   opacity: 1 !important;
 }
 
@@ -363,14 +363,16 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 
 .dark-mode table, .dark-mode th, .dark-mode td, .dark-mode .group-table th, .dark-mode .group-table td { border-color: #334155 !important; color: #f8fafc; }
 .dark-mode .group-table th { background: #1e293b; color: #f8fafc; }
-.dark-mode .group-table th.sticky-col, .dark-mode .group-table td.sticky-col, .dark-mode .group-name-cell { background-color: #1e293b !important; border-right-color: #475569 !important; }
 
-/* 🚀 [교정] 다크모드 그룹 탭 이름 색상 보정 (#ffffff 흰색 고정) */
+/* 🚀 [교정] 다크모드 이름 칸 배경색 (네이비 복구) */
+body.dark-mode .group-table th.sticky-col, body.dark-mode .group-table td.sticky-col { background-color: #1e293b !important; border-right-color: #475569 !important; }
 .dark-mode .name-txt { color: #ffffff !important; font-weight: 800; }
 
 .dark-mode .group-table th.sticky-col { background-color: #0f172a !important; }
 .dark-mode .group-table th.active-col { background: #374151 !important; }
-.dark-mode .group-table th.today-col { background: rgba(0, 242, 255, 0.1) !important; border-bottom: 3px solid #00f2ff !important; }
+/* 🚀 [교정] 다크모드 세로 하이라이트 (아이스 블루) */
+body.dark-mode .group-table td.active-col { background-color: rgba(0, 242, 255, 0.15) !important; }
+.dark-mode .group-table th.today-col { background: rgba(0, 242, 255, 0.1) !important; border-bottom: 4px solid #00f2ff !important; }
 
 /* 🚀 다크모드 월교번: 네이비 배경 유지 */
 .dark-mode .month-calendar { background: #1e293b !important; border-color: #334155 !important; }
