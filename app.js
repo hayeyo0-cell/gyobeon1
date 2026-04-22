@@ -976,7 +976,17 @@ function App() {
   function handleAllCellTap(item) { 
     if (editMode) openEditDialog(item); 
     else {
-      openPathDialog(item, browseDate); 
+      const currentTeamKey = item.teamKey || viewTeam;
+      const team = effectiveData[currentTeamKey];
+      const image = findPathImage(team, browseDate, item.code);
+      if (searchQuery && image) {
+        setPathTeamKey(currentTeamKey);
+        setPathTarget(item);
+        setPathDate(browseDate);
+        setPathImage(image);
+      } else {
+        openPathDialog(item, browseDate);
+      }
     }
   }
 
@@ -1291,33 +1301,43 @@ function App() {
                 </div>
                 
                 {activeTab === "all" ? (
-                  <div className="all-tab-grid-wrap" style={swipeStyle}>
-                    <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
-                      {visibleAllGrid.map((item, idx) => {
-                        const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
-                        const isToday = browseDate === getKoreaToday();
-                        const currentCellKey = getOverrideKey(item.teamKey, item.name);
-                        const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
-                        
-                        const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
-                        const textColorStyle = cellColor ? { color: "#000000", fontWeight: "900" } : { color: isDarkMode ? "#ffffff" : "#000000" };
-                        
-                        return (
-                          <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                            <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
-                            <div className="all-name" style={textColorStyle}>
-                                {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
-                                {searchQuery && (
-                                  <div style={{fontSize: '9px', opacity: 0.8}}>
-                                    [{TEAM_LABELS[item.teamKey]}]
-                                  </div>
-                                )}
+                  <>
+                    <div className="all-tab-grid-wrap" style={swipeStyle}>
+                      <div className={`all-grid-real ${allGridLayout.className}`} style={{ gridTemplateColumns: `repeat(${allGridLayout.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${allGridRows}, minmax(0, 1fr))` }}>
+                        {visibleAllGrid.map((item, idx) => {
+                          const isMine = item.teamKey === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
+                          const isToday = browseDate === getKoreaToday();
+                          const currentCellKey = getOverrideKey(item.teamKey, item.name);
+                          const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
+                          
+                          const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
+                          const textColorStyle = cellColor ? { color: "#000000", fontWeight: "900" } : { color: isDarkMode ? "#ffffff" : "#000000" };
+                          
+                          return (
+                            <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
+                              <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
+                              <div className="all-name" style={textColorStyle}>
+                                  {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
+                                  {searchQuery && (
+                                    <div style={{fontSize: '9px', opacity: 0.8}}>
+                                      [{TEAM_LABELS[item.teamKey]}]
+                                    </div>
+                                  )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                    {searchQuery && pathImage && (
+                      <div className="card" style={{ marginTop: 10, padding: 10 }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, textAlign: 'center', color: '#64748b' }}>
+                          🔍 {pathTarget?.displayName || pathTarget?.name} ({pathTarget?.code}) 행로표
+                        </div>
+                        <img src={pathImage} alt="행로표 미리보기" style={{ width: '100%', borderRadius: 12, border: '1px solid #c8d2e3' }} />
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="card" style={{ padding: 0, overflow: "hidden", ...swipeStyle, borderRadius: "10px", marginTop: "15px" }}>
                     {diaList.map((item, idx) => {
