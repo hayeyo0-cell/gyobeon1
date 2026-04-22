@@ -364,7 +364,7 @@ body.dark-mode .group-table td { background-color: #1e293b !important; border-co
 
 /* 2. 홈 화면 연/월/일 박스 글자색 복구 */
 body.dark-mode .date-box { background: #1e293b !important; border-color: #334155; }
-body.dark-mode .date-btn { background: #334155; color: #ffffff !important; }
+body.dark-mode .date-btn { background: #334155 !important; color: #ffffff !important; }
 body.dark-mode .date-value { background: #1e293b !important; color: #ffffff !important; }
 
 /* 3. 월교번/그룹 테이블 글자색 선명하게 고정 */
@@ -403,7 +403,11 @@ body.dark-mode .group-table th.today-col { background: rgba(0, 242, 255, 0.1) !i
 /* 월교번 다크모드 보정 */
 body.dark-mode .month-day, body.dark-mode .month-code-line, body.dark-mode .tone-normal { color: #ffffff !important; }
 body.dark-mode .month-cell.other-month { opacity: 0.25; background: #0f172a !important; }
-body.dark-mode .month-cell.selected { border-color: #00f2ff !important; background: rgba(0, 242, 255, 0.05) !important; }
+/* [핵심 수정] 다크모드 월교번의 다른 월 날짜 가독성 복구 */
+body.dark-mode .month-cell.other-month .month-day, 
+body.dark-mode .month-cell.other-month .month-code-line, 
+body.dark-mode .month-cell.other-month .month-time-line { color: #64748b !important; }
+body.dark-mode .month-cell.selected { border: 3px solid #00f2ff !important; background: rgba(0, 242, 255, 0.05) !important; }
 
 @media (max-width: 420px) {
   .container { padding: 22px 6px 20px; touch-action: pan-y; }
