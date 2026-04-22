@@ -33,7 +33,7 @@ const DEFAULT_HOLIDAYS_BY_YEAR = {
 
 let RUNTIME_HOLIDAYS_BY_YEAR = { ...DEFAULT_HOLIDAYS_BY_YEAR };
 const HOLIDAY_FETCHING_YEARS = new Set();
-const DEFAULT_GYOBUN = ["2d", "대3", "16d", "휴1", "휴2", "대2", "14d", "24d", "24~", "휴3", "5d", "17d", "27d", "27~", "휴4", "3d", "13d", "23d", "23~", "휴5", "휴6", "대1", "15d", "22d", "22~", "휴7", "9d", "10d", "28d", "28~", "휴8", "4d", "20d", "25d", "25~", "휴9", "1d", "11d", "대4", "대4~", "휴10", "휴11", "7d", "18d", "29d", "29~", "휴12", "8d", "12d", "26d", "26~", "휴13", "휴14", "6d", "19d", "21d", "21~", "휴15"];
+const DEFAULT_GYOBUN = ["2d", "대3", "16d", "휴1", "휴2", "대2", "14d", "24d", "24~", "휴3", "5d", "17d", "27d", "27~", "휴4", "3d", "13d", "23d", "23~", "휴5", "휴6", "대1", "15d", "22d", "22~", "휴7", "9d", "10d", "28d", "28~", "휴7", "9d", "10d", "28d", "28~", "휴8", "4d", "20d", "25d", "25~", "휴9", "1d", "11d", "대4", "대4~", "휴10", "휴11", "7d", "18d", "29d", "29~", "휴12", "8d", "12d", "26d", "26~", "휴13", "휴14", "6d", "19d", "21d", "21~", "휴15"];
 const HIDDEN_NAME_KEYS = ["gb2601"];
 
 const LS_SHARED_CONFIG_CACHE = "gyobeon_shared_config_cache";
@@ -441,7 +441,7 @@ function App() {
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
   const [lastSeenPublishedAt, setLastSeenPublishedAt] = useState(localStorage.getItem(LS_LAST_SEEN_PUBLISHED_AT) || "");
   const [holidayVersion, setHolidayVersion] = useState(0);
-  const [worktimeVersion, setWorktimeVersion] = useState(0);
+  const [wordtimeVersion, setWorktimeVersion] = useState(0);
   const [activeTab, setActiveTab] = useState("home");
   const activeTabRef = useRef("home");
 
@@ -699,7 +699,7 @@ function App() {
     const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster); if (remoteRow?.code) { const anchorDate = getRemoteAnchorBaseDate(team); const dayOffset = diffDays(anchorDate, homeDate); const code = shiftCodeByDays(team, remoteRow.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; }
     const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, myName, mySelection); if (!anchor?.code) return null;
     const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color };
-  }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, worktimeVersion, overrides]);
+  }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, wordtimeVersion, overrides]);
 
   const homePathImage = useMemo(() => {
     if (!effectiveData || !myInfo?.code) return null;
@@ -1400,9 +1400,10 @@ function App() {
                       <tr>
                         <th className="sticky-col">이름</th>
                         {weekDates.map((date) => {
-                          const isSelectedCol = selectedGroupDate === date; const isToday = date === getKoreaToday();
+                          const isToday = date === getKoreaToday();
+                          const isSelectedCol = selectedGroupDate === date; 
                           return (
-                            <th key={date} onClick={() => setSelectedGroupDate(date)} className={`${isSelectedCol ? "active-col" : ""} ${isToday ? "today-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
+                            <th key={date} onClick={() => setSelectedGroupDate(date)} className={`${isToday ? "today-col" : ""} ${isSelectedCol ? "active-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
                               <div style={{ ...swipeStyle, padding: '10px 4px 8px 4px', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                 <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
                                 <div className="day-date">{formatMonthDay(date)}</div>
@@ -1419,38 +1420,37 @@ function App() {
                         groupMembers.map((member, idx) => {
                           const override = overrides[getOverrideKey(member.team, member.name)] || {};
                           const displayMemberName = override.alias || member.name;
-                          /* 🚀 [교정] JavaScript 하이라이트 제어 로직: 해당 날짜가 선택되었을 때 행(tr)에 클래스 부여 */
+                          /* 🚀 [교정] JavaScript 하이라이트 제어: 날짜 선택 시 행(tr) 전체에 클래스 부여 */
                           const isAnyDateSelected = !!selectedGroupDate; 
+
                           return (
-                          <tr key={`${idx}`} className={isAnyDateSelected ? "active-row" : ""}>
-                            <td className="group-name-cell sticky-col">
-                              <div className="group-name-cell-inner">
-                                <div className="name-txt" style={{ color: isDarkMode ? "#ffffff" : "#000000" }}>{displayMemberName}</div>
-                                <div className="team-badge">{TEAM_LABELS[member.team]}</div>
-                                <button className="row-del-btn-text" onClick={() => removeFromGroup(member.team, member.name)}>삭제</button>
-                              </div>
-                            </td>
-                            {weekDates.map((date) => {
-                              const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
-                              const isSelectedCol = selectedGroupDate === date;
-                              const memberKey = getOverrideKey(member.team, member.name);
-                              const memberColor = overrides[memberKey]?.color || "";
-                              
-                              /* 🚀 [교정] 그룹 탭 배경색 간섭 제거 및 하이라이트 복구 */
-                              const groupCellStyle = (!isDarkMode && memberColor) ? { backgroundColor: memberColor, color: "#000000" } : { color: isDarkMode ? "#ffffff" : "#000000" };
+                            <tr key={`${idx}`} className={isAnyDateSelected ? "active-row" : ""}>
+                              <td className="group-name-cell sticky-col">
+                                <div className="group-name-cell-inner">
+                                  <div className="name-txt" style={{ color: isDarkMode ? "#ffffff" : "#000000" }}>{displayMemberName}</div>
+                                  <div className="team-badge">{TEAM_LABELS[member.team]}</div>
+                                  <button className="row-del-btn-text" onClick={() => removeFromGroup(member.team, member.name)}>삭제</button>
+                                </div>
+                              </td>
+                              {weekDates.map((date) => {
+                                const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
+                                const isSelectedCol = selectedGroupDate === date;
+                                const memberKey = getOverrideKey(member.team, member.name);
+                                const memberColor = overrides[memberKey]?.color || "";
+                                
+                                /* 🚀 [교정] 그룹 탭 배경색 간섭 제거 및 하이라이트 복구 */
+                                const groupCellStyle = (!isDarkMode && memberColor) ? { backgroundColor: memberColor, color: "#000000" } : { color: isDarkMode ? "#ffffff" : "#000000" };
+                                const rowHighlightStyle = isSelectedCol ? { backgroundColor: isDarkMode ? "rgba(0, 242, 255, 0.15)" : "#e0f2fe" } : {};
 
-                              /* 🚀 [교정] 날짜 선택 시 가로줄 하이라이트 효과를 위한 개별 셀 하이라이트 유지 */
-                              const activeColStyle = isSelectedCol ? { backgroundColor: isDarkMode ? "rgba(0, 242, 255, 0.15)" : "#e0f2fe" } : {};
-
-                              return (
-                                <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', ...groupCellStyle, ...activeColStyle, transition: "background-color 0.18s ease" }}>
-                                  <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: isSelectedCol ? 800 : 600 }}>
-                                    {item?.code || "-"}
-                                  </div>
-                                </td>
-                              );
-                            })}
-                          </tr>
+                                return (
+                                  <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', ...groupCellStyle, ...rowHighlightStyle, transition: "background-color 0.18s ease" }}>
+                                    <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: isSelectedCol ? 800 : 600 }}>
+                                      {item?.code || "-"}
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
                           );
                         })
                       )}
