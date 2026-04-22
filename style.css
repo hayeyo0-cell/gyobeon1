@@ -2,10 +2,10 @@
 
 /* 🟢 [디자인 철학 복구] 불필요하게 글씨를 얇게 깎아먹던 폰트 스무딩 옵션을 제거하여 쨍한 화질 복구! */
 html, body {
-  margin: 0; width: 100%; height: 100%; overflow: hidden; overflow-x: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", sans-serif;
-  background: #e4e7eb; color: #111827;
-  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  margin: 0; width: 100%; height: 100%; overflow: hidden; overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", sans-serif;
+  background: #e4e7eb; color: #111827;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 }
 body { overscroll-behavior: none; transition: background-color 0.2s ease, color 0.2s ease; }
 button, input, select { font: inherit; }
@@ -50,34 +50,34 @@ button:active { transform: scale(0.97); }
 .main-subinfo { margin-top: 12px; font-size: 15px; font-weight: 700; color: #64748b; letter-spacing: -0.01em; transition: color 0.2s ease; }
 
 .home-path-preview {
-  margin-top: 18px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  cursor: pointer;
-  animation: fadeIn 0.3s ease;
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  animation: fadeIn 0.3s ease;
 }
 .home-path-preview img {
-  width: 100%;
-  max-width: 240px; 
-  height: 130px; 
-  object-fit: contain; 
-  border-radius: 14px;
-  background: #f8fafc; 
-  border: 1px solid rgba(203, 213, 225, 0.8);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-  transition: transform 0.15s ease;
+  width: 100%;
+  max-width: 240px; 
+  height: 130px; 
+  object-fit: contain; 
+  border-radius: 14px;
+  background: #f8fafc; 
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  transition: transform 0.15s ease;
 }
 .home-path-preview:active img { transform: scale(0.96); }
 .preview-label {
-  margin-top: 8px;
-  font-size: 11px;
-  color: #475569;
-  font-weight: 700;
-  background: rgba(241, 245, 249, 0.8);
-  padding: 4px 12px;
-  border-radius: 12px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  margin-top: 8px;
+  font-size: 11px;
+  color: #475569;
+  font-weight: 700;
+  background: rgba(241, 245, 249, 0.8);
+  padding: 4px 12px;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .tab-page { min-height: 100%; animation: pageFadeIn 0.18s ease; }
@@ -117,21 +117,21 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 
 /* 💡 [핵심] 이름 칸 고정 디자인 - 하이라이트 침범 방지 */
 .group-table th.sticky-col, .group-table td.sticky-col, .group-name-cell {
-  position: sticky; left: 0;
-  background-color: #ffffff !important; /* 👈 라이트모드 미색 고정 */
-  z-index: 10; border-right: 2px solid #e2e8f0 !important; padding: 8px 4px !important; transition: background-color 0.2s ease;
+  position: sticky; left: 0;
+  background-color: #ffffff !important; /* 👈 라이트모드 미색 고정 */
+  z-index: 10; border-right: 2px solid #e2e8f0 !important; padding: 8px 4px !important; transition: background-color 0.2s ease;
 }
 body.dark-mode .group-table th.sticky-col, body.dark-mode .group-table td.sticky-col {
-  background-color: #1e293b !important; /* 👈 다크모드 네이비 고정 */
+  background-color: #1e293b !important; /* 👈 다크모드 네이비 고정 */
 }
 
 /* 💡 [핵심] 세로 하이라이트 디자인 - 사진 속 연한 하늘색 구현 */
 .group-table th.active-col, .group-table td.active-col {
-  background-color: #f0f9ff !important;
-  transition: background-color 0.15s ease;
+  background-color: #f0f9ff !important;
+  transition: background-color 0.15s ease;
 }
 body.dark-mode .group-table th.active-col, body.dark-mode .group-table td.active-col {
-  background-color: rgba(59, 130, 246, 0.15) !important;
+  background-color: rgba(59, 130, 246, 0.15) !important;
 }
 
 .group-table th:first-child, .group-table td:first-child, .group-name-cell { width: 76px; min-width: 76px; max-width: 76px; padding: 6px 2px !important; }
@@ -189,43 +189,43 @@ body.dark-mode .name-txt { color: #ffffff !important; }
 
 /* 🚀 상단 헤더 복구 */
 .all-header {
-    height: 60px;
-    display: grid;
-    grid-template-columns: 44px 1fr 44px 62px 44px;
-    background: #3b82f6 !important;
-    background-image: none !important;
-    color: #ffffff !important;
-    border-radius: 16px !important;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
-    border: 1px solid rgba(0,0,0,0.15) !important;
+    height: 60px;
+    display: grid;
+    grid-template-columns: 44px 1fr 44px 62px 44px;
+    background: #3b82f6 !important;
+    background-image: none !important;
+    color: #ffffff !important;
+    border-radius: 16px !important;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    border: 1px solid rgba(0,0,0,0.15) !important;
 }
 
 .dia-header {
-    grid-template-columns: 44px 1fr 44px 44px !important;
-    background: #3b82f6 !important;
-    border-radius: 16px !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    grid-template-columns: 44px 1fr 44px 44px !important;
+    background: #3b82f6 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
 }
 
 .all-header-btn, .all-edit-btn, .all-header-title {
-    border: none !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.2) !important;
-    background: transparent !important;
-    font-size: 22px;
-    font-weight: 800;
-    cursor: pointer;
-    height: 60px;
-    color: #ffffff !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    white-space: nowrap;
+    border: none !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.2) !important;
+    background: transparent !important;
+    font-size: 22px;
+    font-weight: 800;
+    cursor: pointer;
+    height: 60px;
+    color: #ffffff !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
 }
 
 .all-edit-btn.active {
-    color: #ff3333 !important;
-    text-shadow: 0 0 8px rgba(255,0,0,0.3);
+    color: #ff3333 !important;
+    text-shadow: 0 0 8px rgba(255,0,0,0.3);
 }
 
 .all-header-btn:last-child { border-right: none !important; }
@@ -235,38 +235,38 @@ body.dark-mode .name-txt { color: #ffffff !important; }
 .all-team-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; margin-bottom: 8px; }
 
 .all-team-tab {
-    position: relative;
-    border: 1px solid rgba(255,255,255,0.2) !important;
-    background: #3b82f6 !important;
-    color: #ffffff !important;
-    font-size: 15px;
-    font-weight: 800;
-    padding: 11px 0;
-    border-radius: 18px;
-    cursor: pointer;
-    line-height: 1;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    background: #3b82f6 !important;
+    color: #ffffff !important;
+    font-size: 15px;
+    font-weight: 800;
+    padding: 11px 0;
+    border-radius: 18px;
+    cursor: pointer;
+    line-height: 1;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2) !important;
 }
 
 .all-team-tab.active {
-    border: 1px solid rgba(255,255,255,0.5) !important;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3) !important;
-    transform: translateY(-1px);
-    z-index: 5;
+    border: 1px solid rgba(255,255,255,0.5) !important;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+    transform: translateY(-1px);
+    z-index: 5;
 }
 
 .all-team-tab.my-team { background: #10b981 !important; }
 
 .view-dot {
-    position: absolute;
-    top: 6px;
-    right: 8px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #ffffff !important;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
-    display: none;
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ffffff !important;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+    display: none;
 }
 
 .all-team-tab.active .view-dot { display: block !important; }
@@ -281,24 +281,24 @@ body.dark-mode .name-txt { color: #ffffff !important; }
 .all-name { margin: 0; margin-top: 1px; font-size: 13.5px; line-height: 1; font-weight: 800; color: #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 98%; transition: color 0.2s ease; }
 
 .all-cell-real[style*="background-color"] {
-  background-image: none !important;
+  background-image: none !important;
 }
 
 /* 🚀 [교정] 내 교번 강조: 둥둥 뜨는 효과 제거 + 아이스 블루 테두리 */
 .cell-my {
-  border: 3.5px solid #00f2ff !important; /* 아이스 블루 */
-  z-index: 5;
-  position: relative;
-  box-shadow: 0 8px 16px rgba(0, 242, 255, 0.3);
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-  transform: none !important; /* 둥둥 뜨는 효과 제거 */
+  border: 3.5px solid #00f2ff !important; /* 아이스 블루 */
+  z-index: 5;
+  position: relative;
+  box-shadow: 0 8px 16px rgba(0, 242, 255, 0.3);
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  transform: none !important; /* 둥둥 뜨는 효과 제거 */
 }
 
 .cell-my .all-code, .cell-my .all-name {
-  color: #000000 !important;
-  opacity: 1 !important;
+  color: #000000 !important;
+  opacity: 1 !important;
 }
 
 .cell-my-today { animation: none !important; }
@@ -351,34 +351,34 @@ body.dark-mode .name-txt { color: #ffffff !important; }
 
 /* 🌙 다크 모드 (완벽 보존 및 그룹 테이블 배경색 고정) */
 body.dark-mode { background: #0f172a; color: #f8fafc; }
-.dark-mode .card, .dark-mode .main-panel, .dark-mode .month-calendar, .dark-mode .group-top-bar-v4 { 
-  background-color: #1e293b !important; 
-  border-color: #334155 !important; 
+.dark-mode .card, .dark-mode .main-panel, .dark-mode .month-calendar, .dark-mode .group-top-bar-v4 { 
+  background-color: #1e293b !important; 
+  border-color: #334155 !important; 
 }
 
 /* [핵심 수정] 다크 모드 그룹 테이블 배경 네이비 고정 */
-.dark-mode .group-table-wrap, 
-.dark-mode .group-table, 
-.dark-mode .group-table th, 
-.dark-mode .group-table td { 
-  background-color: #1e293b !important; 
-  border-color: #334155 !important; 
+.dark-mode .group-table-wrap, 
+.dark-mode .group-table, 
+.dark-mode .group-table th, 
+.dark-mode .group-table td { 
+  background-color: #1e293b !important; 
+  border-color: #334155 !important; 
 }
 
 /* [핵심 수정] 사용자 색상이 없는 일반 셀의 글자색만 흰색으로 고정 */
 body.dark-mode .month-cell:not([style*="background-color"]),
 body.dark-mode .group-table td:not([style*="background-color"]),
 body.dark-mode .all-cell-real:not([style*="background-color"]) {
-  color: #ffffff !important;
+  color: #ffffff !important;
 }
 
 /* [핵심 수정] 사용자 색상이 입혀진 셀은 검은 글씨로 가독성 확보 (검게 변하는 현상 방지) */
-body.dark-mode .month-cell[style*="background-color"], 
+body.dark-mode .month-cell[style*="background-color"], 
 body.dark-mode .group-table td[style*="background-color"],
-body.dark-mode .all-cell-real[style*="background-color"] { 
-  background-image: none !important;
-  color: #000000 !important;
-  font-weight: 900 !important;
+body.dark-mode .all-cell-real[style*="background-color"] { 
+  background-image: none !important;
+  color: #000000 !important;
+  font-weight: 900 !important;
 }
 
 .dark-mode .input, .dark-mode .select, .dark-mode .group-select-display { background: #1e293b; border-color: #475569; color: #f8fafc; }
@@ -387,8 +387,8 @@ body.dark-mode .all-cell-real[style*="background-color"] { 
 .dark-mode .date-value { background: #1e293b; color: #f8fafc; }
 .dark-mode .main-subinfo, .dark-mode .help-text { color: #94a3b8; }
 .dark-mode .all-tab-grid-wrap { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155; }
-.dark-mode .all-cell-real:not([style*="background-color"]) { 
-  background: linear-gradient(180deg, #334155 0%, #1e293b 100%); 
+.dark-mode .all-cell-real:not([style*="background-color"]) { 
+  background: linear-gradient(180deg, #334155 0%, #1e293b 100%); 
 }
 .dark-mode .all-code, .dark-mode .all-name { transition: none; }
 
@@ -411,91 +411,91 @@ body.dark-mode .group-table td.active-col { background-color: rgba(59, 130, 246,
 .dark-mode .month-header-title { background: #1e293b; color: #f8fafc; border-color: #475569; }
 
 @media (max-width: 420px) {
-  .container { padding: 22px 6px 20px; touch-action: pan-y; }
-  .container::after { height: calc(92px + env(safe-area-inset-bottom, 0px)); }
-  .date-grid { gap: 6px; height: 154px; margin-bottom: 6px; }
-  .date-box { grid-template-rows: 42px 1fr 42px; border-radius: 18px; }
-  .date-btn { height: 42px; font-size: 22px; }
-  .date-value { font-size: 19px; }
-  .settings-row { min-height: 46px; margin-bottom: 6px; gap: 6px; }
-  .settings-btn, .install-btn, .quick-btn { height: 38px; padding: 0 11px; font-size: 13px; border-radius: 14px; gap: 5px; }
-  .main-panel { min-height: 188px; border-radius: 24px; }
-  .main-code { font-size: 36px; }
-  .main-time { font-size: 27px; }
-  .main-subinfo { font-size: 13px; margin-top: 10px; }
-  .bottom-tabs { height: calc(56px + env(safe-area-inset-bottom, 0px)); }
-  .bottom-tab { height: 56px; font-size: 14px; padding: 0 2px; }
-  .bottom-tab.active { font-size: 15px; }
-  .month-header-title { font-size: 20px; }
-  .month-nav-btn { height: 44px; font-size: 22px; border-radius: 14px; width: 44px !important; }
-  .month-calendar { padding: 8px; border-radius: 20px; margin-bottom: 10px; }
-  .month-weekdays > div { font-size: 15px; padding: 6px 0; }
-  .month-cell { min-height: 102px; }
-  .month-cell-inner { min-height: 100px; padding: 5px 5px 4px; grid-template-rows: 16px 24px 1fr; }
-  .month-day { font-size: 14px; }
-  .month-code-line { font-size: 15px; margin-top: 3px; }
-  .month-time-wrap { grid-template-rows: 20px 20px; }
-  .month-time-line { font-size: 11px; }
-  .all-page { padding-bottom: 20px; }
-  .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
-  .dia-header { grid-template-columns: 40px 1fr 38px 40px; }
-  .all-header-btn { height: 52px; font-size: 18px; }
-  .all-edit-btn { height: 52px; font-size: 12px; }
-  .all-header-title { font-size: 14px; padding: 0 5px; }
-  .all-team-tabs { gap: 4px; margin-top: 6px; margin-bottom: 6px; }
-  .all-team-tab { font-size: 13px; padding: 9px 0; border-radius: 14px; }
-  .all-tab-grid-wrap { padding: 6px; border-radius: 22px; margin-bottom: 10px; }
-  .all-cell-real { min-height: 48px; border-radius: 8px; padding: 2px 1px; }
-  .group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
-  .nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
-  .group-select-display { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
-  .group-add-btn-v4 { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
-  .group-table { font-size: 12px; }
-  .group-table th:first-child, .group-table td:first-child, .group-name-cell { width: 68px; min-width: 68px; max-width: 68px; }
-  .day-name { font-size: 13px; }
-  .day-date { font-size: 10px; }
-  .name-txt { font-size: 13px; }
-  .team-badge { font-size: 10px; margin-bottom: 4px; }
-  .code-txt { font-size: 13px; }
-  .row-del-btn-text { padding: 3px 10px; font-size: 10px; border-radius: 10px; }
-  .modal { padding: 16px; border-radius: 20px; }
-  .modal-title { font-size: 22px; }
-  .modal-sub { font-size: 16px; }
+  .container { padding: 22px 6px 20px; touch-action: pan-y; }
+  .container::after { height: calc(92px + env(safe-area-inset-bottom, 0px)); }
+  .date-grid { gap: 6px; height: 154px; margin-bottom: 6px; }
+  .date-box { grid-template-rows: 42px 1fr 42px; border-radius: 18px; }
+  .date-btn { height: 42px; font-size: 22px; }
+  .date-value { font-size: 19px; }
+  .settings-row { min-height: 46px; margin-bottom: 6px; gap: 6px; }
+  .settings-btn, .install-btn, .quick-btn { height: 38px; padding: 0 11px; font-size: 13px; border-radius: 14px; gap: 5px; }
+  .main-panel { min-height: 188px; border-radius: 24px; }
+  .main-code { font-size: 36px; }
+  .main-time { font-size: 27px; }
+  .main-subinfo { font-size: 13px; margin-top: 10px; }
+  .bottom-tabs { height: calc(56px + env(safe-area-inset-bottom, 0px)); }
+  .bottom-tab { height: 56px; font-size: 14px; padding: 0 2px; }
+  .bottom-tab.active { font-size: 15px; }
+  .month-header-title { font-size: 20px; }
+  .month-nav-btn { height: 44px; font-size: 22px; border-radius: 14px; width: 44px !important; }
+  .month-calendar { padding: 8px; border-radius: 20px; margin-bottom: 10px; }
+  .month-weekdays > div { font-size: 15px; padding: 6px 0; }
+  .month-cell { min-height: 102px; }
+  .month-cell-inner { min-height: 100px; padding: 5px 5px 4px; grid-template-rows: 16px 24px 1fr; }
+  .month-day { font-size: 14px; }
+  .month-code-line { font-size: 15px; margin-top: 3px; }
+  .month-time-wrap { grid-template-rows: 20px 20px; }
+  .month-time-line { font-size: 11px; }
+  .all-page { padding-bottom: 20px; }
+  .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
+  .dia-header { grid-template-columns: 40px 1fr 38px 40px; }
+  .all-header-btn { height: 52px; font-size: 18px; }
+  .all-edit-btn { height: 52px; font-size: 12px; }
+  .all-header-title { font-size: 14px; padding: 0 5px; }
+  .all-team-tabs { gap: 4px; margin-top: 6px; margin-bottom: 6px; }
+  .all-team-tab { font-size: 13px; padding: 9px 0; border-radius: 14px; }
+  .all-tab-grid-wrap { padding: 6px; border-radius: 22px; margin-bottom: 10px; }
+  .all-cell-real { min-height: 48px; border-radius: 8px; padding: 2px 1px; }
+  .group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
+  .nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
+  .group-select-display { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
+  .group-add-btn-v4 { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
+  .group-table { font-size: 12px; }
+  .group-table th:first-child, .group-table td:first-child, .group-name-cell { width: 68px; min-width: 68px; max-width: 68px; }
+  .day-name { font-size: 13px; }
+  .day-date { font-size: 10px; }
+  .name-txt { font-size: 13px; }
+  .team-badge { font-size: 10px; margin-bottom: 4px; }
+  .code-txt { font-size: 13px; }
+  .row-del-btn-text { padding: 3px 10px; font-size: 10px; border-radius: 10px; }
+  .modal { padding: 16px; border-radius: 20px; }
+  .modal-title { font-size: 22px; }
+  .modal-sub { font-size: 16px; }
 }
 
 /* 🚀 색상 변경 모달 내 드롭다운(Select) 디자인 최적화 추가 */
 select.select {
-  width: 100% !important;
-  height: 48px !important;
-  padding: 0 14px !important;
-  border-radius: 16px !important;
-  border: 1px solid #cbd5e1 !important;
-  background-color: #ffffff !important;
-  font-size: 16px !important;
-  font-weight: 700 !important;
-  color: #111827 !important;
-  outline: none !important;
-  cursor: pointer !important;
-  appearance: none !important;
-  -webkit-appearance: none !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234b5563'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
-  background-repeat: no-repeat !important;
-  background-position: right 14px center !important;
-  background-size: 18px !important;
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.02) !important;
-  transition: all 0.2s ease !important;
-  margin-top: 8px !important;
+  width: 100% !important;
+  height: 48px !important;
+  padding: 0 14px !important;
+  border-radius: 16px !important;
+  border: 1px solid #cbd5e1 !important;
+  background-color: #ffffff !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+  outline: none !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234b5563'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 18px !important;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.02) !important;
+  transition: all 0.2s ease !important;
+  margin-top: 8px !important;
 }
 
 select.select:focus {
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12) !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12) !important;
 }
 
 /* 다크모드 드롭다운 대응 */
 body.dark-mode select.select {
-  background-color: #1e293b !important;
-  border-color: #475569 !important;
-  color: #f8fafc !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+  color: #f8fafc !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
 }
