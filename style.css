@@ -44,14 +44,12 @@ button:active { transform: scale(0.97); }
 .date-btn { width: 100%; height: 46px; border: 0; background: rgba(215, 220, 230, 0.55); font-size: 26px; font-weight: 800; cursor: pointer; color: inherit; transition: background-color 0.2s ease; }
 .date-value { background: rgba(255, 255, 255, 0.95); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 23px; line-height: 1.15; padding: 4px; white-space: nowrap; word-break: keep-all; transition: background-color 0.2s ease, color 0.2s ease; }
 
-/* 🚀 [수정] background: 단축 속성을 background-color:로 변경하여 JS 커스텀 색상이 덮어씌워지도록 수정 */
 .main-panel { min-height: 210px; background-color: rgba(250, 250, 248, 0.92); border-radius: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: 0; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72); border: 1px solid rgba(255, 255, 255, 0.8); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .center-view { text-align: center; padding: 0; width: 100%; }
 .main-code { font-size: clamp(40px, 9vw, 56px); line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
 .main-time { margin-top: 14px; font-size: clamp(24px, 6vw, 36px); line-height: 1.15; font-weight: 700; }
 .main-subinfo { margin-top: 12px; font-size: 15px; font-weight: 700; color: #64748b; letter-spacing: -0.01em; transition: color 0.2s ease; }
 
-/* 🚀 [복구] 행로표 미리보기(썸네일) 기능 */
 .home-path-preview {
   margin-top: 18px;
   display: flex;
@@ -115,7 +113,7 @@ button:active { transform: scale(0.97); }
 
 .group-add-btn-v4 { flex: 1; min-width: 0; height: 100%; background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%); color: #fff; border: none; padding: 8px 4px; border-radius: 12px; font-weight: 800; font-size: 13px; text-align: center; box-shadow: 0 4px 10px rgba(124, 58, 237, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: center; }
 
-/* 🚀 [최종 해결책] dialist.txt 데이터를 포함한 앱 내 모든 테이블 요소 강제 수정 */
+/* 🚀 [교정] 원래의 예쁜 격자 표 디자인 유지 */
 table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !important; border-collapse: collapse !important; }
 .group-table-wrap { overflow: hidden; border-radius: 18px; background: #ffffff; border: 1px solid #c8d2e3 !important; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .group-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
@@ -175,7 +173,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 .modal-title { font-size: 22px; }
 .modal-sub { font-size: 16px; }
 
-/* 🚀 [최종 수정 핵심 복구] 상단 헤더: 하단 탭 진한 파랑(#3b82f6) 일치 + 사각형 16px */
+/* 🚀 상단 헤더 복구 */
 .all-header { 
     height: 60px; 
     display: grid; 
@@ -222,7 +220,6 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 
 .all-team-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; margin-bottom: 8px; }
 
-/* 🚀 [소속 버튼 수정] 항상 파란 배경 유지 + 도트로 구분 */
 .all-team-tab { 
     position: relative; 
     border: 1px solid rgba(255,255,255,0.2) !important; 
@@ -269,15 +266,13 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 .all-code { margin: 0; font-size: 18.5px; line-height: 1; font-weight: 900; color: #000000; white-space: nowrap; transition: color 0.2s ease; }
 .all-name { margin: 0; margin-top: 1px; font-size: 13.5px; line-height: 1; font-weight: 800; color: #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 98%; transition: color 0.2s ease; }
 
-/* 🚀 [교정 완료] JS에서 배경색이 들어오면 기존 그라데이션만 지우고 커스텀 배경색을 표출 */
 .all-cell-real[style*="background-color"] { 
   background-image: none !important; 
 }
 
-/* 🚀 [내 교번 강조 교정] 사용자 요청: 쨍한 아이스 블루 테두리 */
+/* 🚀 [교정] 내 교번 강조: 둥둥 뜨는 효과 제거 + 아이스 블루 테두리 */
 .cell-my { 
   border: 3.5px solid #00f2ff !important; /* 아이스 블루 */
-  transform: translateY(-2px) scale(1.02); 
   z-index: 5; 
   position: relative; 
   box-shadow: 0 8px 16px rgba(0, 242, 255, 0.3);
@@ -286,7 +281,6 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
   justify-content: center !important;
 }
 
-/* 강조 칸 글자 시인성 확보 */
 .cell-my .all-code, .cell-my .all-name { 
   color: #000000 !important; 
   opacity: 1 !important;
@@ -294,7 +288,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 
 .cell-my-today { animation: myCellBlink 1.4s ease-in-out infinite; }
 
-/* 🚀 [월교번 디자인 DNA 이식] 그룹 탭 디자인 요소(선, 폰트) 적용 */
+/* 🚀 [월교번 디자인 DNA 이식] */
 .month-calendar { background: rgba(255, 255, 255, 0.76); border-radius: 24px; padding: 10px; margin-bottom: 12px; border: 1px solid #c8d2e3 !important; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06); transition: background-color 0.2s ease; }
 .month-weekdays, .month-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; }
 .month-weekdays { border-bottom: 2px solid #c8d2e3 !important; margin-bottom: 4px; }
@@ -303,9 +297,9 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 .month-cell { border: 1px solid #c8d2e3 !important; background: #ffffff; min-height: 116px; padding: 0; cursor: pointer; border-radius: 0; box-shadow: none; transition: background-color 0.16s ease; display: block; overflow: hidden; }
 .month-cell:hover { background: #fbfcff; }
 
-/* 🚀 월교번 오늘 날짜 강조: 아이스 블루 테두리 포인트 */
+/* 🚀 월교번 오늘 강조: 날짜 색상 유지 + 아이스 블루 테두리 */
 .month-cell.selected { border: 3px solid #00f2ff !important; z-index: 10; position: relative; }
-.month-cell.selected .month-day { color: #00f2ff !important; font-weight: 900; }
+.month-cell.selected .month-day { font-weight: 900; }
 
 .month-cell.other-month { opacity: 0.34; background: #f8fafc; }
 .month-cell-inner { width: 100%; min-height: 114px; padding: 8px 6px 4px; display: grid; grid-template-rows: 20px 30px 1fr; align-items: start; }
@@ -340,7 +334,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 
 @keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(0, 242, 255, 0.2); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.4); } }
 
-/* 🌙 다크 모드 오버라이드 (입체감 유지) */
+/* 🌙 다크 모드 (사진 3, 4번 오리지널 네이비 원복) */
 body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .card, .dark-mode .main-panel, .dark-mode .month-calendar, .dark-mode .group-table-wrap, .dark-mode .group-top-bar-v4 { background-color: rgba(30, 41, 59, 0.95); border-color: #334155 !important; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
 .dark-mode .input, .dark-mode .select, .dark-mode .group-select-display { background: #1e293b; border-color: #475569; color: #f8fafc; }
@@ -363,7 +357,7 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .group-table th.active-col { background: #374151 !important; }
 .dark-mode .group-table th.today-col { background: rgba(0, 242, 255, 0.1) !important; border-bottom: 3px solid #00f2ff !important; }
 
-/* 🚀 [다크모드 월교번 디자인 업그레이드] 네이비 배경 원복 및 그룹 DNA 적용 */
+/* 🚀 다크모드 월교번: 네이비 배경 유지 */
 .dark-mode .month-calendar { background: #1e293b !important; border-color: #334155 !important; }
 .dark-mode .month-weekdays { border-bottom-color: #334155 !important; }
 .dark-mode .month-weekdays > div { color: #f8fafc; }
@@ -391,6 +385,10 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode .all-header-btn, .dark-mode .all-edit-btn, .dark-mode .all-header-title { color: #ffffff !important; }
 .dark-mode .all-edit-btn.active { color: #ff4d4d !important; }
 .dark-mode .tab-page div.card { background: #1e293b !important; border: 1px solid #334155 !important; }
+
+/* 🚀 [JS 배경색 주입 대응] 리스트 배경색 간섭 제거 */
+.month-cell[style*="background-color"], .group-table td[style*="background-color"] { background-color: inherit !important; }
+.all-cell-real[style*="background-color"] { background-image: none !important; }
 
 @media (max-width: 420px) {
   .container { padding: 22px 6px 20px; touch-action: pan-y; }
