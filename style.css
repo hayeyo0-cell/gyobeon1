@@ -318,6 +318,9 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
 .modal-btn { min-width: 88px; height: 42px; border: 1px solid rgba(203, 213, 225, 0.95); background: rgba(255, 255, 255, 0.92); cursor: pointer; border-radius: 14px; font-weight: 700; font-size: 15px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; color: inherit; }
 .modal-btn.primary { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); color: white; border-color: transparent; box-shadow: 0 8px 16px rgba(47, 97, 220, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+/* 🚀 시작하기 버튼 활성화 교정 */
+.modal-btn:disabled { opacity: 0.95 !important; cursor: pointer !important; background: #3b82f6 !important; color: white !important; }
+.color-preview { height: 40px; border-radius: 14px; border: 1px solid #cbd5e1; margin-top: 8px; background: white; }
 
 .viewer-page { position: fixed; inset: 0; background: #f3f4f6; z-index: 3000; overflow: auto; }
 .viewer-header { position: sticky; top: 0; background: rgba(243, 244, 246, 0.84); backdrop-filter: blur(12px); padding: 12px 16px; border-bottom: 1px solid #d1d5db; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
@@ -325,6 +328,8 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 .viewer-body { padding: 16px; overflow: visible; color: #111827; }
 .fullscreen-image { width: 100%; max-width: 950px; display: block; margin: 0 auto; background: white; border: 1px solid #cbd5e1; box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08); }
 .empty-box { border: 1px dashed #94a3b8; padding: 40px 16px; background: white; border-radius: 16px; color: #64748b; text-align: center; }
+
+@keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(0, 242, 255, 0.2); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.4); } }
 
 /* 🌙 다크 모드 (배경 강제 교정: 사진 40498.jpg 및 40496.jpg 원본 복구) */
 body.dark-mode { background: #0f172a !important; color: #f8fafc !important; }
@@ -344,8 +349,8 @@ body.dark-mode .group-table, body.dark-mode .group-table td, body.dark-mode .mon
 body.dark-mode .group-table td.active-col { background-color: rgba(0, 242, 255, 0.15) !important; }
 body.dark-mode .group-table th.today-col, body.dark-mode .month-cell.selected { background: rgba(0, 242, 255, 0.1) !important; border: 3px solid #00f2ff !important; }
 
-/* 🚀 시작하기 버튼 활성화 교정 (JS 비활성 상태 보완) */
-.modal-btn:disabled { opacity: 0.95 !important; cursor: pointer !important; background: #3b82f6 !important; color: white !important; }
+/* 🚀 [JS 배경색 주입 대응] 리스트 배경색 간섭 차단 */
+.month-cell[style*="background-color"], .group-table td[style*="background-color"] { background-color: inherit !important; }
 
 @media (max-width: 420px) {
   .container { padding: 22px 6px 20px; touch-action: pan-y; }
