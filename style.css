@@ -36,7 +36,7 @@ button:active { transform: scale(0.97); }
 .settings-btn { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); }
 .install-btn { background: linear-gradient(180deg, #2aa55d 0%, #197a42 100%); }
 .quick-btn.band { background: linear-gradient(180deg, #21b35a 0%, #169447 100%); }
-.quick-btn.vacation { background: linear-gradient(180deg, #21b35a 0%, #169447 100%); }
+.quick-btn.vacation { background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%); }
 .quick-icon { width: 20px; height: 20px; object-fit: contain; display: block; flex-shrink: 0; }
 
 .date-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; height: 168px; }
@@ -129,16 +129,8 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 .day-name.sat { color: #3b82f6; }
 .day-date { font-size: 11px; color: #64748b; margin-top: 2px; }
 
-/* 🚀 [교정] 그룹 탭 오늘 날짜 밑줄 고정 및 선택 날짜 가로 하이라이트 효과 복구 */
-.group-table th.today-col { border-bottom: 4px solid #3b82f6 !important; background: #fff7ed !important; }
-body.dark-mode .group-table th.today-col { border-bottom: 4px solid #00f2ff !important; background: rgba(0, 242, 255, 0.1) !important; }
-
-.group-table th.active-col { background: #f5f3ff !important; border-bottom: none !important; } 
-body.dark-mode .group-table th.active-col { background: rgba(0, 242, 255, 0.05) !important; border-bottom: none !important; }
-
-/* 🚀 [교정] 가로 한 줄 전체 색상 입히는 클래스 추가 (JS 대응) */
-.group-table tr.active-row td { background-color: #f0f9ff !important; }
-body.dark-mode .group-table tr.active-row td { background-color: rgba(0, 242, 255, 0.08) !important; }
+.group-table th.active-col { background: #f5f3ff !important; } 
+.group-table th.today-col { background: #fff7ed !important; border-bottom: 3px solid #fb923c !important; }
 
 .name-txt { font-weight: 800; font-size: 14px; color: #000000; transition: color 0.2s ease; }
 .team-badge { font-size: 11px; color: #64748b; margin-top: 2px; font-weight: 600; margin-bottom: 6px; }
@@ -295,7 +287,7 @@ body.dark-mode .group-table tr.active-row td { background-color: rgba(0, 242, 25
   opacity: 1 !important;
 }
 
-.cell-my-today { animation: none !important; }
+.cell-my-today { animation: myCellBlink 1.4s ease-in-out infinite; }
 
 /* 🚀 [월교번 디자인 DNA 이식] */
 .month-calendar { background: rgba(255, 255, 255, 0.76); border-radius: 24px; padding: 10px; margin-bottom: 12px; border: 1px solid #c8d2e3 !important; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06); transition: background-color 0.2s ease; }
@@ -345,7 +337,7 @@ body.dark-mode .group-table tr.active-row td { background-color: rgba(0, 242, 25
 
 /* 🌙 다크 모드 (사진 3, 4번 오리지널 네이비 원복) */
 body.dark-mode { background: #0f172a; color: #f8fafc; }
-.dark-mode .card, .dark-mode .main-panel, .dark-mode .month-calendar, .dark-mode .group-table-wrap, .dark-mode .group-top-bar-v4 { background-color: rgba(30, 41, 59, 0.95); border-color: #334155 !important; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+.dark-mode .card, .dark-mode .main-panel, .dark-mode .month-calendar, .dark-mode .group-table-wrap, .dark-mode .group-top-bar-v4 { background-color: #1e293b !important; border-color: #334155 !important; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
 .dark-mode .input, .dark-mode .select, .dark-mode .group-select-display { background: #1e293b; border-color: #475569; color: #f8fafc; }
 .dark-mode .date-box { background: rgba(30, 41, 59, 0.95); border-color: #334155; }
 .dark-mode .date-btn { background: #334155; color: #f8fafc; }
