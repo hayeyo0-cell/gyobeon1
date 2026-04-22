@@ -613,7 +613,7 @@ function App() {
   useEffect(() => { if (!data) return; const migrated = migrateLegacyOverrides(loadOverrides(), data); setOverrides(migrated); }, [data]);
   useEffect(() => { const years = [getYearFromDateStr(homeDate), getYearFromDateStr(browseDate), getYearFromDateStr(monthDate), getYearFromDateStr(groupBaseDate)].filter(Boolean); [...new Set(years)].forEach((year) => { ensureHolidayYear(year, () => setHolidayVersion((v) => v + 1)); }); }, [homeDate, browseDate, monthDate, groupBaseDate]);
   useEffect(() => { if (!allowProfileEdit) return; setDraftTeam(selectedTeam || mySelection?.teamKey || "ks"); setDraftName(String(mySelection?.name || "").trim()); setDraftCode(String(mySelection?.code || "").trim()); }, [allowProfileEdit, selectedTeam, mySelection]);
-  useEffect(() => { if (!allowProfileEdit) return; const teamKey = draftTeam || "ks"; const currentName = String(draftName || "").trim(); if (!currentName) return; const team = setupSourceData?.[teamKey] || data?.[teamKey]; if (!team) return; if (String(draftCode || "").trim()) return; let nextCode = ""; const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster); if (remoteRow?.code) { nextCode = normalizeToFixedCode(team, remoteRow.code); } else { const zipPerson = findZipPersonByName(team, currentName); if (zipPerson?.baseCode) { nextCode = normalizeToFixedCode(team, zipPerson.baseCode); } } if (!nextCode) return; setDraftCode(nextCode); }, [ allowProfileEdit, draftTeam, draftName, draftCode, remoteRoster, setupSourceData, data, ]);
+  useEffect(() => { if (!allowProfileEdit) return; const teamKey = draftTeam || "ks"; const currentName = String(draftName || "").trim(); if (!currentName) return; const team = setupSourceData?.[draftTeam] || data?.[draftTeam]; if (!team) return; if (String(draftCode || "").trim()) return; let nextCode = ""; const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster); if (remoteRow?.code) { nextCode = normalizeToFixedCode(team, remoteRow.code); } else { const zipPerson = findZipPersonByName(team, currentName); if (zipPerson?.baseCode) { nextCode = normalizeToFixedCode(team, zipPerson.baseCode); } } if (!nextCode) return; setDraftCode(nextCode); }, [ allowProfileEdit, draftTeam, draftName, draftCode, remoteRoster, setupSourceData, data, ]);
   useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
 
   function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
@@ -1198,7 +1198,7 @@ function App() {
                 <div className="card main-panel" style={swipeStyle}>
                   <div className="center-view">
                     <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
-                    <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
+                    <div className="main-code-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
                     <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
                     
                     {homePathImage && (
@@ -1223,7 +1223,7 @@ function App() {
                 <div className="all-tab-header">
                   <div className="all-header" style={{ 
                     display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", 
-                    background: editMode ? "#ef4444" : "#93c5fd", 
+                    background: editMode ? "#ef4444" : "#3b82f6", 
                     borderRadius: "25px", overflow: "hidden",
                     boxShadow: "0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)",
                     transition: "background 0.3s ease"
@@ -1231,10 +1231,10 @@ function App() {
                     <button className="all-header-btn" style={{ 
                       width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)",
-                      background: "transparent", fontSize: "20px", fontWeight: "bold", color: editMode ? "#ffffff" : "#1e3a8a" 
+                      background: "transparent", fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
-                    <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "800", color: editMode ? "#ffffff" : "#1e3a8a" }}>
+                    <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff" }}>
                       {TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}
                     </div>
 
@@ -1243,14 +1243,14 @@ function App() {
                         <button className="all-header-btn" style={{ 
                           width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
                           padding: 0, border: "none", borderLeft: "2px solid rgba(0,0,0,0.2)", borderRight: "2px solid rgba(0,0,0,0.2)", 
-                          background: "transparent", fontSize: "16px", color: editMode ? "#ffffff" : "#1e3a8a" 
+                          background: "transparent", fontSize: "16px", color: "#ffffff" 
                         }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
                         
                         <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
                           width: "37px", height: "37px", minWidth: "37px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", 
                           padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)", 
                           background: "transparent",
-                          color: editMode ? "#ffffff" : "#1e3a8a", fontWeight: "bold" 
+                          color: "#ffffff", fontWeight: "bold" 
                         }} onClick={() => setEditMode(!editMode)}>{editMode ? "수정중" : "수정"}</button>
                       </>
                     )}
@@ -1259,7 +1259,7 @@ function App() {
                       width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
                       borderLeft: (activeTab === "dia") ? "2px solid rgba(0,0,0,0.2)" : "none",
-                      fontSize: "20px", fontWeight: "bold", color: editMode ? "#ffffff" : "#1e3a8a" 
+                      fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
 
@@ -1289,7 +1289,6 @@ function App() {
                         const currentCellKey = getOverrideKey(item.teamKey, item.name);
                         const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                         
-                        /* 🚀 [교정] 지능형 글자색: 배경색 유무에 따라 검정/흰색 자동 전환 */
                         const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                         const textColorStyle = cellColor ? { color: "#000000", fontWeight: "900" } : { color: isDarkMode ? "#ffffff" : "#000000" };
                         
@@ -1351,7 +1350,6 @@ function App() {
                         const cellKey = getOverrideKey(targetTeamKey, mySelection?.name);
                         const cellColor = overrides[cellKey]?.color || "";
                         
-                        /* 🚀 [교정] 월교번 배경색 간섭 제거 및 아이스 블루 적용 준비 */
                         const monthCellStyle = (isDarkMode) ? undefined : (cellColor ? { backgroundColor: cellColor } : undefined);
                         const textColorStyle = (isDarkMode) ? { color: "#ffffff" } : (cellColor ? { color: "#000000" } : {});
 
@@ -1392,7 +1390,7 @@ function App() {
                   </div>
                   <div style={{ flex: 1, display: 'flex', gap: '4px', minWidth: 0, height: '100%' }}>
                     <button className="group-add-btn-v4" onClick={() => setShowGroupAdd(true)}>관리</button>
-                    <button className="group-add-btn-v4" style={{ background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2)' }} onClick={handleShareGroupImage}>공유</button>
+                    <button className="group-add-btn-v4" style={{ background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)' }} onClick={handleShareGroupImage}>공유</button>
                   </div>
                   <button className="nav-btn-v4" onClick={() => setGroupBaseDate(addDays(groupBaseDate, 7))}>▶</button>
                 </div>
@@ -1402,7 +1400,8 @@ function App() {
                       <tr>
                         <th className="sticky-col">이름</th>
                         {weekDates.map((date) => {
-                          const isSelectedCol = selectedGroupDate === date; const isToday = date === getKoreaToday();
+                          const isSelectedCol = selectedGroupDate === date; 
+                          const isToday = date === getKoreaToday();
                           return (
                             <th key={date} onClick={() => setSelectedGroupDate(date)} className={`${isSelectedCol ? "active-col" : ""} ${isToday ? "today-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
                               <div style={{ ...swipeStyle, padding: '10px 4px 8px 4px', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -1422,7 +1421,8 @@ function App() {
                           const override = overrides[getOverrideKey(member.team, member.name)] || {};
                           const displayMemberName = override.alias || member.name;
                           return (
-                          <tr key={`${idx}`}>
+                          /* 🚀 [교정] 선택 날짜 가로줄 전체 하이라이트 CSS 연동 */
+                          <tr key={`${idx}`} className={selectedGroupDate ? "active-row" : ""}>
                             <td className="group-name-cell sticky-col">
                               <div className="group-name-cell-inner">
                                 <div className="name-txt" style={{ color: isDarkMode ? "#ffffff" : "#000000" }}>{displayMemberName}</div>
@@ -1436,12 +1436,10 @@ function App() {
                               const memberKey = getOverrideKey(member.team, member.name);
                               const memberColor = overrides[memberKey]?.color || "";
                               
-                              /* 🚀 [기능 복구] 세로 하이라이트 효과 적용 */
                               const groupCellStyle = (!isDarkMode && memberColor) ? { backgroundColor: memberColor, color: "#000000" } : { color: isDarkMode ? "#ffffff" : "#000000" };
-                              const activeColStyle = isSelectedCol ? { backgroundColor: isDarkMode ? "rgba(0, 242, 255, 0.15)" : "#e0f2fe" } : {};
 
                               return (
-                                <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', ...groupCellStyle, ...activeColStyle, transition: "background-color 0.18s ease" }}>
+                                <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', ...groupCellStyle, transition: "background-color 0.18s ease" }}>
                                   <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: isSelectedCol ? 800 : 600 }}>
                                     {item?.code || "-"}
                                   </div>
