@@ -1396,20 +1396,14 @@ function App() {
                         const worktime = item?.code ? pickWorktime(effectiveData[targetTeamKey], item.code, date) : ""; 
                         const { startTime, endTime } = splitWorktime(worktime);
                         
-                        const cellKey = getOverrideKey(targetTeamKey, mySelection?.name);
-                        const cellColor = overrides[cellKey]?.color || "";
-                        
-                        const monthCellStyle = (isDarkMode) ? undefined : (cellColor ? { backgroundColor: cellColor } : undefined);
-                        const textColorStyle = (isDarkMode) ? { color: "#ffffff" } : (cellColor ? { color: "#000000" } : {});
-
                         return (
-                          <button key={date} className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`} style={monthCellStyle} onClick={() => { if (item?.code) { openPathDialogForTeamAndDate(targetTeamKey, { code: item.code, name: item.name || mySelection?.name || "", displayName: item.displayName || mySelection?.name || "", idx: -1 }, date); } else { setMonthDate(date); } }}>
+                          <button key={date} className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`} onClick={() => { if (item?.code) { openPathDialogForTeamAndDate(targetTeamKey, { code: item.code, name: item.name || mySelection?.name || "", displayName: item.displayName || mySelection?.name || "", idx: -1 }, date); } else { setMonthDate(date); } }}>
                             <div className={`month-cell-inner ${toneClass}`}>
-                              <div className={`month-day ${toneClass}`} style={textColorStyle}>{parseLocalDate(date).getDate()}</div>
-                              <div className={`month-code-line ${toneClass}`} style={textColorStyle}>{item?.code || "-"}</div>
+                              <div className={`month-day ${toneClass}`}>{parseLocalDate(date).getDate()}</div>
+                              <div className={`month-code-line ${toneClass}`}>{item?.code || "-"}</div>
                               <div className="month-time-wrap">
-                                <div className={`month-time-line ${toneClass}`} style={textColorStyle}>{startTime || "-"}</div>
-                                <div className={`month-time-line ${toneClass}`} style={textColorStyle}>{endTime || ""}</div>
+                                <div className={`month-time-line ${toneClass}`}>{startTime || "-"}</div>
+                                <div className={`month-time-line ${toneClass}`}>{endTime || ""}</div>
                               </div>
                             </div>
                           </button>
