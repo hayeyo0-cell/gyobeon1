@@ -1351,7 +1351,7 @@ function App() {
                         const cellKey = getOverrideKey(targetTeamKey, mySelection?.name);
                         const cellColor = overrides[cellKey]?.color || "";
                         
-                        /* 🚀 [교정] 월교번 배경색 간섭 제거: 다크모드일 땐 항상 기본배경 적용 */
+                        /* 🚀 [교정] 월교번 배경색 간섭 제거 및 아이스 블루 적용 준비 */
                         const monthCellStyle = (isDarkMode) ? undefined : (cellColor ? { backgroundColor: cellColor } : undefined);
                         const textColorStyle = (isDarkMode) ? { color: "#ffffff" } : (cellColor ? { color: "#000000" } : {});
 
@@ -1436,15 +1436,13 @@ function App() {
                               const memberKey = getOverrideKey(member.team, member.name);
                               const memberColor = overrides[memberKey]?.color || "";
                               
-                              /* 🚀 [교정] 그룹 탭 배경색 간섭 제거: 다크모드일 땐 항상 기본배경 적용 */
+                              /* 🚀 [기능 복구] 세로 하이라이트 효과 적용 */
                               const groupCellStyle = (!isDarkMode && memberColor) ? { backgroundColor: memberColor, color: "#000000" } : { color: isDarkMode ? "#ffffff" : "#000000" };
-
-                              /* 🚀 [기능 복구] 날짜 선택 시 그룹 전체 색상 강조 효과 적용 */
-                              const activeColStyle = isSelectedCol ? { backgroundColor: isDarkMode ? "rgba(59, 130, 246, 0.2)" : "#f0f7ff" } : {};
+                              const activeColStyle = isSelectedCol ? { backgroundColor: isDarkMode ? "rgba(0, 242, 255, 0.15)" : "#e0f2fe" } : {};
 
                               return (
                                 <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', ...groupCellStyle, ...activeColStyle, transition: "background-color 0.18s ease" }}>
-                                  <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: isSelectedCol ? 700 : 600 }}>
+                                  <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: isSelectedCol ? 800 : 600 }}>
                                     {item?.code || "-"}
                                   </div>
                                 </td>
