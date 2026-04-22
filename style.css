@@ -156,38 +156,6 @@ body.dark-mode .name-txt { color: #ffffff !important; }
 .month-header-title { height: 48px; display: flex; align-items: center; justify-content: center; background: #ffffff; border-radius: 16px; font-size: 24px; font-weight: 800; border: 1px solid #d7dce5; transition: background-color 0.2s ease, border-color 0.2s ease; }
 
 .all-page { padding-bottom: 20px; }
-.all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
-.dia-header { grid-template-columns: 40px 1fr 38px 40px; }
-.all-header-btn { height: 52px; font-size: 18px; }
-.all-edit-btn { height: 52px; font-size: 12px; }
-.all-header-title { font-size: 14px; padding: 0 5px; }
-
-.all-team-tabs { gap: 4px; margin-top: 6px; margin-bottom: 6px; }
-.all-team-tab { font-size: 13px; padding: 9px 0; border-radius: 14px; }
-.all-tab-grid-wrap { padding: 6px; border-radius: 22px; margin-bottom: 10px; }
-.all-cell-real { min-height: 48px; border-radius: 8px; padding: 2px 1px; }
-
-.all-grid-real.density-4 { display: grid; width: 100%; height: auto; gap: 2px; align-items: stretch; grid-template-columns: repeat(4, 1fr); }
-.all-grid-real.density-5 { display: grid; width: 100%; height: auto; gap: 2px; align-items: stretch; grid-template-columns: repeat(5, 1fr); }
-.all-grid-real.density-6 { display: grid; width: 100%; height: auto; gap: 2px; align-items: stretch; grid-template-columns: repeat(6, 1fr); }
-
-.all-grid-real.density-4 .all-code { font-size: 17px; } .all-grid-real.density-4 .all-name { font-size: 12.5px; }
-.all-grid-real.density-5 .all-code { font-size: 15px; } .all-grid-real.density-5 .all-name { font-size: 11.5px; }
-.all-grid-real.density-6 .all-code { font-size: 14px; } .all-grid-real.density-6 .all-name { font-size: 10px; }
-
-.group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
-.nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
-.group-select-display { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
-.group-add-btn-v4 { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
-
-.code-txt { font-size: 13px; }
-.row-del-btn-text { padding: 3px 10px; font-size: 10px; border-radius: 10px; }
-
-.modal { padding: 16px; border-radius: 20px; }
-.modal-title { font-size: 22px; }
-.modal-sub { font-size: 16px; }
-
-/* 🚀 상단 헤더 복구 */
 .all-header {
     height: 60px;
     display: grid;
@@ -364,7 +332,7 @@ body.dark-mode { background: #0f172a; color: #f8fafc; }
 .dark-mode table, .dark-mode th, .dark-mode td, .dark-mode .group-table th, .dark-mode .group-table td { border-color: #334155 !important; color: #f8fafc; }
 .dark-mode .group-table th { background: #1e293b; color: #f8fafc; }
 
-/* 🚀 [교정] 다크모드 그룹 탭 이름 칸 (네이비 복구) */
+/* 🚀 [교정] 다크모드 이름 칸 배경색 (네이비 복구) */
 body.dark-mode .group-table th.sticky-col, body.dark-mode .group-table td.sticky-col { background-color: #1e293b !important; border-right-color: #475569 !important; }
 .dark-mode .name-txt { color: #ffffff !important; font-weight: 800; }
 
@@ -390,8 +358,8 @@ body.dark-mode .group-table td.active-col { background-color: rgba(0, 242, 255, 
 .dark-mode .notice-box { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border-color: rgba(59, 130, 246, 0.3); }
 .dark-mode .modal { background: #1e293b; color: #f8fafc; border-color: #334155; }
 .dark-mode .modal-btn { background: #334155; border-color: #475569; color: #f8fafc; }
-/* 🚀 시작하기 버튼 활성화 교정: 잠금 상태에서도 클릭 가능하게 투명도 및 포인터 보정 */
-.modal-btn:disabled { opacity: 0.95; cursor: pointer; background: #3b82f6; color: white; }
+/* 🚀 시작하기 버튼 활성화 교정: 버튼이 disabled여도 시각적으로 활성 상태 유지 및 JS 트리거 보조 */
+.modal-btn:disabled { opacity: 0.95; cursor: pointer; background: #3b82f6 !important; color: white !important; }
 .dark-mode .modal-title, .dark-mode .label { color: #e2e8f0; }
 .dark-mode .empty-msg { color: #94a3b8; }
 .dark-mode .home-path-preview img { background: #1e293b; border-color: #334155; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }
@@ -496,5 +464,5 @@ body.dark-mode select.select {
   background-color: #1e293b !important;
   border-color: #475569 !important;
   color: #f8fafc !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
 }
