@@ -318,7 +318,7 @@ function applyRemoteRosterNamesForSetup(baseData, remoteRoster) {
   return next;
 }
 
-/* 🚀 [교정] buildAnchorForIdentity 안전 로직 보강하여 초기 설정 프리징 해결 */
+/* 🚀 [프리징 해결] buildAnchorForIdentity 안전 로직 보강 */
 function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection = null) {
   if (!team || !name) return buildTeamAnchorFromZip(team);
   try {
@@ -762,7 +762,7 @@ function App() {
     return grid.map(item => ({ ...item, teamKey: viewTeam })); 
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection, myInfo]);
 
-  /* 🚀 [교정] 이름 검색 시 오늘 데이터만 참조하도록 완전 분리 (열번 검색은 현행 유지) */
+  /* 🚀 [교정] 이름 검색 시 중복 방지를 위해 오늘 데이터만 필터링 */
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
@@ -782,39 +782,32 @@ function App() {
       TEAM_ORDER.forEach(teamKey => {
         const team = effectiveData[teamKey];
         if (!team) return;
-
         const teamGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
           ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, browseDate, overrides)
           : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, browseDate), overrides);
-
         const yesterdayGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
           ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
           : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
-
         const matchedYesterday = yesterdayGrid.filter(item => {
           if (!isNightStartCode(teamKey, item.code)) return false;
           const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
           const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
           return trains.some(t => String(t) === q) && !isNightLaunchTrain;
         }).map(item => ({ ...item, code: normalizeCodeKey(item.code).replace(/d$/, "") + "~", teamKey, searchOrigin: 'yesterday' }));
-
         const matchedToday = teamGrid.filter(item => {
           const folder = getPathFolder(teamKey, browseDate, item.code);
           const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
           const isMatch = trains.some(t => String(t) === q);
           return isMatch && !(isEarlyMorningTrain && isNightStartCode(teamKey, item.code));
         }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
-
         crossTeamResults = [...crossTeamResults, ...matchedYesterday, ...matchedToday];
       });
-
       const uniqueMap = new Map();
       crossTeamResults.forEach(item => {
           const key = `${item.teamKey}-${item.name}-${item.code}`;
           if (!uniqueMap.has(key)) uniqueMap.set(key, item);
       });
       return Array.from(uniqueMap.values());
-
     } else {
       let crossTeamNameResults = [];
       TEAM_ORDER.forEach(teamKey => {
@@ -823,7 +816,6 @@ function App() {
         const teamGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
           ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, browseDate, overrides)
           : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, browseDate), overrides);
-
         const matched = teamGrid.filter(item => {
           const cellKey = getOverrideKey(teamKey, item.name);
           const displayName = overrides[cellKey]?.alias || item.displayName || item.name;
@@ -897,7 +889,7 @@ function App() {
       const nextSetupData = applyRemoteRosterNamesForSetup(nextData, rosterForApply || getEmptyRemoteRoster());
       if (!keepSavedSelection) {
         setAllowProfileEdit(true); const defaultTeam = mySelection?.teamKey || selectedTeam || "ks"; const defaultName = String(mySelection?.name || "").trim() || nextSetupData?.[defaultTeam]?.info?.baseName || nextSetupData?.[defaultTeam]?.people?.[0]?.name || "";
-        const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData || nextData, rosterForApply || getEmptyRemoteRoster(), defaultTeam, defaultName, mySelection); setTeamAnchors(autoAnchors); setDraftTeam(defaultTeam); setDraftName(""); setDraftCode(""); setSelectedTeam(defaultTeam);
+        const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData || nextData, rosterForApply || getEmptyRemoteRoster(), defaultTeam, defaultName, mySelection); setTeamAnchors(nextAnchors); setDraftTeam(defaultTeam); setDraftName(""); setDraftCode(""); setSelectedTeam(defaultTeam);
       }
     } catch (e) { setError("ZIP 파일을 읽는 중 오류가 발생했습니다."); } finally { if (showBusy) setLoading(false); }
   }
@@ -1289,9 +1281,9 @@ function App() {
                         const currentCellKey = getOverrideKey(item.teamKey, item.name);
                         const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                         
-                        /* 🚀 [교정] 지능형 글자색: 배경색 유무에 따라 검정/흰색 자동 전환 */
+                        /* 🚀 [지능형 글자색] 배경색 유무와 다크모드 여부에 따라 색상 결정 */
                         const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
-                        const textColorStyle = cellColor ? { color: "#000000", fontWeight: "900" } : {};
+                        const textColorStyle = cellColor ? { color: "#000000", fontWeight: "900" } : { color: isDarkMode ? "#ffffff" : "#000000" };
                         
                         return (
                           <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
@@ -1350,8 +1342,10 @@ function App() {
                         
                         const cellKey = getOverrideKey(targetTeamKey, mySelection?.name);
                         const cellColor = overrides[cellKey]?.color || "";
-                        const monthCellStyle = cellColor ? { backgroundColor: cellColor } : undefined;
-                        const textColorStyle = cellColor ? { color: "#000000" } : {};
+                        
+                        /* 🚀 [월교번 다크모드 네이비 원복] 배경색은 CSS에서 제어하도록 JS 인라인 스타일 최소화 */
+                        const monthCellStyle = (!isDarkMode && cellColor) ? { backgroundColor: cellColor } : undefined;
+                        const textColorStyle = (isDarkMode) ? { color: "#ffffff" } : (cellColor ? { color: "#000000" } : {});
 
                         return (
                           <button key={date} className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`} style={monthCellStyle} onClick={() => { if (item?.code) { openPathDialogForTeamAndDate(targetTeamKey, { code: item.code, name: item.name || mySelection?.name || "", displayName: item.displayName || mySelection?.name || "", idx: -1 }, date); } else { setMonthDate(date); } }}>
@@ -1423,7 +1417,7 @@ function App() {
                           <tr key={`${idx}`}>
                             <td className="group-name-cell sticky-col">
                               <div className="group-name-cell-inner">
-                                <div className="name-txt">{displayMemberName}</div>
+                                <div className="name-txt" style={{ color: isDarkMode ? "#ffffff" : "#000000" }}>{displayMemberName}</div>
                                 <div className="team-badge">{TEAM_LABELS[member.team]}</div>
                                 <button className="row-del-btn-text" onClick={() => removeFromGroup(member.team, member.name)}>삭제</button>
                               </div>
@@ -1433,7 +1427,9 @@ function App() {
                               const isSelectedCol = selectedGroupDate === date;
                               const memberKey = getOverrideKey(member.team, member.name);
                               const memberColor = overrides[memberKey]?.color || "";
-                              const groupCellStyle = memberColor ? { backgroundColor: memberColor, color: "#000000" } : {};
+                              
+                              /* 🚀 [교정] 그룹 탭 글자색 가변 로직 반영 */
+                              const groupCellStyle = memberColor ? { backgroundColor: memberColor, color: "#000000" } : { color: isDarkMode ? "#ffffff" : "#000000" };
 
                               return (
                                 <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} style={{ cursor: "pointer", padding: 0, overflow: 'hidden', ...groupCellStyle, transition: "background-color 0.18s ease" }}>
