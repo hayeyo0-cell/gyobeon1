@@ -845,7 +845,8 @@ function App() {
     }
   }, [allGrid, searchQuery, browseDate, effectiveData, remoteRoster, overrides, teamAnchors]);
 
-  // 💡 [추가된 로직] 검색 결과가 있으면 첫 번째 항목의 행로표를 자동으로 설정
+  const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
+
   useEffect(() => {
     if (activeTab === 'all' && searchQuery && visibleAllGrid.length > 0) {
       const firstItem = visibleAllGrid[0];
@@ -863,8 +864,6 @@ function App() {
       setPathImage("");
     }
   }, [searchQuery, visibleAllGrid, browseDate, activeTab, effectiveData]);
-
-  const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
 
   const allGridLayout = useMemo(() => { return getAllGridLayout(visibleAllGrid.length || 0); }, [visibleAllGrid.length]);
   const allGridRows = useMemo(() => { return Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols)); }, [visibleAllGrid.length, allGridLayout.cols]);
@@ -1348,7 +1347,6 @@ function App() {
                         })}
                       </div>
                     </div>
-                    {/* 💡 [수정됨] 검색 시 미리보기 영역이 빈 공간에 나타나도록 추가 */}
                     {searchQuery && pathImage && (
                       <div className="card" style={{ marginTop: 10, padding: 10 }}>
                         <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, textAlign: 'center', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
