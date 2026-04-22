@@ -349,27 +349,25 @@ body.dark-mode .name-txt { color: #ffffff !important; }
 
 @keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(0, 242, 255, 0.2); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.4); } }
 
-/* 🌙 다크 모드 (완벽 보존 및 디자인 충돌 해결) */
+/* 🌙 다크 모드 전용 스타일 */
 body.dark-mode { background: #0f172a; color: #f8fafc; }
-body.dark-mode .card, body.dark-mode .main-panel, body.dark-mode .month-calendar, body.dark-mode .group-table-wrap, body.dark-mode .group-top-bar-v4 { background-color: #1e293b !important; border-color: #334155 !important; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+body.dark-mode .card, 
+body.dark-mode .main-panel, 
+body.dark-mode .month-calendar, 
+body.dark-mode .group-top-bar-v4 { background-color: #1e293b !important; border-color: #334155 !important; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
 
-/* 다크모드 입력창 및 설정창 가독성 확보 */
-body.dark-mode .modal { background: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; }
-body.dark-mode .input, body.dark-mode .select, body.dark-mode .group-select-display { background: #0f172a !important; border-color: #475569 !important; color: #f8fafc !important; }
+/* 그룹 테이블 다크모드 배경 고정 */
+body.dark-mode .group-table-wrap, 
+body.dark-mode .group-table, 
+body.dark-mode .group-table th, 
+body.dark-mode .group-table td { background-color: #1e293b !important; border-color: #334155 !important; }
 
-/* 다크모드 전체탭 격자 디자인 복구 */
-body.dark-mode .all-tab-grid-wrap { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155; }
-body.dark-mode .all-cell-real:not([style*="background-color"]) { 
-  background: linear-gradient(180deg, #334155 0%, #1e293b 100%) !important; 
-  border-color: #475569 !important;
-}
+/* 다크모드 글자색 보정 (색상 미지정 시 흰색) */
+body.dark-mode .month-cell:not([style*="background-color"]),
+body.dark-mode .group-table td:not([style*="background-color"]),
+body.dark-mode .all-cell-real:not([style*="background-color"]) { color: #ffffff !important; }
 
-/* 🚀 [교정 핵심] 배경색 주입 대응 - 라이트모드 보라색 간섭 차단 및 가독성 확보 */
-body.dark-mode .month-cell, body.dark-mode .group-table td, body.dark-mode .all-cell-real {
-  color: #ffffff !important; 
-}
-
-/* 사용자 지정 색상이 입혀진 칸만 글자색을 검은색으로 고정하여 쨍하게 표시 */
+/* 사용자 지정 색상 셀 다크모드 가독성 보정 */
 body.dark-mode .month-cell[style*="background-color"], 
 body.dark-mode .group-table td[style*="background-color"],
 body.dark-mode .all-cell-real[style*="background-color"] { 
@@ -379,13 +377,31 @@ body.dark-mode .all-cell-real[style*="background-color"] {
   text-shadow: none !important;
 }
 
-/* 다크모드 이름 칸 고정 (네이비 복구) */
+body.dark-mode .input, 
+body.dark-mode .select, 
+body.dark-mode .group-select-display { background: #0f172a !important; border-color: #475569 !important; color: #f8fafc !important; }
+body.dark-mode .date-box { background: #1e293b !important; border-color: #334155; }
+body.dark-mode .date-btn { background: #334155; color: #f8fafc; }
+body.dark-mode .date-value { background: #1e293b; color: #f8fafc; }
+
+/* 다크모드 모달 가독성 */
+body.dark-mode .modal { background: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; }
+body.dark-mode .modal-title, body.dark-mode .label { color: #ffffff !important; }
+
+/* 전체 탭 디자인 다크모드 복구 */
+body.dark-mode .all-tab-grid-wrap { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155; }
+body.dark-mode .all-cell-real:not([style*="background-color"]) { 
+  background: linear-gradient(180deg, #334155 0%, #1e293b 100%) !important; 
+  border-color: #475569 !important;
+}
+
+/* 그룹 테이블 상세 설정 */
 body.dark-mode .group-table th.sticky-col, body.dark-mode .group-table td.sticky-col { background-color: #1e293b !important; border-right-color: #475569 !important; }
 body.dark-mode .name-txt { color: #ffffff !important; font-weight: 800; }
-body.dark-mode .group-table td.active-col { background-color: rgba(59, 130, 246, 0.25) !important; }
+body.dark-mode .group-table td.active-col { background-color: rgba(59, 130, 246, 0.2) !important; }
 body.dark-mode .group-table th.today-col { background: rgba(0, 242, 255, 0.1) !important; border-bottom: 4px solid #00f2ff !important; }
 
-/* 다크모드 월교번 가독성 */
+/* 월교번 다크모드 보정 */
 body.dark-mode .month-day, body.dark-mode .month-code-line, body.dark-mode .tone-normal { color: #ffffff !important; }
 body.dark-mode .month-time-line { color: #94a3b8; }
 body.dark-mode .month-cell.selected { border-color: #00f2ff !important; background: rgba(0, 242, 255, 0.05) !important; }
@@ -478,4 +494,4 @@ body.dark-mode select.select {
   border-color: #475569 !important;
   color: #f8fafc !important;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
-}
+} 이코드와 방금 내가 올려준 사진 참고해서 절대로 임의로 디자인 바꾸거나 줄이지말고 해결해줘. 라이트모드는 절대 건드리지말고 다크모드에서 발생하는 문제만 해결해줘. 참고로 월교번 사진보면 다른월 날짜들 색상이 흰색이야. 배경이 흰색이니까 보이지않아. 글고 다크모드 전체 디자인보면 사각격자가 원래 입체감이 있어야하는데 입체감이 없어졌어. 글구 설정창 모달도 흰색이 섞여있어서 글자가 안보여. 꼼꼼하게 확인해서 해결부탁해
