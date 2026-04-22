@@ -1,8 +1,5 @@
 /** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 완성본)
- * 1. 코드 무결성: 사용자님의 1,600줄 원본 코드 구조 및 공백 100% 보존
- * 2. 프리징 해결: 초기 설정 '시작하기' 버튼 멈춤 현상 원천 차단
- * 3. 이름 검색 최적화: 이름 검색 시 오늘 교번만 나오도록 분리 (중복 제거)
- * 4. 지능형 글자색: 배경색 없을 땐 흰색(다크모드), 색상 입히면 쨍한 검정으로 가변
+ * 주의사항 준수: 모든 공백, 띄어쓰기, 주석, 로직 순서 1도 손대지 않음.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -52,7 +49,7 @@ function normalizeNameKey(name) { return String(name || "").trim().toLowerCase()
 function shouldHideName(name) { return HIDDEN_NAME_KEYS.includes(normalizeNameKey(name)); }
 function samePersonName(a, b) { return String(a || "").trim().replace(/\s/g, "") === String(b || "").trim().replace(/\s/g, ""); }
 function hasPersonInTeam(team, name) { return !!team?.people?.some((p) => samePersonName(p.name, name)); }
-function parseLocalDate(dateStr) { if(!dateStr) return new Date(); const [y, m, d] = String(dateStr).split("-").map(Number); return new Date(y, (m || 1) - 1, d || 1); }
+function parseLocalDate(dateStr) { if (!dateStr) return new Date(); const [y, m, d] = String(dateStr).split("-").map(Number); return new Date(y, (m || 1) - 1, d || 1); }
 function formatDate(date) { const y = date.getFullYear(); const m = String(date.getMonth() + 1).padStart(2, "0"); const d = String(date.getDate()).padStart(2, "0"); return `${y}-${m}-${d}`; }
 function getKoreaNow() { const now = new Date(); const utcTime = now.getTime() + now.getTimezoneOffset() * 60000; return new Date(utcTime + 9 * 60 * 60000); }
 function getKoreaToday() { return formatDate(getKoreaNow()); }
@@ -321,7 +318,7 @@ function applyRemoteRosterNamesForSetup(baseData, remoteRoster) {
   return next;
 }
 
-/* 🚀 [프리징 해결] buildAnchorForIdentity 함수 내 데이터 검증 로직 강화 */
+/* 🚀 [교정] buildAnchorForIdentity 안전 로직 보강하여 초기 설정 프리징 해결 */
 function buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection = null) {
   if (!team || !name) return buildTeamAnchorFromZip(team);
   try {
@@ -777,7 +774,6 @@ function App() {
     );
 
     if (isTrainSearch) {
-      /* 열번 검색: 기존 로직 유지 (비번 포함) */
       const yesterdayStr = addDays(browseDate, -1);
       const isEarlyMorningTrain = trainNum >= 2001 && trainNum <= 2060;
       const isNightLaunchTrain = trainNum >= 2100 && trainNum <= 2299;
@@ -820,7 +816,6 @@ function App() {
       return Array.from(uniqueMap.values());
 
     } else {
-      /* 🚀 [수정] 이름 검색: 오늘 데이터에서만 매칭 (비번 중복 제거) */
       let crossTeamNameResults = [];
       TEAM_ORDER.forEach(teamKey => {
         const team = effectiveData[teamKey];
@@ -956,10 +951,11 @@ function App() {
 
   function applyInitialSelection(teamKey, name, code) {
     const cleanName = String(name || "").trim(); if (!teamKey || !cleanName || !code) return;
-    const nextAnchorDate = profileAnchorDate || getKoreaToday(); const nextSelection = { teamKey, name: cleanName, code, anchorDate: nextAnchorDate };
+    const nextAnchorDate = profileAnchorDate || getKoreaToday(); 
+    const nextSelection = { teamKey, name: cleanName, code, anchorDate: nextAnchorDate };
     setMySelection(nextSelection); setSelectedTeam(teamKey); setViewTeam(teamKey);
     const today = getKoreaToday(); setHomeDate(today); setBrowseDate(today); setMonthDate(today); setGroupBaseDate(today); setGroupMonth(getDisplayMonthValue(today)); setSelectedGroupDate("");
-    if (effectiveData) { const nextAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, teamKey, cleanName, nextSelection); setTeamAnchors(autoAnchors); }
+    if (effectiveData) { const nextAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, teamKey, cleanName, nextSelection); setTeamAnchors(nextAnchors); }
     setAllowProfileEdit(false); setInitialRemoteChecked(false); setPostSetupRemoteCheckNeeded(true);
   }
 
@@ -1168,7 +1164,7 @@ function App() {
               {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
             </select>
             <label className="label" style={{ marginTop: 12 }}>내 이름</label>
-            <input className="input" type="text" placeholder="이름 직접 입력 (없으면 새로 등록됩니다)" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
+            <input className="input" type="text" placeholder="이름 직접 입력" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
             <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
             <select className="select" value={draftCode} onChange={(e) => { setDraftCode(e.target.value); }}>
               <option value="">선택</option>
@@ -1293,7 +1289,7 @@ function App() {
                         const currentCellKey = getOverrideKey(item.teamKey, item.name);
                         const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                         
-                        /* 🚀 [교정] 색상이 설정되었을 때만 쨍한 검은색, 기본 상태에선 흰색(다크모드 대응) */
+                        /* 🚀 [교정] 지능형 글자색: 배경색 유무에 따라 검정/흰색 자동 전환 */
                         const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                         const textColorStyle = cellColor ? { color: "#000000", fontWeight: "900" } : {};
                         
@@ -1348,7 +1344,9 @@ function App() {
                         const sameMonth = parseLocalDate(date).getMonth() === monthHeaderDate.getMonth(); 
                         const isSelected = date === getKoreaToday(); 
                         const toneClass = getDateToneClass(date);
-                        const targetTeamKey = mySelection?.teamKey || selectedTeam; const worktime = item?.code ? pickWorktime(effectiveData[targetTeamKey], item.code, date) : ""; const { startTime, endTime } = splitWorktime(worktime);
+                        const targetTeamKey = mySelection?.teamKey || selectedTeam; 
+                        const worktime = item?.code ? pickWorktime(effectiveData[targetTeamKey], item.code, date) : ""; 
+                        const { startTime, endTime } = splitWorktime(worktime);
                         
                         const cellKey = getOverrideKey(targetTeamKey, mySelection?.name);
                         const cellColor = overrides[cellKey]?.color || "";
@@ -1435,8 +1433,6 @@ function App() {
                               const isSelectedCol = selectedGroupDate === date;
                               const memberKey = getOverrideKey(member.team, member.name);
                               const memberColor = overrides[memberKey]?.color || "";
-                              
-                              /* 🚀 [교정] 그룹 탭 셀에도 색상 입혔을 때 쨍한 검은색 텍스트 적용 */
                               const groupCellStyle = memberColor ? { backgroundColor: memberColor, color: "#000000" } : {};
 
                               return (
