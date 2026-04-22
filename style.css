@@ -35,7 +35,7 @@ button:active { transform: scale(0.97); }
 .settings-btn { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); }
 .install-btn { background: linear-gradient(180deg, #2aa55d 0%, #197a42 100%); }
 .quick-btn.band { background: linear-gradient(180deg, #21b35a 0%, #169447 100%); }
-.quick-btn.vacation { background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%); }
+.quick-btn.warmth { background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%); }
 .quick-icon { width: 20px; height: 20px; object-fit: contain; display: block; flex-shrink: 0; }
 
 .date-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; height: 168px; }
@@ -350,9 +350,9 @@ body.dark-mode .name-txt { color: #ffffff !important; }
 @keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(0, 242, 255, 0.2); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.4); } }
 
 /* 🌙 다크 모드 (완벽 보존 및 디자인 충돌 정밀 해결) */
-body.dark-mode { background: #0f172a; color: #f8fafc; }
+body.dark-mode { background: #0f172a !important; color: #f8fafc !important; }
 
-/* 1. 배경색 고정 - 라이트모드 보라색 간섭 차단 */
+/* 1. 배경색 강제 고정 - 라이트모드 보라색 간섭 차단 및 가독성 확보 */
 body.dark-mode .card, 
 body.dark-mode .main-panel, 
 body.dark-mode .month-calendar, 
@@ -360,64 +360,77 @@ body.dark-mode .group-top-bar-v4,
 body.dark-mode .group-table-wrap, 
 body.dark-mode .group-table, 
 body.dark-mode .group-table th, 
-body.dark-mode .group-table td { background-color: #1e293b !important; border-color: #334155 !important; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+body.dark-mode .group-table td,
+body.dark-mode .month-cell { 
+  background-color: #1e293b !important; 
+  border-color: #334155 !important; 
+}
 
-/* 2. 홈 화면 연/월/일 박스 글자색 복구 */
-body.dark-mode .date-box { background: #1e293b !important; border-color: #334155 !important; }
+/* 2. 홈 화면 연/월/일 박스 가독성 복구 (사진 40578 대응) */
+body.dark-mode .date-box { background-color: #1e293b !important; border-color: #334155 !important; }
 body.dark-mode .date-btn { background-color: #334155 !important; color: #ffffff !important; }
 body.dark-mode .date-value { background-color: #1e293b !important; color: #ffffff !important; }
 
-/* 3. 월교번/그룹 테이블 글자색 선명하게 고정 */
+/* 3. 글자색 선명하게 고정 (색상이 입혀지지 않은 기본 셀 전용) */
 body.dark-mode .group-table td:not([style*="background-color"]), 
 body.dark-mode .month-cell:not([style*="background-color"]),
-body.dark-mode .all-cell-real:not([style*="background-color"]) { color: #ffffff !important; }
+body.dark-mode .all-cell-real:not([style*="background-color"]) { 
+  color: #ffffff !important; 
+}
 
-/* 사용자 지정 색상 셀 가독성 (검은 글씨 적용) */
+/* 4. 사용자 지정 색상 셀 가독성 보정 (배경색 네이비 고정, 글자색 흰색 유지) */
 body.dark-mode .month-cell[style*="background-color"], 
 body.dark-mode .group-table td[style*="background-color"],
 body.dark-mode .all-cell-real[style*="background-color"] { 
+  background-color: #1e293b !important; 
   background-image: none !important;
-  color: #000000 !important;
-  font-weight: 900 !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
 }
 
-/* 4. 설정창/모달 가독성 복구 (흰색 섞임 방지) */
-body.dark-mode .modal { background: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; box-shadow: 0 20px 60px rgba(0,0,0,0.7); }
+/* 5. 설정창/모달 가독성 복구 (사진 40584, 40621 대응) */
+body.dark-mode .modal { background-color: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; }
 body.dark-mode .modal-title, body.dark-mode .label { color: #ffffff !important; }
-body.dark-mode .input, body.dark-mode .select, body.dark-mode .group-select-display { background: #0f172a !important; border-color: #475569 !important; color: #f8fafc !important; }
+body.dark-mode .input, 
+body.dark-mode .select, 
+body.dark-mode .group-select-display { 
+  background-color: #0f172a !important; 
+  border-color: #475569 !important; 
+  color: #f8fafc !important; 
+}
 
-/* 5. 전체 탭 사각 격자 입체감 복원 */
-body.dark-mode .all-tab-grid-wrap { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155 !important; }
+/* 6. 전체 탭 사각 격자 입체감 및 디자인 복원 (마지막 사진 철학 유지) */
+body.dark-mode .all-tab-grid-wrap { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important; border: 1px solid #334155 !important; }
 body.dark-mode .all-cell-real:not([style*="background-color"]) { 
   background: linear-gradient(180deg, #334155 0%, #1e293b 100%) !important; 
   border: 1px solid #475569 !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 4px rgba(0,0,0,0.3) !important;
 }
 
-/* 그룹 테이블 이름 칸 고정 */
+/* 7. 그룹 테이블 상세 설정 및 하이라이트 */
 body.dark-mode .group-table th.sticky-col, body.dark-mode .group-table td.sticky-col { background-color: #1e293b !important; border-right: 2px solid #334155 !important; z-index: 20; }
 body.dark-mode .name-txt { color: #ffffff !important; font-weight: 800; }
-body.dark-mode .group-table td.active-col { background-color: rgba(59, 130, 246, 0.2) !important; }
+body.dark-mode .group-table td.active-col { background-color: rgba(59, 130, 246, 0.25) !important; }
 body.dark-mode .group-table th.today-col { background: rgba(0, 242, 255, 0.1) !important; border-bottom: 4px solid #00f2ff !important; }
 
-/* 월교번 다크모드 보정 */
+/* 8. 월교번 다크모드 가독성 및 다른 월 날짜 보정 (사진 40586, 40623 대응) */
 body.dark-mode .month-day, body.dark-mode .month-code-line, body.dark-mode .tone-normal { color: #ffffff !important; }
-body.dark-mode .month-cell.other-month { opacity: 0.25; background: #0f172a !important; }
+body.dark-mode .month-cell.other-month { opacity: 1 !important; background-color: #0f172a !important; }
 body.dark-mode .month-cell.other-month .month-day, 
 body.dark-mode .month-cell.other-month .month-code-line, 
 body.dark-mode .month-cell.other-month .month-time-line { color: #64748b !important; }
-body.dark-mode .month-cell.selected { border: 3px solid #00f2ff !important; background: rgba(0, 242, 255, 0.05) !important; }
+body.dark-mode .month-cell.selected { border: 3.5px solid #00f2ff !important; background-color: rgba(0, 242, 255, 0.05) !important; }
 
 @media (max-width: 420px) {
-  .container { padding: 22px 6px 20px; touch-action: pan-y; }
+  .container { padding: 22px 6px 20px !important; touch-action: pan-y; }
   .container::after { height: calc(92px + env(safe-area-inset-bottom, 0px)); }
-  .date-grid { gap: 6px; height: 154px; margin-bottom: 6px; }
+  .date-grid { gap: 6px; height: 154px !important; margin-bottom: 6px; }
   .date-box { grid-template-rows: 42px 1fr 42px; border-radius: 18px; }
   .date-btn { height: 42px; font-size: 22px; }
   .date-value { font-size: 19px; }
   .settings-row { min-height: 46px; margin-bottom: 6px; gap: 6px; }
   .settings-btn, .install-btn, .quick-btn { height: 38px; padding: 0 11px; font-size: 13px; border-radius: 14px; gap: 5px; }
-  .main-panel { min-height: 188px; border-radius: 24px; }
+  .main-panel { min-height: 188px !important; border-radius: 24px; }
   .main-code { font-size: 36px; }
   .main-time { font-size: 27px; }
   .main-subinfo { font-size: 13px; margin-top: 10px; }
@@ -492,8 +505,8 @@ select.select:focus {
 
 /* 다크모드 드롭다운 대응 */
 body.dark-mode select.select {
-  background-color: #1e293b !important;
+  background-color: #0f172a !important;
   border-color: #475569 !important;
   color: #f8fafc !important;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
-} 이코드인데 너가 자꾸 다크모드 배경색을 임의로 바꿔버리니까 라이트모드에 보라색 색깔입혀지는것까지 건드리는거야~다크모드 배경색문제만 정확히 해결해줘
+}
