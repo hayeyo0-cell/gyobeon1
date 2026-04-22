@@ -294,7 +294,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 
 .cell-my-today { animation: myCellBlink 1.4s ease-in-out infinite; }
 
-/* 🚀 [월교번 디자인 DNA 이식] 그룹 탭 스타일 적용 */
+/* 🚀 [월교번 디자인 DNA 이식] 그룹 탭 디자인 요소(선, 폰트) 적용 */
 .month-calendar { background: rgba(255, 255, 255, 0.76); border-radius: 24px; padding: 10px; margin-bottom: 12px; border: 1px solid #c8d2e3 !important; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06); transition: background-color 0.2s ease; }
 .month-weekdays, .month-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; }
 .month-weekdays { border-bottom: 2px solid #c8d2e3 !important; margin-bottom: 4px; }
@@ -303,7 +303,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 .month-cell { border: 1px solid #c8d2e3 !important; background: #ffffff; min-height: 116px; padding: 0; cursor: pointer; border-radius: 0; box-shadow: none; transition: background-color 0.16s ease; display: block; overflow: hidden; }
 .month-cell:hover { background: #fbfcff; }
 
-/* 월교번 오늘 날짜 강조: 그룹 스타일 포인트 */
+/* 🚀 월교번 오늘 날짜 강조: 은은한 주황색 배경 + 쨍한 주황 테두리 포인트 */
 .month-cell.selected { border: 3px solid #fb923c !important; background: #fff7ed !important; z-index: 10; }
 .month-cell.selected .month-day { color: #fb923c !important; font-weight: 900; }
 
