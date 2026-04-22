@@ -363,7 +363,7 @@ body.dark-mode .group-table th,
 body.dark-mode .group-table td { background-color: #1e293b !important; border-color: #334155 !important; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
 
 /* 2. 홈 화면 연/월/일 박스 글자색 복구 */
-body.dark-mode .date-box { background: #1e293b !important; border-color: #334155; }
+body.dark-mode .date-box { background: #1e293b !important; border-color: #334155 !important; }
 body.dark-mode .date-btn { background: #334155 !important; color: #ffffff !important; }
 body.dark-mode .date-value { background: #1e293b !important; color: #ffffff !important; }
 
@@ -387,7 +387,7 @@ body.dark-mode .modal-title, body.dark-mode .label { color: #ffffff !important; 
 body.dark-mode .input, body.dark-mode .select, body.dark-mode .group-select-display { background: #0f172a !important; border-color: #475569 !important; color: #f8fafc !important; }
 
 /* 5. 전체 탭 사각 격자 입체감 복원 */
-body.dark-mode .all-tab-grid-wrap { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155; }
+body.dark-mode .all-tab-grid-wrap { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155 !important; }
 body.dark-mode .all-cell-real:not([style*="background-color"]) { 
   background: linear-gradient(180deg, #334155 0%, #1e293b 100%) !important; 
   border: 1px solid #475569 !important;
@@ -403,7 +403,6 @@ body.dark-mode .group-table th.today-col { background: rgba(0, 242, 255, 0.1) !i
 /* 월교번 다크모드 보정 */
 body.dark-mode .month-day, body.dark-mode .month-code-line, body.dark-mode .tone-normal { color: #ffffff !important; }
 body.dark-mode .month-cell.other-month { opacity: 0.25; background: #0f172a !important; }
-/* [핵심 수정] 다크모드 월교번의 다른 월 날짜 가독성 복구 */
 body.dark-mode .month-cell.other-month .month-day, 
 body.dark-mode .month-cell.other-month .month-code-line, 
 body.dark-mode .month-cell.other-month .month-time-line { color: #64748b !important; }
@@ -497,4 +496,4 @@ body.dark-mode select.select {
   border-color: #475569 !important;
   color: #f8fafc !important;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
-} 이코드인데 너가 자꾸 다크모드 배경색을 임의로 바꿔버리니까 라이트모드에 보라색 색깔입혀지는것까지 건드리는거야~다크모드 배경색문제만 정확히 해결해줘
+}
