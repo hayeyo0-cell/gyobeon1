@@ -1243,7 +1243,7 @@ function App() {
                 <div className="all-tab-header">
                   <div className="all-header" style={{ 
                     display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", 
-                    background: editMode ? "#ef4444" : "#93c5fd", 
+                    background: editMode ? "#ef4444" : "#3b82f6", 
                     borderRadius: "25px", overflow: "hidden",
                     boxShadow: "0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)",
                     transition: "background 0.3s ease"
@@ -1251,10 +1251,10 @@ function App() {
                     <button className="all-header-btn" style={{ 
                       width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)",
-                      background: "transparent", fontSize: "20px", fontWeight: "bold", color: editMode ? "#ffffff" : "#1e3a8a" 
+                      background: "transparent", fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
-                    <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "800", color: editMode ? "#ffffff" : "#1e3a8a" }}>
+                    <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff" }}>
                       {TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}
                     </div>
 
@@ -1263,14 +1263,14 @@ function App() {
                         <button className="all-header-btn" style={{ 
                           width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
                           padding: 0, border: "none", borderLeft: "2px solid rgba(0,0,0,0.2)", borderRight: "2px solid rgba(0,0,0,0.2)", 
-                          background: "transparent", fontSize: "16px", color: editMode ? "#ffffff" : "#1e3a8a" 
+                          background: "transparent", fontSize: "16px", color: "#ffffff" 
                         }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
                         
                         <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
                           width: "37px", height: "37px", minWidth: "37px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", 
                           padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)", 
                           background: "transparent",
-                          color: editMode ? "#ffffff" : "#1e3a8a", fontWeight: "bold" 
+                          color: "#ffffff", fontWeight: "bold" 
                         }} onClick={() => setEditMode(!editMode)}>{editMode ? "수정중" : "수정"}</button>
                       </>
                     )}
@@ -1279,7 +1279,7 @@ function App() {
                       width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
                       borderLeft: (activeTab === "dia") ? "2px solid rgba(0,0,0,0.2)" : "none",
-                      fontSize: "20px", fontWeight: "bold", color: editMode ? "#ffffff" : "#1e3a8a" 
+                      fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
 
@@ -1329,12 +1329,13 @@ function App() {
                         })}
                       </div>
                     </div>
+                    {/* 💡 [수정됨] 검색 시 미리보기 영역이 빈 공간에 나타나도록 추가 */}
                     {searchQuery && pathImage && (
                       <div className="card" style={{ marginTop: 10, padding: 10 }}>
-                        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, textAlign: 'center', color: '#64748b' }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, textAlign: 'center', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
                           🔍 {pathTarget?.displayName || pathTarget?.name} ({pathTarget?.code}) 행로표
                         </div>
-                        <img src={pathImage} alt="행로표 미리보기" style={{ width: '100%', borderRadius: 12, border: '1px solid #c8d2e3' }} />
+                        <img src={pathImage} alt="행로표 미리보기" style={{ width: '100%', borderRadius: 16, border: isDarkMode ? '1px solid #334155' : '1px solid #c8d2e3' }} />
                       </div>
                     )}
                   </>
