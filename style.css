@@ -361,13 +361,13 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 }
 .month-code-line { 
   margin-top: 4px; 
-  font-size: 18px; 
+  font-size: 16.5px; /* 👈 [교정] 줄바꿈 방지 정밀 축소 */
   font-weight: 900; 
   color: #000000 !important; 
 }
 .month-time-wrap { width: 100%; display: grid; grid-template-rows: 24px 24px; margin-top: 2px; }
 .month-time-line { 
-  font-size: 12.5px; 
+  font-size: 11.5px; /* 👈 [교정] 시간 정밀 축소 */
   color: #334155 !important; 
   font-weight: 800; 
 }
@@ -502,7 +502,10 @@ body.dark-mode .month-weekdays > div {
   font-weight: 900; 
 }
 
-body.dark-mode .month-day, body.dark-mode .month-code-line, body.dark-mode .tone-normal { color: #ffffff !important; }
+body.dark-mode .month-day, body.dark-mode .tone-normal { color: #ffffff !important; }
+/* 🚀 [교정] 다크모드에서도 교번 글자 한 칸 축소 적용 */
+body.dark-mode .month-code-line { color: #ffffff !important; font-size: 16.5px !important; } 
+
 body.dark-mode .month-cell.other-month { opacity: 1 !important; background-color: #090e18 !important; }
 body.dark-mode .month-cell.other-month .month-day, 
 body.dark-mode .month-cell.other-month .month-code-line, 
@@ -546,9 +549,9 @@ body.dark-mode .day-date { color: #94a3b8 !important; }
   .month-cell { min-height: 102px; }
   .month-cell-inner { min-height: 100px; padding: 5px 5px 4px; grid-template-rows: 16px 24px 1fr; }
   .month-day { font-size: 14px; }
-  .month-code-line { font-size: 15px; margin-top: 3px; }
+  .month-code-line { font-size: 15.5px !important; margin-top: 3px; } /* 👈 [모바일 최적화] 모바일에서도 휴10 짤림 방지 */
   .month-time-wrap { grid-template-rows: 20px 20px; }
-  .month-time-line { font-size: 11px; }
+  .month-time-line { font-size: 10.5px !important; } /* 👈 [모바일 최적화] 시간 글자 10.5px로 정밀 조정 */
   .all-page { padding-bottom: 20px; }
   .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
   .dia-header { grid-template-columns: 40px 1fr 38px 40px; }
@@ -617,4 +620,4 @@ body.dark-mode .group-table th.today-col {
 .quick-btn.warmth, .quick-btn.vacation {
   background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important;
   color: #ffffff !important;
-}  
+}
