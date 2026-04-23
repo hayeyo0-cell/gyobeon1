@@ -1,7 +1,3 @@
-{
-type: uploaded file
-fileName: 40773.jpg
-}
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 /* 🟢 [디자인 철학 복구] 불필요하게 글씨를 얇게 깎아먹던 폰트 스무딩 옵션을 제거하여 쨍한 화질 복구! */
@@ -141,8 +137,8 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 .day-name.sat { color: #3b82f6; }
 .day-date { font-size: 11px; color: #64748b; margin-top: 2px; }
 
-/* 오늘 날짜 밑줄 고정 */
-.group-table th.today-col { border-bottom: 4px solid #3b82f6 !important; background: #fff7ed !important; }
+/* 🚀 [교정] 오늘 날짜 밑줄: 쨍한 파랑 대신 차분한 로열 블루로 굵기 통일 */
+.group-table th.today-col { border-bottom: 2px solid #2f61dc !important; background: #fff7ed !important; }
 
 .name-txt { font-weight: 800; font-size: 14px; color: #000000; transition: color 0.2s ease; }
 .team-badge { font-size: 11px; color: #64748b; margin-top: 2px; font-weight: 600; background: transparent !important; }
@@ -195,15 +191,15 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
     color: #ffffff !important;
     border-radius: 16px !important;
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
-    border: 1px solid rgba(0,0,0,0.15) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
 }
 
 .dia-header {
     grid-template-columns: 44px 1fr 44px 44px !important;
     background: #3b82f6 !important;
     border-radius: 16px !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2) !important;
 }
 
 .all-header-btn, .all-edit-btn, .all-header-title {
@@ -234,7 +230,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 
 .all-team-tab {
     position: relative;
-    border: 1px solid rgba(255,255,255,0.2) !important;
+    border: 1px solid rgba(0,0,0,0.05) !important;
     background: #3b82f6 !important;
     color: #ffffff !important;
     font-size: 15px;
@@ -243,12 +239,12 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
     border-radius: 18px;
     cursor: pointer;
     line-height: 1;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2) !important;
 }
 
 .all-team-tab.active {
-    border: 1px solid rgba(255,255,255,0.5) !important;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.3) !important;
     transform: translateY(-1px);
     z-index: 5;
 }
@@ -282,16 +278,16 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
   background-image: none !important;
 }
 
-/* 🚀 [교정] 내 교번 강조: 둥둥 뜨는 효과 제거 + 아이스 블루 테두리 */
+/* 🚀 [교정] 내 교번 강조: 쨍한 민트 대신 차분한 '로열 스카이' 컬러로 굵기 통일 */
 .cell-my {
-  border: 3.5px solid #00f2ff !important; /* 아이스 블루 */
+  border: 1.5px solid #3b82f6 !important; 
   z-index: 5;
   position: relative;
-  box-shadow: 0 8px 16px rgba(0, 242, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
-  transform: none !important; /* 둥둥 뜨는 효과 제거 */
+  transform: none !important; 
 }
 
 .cell-my .all-code, .cell-my .all-name {
@@ -304,13 +300,12 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 /* 🚀 [월교번 디자인 가독성 최종 정비] */
 /* ✅ [가독성 튜닝] 눈이 편한 '소프트 아이보리' 달력과 '딥 블루' 헤더 대비 */
 .month-calendar { 
-  background: #fdfdfa !important; /* 👈 눈부심 없는 부드러운 미색 */
+  background: #fdfdfa !important; 
   border-radius: 26px; 
   padding: 10px; 
   margin-bottom: 12px; 
-  /* 🚀 [교정] 테두리 굵기 1px 통일 및 차분한 슬레이트 그레이 컬러 추천 */
-  border: 1px solid #94a3b8 !important; 
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18); 
+  border: 1px solid #cbd5e1 !important; /* 👈 외곽선을 주변과 같은 굵기로 보정 */
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08); 
   transition: background-color 0.2s ease; 
   overflow: hidden;
 }
@@ -318,7 +313,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 
 /* 요일 헤더: 딥 네이비로 반전시켜 시각적 중심 확보 */
 .month-weekdays { 
-  border-bottom: 1px solid #94a3b8 !important; 
+  border-bottom: 1px solid #e2e8f0 !important; 
   margin-bottom: 4px; 
   background: #1e293b; 
   border-radius: 16px 16px 0 0;
@@ -332,8 +327,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 }
 
 .month-cell { 
-  /* 🚀 [교정] 내부 격자 테두리 1px 통일 및 차분한 색상 적용 */
-  border: 1px solid #94a3b8 !important; 
+  border: 0.5px solid #e2e8f0 !important; 
   background: #ffffff !important; 
   min-height: 116px; 
   padding: 0; 
@@ -344,32 +338,27 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
   overflow: hidden; 
 }
 
-/* 🚀 [교정] 이번달(이달) 칸의 테두리도 1px로 통정하여 정갈하게 보정 */
+/* 🚀 [교정] 이번달(이달) 칸의 테두리를 일반 선과 조화롭게 보정 */
 .month-cell:not(.other-month) {
-  border: 1px solid #94a3b8 !important; 
+  border: 0.5px solid #cbd5e1 !important; 
 }
 
 .month-cell:hover { background: #f1f5f9 !important; }
 
-/* 🚀 [교정] 월교번 '오늘' 강조: 테두리 아이스 블루로 쨍하게 강조 */
+/* 🚀 [교정] 월교번 '오늘' 강조: 쨍한 형광 파랑 대신 차분한 '스카이 블루' 테두리로 굵기 통일 */
 .month-cell.selected { 
-  border: 4px solid #00b8ff !important; 
+  border: 2px solid #3b82f6 !important; 
   background: #f0f9ff !important; 
   z-index: 10; 
   position: relative; 
-  box-shadow: 0 0 20px rgba(0, 184, 255, 0.4);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
 }
 .month-cell.selected .month-day { 
   color: #000000 !important; 
   font-weight: 900; 
 }
 
-/* 🚀 [교정] 지난달/다음달 칸 테두리도 1px로 통일 */
-.month-cell.other-month { 
-  opacity: 0.45; 
-  background: #f8fafc !important; 
-  border: 1px solid #cbd5e1 !important; 
-}
+.month-cell.other-month { opacity: 0.45; background: #f8fafc !important; border: 0.5px solid #e2e8f0 !important; }
 .month-cell-inner { width: 100%; min-height: 114px; padding: 8px 6px 4px; display: grid; grid-template-rows: 20px 30px 1fr; align-items: start; }
 
 .month-day { 
@@ -398,14 +387,14 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 .tone-sat, .month-weekdays .sat { color: #508dff !important; } /* 👈 토요일 색상을 미세하게 밝게 튜닝 */
 
 .modal-backdrop { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.34); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 4000; padding: 16px; animation: fadeIn 0.18s ease; }
-.modal { width: 100%; max-width: 520px; background: rgba(255, 255, 255, 0.95); border-radius: 24px; padding: 20px; max-height: 90vh; overflow: auto; box-shadow: 0 24px 50px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.78); border: 1px solid rgba(255, 255, 255, 0.86); animation: modalUp 0.2s ease; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+.modal { width: 100%; max-width: 520px; background: rgba(255, 255, 255, 0.95); border-radius: 24px; padding: 20px; max-height: 90vh; overflow: auto; box-shadow: 0 24px 50px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.78); border: 1px solid rgba(255, 255, 255, 0.86); animation: modalUp 0.2s ease; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modalUp { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .modal-title { font-size: 26px; font-weight: 800; margin-bottom: 14px; }
 .modal-sub { font-size: 18px; margin-bottom: 16px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
 .modal-btn { min-width: 88px; height: 42px; border: 1px solid rgba(203, 213, 225, 0.95); background: rgba(255, 255, 255, 0.92); cursor: pointer; border-radius: 14px; font-weight: 700; font-size: 15px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; color: inherit; }
-.modal-btn.primary { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); color: white; border-color: transparent; box-shadow: 0 8px 16px rgba(47, 97, 220, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.modal-btn.primary { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); color: white; border-color: transparent; box-shadow: 0 8px 16px rgba(47, 97, 220, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
 .modal-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .color-preview { height: 40px; border-radius: 14px; border: 1px solid #cbd5e1; margin-top: 8px; background: white; }
 
@@ -416,7 +405,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 .fullscreen-image { width: 100%; max-width: 950px; display: block; margin: 0 auto; background: white; border: 1px solid #cbd5e1; box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08); }
 .empty-box { border: 1px dashed #94a3b8; padding: 40px 16px; background: white; border-radius: 16px; color: #64748b; text-align: center; }
 
-@keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(0, 242, 255, 0.2); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.4); } }
+@keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.01); box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1); } 50% { transform: translateY(-3px) scale(1.02); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); } }
 
 /* 🌙 [디자인 교정] 다크 모드 (대비 강화 및 시인성 극대화) */
 body.dark-mode { background: #05080f !important; color: #f8fafc !important; }
@@ -483,16 +472,13 @@ body.dark-mode .quick-btn.warmth {
 body.dark-mode .all-tab-grid-wrap { 
   background: #05080f !important; 
   border: 1px solid #1e293b !important; 
-  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.4) !important;
 }
 body.dark-mode .all-cell-real:not([style*="background-color"]) { 
   background: #1a2236 !important; 
   border: 1px solid #2d3748 !important; 
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 8px rgba(0, 0, 0, 0.3) !important;
 }
 body.dark-mode .all-cell-real:not([style*="background-color"]) .all-code {
   color: #ffffff !important;
-  text-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
 }
 body.dark-mode .all-cell-real:not([style*="background-color"]) .all-name {
   color: #e2e8f0 !important;
@@ -510,13 +496,12 @@ body.dark-mode .month-calendar {
 }
 body.dark-mode .month-cell { 
   background-color: #161e2e !important; 
-  /* 🚀 [교정] 다크모드 내부 격자 테두리도 1px로 통일 */
-  border: 1px solid #2d3748 !important; 
+  border: 0.5px solid #2d3748 !important; 
 }
 
-/* 🚀 [교정] 다크모드 이달의 칸 테두리 강조도 1px 수준에서 색상으로 차별화 */
+/* 🚀 [교정] 다크모드 이달의 칸 테두리 보정 */
 body.dark-mode .month-cell:not(.other-month) {
-  border: 1px solid #4b5563 !important;
+  border: 0.5px solid #4b5563 !important;
 }
 
 body.dark-mode .month-weekdays { 
@@ -538,20 +523,15 @@ body.dark-mode .month-code-line {
   white-space: nowrap !important; 
 } 
 
-/* 🚀 [교정] 다크모드 지난달/다음달 테두리 1px 통일 */
-body.dark-mode .month-cell.other-month { 
-  opacity: 1 !important; 
-  background-color: #090e18 !important; 
-  border: 1px solid #1f2937 !important; 
-}
+body.dark-mode .month-cell.other-month { opacity: 1 !important; background-color: #090e18 !important; border: 0.5px solid #1f2937 !important; }
 body.dark-mode .month-cell.other-month .month-day, 
 body.dark-mode .month-cell.other-month .month-code-line, 
 body.dark-mode .month-cell.other-month .month-time-line { color: #4b5563 !important; }
 
-/* 다크모드 '오늘' 23일 날짜색 흰색 복구 및 테두리 강조 */
+/* 🚀 [교정] 다크모드 '오늘' 23일 테두리도 차분한 '로열 블루'로 통일 */
 body.dark-mode .month-cell.selected { 
-  border: 4px solid #00f2ff !important; 
-  background-color: rgba(0, 242, 255, 0.08) !important; 
+  border: 2px solid #3b82f6 !important; 
+  background-color: rgba(59, 130, 246, 0.1) !important; 
 }
 body.dark-mode .month-cell.selected .month-day {
   color: #ffffff !important; 
@@ -564,7 +544,7 @@ body.dark-mode .group-table th div, body.dark-mode .group-table td div { color: 
 body.dark-mode .day-date { color: #94a3b8 !important; }
 
 @media (max-width: 420px) {
-  .container { padding: 22px 66px 20px !important; touch-action: pan-y; }
+  .container { padding: 22px 6px 20px !important; touch-action: pan-y; }
   .container::after { height: calc(92px + env(safe-area-inset-bottom, 0px)); }
   .date-grid { gap: 6px; height: 154px !important; margin-bottom: 6px; }
   .date-box { grid-template-rows: 42px 1fr 42px; border-radius: 18px; }
@@ -646,16 +626,16 @@ body.dark-mode .all-cell-real[style] {
   background-image: none !important;
 }
 
-/* 2️⃣ 그룹 하이라이트 복구 */
+/* 2️⃣ 그룹 하이라이트 보정 */
 body.dark-mode .group-table th.active-col,
 body.dark-mode .group-table td.active-col {
-  background-color: rgba(56, 189, 248, 0.4) !important; 
+  background-color: rgba(59, 130, 246, 0.15) !important; 
 }
 
-/* 오늘 표시 */
+/* 오늘 표시 보정 */
 body.dark-mode .group-table th.today-col {
-  border-bottom: 4px solid #22d3ee !important;
-  background-color: rgba(250, 204, 21, 0.35) !important;
+  border-bottom: 2px solid #3b82f6 !important;
+  background-color: rgba(250, 204, 21, 0.15) !important;
 }
 
 /* 3️⃣ 휴가 버튼 강제 복구 - 라이트/다크 모두 적용 */
