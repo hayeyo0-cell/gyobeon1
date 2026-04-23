@@ -35,9 +35,9 @@ button:active { transform: scale(0.97); }
 .settings-btn { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); }
 .install-btn { background: linear-gradient(180deg, #2aa55d 0%, #197a42 100%); }
 
-/* 🚀 [디자인 복구] 밴드 및 휴가 버튼 색상 (라이트/다크 공통 적용) */
-.quick-btn.band { background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important; color: #ffffff !important; }
-.quick-btn.warmth { background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%) !important; color: #ffffff !important; }
+/* 🚀 [디자인 유지] 라이트 모드 밴드/휴가 버튼 녹색 원본 설정 */
+.quick-btn.band { background: linear-gradient(180deg, #21b35a 0%, #169447 100%); }
+.quick-btn.warmth { background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%); }
 .quick-icon { width: 20px; height: 20px; object-fit: contain; display: block; flex-shrink: 0; }
 
 .date-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; height: 168px; }
@@ -123,17 +123,11 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
   background-color: #ffffff !important; /* 👈 라이트모드 미색 고정 */
   z-index: 10; border-right: 2px solid #e2e8f0 !important; padding: 8px 4px !important; transition: background-color 0.2s ease;
 }
-body.dark-mode .group-table th.sticky-col, body.dark-mode .group-table td.sticky-col {
-  background-color: #1e293b !important; /* 👈 다크모드 네이비 고정 */
-}
 
 /* 💡 [핵심] 세로 하이라이트 디자인 - 사진 속 연한 하늘색 구현 */
 .group-table th.active-col, .group-table td.active-col {
   background-color: #f0f9ff !important;
   transition: background-color 0.15s ease;
-}
-body.dark-mode .group-table th.active-col, body.dark-mode .group-table td.active-col {
-  background-color: rgba(59, 130, 246, 0.15) !important;
 }
 
 .group-table th:first-child, .group-table td:first-child, .group-name-cell { width: 76px; min-width: 76px; max-width: 76px; padding: 6px 2px !important; }
@@ -145,10 +139,8 @@ body.dark-mode .group-table th.active-col, body.dark-mode .group-table td.active
 
 /* 오늘 날짜 밑줄 고정 */
 .group-table th.today-col { border-bottom: 4px solid #3b82f6 !important; background: #fff7ed !important; }
-body.dark-mode .group-table th.today-col { border-bottom: 4px solid #00f2ff !important; background: rgba(0, 242, 255, 0.1) !important; }
 
 .name-txt { font-weight: 800; font-size: 14px; color: #000000; transition: color 0.2s ease; }
-body.dark-mode .name-txt { color: #ffffff !important; }
 .team-badge { font-size: 11px; color: #64748b; margin-top: 2px; font-weight: 600; background: transparent !important; }
 .row-del-btn-text { background: linear-gradient(180deg, #ff6b6b 0%, #ef4444 100%); color: white; border: none; border-radius: 12px; padding: 4px 12px; font-size: 11px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 8px rgba(239, 68, 68, 0.18); }
 .empty-msg { padding: 40px !important; color: #64748b; font-weight: 600; }
