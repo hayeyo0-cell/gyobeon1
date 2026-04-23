@@ -17,7 +17,7 @@ button:active { transform: scale(0.97); }
 .container { width: 100%; min-height: 100dvh; padding: 24px 8px 24px; overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
 .container::after { content: ""; display: block; height: calc(86px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; }
 
-.card, .main-panel, .month-header-bar, .month-calendar, .all-tab-header, .all-team-tabs, .all-tab-grid-wrap, .group-page, .group-table-wrap { width: 100%; margin-left: auto; margin-right: auto; }
+.card, .main-panel, .month-header-bar, .month-calendar, .all-tab-header, .all-tab-grid-wrap, .group-page, .group-table-wrap { width: 100%; margin-left: auto; margin-right: auto; }
 
 /* 🚀 [눈부심 방지] 카드의 흰색을 조금 더 차분한 미색으로 조정하여 가독성 확보 */
 .card { background: rgba(250, 250, 248, 0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 24px; padding: 14px; margin-bottom: 10px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.65); border: 1px solid rgba(0, 0, 0, 0.05); transition: background-color 0.2s ease, border-color 0.2s ease; }
@@ -35,9 +35,9 @@ button:active { transform: scale(0.97); }
 .settings-btn { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); }
 .install-btn { background: linear-gradient(180deg, #2aa55d 0%, #197a42 100%); }
 
-/* 🚀 [긴급 교정] 휴가 버튼 녹색 복구 (vacation, warmth 모두 대응) */
+/* 🚀 [교정] 휴가 버튼 색상을 밴드 버튼과 100% 동일하게 일치 */
 .quick-btn.band { background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important; }
-.quick-btn.vacation, .quick-btn.warmth { background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%) !important; color: #ffffff !important; }
+.quick-btn.vacation, .quick-btn.warmth { background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important; color: #ffffff !important; }
 .quick-icon { width: 20px; height: 20px; object-fit: contain; display: block; flex-shrink: 0; }
 
 .date-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; height: 168px; }
@@ -282,10 +282,6 @@ body.dark-mode .name-txt { color: #ffffff !important; }
 .all-code { margin: 0; font-size: 18.5px; line-height: 1; font-weight: 900; color: #000000; white-space: nowrap; transition: color 0.2s ease; }
 .all-name { margin: 0; margin-top: 1px; font-size: 13.5px; line-height: 1; font-weight: 800; color: #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 98%; transition: color 0.2s ease; }
 
-.all-cell-real[style*="background-color"] {
-  background-image: none !important;
-}
-
 /* 🚀 [교정] 내 교번 강조: 둥둥 뜨는 효과 제거 + 아이스 블루 테두리 */
 .cell-my {
   border: 3.5px solid #00f2ff !important; /* 아이스 블루 */
@@ -370,16 +366,21 @@ body.dark-mode .month-header-title {
   color: #ffffff !important; 
 }
 
-/* 🚀 [교환/복원 핵심] 다크모드 사용자 지정 배경색 복원 로직 */
+/* 🚀 [교환/복원 핵심] 다크모드 사용자 지정 배경색 복원 로직 - 전체 탭 포함 */
 body.dark-mode .month-cell[style*="background-color"], 
 body.dark-mode .group-table td[style*="background-color"],
 body.dark-mode .all-cell-real[style*="background-color"] { 
-  background-color: inherit !important; /* JS가 입힌 색상을 그대로 노출 */
   background-image: none !important;
+  background-color: attr(style) !important; /* 브라우저의 기본 인라인 스타일 우선 순위 확보 */
   color: #000000 !important; /* 배경색이 밝으므로 글자는 검정으로 고정 */
 }
 
-/* 2. [설정창/모달] 가독성 복구 (사진 40673, 40671 대응) */
+/* 다크모드에서 인라인 스타일(지정색)이 있을 경우 강제로 배경색을 투명하게 해서 밑의 색이 보이게 함 */
+body.dark-mode .all-cell-real[style*="background-color"] {
+  background-color: inherit !important;
+}
+
+/* 2. [설정창/모달] 가독성 복구 */
 body.dark-mode .modal { 
   background-color: #1e293b !important; 
   border: 1px solid #334155 !important; 
@@ -387,7 +388,7 @@ body.dark-mode .modal {
 }
 body.dark-mode .modal-title, body.dark-mode .label { color: #ffffff !important; }
 
-/* 내 정보 박스 배경색 고정 (사진 b3e679e6 대응) */
+/* 내 정보 박스 배경색 고정 */
 body.dark-mode .notice-box { 
   background-color: #0f172a !important; 
   border: 1px solid #334155 !important; 
@@ -417,7 +418,7 @@ body.dark-mode .date-box { background-color: #1e293b !important; border-color: #
 body.dark-mode .date-btn { background-color: #334155 !important; color: #ffffff !important; }
 body.dark-mode .date-value { background-color: #1e293b !important; color: #ffffff !important; }
 
-/* 5. [월교번/그룹 가독성] 다른 월 날짜 보정 및 그룹 이름 텍스트 */
+/* 5. [월교번/그룹 가독성] */
 body.dark-mode .month-day, body.dark-mode .month-code-line, body.dark-mode .tone-normal { color: #ffffff !important; }
 body.dark-mode .month-cell.other-month { opacity: 1 !important; background-color: #0f172a !important; }
 body.dark-mode .month-cell.other-month .month-day, 
@@ -425,7 +426,7 @@ body.dark-mode .month-cell.other-month .month-code-line,
 body.dark-mode .month-cell.other-month .month-time-line { color: #64748b !important; }
 body.dark-mode .month-cell.selected { border: 3.5px solid #00f2ff !important; background-color: rgba(0, 242, 255, 0.05) !important; }
 
-/* 6. [그룹 탭 글자색 보정] 사진 40673에서 이름 옆 소속(경산, 문양 등) 가독성 해결 */
+/* 6. [그룹 탭 글자색 보정] */
 body.dark-mode .team-badge { color: #94a3b8 !important; font-weight: 700 !important; }
 body.dark-mode .group-table th div, body.dark-mode .group-table td div { color: #ffffff !important; }
 body.dark-mode .day-date { color: #94a3b8 !important; }
