@@ -508,13 +508,13 @@ body.dark-mode .month-cell.other-month .month-day,
 body.dark-mode .month-cell.other-month .month-code-line, 
 body.dark-mode .month-cell.other-month .month-time-line { color: #475569 !important; }
 
-/* ✅ [수정] 다크모드 '오늘' 23일 날짜색 검정 고정 및 테두리 강조 */
+/* ✅ [수정] 다크모드 '오늘' 23일 날짜색 흰색 복구 및 테두리 강조 */
 body.dark-mode .month-cell.selected { 
   border: 3.5px solid #00f2ff !important; 
   background-color: rgba(0, 242, 255, 0.05) !important; 
 }
 body.dark-mode .month-cell.selected .month-day {
-  color: #000000 !important; /* 👈 다크모드에서도 날짜색 검정 유지 */
+  color: #ffffff !important; /* 👈 다크모드에서는 날짜색 흰색으로 복구 */
   font-weight: 900;
 }
 
