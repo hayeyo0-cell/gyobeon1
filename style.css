@@ -35,10 +35,9 @@ button:active { transform: scale(0.97); }
 .settings-btn { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); }
 .install-btn { background: linear-gradient(180deg, #2aa55d 0%, #197a42 100%); }
 
-/* 🚀 [디자인 복구] 밴드 및 휴가 버튼 색상 강제 지정 */
+/* 🚀 [긴급 교정] 휴가 버튼 녹색 복구 (vacation, warmth 모두 대응) */
 .quick-btn.band { background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important; }
-/* warmth와 vacation 두 클래스 모두에 녹색을 입혀 확실히 해결합니다 */
-.quick-btn.warmth, .quick-btn.vacation { background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%) !important; color: white !important; }
+.quick-btn.vacation, .quick-btn.warmth { background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%) !important; color: #ffffff !important; }
 .quick-icon { width: 20px; height: 20px; object-fit: contain; display: block; flex-shrink: 0; }
 
 .date-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; height: 168px; }
@@ -355,7 +354,7 @@ body.dark-mode .name-txt { color: #ffffff !important; }
 /* 🌙 다크 모드 (완벽 보존 및 디자인 충돌 정밀 해결) */
 body.dark-mode { background: #0f172a !important; color: #f8fafc !important; }
 
-/* 1. 배경색 강제 고정 - 사진 속 하얗게 튀는 배경들 전부 네이비로 수정 */
+/* 1. [배경 고정] 다크모드 하얗게 튀는 배경들 전부 네이비로 수정 */
 body.dark-mode .card, 
 body.dark-mode .main-panel, 
 body.dark-mode .month-calendar, 
@@ -371,17 +370,16 @@ body.dark-mode .month-header-title {
   color: #ffffff !important; 
 }
 
-/* 2. [사용자 색상 복원] 다크모드에서도 지정한 색상이 배경으로 나오도록 수정 */
+/* 🚀 [교환/복원 핵심] 다크모드 사용자 지정 배경색 복원 로직 */
 body.dark-mode .month-cell[style*="background-color"], 
 body.dark-mode .group-table td[style*="background-color"],
 body.dark-mode .all-cell-real[style*="background-color"] { 
-  background-color: inherit !important; /* JS가 주입한 배경색 그대로 유지 */
+  background-color: inherit !important; /* JS가 입힌 색상을 그대로 노출 */
   background-image: none !important;
-  color: #000000 !important; /* 배경색 대비를 위해 글자는 검정 */
-  font-weight: 800 !important;
+  color: #000000 !important; /* 배경색이 밝으므로 글자는 검정으로 고정 */
 }
 
-/* 3. [설정창 가독성 복구] 사진 속 불투명/가독성 문제 해결 */
+/* 2. [설정창/모달] 가독성 복구 (사진 40673, 40671 대응) */
 body.dark-mode .modal { 
   background-color: #1e293b !important; 
   border: 1px solid #334155 !important; 
@@ -389,7 +387,7 @@ body.dark-mode .modal {
 }
 body.dark-mode .modal-title, body.dark-mode .label { color: #ffffff !important; }
 
-/* 내 정보 박스 배경색 고정 */
+/* 내 정보 박스 배경색 고정 (사진 b3e679e6 대응) */
 body.dark-mode .notice-box { 
   background-color: #0f172a !important; 
   border: 1px solid #334155 !important; 
@@ -406,7 +404,7 @@ body.dark-mode .modal-btn {
   opacity: 1 !important; 
 }
 
-/* 4. [전체 탭 격자] 사각 격자 입체감 복원 */
+/* 3. [전체 탭 격자] 사각 격자 입체감 및 디자인 복원 */
 body.dark-mode .all-tab-grid-wrap { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important; border: 1px solid #334155 !important; }
 body.dark-mode .all-cell-real:not([style*="background-color"]) { 
   background: linear-gradient(180deg, #334155 0%, #1e293b 100%) !important; 
@@ -414,18 +412,23 @@ body.dark-mode .all-cell-real:not([style*="background-color"]) {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 4px rgba(0,0,0,0.3) !important;
 }
 
-/* 5. [홈 화면 날짜박스] 연/월/일 박스 가독성 */
+/* 4. [홈 화면 날짜박스] 연/월/일 박스 가독성 */
 body.dark-mode .date-box { background-color: #1e293b !important; border-color: #334155 !important; }
 body.dark-mode .date-btn { background-color: #334155 !important; color: #ffffff !important; }
 body.dark-mode .date-value { background-color: #1e293b !important; color: #ffffff !important; }
 
-/* 6. [월교번 가독성] 다른 월 날짜 보정 */
+/* 5. [월교번/그룹 가독성] 다른 월 날짜 보정 및 그룹 이름 텍스트 */
 body.dark-mode .month-day, body.dark-mode .month-code-line, body.dark-mode .tone-normal { color: #ffffff !important; }
 body.dark-mode .month-cell.other-month { opacity: 1 !important; background-color: #0f172a !important; }
 body.dark-mode .month-cell.other-month .month-day, 
 body.dark-mode .month-cell.other-month .month-code-line, 
 body.dark-mode .month-cell.other-month .month-time-line { color: #64748b !important; }
 body.dark-mode .month-cell.selected { border: 3.5px solid #00f2ff !important; background-color: rgba(0, 242, 255, 0.05) !important; }
+
+/* 6. [그룹 탭 글자색 보정] 사진 40673에서 이름 옆 소속(경산, 문양 등) 가독성 해결 */
+body.dark-mode .team-badge { color: #94a3b8 !important; font-weight: 700 !important; }
+body.dark-mode .group-table th div, body.dark-mode .group-table td div { color: #ffffff !important; }
+body.dark-mode .day-date { color: #94a3b8 !important; }
 
 @media (max-width: 420px) {
   .container { padding: 22px 6px 20px !important; touch-action: pan-y; }
