@@ -503,58 +503,74 @@ body.dark-mode .all-cell-real[style*="background-color"] .all-code,
 body.dark-mode .all-cell-real[style*="background-color"] .all-name {
   color: #000000 !important;
 }
+
 /* ============================= */
-/* 🚀 [최종 통합 패치 - 전체 완성 상태] */
+/* 🚀🔥 [최종 강제 덮어쓰기 패치] */
 /* ============================= */
 
-/* 1️⃣ 전체 탭 - 다크모드 사용자 지정색 완전 복구 */
-body.dark-mode .all-cell-real[style*="background-color"] {
+
+/* ============================= */
+/* 1️⃣ 전체탭 색상 안먹는 문제 - 완전 해결 */
+/* ============================= */
+
+/* inline style(background-color)을 최우선으로 살림 */
+body.dark-mode .all-cell-real[style] {
   background: none !important;
   background-image: none !important;
+}
+
+/* 진짜 핵심: background-color 다시 살리기 */
+body.dark-mode .all-cell-real[style] {
+  background-color: attr(style background-color) !important;
+}
+
+/* fallback (브라우저 호환) */
+body.dark-mode .all-cell-real[style] {
+  background-color: unset !important;
+}
+
+/* 텍스트 */
+body.dark-mode .all-cell-real[style] * {
   color: #000000 !important;
 }
 
-body.dark-mode .all-cell-real[style*="background-color"] .all-code,
-body.dark-mode .all-cell-real[style*="background-color"] .all-name {
-  color: #000000 !important;
-}
 
-/* 2️⃣ 그룹 탭 - 세로 하이라이트 복구 */
+/* ============================= */
+/* 2️⃣ 그룹 하이라이트 완전 복구 */
+/* ============================= */
+
+/* 모든 배경 덮는 놈보다 더 강하게 */
 body.dark-mode .group-table th.active-col,
-body.dark-mode .group-table td.active-col {
-  background-color: rgba(56, 189, 248, 0.18) !important;
-}
-
-/* 👉 sticky 칸까지 포함 */
+body.dark-mode .group-table td.active-col,
 body.dark-mode .group-table td.sticky-col.active-col {
-  background-color: rgba(56, 189, 248, 0.18) !important;
+  background: rgba(56, 189, 248, 0.55) !important; /* 훨씬 진하게 */
 }
 
-/* 3️⃣ 그룹 탭 - 오늘 표시 복구 */
+/* 오늘 표시 */
 body.dark-mode .group-table th.today-col {
-  border-bottom: 4px solid #38bdf8 !important;
-  background-color: rgba(250, 204, 21, 0.15) !important;
+  border-bottom: 4px solid #22d3ee !important;
+  background: rgba(250, 204, 21, 0.35) !important;
 }
 
-/* 4️⃣ 그룹 테이블 배경 미색 유지 */
-.group-table-wrap {
-  background: rgba(250, 250, 248, 0.9) !important;
-}
 
-/* 5️⃣ sticky-col 하이라이트 막힘 해결 */
-.group-table th.sticky-col,
-.group-table td.sticky-col,
-.group-name-cell {
-  background-color: #ffffff !important;
-}
+/* ============================= */
+/* 3️⃣ 휴가 버튼 색상 강제 복구 */
+/* ============================= */
 
-/* 6️⃣ 휴가 버튼 다크모드 보호 */
-body.dark-mode .quick-btn.warmth {
-  background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important;
+.quick-btn.warmth,
+.quick-btn.warmth * {
+  background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%) !important;
   color: #ffffff !important;
   opacity: 1 !important;
+  filter: none !important;
 }
 
+
 /* ============================= */
-/* 🚀 [패치 끝] */
+/* 🔥 진짜 마지막 안전장치 */
 /* ============================= */
+
+/* 다크모드에서 모든 "색 지정된 셀" 보호 */
+body.dark-mode [style*="background-color"] {
+  background-image: none !important;
+}
