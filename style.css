@@ -483,7 +483,7 @@ body.dark-mode .date-box { background-color: #1e293b !important; border-color: #
 body.dark-mode .date-btn { background-color: #334155 !important; color: #ffffff !important; }
 body.dark-mode .date-value { background-color: #1e293b !important; color: #ffffff !important; }
 
-/* 5. [월교번/그룹 가독성] ✅ [수정] 월교번도 전체탭과 같은 쨍한 블랙 네이비 테마 적용 */
+/* 5. [월교번/그룹 가독성] ✅ [수정] 요일 텍스트 시인성 확보(color: #ffffff !important) */
 body.dark-mode .month-calendar {
   background-color: #0f172a !important;
   border-color: #1e293b !important;
@@ -493,7 +493,7 @@ body.dark-mode .month-cell {
   border: 1px solid #2d3748 !important; 
 }
 body.dark-mode .month-weekdays { border-bottom: 2px solid #2d3748 !important; }
-body.dark-mode .month-weekdays > div { color: #f8fafc !important; }
+body.dark-mode .month-weekdays > div { color: #ffffff !important; font-weight: 900; } /* 👈 요일 글자색 화이트로 고정 */
 
 body.dark-mode .month-day, body.dark-mode .month-code-line, body.dark-mode .tone-normal { color: #ffffff !important; }
 body.dark-mode .month-cell.other-month { opacity: 1 !important; background-color: #0a0f1d !important; }
