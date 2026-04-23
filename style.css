@@ -109,9 +109,9 @@ button:active { transform: scale(0.97); }
 
 .group-add-btn-v4 { flex: 1; min-width: 0; height: 100%; background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%); color: #fff; border: none; padding: 8px 4px; border-radius: 12px; font-weight: 800; font-size: 13px; text-align: center; box-shadow: 0 4px 10px rgba(124, 58, 237, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: center; }
 
-/* 🚀 [테두리 디자인 교정 - 딥 퍼플 테마] 선 굵기를 1px로 통일하고 깊이감 있는 퍼플색 적용 */
-table, th, td, .group-table th, .group-table td { border: 1px solid #581c87 !important; border-collapse: collapse !important; }
-.group-table-wrap { overflow: hidden; border-radius: 18px; background: #ffffff; border: 1px solid #581c87 !important; box-shadow: 0 4px 12px rgba(88, 28, 135, 0.08); transition: background-color 0.2s ease, border-color 0.2s ease; }
+/* 🚀 [테두리 디자인 교정] 선 굵기를 1px로 통일하고 자연스러운 색상으로 변경 */
+table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !important; border-collapse: collapse !important; }
+.group-table-wrap { overflow: hidden; border-radius: 18px; background: #ffffff; border: 1px solid #94a3b8 !important; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .group-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; background-color: #ffffff !important; }
 
 .group-table th:last-child, .group-table td:last-child { border-right: none !important; }
@@ -121,7 +121,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #581c87 !imp
 .group-table th.sticky-col, .group-table td.sticky-col, .group-name-cell {
   position: sticky; left: 0;
   background-color: #ffffff !important; /* 👈 라이트모드 미색 고정 */
-  z-index: 10; border-right: 1.5px solid #581c87 !important; padding: 8px 4px !important; transition: background-color 0.2s ease;
+  z-index: 10; border-right: 1.5px solid #94a3b8 !important; padding: 8px 4px !important; transition: background-color 0.2s ease;
 }
 
 /* 💡 [핵심] 세로 하이라이트 디자인 - 사진 속 연한 하늘색 구현 */
@@ -304,7 +304,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #581c87 !imp
   border-radius: 26px; 
   padding: 10px; 
   margin-bottom: 12px; 
-  border: 1px solid #581c87 !important; /* 👈 테두리 굵기 1px로 통일 & 딥 퍼플 */
+  border: 1px solid #94a3b8 !important; /* 👈 테두리 굵기 1px로 통일 */
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18); /* 👈 바닥 배경과 분리하는 깊은 그림자 */
   transition: background-color 0.2s ease; 
   overflow: hidden;
@@ -313,7 +313,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #581c87 !imp
 
 /* 요일 헤더: 딥 네이비로 반전시켜 시각적 중심 확보 */
 .month-weekdays { 
-  border-bottom: 1.5px solid #581c87 !important; 
+  border-bottom: 1.5px solid #94a3b8 !important; 
   margin-bottom: 4px; 
   background: #1e293b; /* 👈 진한 배경으로 요일 구분 확실히 함 */
   border-radius: 16px 16px 0 0;
@@ -326,9 +326,9 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #581c87 !imp
   color: #ffffff !important; /* 👈 글자는 흰색으로 반전 */
 }
 
-/* 🚀 [테두리 일원화] 월교번 각 칸의 선을 1px로 통일 및 딥 퍼플 */
+/* 🚀 [테두리 일원화] 월교번 각 칸의 선을 1px로 통일 */
 .month-cell { 
-  border: 1px solid #581c87 !important; 
+  border: 1px solid #94a3b8 !important; 
   background: #ffffff !important; 
   min-height: 116px; 
   padding: 0; 
@@ -339,9 +339,9 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #581c87 !imp
   overflow: hidden; 
 }
 
-/* 🚀 [교정] 이번달(이달) 칸의 테두리를 선명하게 강조 */
+/* 🚀 [교정] 이번달(이달) 칸의 테두리를 선명하고 쨍하게 강조 */
 .month-cell:not(.other-month) {
-  border: 1px solid #581c87 !important; 
+  border: 1px solid #94a3b8 !important; 
 }
 
 .month-cell:hover { background: #f1f5f9 !important; }
@@ -423,7 +423,7 @@ body.dark-mode .group-table td,
 body.dark-mode .month-cell,
 body.dark-mode .month-header-title { 
   background-color: #161e2e !important; 
-  border-color: #581c87 !important; /* 👈 다크모드에서도 딥 퍼플 경계 유지 */
+  border-color: #334155 !important; 
   color: #ffffff !important; 
 }
 
@@ -496,21 +496,21 @@ body.dark-mode .date-value { background-color: #111827 !important; color: #fffff
 /* 5. [월교번/그룹 가독성] */
 body.dark-mode .month-calendar {
   background-color: #05080f !important;
-  border-color: #581c87 !important;
+  border-color: #334155 !important;
 }
 body.dark-mode .month-cell { 
   background-color: #161e2e !important; 
-  border: 1px solid #581c87 !important; 
+  border: 1px solid #334155 !important; 
 }
 
 /* 🚀 [교정] 다크모드 이달의 칸 테두리 강조 */
 body.dark-mode .month-cell:not(.other-month) {
-  border: 1px solid #6b21a8 !important; /* 조금 더 밝은 퍼플로 경계 보강 */
+  border: 1px solid #4b5563 !important;
 }
 
 body.dark-mode .month-weekdays { 
   background-color: #1a2236 !important; 
-  border-bottom: 1px solid #581c87 !important; 
+  border-bottom: 1px solid #4b5563 !important; 
 }
 body.dark-mode .month-weekdays > div { 
   color: #ffffff !important; 
