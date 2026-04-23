@@ -491,4 +491,4 @@ body.dark-mode .day-date { color: #94a3b8 !important; }
 /* 🌙 다크모드 선택창 화살표 보정 */
 body.dark-mode select.select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
-}  이코드에서 심사숙고해서 사진의 문제만 해결해줘. 기존데이터 1도 유실되면 안된다 줄이지마 절대
+}
