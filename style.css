@@ -1,3 +1,9 @@
+/* 수정된 CSS 부분 - 이 부분 외의 모든 로직과 디자인은 원본 그대로 유지됩니다. */
+
+{
+type: uploaded file
+fileName: 40779.jpg
+}
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 /* 🟢 [디자인 철학 복구] 불필요하게 글씨를 얇게 깎아먹던 폰트 스무딩 옵션을 제거하여 쨍한 화질 복구! */
@@ -278,16 +284,16 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
   background-image: none !important;
 }
 
-/* 🚀 [교정] 내 교번 강조: 둥둥 뜨는 효과 제거 + 아이스 블루 테두리 */
+/* 🚀 [교정] 내 교번 강조: 쨍한 민트 대신 로열 블루 테두리로 안정감 부여 */
 .cell-my {
-  border: 3px solid #00f2ff !important; /* 아이스 블루 */
+  border: 3px solid #3b82f6 !important; /* 로열 블루 */
   z-index: 5;
   position: relative;
-  box-shadow: 0 8px 16px rgba(0, 242, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
-  transform: none !important; /* 둥둥 뜨는 효과 제거 */
+  transform: none !important;
 }
 
 .cell-my .all-code, .cell-my .all-name {
@@ -300,12 +306,12 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 /* 🚀 [월교번 디자인 가독성 최종 정비] */
 /* ✅ [가독성 튜닝] 눈이 편한 '소프트 아이보리' 달력과 '딥 블루' 헤더 대비 */
 .month-calendar { 
-  background: #fdfdfa !important; /* 👈 눈부심 없는 부드러운 미색 */
+  background: #fdfdfa !important; 
   border-radius: 26px; 
   padding: 10px; 
   margin-bottom: 12px; 
-  border: 1px solid #94a3b8 !important; /* 👈 테두리 굵기 1px로 통일 */
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18); /* 👈 바닥 배경과 분리하는 깊은 그림자 */
+  border: 1px solid #94a3b8 !important; /* 👈 외곽 테두리 1px 고정 */
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18); 
   transition: background-color 0.2s ease; 
   overflow: hidden;
 }
@@ -313,9 +319,9 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 
 /* 요일 헤더: 딥 네이비로 반전시켜 시각적 중심 확보 */
 .month-weekdays { 
-  border-bottom: 1.5px solid #94a3b8 !important; 
-  margin-bottom: 4px; 
-  background: #1e293b; /* 👈 진한 배경으로 요일 구분 확실히 함 */
+  border-bottom: 1px solid #94a3b8 !important; 
+  margin-bottom: 0; 
+  background: #1e293b; 
   border-radius: 16px 16px 0 0;
 }
 .month-weekdays > div { 
@@ -323,12 +329,12 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
   font-size: 16px; 
   font-weight: 900; 
   padding: 12px 0; 
-  color: #ffffff !important; /* 👈 글자는 흰색으로 반전 */
+  color: #ffffff !important; 
 }
 
-/* 🚀 [테두리 일원화] 월교번 각 칸의 선을 1px로 통일 */
+/* 🚀 [테두리 일원화] 월교번 각 칸의 선을 외곽과 동일하게 1px 고정 */
 .month-cell { 
-  border: 1px solid #94a3b8 !important; 
+  border: 1px solid #94a3b8 !important; /* 👈 내부 선도 1px로 통일 */
   background: #ffffff !important; 
   min-height: 116px; 
   padding: 0; 
@@ -346,20 +352,20 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 
 .month-cell:hover { background: #f1f5f9 !important; }
 
-/* 🚀 [교정] 월교번 '오늘' 강조: 테두리 아이스 블루로 쨍하게 강조 */
+/* 🚀 [교정] 월교번 '오늘' 강조: 아이스 블루 대신 에메랄드 그린으로 과하지 않게 강조 */
 .month-cell.selected { 
-  border: 3px solid #00b8ff !important; 
-  background: #f0f9ff !important; 
+  border: 3px solid #10b981 !important; /* 에메랄드 그린 */
+  background: #f0fdf4 !important; 
   z-index: 10; 
   position: relative; 
-  box-shadow: 0 0 20px rgba(0, 184, 255, 0.4);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
 }
 .month-cell.selected .month-day { 
   color: #000000 !important; 
   font-weight: 900; 
 }
 
-.month-cell.other-month { opacity: 0.45; background: #f8fafc !important; border: 1px solid #cbd5e1 !important; }
+.month-cell.other-month { opacity: 0.45; background: #f8fafc !important; border: 1px solid #94a3b8 !important; }
 .month-cell-inner { width: 100%; min-height: 114px; padding: 8px 6px 4px; display: grid; grid-template-rows: 20px 30px 1fr; align-items: start; }
 
 .month-day { 
@@ -406,7 +412,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 .fullscreen-image { width: 100%; max-width: 950px; display: block; margin: 0 auto; background: white; border: 1px solid #cbd5e1; box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08); }
 .empty-box { border: 1px dashed #94a3b8; padding: 40px 16px; background: white; border-radius: 16px; color: #64748b; text-align: center; }
 
-@keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(0, 242, 255, 0.2); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.4); } }
+@keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.4); } }
 
 /* 🌙 [디자인 교정] 다크 모드 (대비 강화 및 시인성 극대화) */
 body.dark-mode { background: #05080f !important; color: #f8fafc !important; }
@@ -532,10 +538,10 @@ body.dark-mode .month-cell.other-month .month-day,
 body.dark-mode .month-cell.other-month .month-code-line, 
 body.dark-mode .month-cell.other-month .month-time-line { color: #4b5563 !important; }
 
-/* 다크모드 '오늘' 23일 날짜색 흰색 복구 및 테두리 강조 */
+/* 다크모드 '오늘' 강조: 쨍한 민트색 적용 */
 body.dark-mode .month-cell.selected { 
-  border: 3px solid #00f2ff !important; 
-  background-color: rgba(0, 242, 255, 0.08) !important; 
+  border: 3px solid #10b981 !important; 
+  background-color: rgba(16, 185, 129, 0.12) !important; 
 }
 body.dark-mode .month-cell.selected .month-day {
   color: #ffffff !important; 
@@ -638,7 +644,7 @@ body.dark-mode .group-table td.active-col {
 
 /* 오늘 표시 */
 body.dark-mode .group-table th.today-col {
-  border-bottom: 3px solid #22d3ee !important;
+  border-bottom: 3px solid #3b82f6 !important;
   background-color: rgba(250, 204, 21, 0.35) !important;
 }
 
