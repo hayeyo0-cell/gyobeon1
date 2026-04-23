@@ -35,9 +35,10 @@ button:active { transform: scale(0.97); }
 .settings-btn { background: linear-gradient(180deg, #4b7dff 0%, #2f61dc 100%); }
 .install-btn { background: linear-gradient(180deg, #2aa55d 0%, #197a42 100%); }
 
-/* 🚀 [디자인 유지] 라이트 모드 밴드/휴가 버튼 녹색 원본 설정 */
-.quick-btn.band { background: linear-gradient(180deg, #21b35a 0%, #169447 100%); }
-.quick-btn.warmth { background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%); }
+/* 🚀 [디자인 유지] 라이트 모드 밴드/휴가 버튼 녹색 원본 설정 유지 */
+/* ✅ [수정] .warmth 클래스뿐만 아니라 휴가 관련 버튼의 색상을 명확히 고정 */
+.quick-btn.band { background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important; }
+.quick-btn.warmth, .quick-btn.vacation { background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%) !important; opacity: 1 !important; }
 .quick-icon { width: 20px; height: 20px; object-fit: contain; display: block; flex-shrink: 0; }
 
 .date-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; height: 168px; }
@@ -362,12 +363,12 @@ body.dark-mode .month-header-title {
   color: #ffffff !important; 
 }
 
-/* 🚀 [교환/복원 핵심] 다크모드 사용자 지정 배경색 복원 로직 - 전체 탭 포함 */
+/* 🚀 [교환/복원 핵심] ✅ [수정] 다크모드 사용자 지정 배경색 보존 로직 강화 */
 body.dark-mode .month-cell[style*="background-color"], 
 body.dark-mode .group-table td[style*="background-color"],
 body.dark-mode .all-cell-real[style*="background-color"] { 
   background-image: none !important;
-  background-color: inherit !important; /* 👈 JS가 주입한 인라인 스타일 우선 적용 */
+  /* background-color: inherit !important; 제거 -> 인라인 스타일이 자연스럽게 적용되도록 함 */
   color: #000000 !important; /* 배경색이 밝으므로 글자는 검정으로 고정 */
 }
 
@@ -396,12 +397,13 @@ body.dark-mode .modal-btn {
   opacity: 1 !important; 
 }
 
-/* 🚀 [밴드 및 휴가 버튼] 다크모드 가독성 강화 */
+/* 🚀 [밴드 및 휴가 버튼] ✅ [수정] 다크모드에서도 녹색 원본색 유지 */
 body.dark-mode .quick-btn.band, 
 body.dark-mode .quick-btn.vacation, 
 body.dark-mode .quick-btn.warmth { 
   background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important; 
   opacity: 1 !important; 
+  filter: none !important;
 }
 
 /* 3. [전체 탭 격자] 사각 격자 입체감 및 디자인 복원 */
@@ -493,10 +495,9 @@ body.dark-mode select.select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
 }
 
-/* 🚀 [최종 보정] 다크모드 사용자 지정색 칸 가독성 잠금 로직 */
+/* 🚀 [최종 보정] ✅ [수정] 다크모드 사용자 지정색 칸 가독성 잠금 및 배경 복구 로직 */
 body.dark-mode .all-cell-real[style*="background-color"] {
-  background-image: none !important; /* 그라데이션 제거 */
-  background-color: inherit !important; /* 지정 배경색 출력 */
+  background-image: none !important; /* 다크모드 기본 그라데이션 강제 제거 */
   color: #000000 !important; /* 글자 검정 고정 */
 }
 body.dark-mode .all-cell-real[style*="background-color"] .all-code,
@@ -508,69 +509,25 @@ body.dark-mode .all-cell-real[style*="background-color"] .all-name {
 /* 🚀🔥 [최종 강제 덮어쓰기 패치] */
 /* ============================= */
 
-
-/* ============================= */
-/* 1️⃣ 전체탭 색상 안먹는 문제 - 완전 해결 */
-/* ============================= */
-
-/* inline style(background-color)을 최우선으로 살림 */
+/* 1️⃣ 전체탭 색상 보존 - !important 없이 인라인 스타일이 작동하도록 유도 */
 body.dark-mode .all-cell-real[style] {
-  background: none !important;
   background-image: none !important;
 }
 
-/* 진짜 핵심: background-color 다시 살리기 */
-body.dark-mode .all-cell-real[style] {
-  background-color: attr(style background-color) !important;
-}
-
-/* fallback (브라우저 호환) */
-body.dark-mode .all-cell-real[style] {
-  background-color: unset !important;
-}
-
-/* 텍스트 */
-body.dark-mode .all-cell-real[style] * {
-  color: #000000 !important;
-}
-
-
-/* ============================= */
-/* 2️⃣ 그룹 하이라이트 완전 복구 */
-/* ============================= */
-
-/* 모든 배경 덮는 놈보다 더 강하게 */
+/* 2️⃣ 그룹 하이라이트 복구 */
 body.dark-mode .group-table th.active-col,
-body.dark-mode .group-table td.active-col,
-body.dark-mode .group-table td.sticky-col.active-col {
-  background: rgba(56, 189, 248, 0.55) !important; /* 훨씬 진하게 */
+body.dark-mode .group-table td.active-col {
+  background-color: rgba(56, 189, 248, 0.4) !important; 
 }
 
 /* 오늘 표시 */
 body.dark-mode .group-table th.today-col {
   border-bottom: 4px solid #22d3ee !important;
-  background: rgba(250, 204, 21, 0.35) !important;
+  background-color: rgba(250, 204, 21, 0.35) !important;
 }
 
-
-/* ============================= */
-/* 3️⃣ 휴가 버튼 색상 강제 복구 */
-/* ============================= */
-
-.quick-btn.warmth,
-.quick-btn.warmth * {
+/* 3️⃣ 휴가 버튼 강제 복구 - 라이트/다크 모두 적용 */
+.quick-btn.warmth, .quick-btn.vacation {
   background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%) !important;
   color: #ffffff !important;
-  opacity: 1 !important;
-  filter: none !important;
-}
-
-
-/* ============================= */
-/* 🔥 진짜 마지막 안전장치 */
-/* ============================= */
-
-/* 다크모드에서 모든 "색 지정된 셀" 보호 */
-body.dark-mode [style*="background-color"] {
-  background-image: none !important;
 }
