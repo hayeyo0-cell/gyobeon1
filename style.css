@@ -397,10 +397,10 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
 
 @keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(0, 242, 255, 0.2); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.4); } }
 
-/* 🌙 다크 모드 (완벽 보존 및 디자인 충돌 정밀 해결) */
-body.dark-mode { background: #0f172a !important; color: #f8fafc !important; }
+/* 🌙 [디자인 교정] 다크 모드 (대비 강화 및 시인성 극대화) */
+body.dark-mode { background: #05080f !important; color: #f8fafc !important; }
 
-/* 1. [배경 고정] 다크모드 하얗게 튀는 배경들 전부 네이비로 수정 */
+/* 1. [배경 고정] 다크모드 배경을 더 어둡게, 카드는 살짝 띄워서 격자 경계 확보 */
 body.dark-mode .card, 
 body.dark-mode .main-panel, 
 body.dark-mode .month-calendar, 
@@ -411,8 +411,8 @@ body.dark-mode .group-table th,
 body.dark-mode .group-table td,
 body.dark-mode .month-cell,
 body.dark-mode .month-header-title { 
-  background-color: #1e293b !important; 
-  border-color: #334155 !important; 
+  background-color: #161e2e !important; /* 👈 격자 칸 배경을 살짝 밝게 조정 */
+  border-color: #2d3748 !important; 
   color: #ffffff !important; 
 }
 
@@ -424,10 +424,10 @@ body.dark-mode .all-cell-real[style*="background-color"] {
   color: #000000 !important; /* 배경색이 밝으므로 글자는 검정으로 고정 */
 }
 
-/* 2. [설정창 가독성 복구] 사진 속 불투명/가독성 문제 해결 */
+/* 2. [설정창 가독성 복구] */
 body.dark-mode .modal { 
-  background-color: #1e293b !important; 
-  border: 1px solid #334155 !important; 
+  background-color: #111827 !important; 
+  border: 1px solid #374151 !important; 
   color: #f8fafc !important; 
 }
 body.dark-mode .modal-title, body.dark-mode .label { color: #ffffff !important; }
@@ -435,7 +435,7 @@ body.dark-mode .modal-title, body.dark-mode .label { color: #ffffff !important; 
 /* 내 정보 박스 배경색 고정 */
 body.dark-mode .notice-box { 
   background-color: #0f172a !important; 
-  border: 1px solid #334155 !important; 
+  border: 1px solid #1e293b !important; 
   color: #38bdf8 !important; 
 }
 
@@ -443,8 +443,8 @@ body.dark-mode .input,
 body.dark-mode .select, 
 body.dark-mode .group-select-display, 
 body.dark-mode .modal-btn { 
-  background-color: #0f172a !important; 
-  border-color: #475569 !important; 
+  background-color: #1f2937 !important; 
+  border-color: #374151 !important; 
   color: #ffffff !important; 
   opacity: 1 !important; 
 }
@@ -460,14 +460,14 @@ body.dark-mode .quick-btn.warmth {
 
 /* 3. [전체 탭 격자] ✅ [수정] 쨍하고 깊이감 있는 블랙 네이비 테마로 튜닝 */
 body.dark-mode .all-tab-grid-wrap { 
-  background: #0f172a !important; 
+  background: #05080f !important; /* 👈 바닥 배경을 더 어둡게 */
   border: 1px solid #1e293b !important; 
   box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.4) !important;
 }
 body.dark-mode .all-cell-real:not([style*="background-color"]) { 
-  background: #1a2236 !important; 
+  background: #1a2236 !important; /* 👈 격자 칸은 띄워서 경계 명확히 */
   border: 1px solid #2d3748 !important; 
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 8px rgba(0, 0, 0, 0.3) !important;
 }
 /* 지정색 없는 일반 칸의 글자색은 아주 선명한 화이트 */
 body.dark-mode .all-cell-real:not([style*="background-color"]) .all-code {
@@ -479,17 +479,17 @@ body.dark-mode .all-cell-real:not([style*="background-color"]) .all-name {
 }
 
 /* 4. [홈 화면 날짜박스] 연/월/일 박스 가독성 */
-body.dark-mode .date-box { background-color: #1e293b !important; border-color: #334155 !important; }
-body.dark-mode .date-btn { background-color: #334155 !important; color: #ffffff !important; }
-body.dark-mode .date-value { background-color: #1e293b !important; color: #ffffff !important; }
+body.dark-mode .date-box { background-color: #111827 !important; border-color: #374151 !important; }
+body.dark-mode .date-btn { background-color: #1f2937 !important; color: #ffffff !important; }
+body.dark-mode .date-value { background-color: #111827 !important; color: #ffffff !important; }
 
 /* 5. [월교번/그룹 가독성] ✅ [수정] 상단 요일 배경 및 23일 날짜색 복구 */
 body.dark-mode .month-calendar {
-  background-color: #0f172a !important;
+  background-color: #05080f !important;
   border-color: #1e293b !important;
 }
 body.dark-mode .month-cell { 
-  background-color: #1a2236 !important; 
+  background-color: #161e2e !important; 
   border: 1px solid #2d3748 !important; 
 }
 /* 다크모드 요일 헤더: 흰색 배경 제거 및 시인성 확보 */
@@ -503,15 +503,15 @@ body.dark-mode .month-weekdays > div {
 }
 
 body.dark-mode .month-day, body.dark-mode .month-code-line, body.dark-mode .tone-normal { color: #ffffff !important; }
-body.dark-mode .month-cell.other-month { opacity: 1 !important; background-color: #0a0f1d !important; }
+body.dark-mode .month-cell.other-month { opacity: 1 !important; background-color: #090e18 !important; }
 body.dark-mode .month-cell.other-month .month-day, 
 body.dark-mode .month-cell.other-month .month-code-line, 
-body.dark-mode .month-cell.other-month .month-time-line { color: #475569 !important; }
+body.dark-mode .month-cell.other-month .month-time-line { color: #4b5563 !important; }
 
 /* ✅ [수정] 다크모드 '오늘' 23일 날짜색 흰색 복구 및 테두리 강조 */
 body.dark-mode .month-cell.selected { 
   border: 3.5px solid #00f2ff !important; 
-  background-color: rgba(0, 242, 255, 0.05) !important; 
+  background-color: rgba(0, 242, 255, 0.08) !important; 
 }
 body.dark-mode .month-cell.selected .month-day {
   color: #ffffff !important; /* 👈 다크모드에서는 날짜색 흰색으로 복구 */
@@ -617,4 +617,4 @@ body.dark-mode .group-table th.today-col {
 .quick-btn.warmth, .quick-btn.vacation {
   background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important;
   color: #ffffff !important;
-}
+}  
