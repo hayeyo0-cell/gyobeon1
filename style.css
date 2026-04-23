@@ -36,9 +36,9 @@ button:active { transform: scale(0.97); }
 .install-btn { background: linear-gradient(180deg, #2aa55d 0%, #197a42 100%); }
 
 /* 🚀 [디자인 유지] 라이트 모드 밴드/휴가 버튼 녹색 원본 설정 유지 */
-/* ✅ [수정] .warmth 클래스뿐만 아니라 휴가 관련 버튼의 색상을 명확히 고정 */
+/* ✅ [수정] 라이트모드에서 휴가 버튼 색상을 밴드 버튼 색상과 완벽하게 일치시킴 */
 .quick-btn.band { background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important; }
-.quick-btn.warmth, .quick-btn.vacation { background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%) !important; opacity: 1 !important; }
+.quick-btn.warmth, .quick-btn.vacation { background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important; opacity: 1 !important; }
 .quick-icon { width: 20px; height: 20px; object-fit: contain; display: block; flex-shrink: 0; }
 
 .date-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; height: 168px; }
@@ -527,7 +527,8 @@ body.dark-mode .group-table th.today-col {
 }
 
 /* 3️⃣ 휴가 버튼 강제 복구 - 라이트/다크 모두 적용 */
+/* ✅ 밴드 버튼 색상(#21b35a, #169447)으로 휴가 버튼 색상 완벽 통일 */
 .quick-btn.warmth, .quick-btn.vacation {
-  background: linear-gradient(180deg, #2ccf63 0%, #1db954 100%) !important;
+  background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important;
   color: #ffffff !important;
 }
