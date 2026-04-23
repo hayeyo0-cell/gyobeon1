@@ -492,8 +492,15 @@ body.dark-mode .month-cell {
   background-color: #1a2236 !important; 
   border: 1px solid #2d3748 !important; 
 }
-body.dark-mode .month-weekdays { border-bottom: 2px solid #2d3748 !important; }
-body.dark-mode .month-weekdays > div { color: #ffffff !important; font-weight: 900; } /* 👈 요일 글자색 화이트로 고정 */
+/* 다크모드 요일 헤더 시인성 패치 */
+body.dark-mode .month-weekdays { 
+  background-color: #1a2236 !important; /* 배경을 어둡게 */
+  border-bottom: 2px solid #2d3748 !important; 
+}
+body.dark-mode .month-weekdays > div { 
+  color: #ffffff !important; /* 👈 글자색 화이트로 강제 고정 */
+  font-weight: 900; 
+}
 
 body.dark-mode .month-day, body.dark-mode .month-code-line, body.dark-mode .tone-normal { color: #ffffff !important; }
 body.dark-mode .month-cell.other-month { opacity: 1 !important; background-color: #0a0f1d !important; }
