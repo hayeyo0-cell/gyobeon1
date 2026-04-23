@@ -1,3 +1,7 @@
+{
+type: uploaded file
+fileName: 40771.jpg
+}
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 /* 🟢 [디자인 철학 복구] 불필요하게 글씨를 얇게 깎아먹던 폰트 스무딩 옵션을 제거하여 쨍한 화질 복구! */
@@ -338,6 +342,13 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
   display: block; 
   overflow: hidden; 
 }
+
+/* 🚀 [교정] 이번달(이달) 칸의 테두리를 선명하고 쨍하게 강조 */
+.month-cell:not(.other-month) {
+  border: 1.2px solid #334155 !important; /* 👈 이달의 칸은 테두리를 더 두껍고 진하게 보정 */
+  box-shadow: inset 0 0 0 0.8px rgba(255,255,255,0.8);
+}
+
 .month-cell:hover { background: #f1f5f9 !important; }
 
 /* 🚀 [교정] 월교번 '오늘' 강조: 테두리 아이스 블루로 쨍하게 강조 */
@@ -353,7 +364,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #c8d2e3 !imp
   font-weight: 900; 
 }
 
-.month-cell.other-month { opacity: 0.45; background: #f8fafc !important; }
+.month-cell.other-month { opacity: 0.45; background: #f8fafc !important; border: 0.5px solid #e2e8f0 !important; }
 .month-cell-inner { width: 100%; min-height: 114px; padding: 8px 6px 4px; display: grid; grid-template-rows: 20px 30px 1fr; align-items: start; }
 
 .month-day { 
@@ -496,6 +507,12 @@ body.dark-mode .month-cell {
   background-color: #161e2e !important; 
   border: 1px solid #2d3748 !important; 
 }
+
+/* 🚀 [교정] 다크모드 이달의 칸 테두리 강조 */
+body.dark-mode .month-cell:not(.other-month) {
+  border: 1.5px solid #4b5563 !important;
+}
+
 body.dark-mode .month-weekdays { 
   background-color: #1a2236 !important; 
   border-bottom: 2px solid #2d3748 !important; 
@@ -515,7 +532,7 @@ body.dark-mode .month-code-line {
   white-space: nowrap !important; 
 } 
 
-body.dark-mode .month-cell.other-month { opacity: 1 !important; background-color: #090e18 !important; }
+body.dark-mode .month-cell.other-month { opacity: 1 !important; background-color: #090e18 !important; border: 0.5px solid #1f2937 !important; }
 body.dark-mode .month-cell.other-month .month-day, 
 body.dark-mode .month-cell.other-month .month-code-line, 
 body.dark-mode .month-cell.other-month .month-time-line { color: #4b5563 !important; }
@@ -619,20 +636,4 @@ body.dark-mode .all-cell-real[style] {
 }
 
 /* 2️⃣ 그룹 하이라이트 복구 */
-body.dark-mode .group-table th.active-col,
-body.dark-mode .group-table td.active-col {
-  background-color: rgba(56, 189, 248, 0.4) !important; 
-}
-
-/* 오늘 표시 */
-body.dark-mode .group-table th.today-col {
-  border-bottom: 4px solid #22d3ee !important;
-  background-color: rgba(250, 204, 21, 0.35) !important;
-}
-
-/* 3️⃣ 휴가 버튼 강제 복구 - 라이트/다크 모두 적용 */
-/* ✅ 밴드 버튼 색상(#21b35a, #169447)으로 휴가 버튼 색상 완벽 통일 */
-.quick-btn.warmth, .quick-btn.vacation {
-  background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important;
-  color: #ffffff !important;
-}
+body.dark-mode .group-table th.active
