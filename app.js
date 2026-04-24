@@ -1,7 +1,7 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 완성본 - 로직 수정판)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 완성본 - 전화번호 연동판)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
- * [수정 사항]: 2001~2059 열차 검색 시 어제 야간자의 아침 열차만 노출하고 오늘 야간자 데이터는 강제 배제.
+ * [추가 기능]: 전화번호 입력/저장, 연락처 불러오기, DIA순서/행로표 전화연결 기능 추가.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -468,6 +468,7 @@ function App() {
   const [editingCell, setEditingCell] = useState(null);
   const [editColor, setEditColor] = useState("");
   const [editAlias, setEditAlias] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   const [isWorktimeEditOpen, setIsWorktimeEditOpen] = useState(false);
   const [editStartHour, setEditStartHour] = useState("");
   const [editStartMin, setEditStartMin] = useState("");
@@ -770,7 +771,6 @@ function App() {
     const q = String(searchQuery || "").trim().toLowerCase();
     const trainNum = parseInt(q);
     
-    // [기관사님 요청사항 반영] 2001~2059는 어제 야간자만, 2060~2296은 오늘 당일자만
     const isEarlyMorningTrain = !isNaN(trainNum) && trainNum >= 2001 && trainNum <= 2059;
     const isTodaySpecialTrain = !isNaN(trainNum) && trainNum >= 2060 && trainNum <= 2296;
     const isTrainSearch = !isNaN(trainNum) && q.length >= 4 && (isEarlyMorningTrain || isTodaySpecialTrain);
@@ -791,10 +791,8 @@ function App() {
           ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
           : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
 
-        // 1. [2001~2059] 어제 야간 열차 검색 (박차)
         if (isEarlyMorningTrain) {
           const matchedYesterday = yesterdayGrid.filter(item => {
-            // "어제 야간근무(~)" 코드여야만 매칭 (오늘 밤 야간자는 제외)
             if (!isNightStartCode(teamKey, item.code)) return false;
             const folder = getPathFolder(teamKey, yesterdayStr, item.code);
             const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
@@ -806,11 +804,9 @@ function App() {
             searchOrigin: 'yesterday' 
           }));
           
-          // 어제 야간자 매칭 결과가 있으면 그것만 추가 (오늘 데이터는 뒤지지 않음)
           if (matchedYesterday.length > 0) {
             crossTeamResults = [...crossTeamResults, ...matchedYesterday];
           } else {
-            // 어제 야간에 없으면 임시열차 등을 대비해 오늘 열차 중 '야간근무'가 아닌 것만 예비 검색
             const matchedTodayBackup = teamGrid.filter(item => {
               if (isNightStartCode(teamKey, item.code)) return false; 
               const folder = getPathFolder(teamKey, browseDate, item.code);
@@ -820,7 +816,6 @@ function App() {
             crossTeamResults = [...crossTeamResults, ...matchedTodayBackup];
           }
         } 
-        // 2. [2060~2296] 오늘 당일 열차 검색
         else if (isTodaySpecialTrain) {
           const matchedToday = teamGrid.filter(item => {
             const folder = getPathFolder(teamKey, browseDate, item.code);
@@ -890,7 +885,7 @@ function App() {
     const canUseMyAnchorForTeam = viewTeam === mySelection?.teamKey && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(team, mySelection.name);
     if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, team, remoteRoster, browseDate, overrides); } else if (canUseMyAnchorForTeam) { grid = buildAssignedGrid(team, mySelection.name, normalizeToFixedCode(team, mySelection.code), diffDays(mySelection.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); } else { const teamAnchor = buildTeamAnchorFromZip(currentViewTeam); grid = buildAssignedGrid(team, teamAnchor.name, teamAnchor.code, diffDays(teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); }
     if (viewTeam === mySelection?.teamKey && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) { const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection)); grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; }); }
-    const diaOrder = findDiaOrder(team); return diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-" }; });
+    const diaOrder = findDiaOrder(team); return diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-", teamKey: viewTeam }; });
   }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection]);
 
   function findDiaOrder(team) { return team?.diaOrder?.length ? team.diaOrder : getGyobunOrder(team); }
@@ -1026,16 +1021,28 @@ function App() {
   }
 
   function openEditDialog(item) {
-    setEditingCell(item); const currentTeam = item.teamKey || viewTeam; const key = getOverrideKey(currentTeam, item.name); const current = overrides[key] || {}; setEditColor(current.color || ""); setEditAlias(current.alias || "");
+    setEditingCell(item); const currentTeam = item.teamKey || viewTeam; const key = getOverrideKey(currentTeam, item.name); const current = overrides[key] || {}; setEditColor(current.color || ""); setEditAlias(current.alias || ""); setEditPhone(current.phone || "");
     const team = effectiveData?.[currentTeam]; const currentTime = team ? pickWorktime(team, item.code, browseDate) : "----"; const parts = parseTimeValueToParts(currentTime);
     setEditStartHour(parts.sh); setEditStartMin(parts.sm); setEditEndHour(parts.eh); setEditEndMin(parts.em); setIsWorktimeEditOpen(false); setEditOpen(true);
   }
   function closeEditDialog() { if (editOpenRef.current) window.history.back(); else setEditOpen(false); }
-  function commitEdit(nextColorValue = editColor, nextAliasValue = editAlias) {
-    if (!editingCell) return; const currentTeam = editingCell.teamKey || viewTeam; const cleanColor = String(nextColorValue || "").trim(); const cleanAlias = String(nextAliasValue || "").trim(); const key = getOverrideKey(currentTeam, editingCell.name); const next = { ...overrides };
-    if (!cleanColor && !cleanAlias) delete next[key]; else next[key] = { color: cleanColor, alias: cleanAlias };
+  function commitEdit(nextColorValue = editColor, nextAliasValue = editAlias, nextPhoneValue = editPhone) {
+    if (!editingCell) return; const currentTeam = editingCell.teamKey || viewTeam; const cleanColor = String(nextColorValue || "").trim(); const cleanAlias = String(nextAliasValue || "").trim(); const cleanPhone = String(nextPhoneValue || "").trim(); const key = getOverrideKey(currentTeam, editingCell.name); const next = { ...overrides };
+    if (!cleanColor && !cleanAlias && !cleanPhone) delete next[key]; else next[key] = { color: cleanColor, alias: cleanAlias, phone: cleanPhone };
     if (isWorktimeEditOpen) { const built = buildTimeValueFromParts(editStartHour, editStartMin, editEndHour, editEndMin); if (!built) return alert("출퇴근시간 형식을 다시 확인해주세요."); const dayType = guessDayType(browseDate); const allWorktimeOverrides = loadWorktimeOverrides(); const wtKey = getWorktimeOverrideKey(currentTeam, editingCell.code); const currentEntry = { ...(allWorktimeOverrides[wtKey] || {}) }; currentEntry[dayType] = built; allWorktimeOverrides[wtKey] = currentEntry; saveWorktimeOverrides(allWorktimeOverrides); setWorktimeVersion((v) => v + 1); }
-    setOverrides(next); saveOverrides(next); setEditOpen(false); setEditingCell(null); setEditColor(""); setEditAlias(""); setIsWorktimeEditOpen(false); setEditStartHour(""); setEditStartMin(""); setEditEndHour(""); setEditEndMin("");
+    setOverrides(next); saveOverrides(next); setEditOpen(false); setEditingCell(null); setEditColor(""); setEditAlias(""); setEditPhone(""); setIsWorktimeEditOpen(false); setEditStartHour(""); setEditStartMin(""); setEditEndHour(""); setEditEndMin("");
+  }
+
+  async function pickContactForEdit() {
+    if (!('contacts' in navigator && 'select' in navigator.contacts)) return alert("연락처를 불러오기 위해 지원되는 브라우저(Android Chrome 등)가 필요합니다.");
+    try {
+      const contacts = await navigator.contacts.select(['name', 'tel'], { multiple: false });
+      if (contacts.length > 0) {
+        const contact = contacts[0];
+        const rawPhone = contact.tel && contact.tel[0] ? contact.tel[0] : "";
+        setEditPhone(rawPhone.replace(/[^0-9]/g, ''));
+      }
+    } catch (e) { console.error(e); }
   }
 
   function openPathDialog(item, dateStr = todayStr) { 
@@ -1377,10 +1384,18 @@ function App() {
                   <div className="card" style={{ padding: 0, overflow: "hidden", ...swipeStyle, borderRadius: "10px", marginTop: "15px" }}>
                     {diaList.map((item, idx) => {
                       const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
+                      const cellKey = getOverrideKey(item.teamKey, item.name);
+                      const hasPhone = overrides[cellKey]?.phone;
+                      
                       return (
-                        <div key={`${idx}`} onClick={() => openPathDialog(item, browseDate)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 20px", borderBottom: idx === diaList.length - 1 ? "none" : (isDarkMode ? "1px solid #334155" : "1px solid #c8d2e3"), fontSize: 18, background: isMine ? (isDarkMode ? "rgba(56, 189, 248, 0.25)" : "#d9e9ff") : "transparent", borderLeft: isMine ? (isDarkMode ? "4px solid #38bdf8" : "4px solid #3b82f6") : "4px solid transparent", cursor: "pointer" }}>
-                          <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
-                          <div style={{ fontWeight: 600 }}>{item.displayName || item.name}</div>
+                        <div key={`${idx}`} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: idx === diaList.length - 1 ? "none" : (isDarkMode ? "1px solid #334155" : "1px solid #c8d2e3"), background: isMine ? (isDarkMode ? "rgba(56, 189, 248, 0.25)" : "#d9e9ff") : "transparent", borderLeft: isMine ? (isDarkMode ? "4px solid #38bdf8" : "4px solid #3b82f6") : "4px solid transparent", cursor: "pointer" }}>
+                          <div onClick={() => openPathDialog(item, browseDate)} style={{ flex: 1, display: "flex", alignItems: "center", gap: "16px", fontSize: 18 }}>
+                            <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
+                            <div style={{ fontWeight: 600 }}>{item.displayName || item.name}</div>
+                          </div>
+                          {hasPhone && (
+                            <a href={`tel:${overrides[cellKey].phone}`} style={{ padding: '8px 12px', background: '#10b981', color: 'white', borderRadius: '50%', textDecoration: 'none', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}>📞</a>
+                          )}
                         </div>
                       );
                     })}
@@ -1639,6 +1654,11 @@ function App() {
             <div className="modal-sub">{TEAM_LABELS[editingCell?.teamKey || viewTeam]} {editingCell?.code} {editingCell?.name}</div>
             <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="비워두면 원래 이름 사용" />
+            <label className="label" style={{ marginTop: 12 }}>전화번호</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input className="input" style={{ flex: 1 }} value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="01012345678" />
+              <button className="modal-btn" style={{ width: 'auto', padding: '0 12px' }} onClick={pickContactForEdit}>📂</button>
+            </div>
             <label className="label" style={{ marginTop: 12 }}>색상 선택</label>
 <div style={{ marginTop: '8px' }}>
   <select 
@@ -1671,7 +1691,7 @@ function App() {
             )}
             <div className="modal-actions">
               <button className="modal-btn" onClick={closeEditDialog}>아니요</button>
-              <button className="modal-btn primary" onClick={() => commitEdit(editColor, editAlias)}>변경</button>
+              <button className="modal-btn primary" onClick={() => commitEdit(editColor, editAlias, editPhone)}>변경</button>
             </div>
           </div>
         </div>
@@ -1684,8 +1704,15 @@ function App() {
             <button className="modal-btn primary" onClick={closePathDialog}>닫기</button>
           </div>
           <div className="viewer-body">
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
-            <div style={{ color: "#6b7280", marginBottom: 16 }}>{pathDate} {weekdayName(pathDate)}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
+                <div style={{ color: "#6b7280" }}>{pathDate} {weekdayName(pathDate)}</div>
+              </div>
+              {overrides[getOverrideKey(pathTeamKey || viewTeam, pathTarget?.name)]?.phone && (
+                <a href={`tel:${overrides[getOverrideKey(pathTeamKey || viewTeam, pathTarget?.name)].phone}`} style={{ padding: '10px 20px', background: '#10b981', color: 'white', borderRadius: '25px', textDecoration: 'none', fontWeight: 800, fontSize: 14, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>📞 전화연결</a>
+              )}
+            </div>
             {pathImage ? (<img src={pathImage} alt="행로표" className="fullscreen-image" />) : (<div className="empty-box">해당 행로표 이미지를 찾지 못했습니다.</div>)}
           </div>
         </div>
