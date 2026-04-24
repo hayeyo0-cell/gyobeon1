@@ -1,5 +1,6 @@
 /** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 완성본)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
+ * 절대 임의로 코드를 줄이거나 삭제하지 않음.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -294,7 +295,7 @@ function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrid
 
 function buildTeamAnchorFromZip(team) {
   const people = Array.isArray(team?.people) ? team.people : []; const fixedCodes = getGyobunOrder(team); let baseDate = getZipBaseDate(team);
-  if (!people.length) return { name: team?.info?.baseName || "", code: normalizeToFixedCode(team, team?.info?.baseCode || fixedCodes[0] || ""), anchorDate: baseDate };
+  if (!people.length) return { name: team?.info?.baseName || "", code: normalizeToFixedCode(team, team?.info?.baseName || fixedCodes[0] || ""), anchorDate: baseDate };
   const matchedPerson = people.find((p) => samePersonName(p.name, team?.info?.baseName)); if (matchedPerson) return { name: matchedPerson.name, code: normalizeToFixedCode(team, team?.info?.baseCode || matchedPerson.baseCode || fixedCodes[0] || ""), anchorDate: baseDate };
   const firstPerson = people[0]; return { name: firstPerson?.name || "", code: normalizeToFixedCode(team, team?.info?.baseCode || firstPerson?.baseCode || fixedCodes[0] || ""), anchorDate: baseDate };
 }
@@ -1689,116 +1690,6 @@ function App() {
           </div>
         </div>
       )}
-
-      <style>{`
-        :root { --bg-color: #eef1f6; --card-bg: #ffffff; --text-main: #1e293b; --text-sub: #64748b; --primary: #3b82f6; --accent: #10b981; --border: #c8d2e3; }
-        body.dark-mode { --bg-color: #0f172a; --card-bg: #1e293b; --text-main: #f1f5f9; --text-sub: #94a3b8; --border: #334155; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', -apple-system, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding-bottom: 80px; overflow-x: hidden; width: 100%; transition: background 0.3s; }
-        .container { max-width: 500px; margin: 0 auto; padding: 16px; min-height: 100vh; position: relative; }
-        .card { background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid var(--border); transition: transform 0.2s; }
-        .card-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; color: var(--primary); }
-        .label { font-size: 14px; font-weight: 700; margin-bottom: 6px; display: block; color: var(--text-sub); }
-        .input, .select { width: 100%; padding: 14px; border-radius: 12px; border: 2px solid var(--border); background: var(--card-bg); color: var(--text-main); font-size: 16px; font-weight: 600; margin-bottom: 12px; outline: none; transition: border-color 0.2s; }
-        .input:focus { border-color: var(--primary); }
-        .modal-btn { padding: 14px 20px; border-radius: 12px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.2s; background: #e2e8f0; color: #475569; }
-        .modal-btn.primary { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
-        .settings-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 8px; }
-        .settings-btn { background: var(--card-bg); border: 1px solid var(--border); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; color: var(--text-sub); }
-        .install-btn { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; }
-        .quick-links { display: flex; gap: 6px; flex: 1; }
-        .quick-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; border-radius: 20px; border: none; font-size: 13px; font-weight: 700; color: white; }
-        .quick-btn.band { background: #00c73c; }
-        .quick-btn.vacation { background: #ff9f00; }
-        .quick-icon { width: 16px; height: 16px; filter: brightness(0) invert(1); }
-        .date-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-        .date-box { background: var(--card-bg); border-radius: 16px; padding: 10px; text-align: center; border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .date-value { font-size: 15px; font-weight: 800; color: var(--text-main); margin: 2px 0; }
-        .date-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--bg-color); color: var(--text-main); font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
-        .main-panel { padding: 30px 20px; text-align: center; min-height: 240px; display: flex; align-items: center; justify-content: center; }
-        .main-code { font-size: 42px; font-weight: 900; margin-bottom: 8px; letter-spacing: -1px; }
-        .main-time { font-size: 32px; font-weight: 800; opacity: 0.9; margin-bottom: 15px; }
-        .main-subinfo { font-size: 16px; font-weight: 700; color: var(--text-sub); }
-        .home-path-preview { margin-top: 25px; width: 100%; border-radius: 16px; overflow: hidden; border: 2px solid var(--border); position: relative; }
-        .home-path-preview img { width: 100%; display: block; filter: brightness(0.9); }
-        .preview-label { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; font-size: 12px; padding: 6px; font-weight: 700; backdrop-filter: blur(4px); }
-        .all-tab-header { position: sticky; top: 0; background: var(--bg-color); z-index: 10; padding: 4px 0 12px 0; margin: 0 -4px; }
-        .all-team-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; -ms-overflow-style: none; scrollbar-width: none; }
-        .all-team-tabs::-webkit-scrollbar { display: none; }
-        .all-team-tab { white-space: nowrap; padding: 10px 18px; border-radius: 20px; background: var(--card-bg); border: 1px solid var(--border); font-size: 14px; font-weight: 700; color: var(--text-sub); position: relative; }
-        .all-team-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
-        .all-team-tab.my-team { border: 2px solid var(--primary); }
-        .view-dot { width: 6px; height: 6px; background: #fff; border-radius: 50%; display: inline-block; margin-left: 6px; vertical-align: middle; }
-        .all-grid-real { display: grid; gap: 8px; width: 100%; }
-        .all-cell-real { background: var(--card-bg); border-radius: 14px; padding: 10px 6px; text-align: center; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: center; min-height: 64px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .all-cell-real.cell-my { border: 2px solid var(--primary); background: rgba(59, 130, 246, 0.05); }
-        .all-cell-real.cell-my-today { background: var(--primary); }
-        .all-cell-real.cell-my-today .all-code, .all-cell-real.cell-my-today .all-name { color: white !important; }
-        .all-code { font-size: 14px; font-weight: 800; margin-bottom: 2px; letter-spacing: -0.5px; }
-        .all-name { font-size: 12px; font-weight: 600; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .density-6 .all-code { font-size: 13px; }
-        .density-6 .all-name { font-size: 11px; }
-        .month-calendar { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border); overflow: hidden; }
-        .month-header-bar { display: flex; align-items: center; padding: 15px; background: var(--card-bg); border-bottom: 1px solid var(--border); }
-        .month-nav-btn { background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 10px; font-size: 18px; font-weight: 700; color: #475569; display: flex; align-items: center; justify-content: center; }
-        .month-header-title { flex: 1; text-align: center; font-size: 18px; font-weight: 800; }
-        .month-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--bg-color); border-bottom: 1px solid var(--border); }
-        .month-weekdays div { padding: 8px 0; text-align: center; font-size: 11px; font-weight: 800; color: var(--text-sub); }
-        .month-weekdays .sun { color: #ef4444; }
-        .month-weekdays .sat { color: #3b82f6; }
-        .month-row { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--border); }
-        .month-cell { aspect-ratio: 0.75; border: none; background: transparent; padding: 2px; position: relative; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .month-cell:last-child { border-right: none; }
-        .month-cell.selected { background: rgba(59, 130, 246, 0.1); }
-        .month-cell.other-month { opacity: 0.3; }
-        .month-cell-inner { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 4px 1px; }
-        .month-day { font-size: 11px; font-weight: 800; margin-bottom: 4px; }
-        .month-day.tone-sun { color: #ef4444; }
-        .month-day.tone-sat { color: #3b82f6; }
-        .month-code-line { font-size: 12px; font-weight: 900; margin-bottom: 4px; letter-spacing: -0.5px; line-height: 1; width: 100%; text-align: center; }
-        .month-time-wrap { width: 100%; display: flex; flex-direction: column; gap: 1px; }
-        .month-time-line { font-size: 9px; font-weight: 700; transform: scale(0.9); height: 10px; line-height: 10px; width: 110%; margin-left: -5%; color: var(--text-sub); }
-        .group-top-bar-v4 { display: flex; height: 50px; background: var(--primary); border-radius: 25px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .nav-btn-v4 { background: transparent; border: none; color: white; width: 45px; font-size: 16px; border-right: 1px solid rgba(255,255,255,0.2); }
-        .group-select-wrap { flex: 1.2; position: relative; border-right: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
-        .group-select-display { color: white; font-size: 14px; font-weight: 800; pointer-events: none; }
-        .group-select-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-        .group-add-btn-v4 { flex: 0.8; border: none; background: rgba(0,0,0,0.1); color: white; font-size: 13px; font-weight: 800; }
-        .group-table-wrap { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border); overflow: auto; width: 100%; }
-        .group-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .group-table th, .group-table td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); text-align: center; }
-        .group-table th { background: var(--bg-color); height: 54px; }
-        .sticky-col { position: sticky; left: 0; z-index: 5; background: var(--card-bg) !important; width: 75px; min-width: 75px; border-right: 2px solid var(--border) !important; }
-        .group-name-cell-inner { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; }
-        .name-txt { font-size: 13px; font-weight: 800; }
-        .team-badge { font-size: 9px; padding: 1px 6px; border-radius: 8px; background: var(--bg-color); color: var(--text-sub); font-weight: 700; }
-        .row-del-btn-text { font-size: 10px; color: #ef4444; border: none; background: transparent; padding: 2px; font-weight: 700; }
-        .day-name { font-size: 11px; font-weight: 800; margin-bottom: 2px; }
-        .day-name.sun { color: #ef4444; }
-        .day-name.sat { color: #3b82f6; }
-        .day-date { font-size: 10px; font-weight: 600; color: var(--text-sub); }
-        .active-col { background: rgba(59, 130, 246, 0.08) !important; }
-        .today-col { background: rgba(16, 185, 129, 0.08) !important; }
-        .bottom-tabs { position: fixed; bottom: 0; left: 0; right: 0; height: 72px; display: flex; background: var(--card-bg); padding: 8px 12px 24px 12px; z-index: 100; border-top: 1px solid var(--border); box-shadow: 0 -5px 20px rgba(0,0,0,0.05); }
-        .bottom-tab { flex: 1; border: none; background: transparent; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: var(--text-sub); transition: 0.2s; border-radius: 12px; }
-        .bottom-tab.active { color: white; background: var(--primary); }
-        .tabs-5 .bottom-tab { font-size: 13px; }
-        .all-theme.bottom-tabs .bottom-tab.active { background: #3b82f6; }
-        .month-theme.bottom-tabs .bottom-tab.active { background: #8b5cf6; }
-        .group-theme.bottom-tabs .bottom-tab.active { background: #10b981; }
-        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
-        .modal { background: var(--card-bg); border-radius: 28px; width: 100%; max-width: 400px; padding: 24px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
-        .modal-title { font-size: 20px; font-weight: 900; margin-bottom: 20px; text-align: center; }
-        .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
-        .modal-actions button { flex: 1; }
-        .viewer-page { position: fixed; inset: 0; background: var(--bg-color); z-index: 300; display: flex; flex-direction: column; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        .viewer-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: var(--card-bg); border-bottom: 1px solid var(--border); }
-        .viewer-title { font-size: 18px; font-weight: 800; }
-        .viewer-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; align-items: center; }
-        .fullscreen-image { width: 100%; max-width: 800px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        .empty-box { width: 100%; padding: 40px; background: var(--card-bg); border-radius: 16px; border: 2px dashed var(--border); text-align: center; color: var(--text-sub); font-weight: 700; }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-      `}</style>
     </>
   );
 }
