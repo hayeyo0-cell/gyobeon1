@@ -1,5 +1,6 @@
 /** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 완성본)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
+ * 절대 임의로 코드를 줄이거나 삭제하지 않음.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -227,7 +228,7 @@ function loadOverrides() { try { return JSON.parse(localStorage.getItem("gyobeon
 function saveOverrides(value) { localStorage.setItem("gyobeon_overrides", JSON.stringify(value)); }
 function cleanupNameOverrides() { try { const raw = localStorage.getItem("gyobeon_overrides"); if (!raw) return; const data = JSON.parse(raw); let changed = false; Object.keys(data).forEach((key) => { const item = data[key]; if (item && typeof item === "object" && "name" in item) { delete item.name; changed = true; } }); if (changed) localStorage.setItem("gyobeon_overrides", JSON.stringify(data)); } catch (err) {} }
 
-function loadMySelection() { try { JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null"); if (!raw) return null; return { teamKey: raw.teamKey || "ks", name: raw.name || "", code: raw.code || "", anchorDate: raw.anchorDate || getKoreaToday() }; } catch { return null; } }
+function loadMySelection() { try { const raw = JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null"); if (!raw) return null; return { teamKey: raw.teamKey || "ks", name: raw.name || "", code: raw.code || "", anchorDate: raw.anchorDate || getKoreaToday() }; } catch { return null; } }
 function saveMySelection(value) { const next = { teamKey: value?.teamKey || "ks", name: value?.name || "", code: value?.code || "", anchorDate: value?.anchorDate || getKoreaToday() }; localStorage.setItem("gyobeon_my_selection", JSON.stringify(next)); }
 function clearMySelection() { localStorage.removeItem("gyobeon_my_selection"); }
 function loadGroups() { try { return JSON.parse(localStorage.getItem("gyobeon_groups") || "{}"); } catch { return {}; } }
@@ -294,7 +295,7 @@ function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrid
 
 function buildTeamAnchorFromZip(team) {
   const people = Array.isArray(team?.people) ? team.people : []; const fixedCodes = getGyobunOrder(team); let baseDate = getZipBaseDate(team);
-  if (!people.length) return { name: team?.info?.baseName || "", code: normalizeToFixedCode(team, team?.info?.baseCode || fixedCodes[0] || ""), anchorDate: baseDate };
+  if (!people.length) return { name: team?.info?.baseName || "", code: normalizeToFixedCode(team, team?.info?.baseName || fixedCodes[0] || ""), anchorDate: baseDate };
   const matchedPerson = people.find((p) => samePersonName(p.name, team?.info?.baseName)); if (matchedPerson) return { name: matchedPerson.name, code: normalizeToFixedCode(team, team?.info?.baseCode || matchedPerson.baseCode || fixedCodes[0] || ""), anchorDate: baseDate };
   const firstPerson = people[0]; return { name: firstPerson?.name || "", code: normalizeToFixedCode(team, team?.info?.baseCode || firstPerson?.baseCode || fixedCodes[0] || ""), anchorDate: baseDate };
 }
