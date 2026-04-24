@@ -651,3 +651,9 @@ body.dark-mode .group-table th.today-col {
   background: linear-gradient(180deg, #21b35a 0%, #169447 100%) !important;
   color: #ffffff !important;
 }
+
+/* 4️⃣ 다크모드 내 교번 강조 테두리 복구 패치 */
+body.dark-mode .cell-my {
+  border: 3px solid #3b82f6 !important; /* 라이트모드와 동일한 로열 블루 */
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5) !important;
+}
