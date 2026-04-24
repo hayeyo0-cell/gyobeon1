@@ -99,7 +99,7 @@ function parseLines(text) { return String(text || "").replace(/\r/g, "").split("
 function parseInfo(text) {
   const lines = parseLines(text); const tokens = lines.join(" ").split(/\s+/).filter(Boolean);
   const [year, month, day, baseCode, baseName, total] = tokens;
-  return { raw: lines, baseDate: year && month && day ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null, baseCode: baseCode || null, baseName: baseCode || null, totalCount: total && !Number.isNaN(Number(total)) ? Number(total) : 0 };
+  return { raw: lines, baseDate: year && month && day ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null, baseCode: baseCode || null, baseName: baseName || null, totalCount: total && !Number.isNaN(Number(total)) ? Number(total) : 0 };
 }
 
 function normalizeWorktimeLine(line) { return String(line || "").replace(/\s+/g, " ").trim().toLowerCase(); }
@@ -227,7 +227,7 @@ function loadOverrides() { try { return JSON.parse(localStorage.getItem("gyobeon
 function saveOverrides(value) { localStorage.setItem("gyobeon_overrides", JSON.stringify(value)); }
 function cleanupNameOverrides() { try { const raw = localStorage.getItem("gyobeon_overrides"); if (!raw) return; const data = JSON.parse(raw); let changed = false; Object.keys(data).forEach((key) => { const item = data[key]; if (item && typeof item === "object" && "name" in item) { delete item.name; changed = true; } }); if (changed) localStorage.setItem("gyobeon_overrides", JSON.stringify(data)); } catch (err) {} }
 
-function loadMySelection() { try { const raw = JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null"); if (!raw) return null; return { teamKey: raw.teamKey || "ks", name: raw.name || "", code: raw.code || "", anchorDate: raw.anchorDate || getKoreaToday() }; } catch { return null; } }
+function loadMySelection() { try { JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null"); if (!raw) return null; return { teamKey: raw.teamKey || "ks", name: raw.name || "", code: raw.code || "", anchorDate: raw.anchorDate || getKoreaToday() }; } catch { return null; } }
 function saveMySelection(value) { const next = { teamKey: value?.teamKey || "ks", name: value?.name || "", code: value?.code || "", anchorDate: value?.anchorDate || getKoreaToday() }; localStorage.setItem("gyobeon_my_selection", JSON.stringify(next)); }
 function clearMySelection() { localStorage.removeItem("gyobeon_my_selection"); }
 function loadGroups() { try { return JSON.parse(localStorage.getItem("gyobeon_groups") || "{}"); } catch { return {}; } }
@@ -1594,7 +1594,7 @@ function App() {
               <select className="select" style={{ flex: 1, margin: 0 }} value={currentGroup} onChange={(e) => setCurrentGroup(e.target.value)}>
                 {Object.keys(groups).length === 0 ? (<option value="">그룹 없음</option>) : (Object.keys(groups).map((g) => <option key={g} value={g}>{g}</option>))}
               </select>
-              <button className="modal-btn" style={{ width: 'auto', padding: '0 14px', margin: 0, color: '#ef4444', borderColor: '#fca5a5', background: '#fef2f2' }} onClick={deleteCurrentGroup} disabled={!currentGroup}>🗑️ 삭제</button>
+              <button className="modal-btn" style={{ width: 'auto', padding: '14px', margin: 0, color: '#ef4444', borderColor: '#fca5a5', background: '#fef2f2' }} onClick={deleteCurrentGroup} disabled={!currentGroup}>🗑️ 삭제</button>
             </div>
             <label className="label">3. 선택된 그룹에 인원 추가</label>
             <div style={{ gridTemplateColumns: '1fr 1fr', display: 'grid', gap: '8px', marginBottom: '12px' }}>
