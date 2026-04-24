@@ -99,7 +99,7 @@ function parseLines(text) { return String(text || "").replace(/\r/g, "").split("
 function parseInfo(text) {
   const lines = parseLines(text); const tokens = lines.join(" ").split(/\s+/).filter(Boolean);
   const [year, month, day, baseCode, baseName, total] = tokens;
-  return { raw: lines, baseDate: year && month && day ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null, baseCode: baseCode || null, baseName: baseName || null, totalCount: total && !Number.isNaN(Number(total)) ? Number(total) : 0 };
+  return { raw: lines, baseDate: year && month && day ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null, baseCode: baseCode || null, baseName: baseCode || null, totalCount: total && !Number.isNaN(Number(total)) ? Number(total) : 0 };
 }
 
 function normalizeWorktimeLine(line) { return String(line || "").replace(/\s+/g, " ").trim().toLowerCase(); }
