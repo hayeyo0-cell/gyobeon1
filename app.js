@@ -1,7 +1,7 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 완성본 - 로직 수정판)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 완성본)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
- * [수정 사항]: 2060~2296 열차 번호를 '오늘 날짜' 검색 구간으로 확정 반영.
+ * [수정]: 2001~2059 검색 시 전날 야간자 우선 매칭 및 오늘 데이터 중복 노출 차단 로직 반영.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -770,9 +770,9 @@ function App() {
     const q = String(searchQuery || "").trim().toLowerCase();
     const trainNum = parseInt(q);
     
-    // [기관사님 요청사항 반영] 2060~2296은 오늘 열차로 검색
-    const isEarlyMorningTrain = !isNaN(trainNum) && trainNum >= 2001 && trainNum <= 2059; // 어제 야간자
-    const isTodaySpecialTrain = !isNaN(trainNum) && trainNum >= 2060 && trainNum <= 2296; // 오늘 당일자
+    // [중요 로직] 2001~2059는 어제 야간자 우선, 2060~2296은 오늘 당일자
+    const isEarlyMorningTrain = !isNaN(trainNum) && trainNum >= 2001 && trainNum <= 2059;
+    const isTodaySpecialTrain = !isNaN(trainNum) && trainNum >= 2060 && trainNum <= 2296;
     const isTrainSearch = !isNaN(trainNum) && q.length >= 4 && (isEarlyMorningTrain || isTodaySpecialTrain);
 
     if (isTrainSearch) {
@@ -791,12 +791,12 @@ function App() {
           ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
           : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
 
-        // 1. 어제 야간 열차 검색 (2001~2059)
+        // 1. [2001~2059] 어제 야간 열차 우선 검색
         if (isEarlyMorningTrain) {
           const matchedYesterday = yesterdayGrid.filter(item => {
             if (!isNightStartCode(teamKey, item.code)) return false;
-            const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
-            const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
+            const folder = getPathFolder(teamKey, yesterdayStr, item.code);
+            const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
             return trains.some(t => String(t) === q);
           }).map(item => ({ 
             ...item, 
@@ -804,21 +804,28 @@ function App() {
             teamKey, 
             searchOrigin: 'yesterday' 
           }));
-          crossTeamResults = [...crossTeamResults, ...matchedYesterday];
+          
+          if (matchedYesterday.length > 0) {
+            crossTeamResults = [...crossTeamResults, ...matchedYesterday];
+          } else {
+            // 어제 야간에 없으면 오늘 오늘 열차에서 검색
+            const matchedTodayBackup = teamGrid.filter(item => {
+              const folder = getPathFolder(teamKey, browseDate, item.code);
+              const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
+              return trains.some(t => String(t) === q);
+            }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
+            crossTeamResults = [...crossTeamResults, ...matchedTodayBackup];
+          }
+        } 
+        // 2. [2060~2296] 오늘 당일 열차 검색
+        else if (isTodaySpecialTrain) {
+          const matchedToday = teamGrid.filter(item => {
+            const folder = getPathFolder(teamKey, browseDate, item.code);
+            const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
+            return trains.some(t => String(t) === q);
+          }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
+          crossTeamResults = [...crossTeamResults, ...matchedToday];
         }
-
-        // 2. 오늘 당일 열차 검색 (2060~2296 포함)
-        const matchedToday = teamGrid.filter(item => {
-          const folder = getPathFolder(teamKey, browseDate, item.code);
-          const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
-          return trains.some(t => String(t) === q);
-        }).map(item => ({ 
-          ...item, 
-          teamKey, 
-          searchOrigin: 'today' 
-        }));
-
-        crossTeamResults = [...crossTeamResults, ...matchedToday];
       });
 
       const uniqueMap = new Map();
@@ -1243,15 +1250,15 @@ function App() {
                 <div className="card main-panel" style={swipeStyle}>
                   <div className="center-view">
                     <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
-                    <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
-                    <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
+                    <div className="main-code subtitle" style={{ fontSize: 18, marginTop: 8 }}>{myInfo?.displayName || mySelection?.name} ({mySelection?.teamKey ? TEAM_LABELS[mySelection.teamKey] : "-"})</div>
+                    <div className="main-time" style={{ color: getDateBasedColor(homeDate), fontSize: 42, marginTop: 12 }}>{myInfo?.time || "----"}</div>
                     
                     {homePathImage && (
                       <div 
                         className="home-path-preview" 
                         onClick={() => {
                           const targetTeamKey = mySelection?.teamKey || selectedTeam;
-                          openPathDialogForTeamAndDate(targetTeamKey, { code: myInfo?.code, name: myInfo?.name || "", displayName: myInfo?.displayName || "", idx: -1 }, homeDate);
+                          openPathDialogForTeamAndDate(targetTeamKey, { code: myInfo?.code, name: mySelection?.name || "", displayName: myInfo?.displayName || "", idx: -1 }, homeDate);
                         }}
                       >
                         <img src={homePathImage} alt="행로표 미리보기" />
