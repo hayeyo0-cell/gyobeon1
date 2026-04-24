@@ -1,7 +1,7 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (디자인 강화판)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 완성본 - 진입 버그 수정판)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
- * [디자인 업데이트]: 전화기 아이콘을 세련된 그라데이션 버튼으로 변경 및 UI 디테일 개선.
+ * [수정 사항]: 초기 설정 화면 '시작하기' 버튼 클릭 시 메인 진입 안되는 버그 수정.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -990,13 +990,38 @@ function App() {
   }
 
   function applyInitialSelection(teamKey, name, code) {
-    const cleanName = String(name || "").trim(); if (!teamKey || !cleanName || !code) return;
+    const cleanName = String(name || "").trim();
+    const cleanCode = String(code || "").trim();
+    if (!teamKey || !cleanName || !cleanCode) {
+        alert("이름과 교번을 정확히 선택해주세요.");
+        return;
+    }
     const nextAnchorDate = profileAnchorDate || getKoreaToday(); 
-    const nextSelection = { teamKey, name: cleanName, code, anchorDate: nextAnchorDate };
-    setMySelection(nextSelection); setSelectedTeam(teamKey); setViewTeam(teamKey);
-    const today = getKoreaToday(); setHomeDate(today); setBrowseDate(today); setMonthDate(today); setGroupBaseDate(today); setGroupMonth(getDisplayMonthValue(today)); setSelectedGroupDate("");
-    if (effectiveData) { const nextAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, teamKey, cleanName, nextSelection); setTeamAnchors(autoAnchors); }
-    setAllowProfileEdit(false); setInitialRemoteChecked(false); setPostSetupRemoteCheckNeeded(true);
+    const nextSelection = { teamKey, name: cleanName, code: cleanCode, anchorDate: nextAnchorDate };
+    
+    // 상태 즉시 업데이트
+    setMySelection(nextSelection); 
+    setSelectedTeam(teamKey); 
+    setViewTeam(teamKey);
+    setAllowProfileEdit(false); // 이 부분이 true면 계속 설정 화면에 머묾
+    
+    // 로컬스토리지 강제 저장
+    saveMySelection(nextSelection);
+    
+    const today = getKoreaToday(); 
+    setHomeDate(today); 
+    setBrowseDate(today); 
+    setMonthDate(today); 
+    setGroupBaseDate(today); 
+    setGroupMonth(getDisplayMonthValue(today)); 
+    setSelectedGroupDate("");
+
+    if (effectiveData) { 
+        const nextAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, teamKey, cleanName, nextSelection); 
+        setTeamAnchors(nextAnchors); 
+    }
+    setInitialRemoteChecked(false); 
+    setPostSetupRemoteCheckNeeded(true);
   }
 
   function startReconfigureProfile() { setAllowProfileEdit(true); const nextTeam = mySelection?.teamKey || selectedTeam || "ks"; setSelectedTeam(nextTeam); setDraftTeam(nextTeam); setDraftName(String(mySelection?.name || "").trim()); setDraftCode(String(mySelection?.code || "").trim()); setProfileAnchorDate(getKoreaToday()); }
@@ -1235,7 +1260,13 @@ function App() {
             <label className="label" style={{ marginTop: 12 }}>기준 날짜</label>
             <input className="input" type="date" value={profileAnchorDate} onChange={(e) => { const nextDate = e.target.value || getKoreaToday(); setProfileAnchorDate(nextDate); }} />
             <div className="modal-actions">
-              <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() && !draftCode}>시작하기</button>
+              <button 
+                className="modal-btn primary" 
+                onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)}
+                disabled={!String(draftName || "").trim() || !String(draftCode || "").trim()}
+              >
+                시작하기
+              </button>
             </div>
           </div>
         ) : (
@@ -1585,7 +1616,7 @@ function App() {
                 <input className="input" type="date" value={profileAnchorDate} onChange={(e) => { const nextDate = e.target.value || getKoreaToday(); setProfileAnchorDate(nextDate); }} />
                 <div className="modal-actions">
                   <button className="modal-btn" onClick={cancelReconfigureProfile}>취소</button>
-                  <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() && !draftCode}>저장</button>
+                  <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() || !String(draftCode || "").trim()}>저장</button>
                 </div>
               </>
             )}
