@@ -1,7 +1,7 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 완성본 - 전화번호 연동판)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (디자인 강화판)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
- * [추가 기능]: 전화번호 입력/저장, 연락처 불러오기, DIA순서/행로표 전화연결 기능 추가.
+ * [디자인 업데이트]: 전화기 아이콘을 세련된 그라데이션 버튼으로 변경 및 UI 디테일 개선.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -995,7 +995,7 @@ function App() {
     const nextSelection = { teamKey, name: cleanName, code, anchorDate: nextAnchorDate };
     setMySelection(nextSelection); setSelectedTeam(teamKey); setViewTeam(teamKey);
     const today = getKoreaToday(); setHomeDate(today); setBrowseDate(today); setMonthDate(today); setGroupBaseDate(today); setGroupMonth(getDisplayMonthValue(today)); setSelectedGroupDate("");
-    if (effectiveData) { const nextAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, teamKey, cleanName, nextSelection); setTeamAnchors(nextAnchors); }
+    if (effectiveData) { const nextAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, teamKey, cleanName, nextSelection); setTeamAnchors(autoAnchors); }
     setAllowProfileEdit(false); setInitialRemoteChecked(false); setPostSetupRemoteCheckNeeded(true);
   }
 
@@ -1394,7 +1394,14 @@ function App() {
                             <div style={{ fontWeight: 600 }}>{item.displayName || item.name}</div>
                           </div>
                           {hasPhone && (
-                            <a href={`tel:${overrides[cellKey].phone}`} style={{ padding: '8px 12px', background: '#10b981', color: 'white', borderRadius: '50%', textDecoration: 'none', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}>📞</a>
+                            <a href={`tel:${overrides[cellKey].phone}`} style={{ 
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              width: '40px', height: '40px',
+                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                              color: 'white', borderRadius: '50%', textDecoration: 'none', 
+                              boxShadow: '0 4px 8px rgba(16, 185, 129, 0.4)',
+                              fontSize: '18px', border: '2px solid white'
+                            }}>📞</a>
                           )}
                         </div>
                       );
@@ -1704,13 +1711,20 @@ function App() {
             <button className="modal-btn primary" onClick={closePathDialog}>닫기</button>
           </div>
           <div className="viewer-body">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, padding: '0 4px' }}>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 700 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
-                <div style={{ color: "#6b7280" }}>{pathDate} {weekdayName(pathDate)}</div>
+                <div style={{ color: "#6b7280", marginTop: 4 }}>{pathDate} {weekdayName(pathDate)}</div>
               </div>
               {overrides[getOverrideKey(pathTeamKey || viewTeam, pathTarget?.name)]?.phone && (
-                <a href={`tel:${overrides[getOverrideKey(pathTeamKey || viewTeam, pathTarget?.name)].phone}`} style={{ padding: '10px 20px', background: '#10b981', color: 'white', borderRadius: '25px', textDecoration: 'none', fontWeight: 800, fontSize: 14, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>📞 전화연결</a>
+                <a href={`tel:${overrides[getOverrideKey(pathTeamKey || viewTeam, pathTarget?.name)].phone}`} style={{ 
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '10px 18px', 
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                  color: 'white', borderRadius: '25px', textDecoration: 'none', fontWeight: 800, fontSize: 14, 
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)'
+                }}>📞 전화하기</a>
               )}
             </div>
             {pathImage ? (<img src={pathImage} alt="행로표" className="fullscreen-image" />) : (<div className="empty-box">해당 행로표 이미지를 찾지 못했습니다.</div>)}
