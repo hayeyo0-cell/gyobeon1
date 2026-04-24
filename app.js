@@ -793,7 +793,7 @@ function App() {
           if (!isNightStartCode(teamKey, item.code)) return false;
           const folderForYesterday = getPathFolder(teamKey, yesterdayStr, item.code);
           const trains = team.trainData?.[folderForYesterday]?.[normalizeCodeKey(item.code)] || [];
-          return trains.some(t => String(t) === q) && !isNightLaunchTrain;
+          return trains.some(t => String(t) === q);
         }).map(item => ({ 
           ...item, 
           code: normalizeCodeKey(item.code).replace(/d$/, "") + "~", 
@@ -805,7 +805,9 @@ function App() {
           const folder = getPathFolder(teamKey, browseDate, item.code);
           const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
           const isMatch = trains.some(t => String(t) === q);
-          return isMatch && !(isEarlyMorningTrain && isNightStartCode(teamKey, item.code));
+          if (isEarlyMorningTrain && !isNightStartCode(teamKey, item.code)) return isMatch;
+          if (isNightLaunchTrain) return isMatch;
+          return isMatch;
         }).map(item => ({ 
           ...item, 
           teamKey, 
@@ -817,7 +819,7 @@ function App() {
 
       const uniqueMap = new Map();
       crossTeamResults.forEach(item => {
-          const key = `${item.teamKey}-${item.name}-${item.code}`;
+          const key = `${item.teamKey}-${item.name}-${item.code}-${item.searchOrigin}`;
           if (!uniqueMap.has(key)) uniqueMap.set(key, item);
       });
       return Array.from(uniqueMap.values());
