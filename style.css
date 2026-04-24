@@ -652,11 +652,10 @@ body.dark-mode .group-table th.today-col {
   color: #ffffff !important;
 }
 
-/* 4️⃣ 다크모드 내 교번 강조 정밀 패치 (사용자 색상 우선) */
+/* 4️⃣ 다크모드 내 교번 강조 정밀 패치 (라이트모드와 동일한 3px 두께로 조정) */
 body.dark-mode .all-cell-real.cell-my {
-  /* 👈 background 속성을 제거하여 인라인 스타일(사용자 색상)이 그대로 나오게 함 */
-  border: 3.5px solid #3b82f6 !important; 
-  box-shadow: inset 0 0 0 1px #3b82f6, 0 0 12px rgba(59, 130, 246, 0.4) !important;
+  border: 3px solid #3b82f6 !important; /* 👈 라이트모드와 선 두께 통일 */
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.3) !important; /* 👈 과한 그림자 제거 */
   z-index: 10 !important;
 }
 
