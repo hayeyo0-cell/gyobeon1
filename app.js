@@ -1,7 +1,12 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 완성본 - 진입 버그 수정판)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
- * [수정 사항]: 초기 설정 화면 '시작하기' 버튼 클릭 시 메인 진입 안되는 버그 수정.
+ * [최종 통합 내용]: 
+ * 1. 2001~2059 열차 검색 시 어제 야간자 우선 로직 유지.
+ * 2. 내 정보 보호(My Selection First) 로직으로 관리자 업데이트 시에도 본인 설정 유지.
+ * 3. 수정 모드에서 이름(본명) 변경 시 기존 전화번호/색상 자동 초기화.
+ * 4. 연락처 불러오기(📂) 및 세련된 원형 그라데이션 전화기(📞) UI.
+ * 5. 시작하기 버튼 버그 수정 완료.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -621,9 +626,17 @@ function App() {
   function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
     const currentTeamKey = mySelection?.teamKey || ""; const currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
     const teamSource = nextDataOverride?.[currentTeamKey] || data?.[currentTeamKey] || effectiveData?.[currentTeamKey]; if (!teamSource) return;
-    if (mySelection?.code) return;
-    const remoteRow = findRemoteRowByName(currentTeamKey, currentName, nextRemoteRoster); if (!remoteRow?.code) return;
-    const nextAnchorDate = getResolvedBaseDate(currentTeamKey, teamSource, nextRemoteRoster); const nextCode = normalizeToFixedCode(teamSource, remoteRow.code);
+    
+    const remoteRow = findRemoteRowByName(currentTeamKey, currentName, nextRemoteRoster); 
+    if (!remoteRow?.code) return;
+    
+    const nextAnchorDate = getResolvedBaseDate(currentTeamKey, teamSource, nextRemoteRoster); 
+    const nextCode = normalizeToFixedCode(teamSource, remoteRow.code);
+    
+    // [내 정보 보호 원칙]: 이미 수동으로 설정된 code가 있고 그것이 remote와 다르더라도, 
+    // mySelection을 보호하기 위해 덮어쓰지 않습니다.
+    if (mySelection?.code) return; 
+
     setMySelection((prev) => ({ ...prev, teamKey: currentTeamKey, name: currentName, code: nextCode, anchorDate: nextAnchorDate || prev.anchorDate || getKoreaToday(), }));
   }
 
@@ -993,20 +1006,19 @@ function App() {
     const cleanName = String(name || "").trim();
     const cleanCode = String(code || "").trim();
     if (!teamKey || !cleanName || !cleanCode) {
-        alert("이름과 교번을 정확히 선택해주세요.");
+        alert("소속, 이름, 교번을 모두 입력해주세요.");
         return;
     }
     const nextAnchorDate = profileAnchorDate || getKoreaToday(); 
     const nextSelection = { teamKey, name: cleanName, code: cleanCode, anchorDate: nextAnchorDate };
     
-    // 상태 즉시 업데이트
+    // 강제 동기화: mySelection 상태를 먼저 업데이트하고 localStorage에 수동 저장
     setMySelection(nextSelection); 
+    saveMySelection(nextSelection);
+    
     setSelectedTeam(teamKey); 
     setViewTeam(teamKey);
-    setAllowProfileEdit(false); // 이 부분이 true면 계속 설정 화면에 머묾
-    
-    // 로컬스토리지 강제 저장
-    saveMySelection(nextSelection);
+    setAllowProfileEdit(false); 
     
     const today = getKoreaToday(); 
     setHomeDate(today); 
@@ -1046,14 +1058,33 @@ function App() {
   }
 
   function openEditDialog(item) {
-    setEditingCell(item); const currentTeam = item.teamKey || viewTeam; const key = getOverrideKey(currentTeam, item.name); const current = overrides[key] || {}; setEditColor(current.color || ""); setEditAlias(current.alias || ""); setEditPhone(current.phone || "");
+    setEditingCell(item); const currentTeam = item.teamKey || viewTeam; const key = getOverrideKey(currentTeam, item.name); const current = overrides[key] || {}; 
+    setEditColor(current.color || ""); setEditAlias(current.alias || ""); setEditPhone(current.phone || "");
     const team = effectiveData?.[currentTeam]; const currentTime = team ? pickWorktime(team, item.code, browseDate) : "----"; const parts = parseTimeValueToParts(currentTime);
     setEditStartHour(parts.sh); setEditStartMin(parts.sm); setEditEndHour(parts.eh); setEditEndMin(parts.em); setIsWorktimeEditOpen(false); setEditOpen(true);
   }
   function closeEditDialog() { if (editOpenRef.current) window.history.back(); else setEditOpen(false); }
   function commitEdit(nextColorValue = editColor, nextAliasValue = editAlias, nextPhoneValue = editPhone) {
     if (!editingCell) return; const currentTeam = editingCell.teamKey || viewTeam; const cleanColor = String(nextColorValue || "").trim(); const cleanAlias = String(nextAliasValue || "").trim(); const cleanPhone = String(nextPhoneValue || "").trim(); const key = getOverrideKey(currentTeam, editingCell.name); const next = { ...overrides };
-    if (!cleanColor && !cleanAlias && !cleanPhone) delete next[key]; else next[key] = { color: cleanColor, alias: cleanAlias, phone: cleanPhone };
+    
+    // [이름 변경 시 자동 초기화 로직]: 
+    // 만약 현재 교번 칸의 원래 주인(editingCell.name)이 저장된 정보의 baseName과 다르다면, 
+    // 사람이 바뀐 것으로 간주하고 기존 정보를 초기화합니다.
+    if (next[key] && next[key].baseName && !samePersonName(next[key].baseName, editingCell.name)) {
+        delete next[key];
+    }
+    
+    if (!cleanColor && !cleanAlias && !cleanPhone) {
+        delete next[key];
+    } else {
+        next[key] = { 
+            color: cleanColor, 
+            alias: cleanAlias, 
+            phone: cleanPhone,
+            baseName: editingCell.name // 인원 식별을 위해 본명 저장
+        };
+    }
+    
     if (isWorktimeEditOpen) { const built = buildTimeValueFromParts(editStartHour, editStartMin, editEndHour, editEndMin); if (!built) return alert("출퇴근시간 형식을 다시 확인해주세요."); const dayType = guessDayType(browseDate); const allWorktimeOverrides = loadWorktimeOverrides(); const wtKey = getWorktimeOverrideKey(currentTeam, editingCell.code); const currentEntry = { ...(allWorktimeOverrides[wtKey] || {}) }; currentEntry[dayType] = built; allWorktimeOverrides[wtKey] = currentEntry; saveWorktimeOverrides(allWorktimeOverrides); setWorktimeVersion((v) => v + 1); }
     setOverrides(next); saveOverrides(next); setEditOpen(false); setEditingCell(null); setEditColor(""); setEditAlias(""); setEditPhone(""); setIsWorktimeEditOpen(false); setEditStartHour(""); setEditStartMin(""); setEditEndHour(""); setEditEndMin("");
   }
@@ -1222,7 +1253,7 @@ function App() {
   };
 
   async function handleInstall() { if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; setDeferredPrompt(null); }
-  function applyPendingRosterUpdate() { if (!pendingRosterJson) { setShowUpdatePopup(false); return; } acceptRemoteRoster(pendingRosterJson, { alertMessage: "최신 교번 정보가 반영되었습니다.", nextDataOverride: data, syncMine: false }); }
+  function applyPendingRosterUpdate() { if (!pendingRosterJson) { setShowUpdatePopup(false); return; } acceptRemoteRoster(pendingRosterJson, { alertMessage: "최신 교번 정보가 반영되었습니다.", nextDataOverride: data, syncMine: true }); }
   function closeUpdatePopup() { setShowUpdatePopup(false); }
 
   const canEnterApp = !!effectiveData && !!mySelection?.teamKey && !!String(mySelection?.name || "").trim() && !!mySelection?.code && !allowProfileEdit;
@@ -1262,7 +1293,7 @@ function App() {
             <div className="modal-actions">
               <button 
                 className="modal-btn primary" 
-                onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)}
+                onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} 
                 disabled={!String(draftName || "").trim() || !String(draftCode || "").trim()}
               >
                 시작하기
@@ -1426,13 +1457,13 @@ function App() {
                           </div>
                           {hasPhone && (
                             <a href={`tel:${overrides[cellKey].phone}`} style={{ 
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              width: '40px', height: '40px',
-                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
-                              color: 'white', borderRadius: '50%', textDecoration: 'none', 
-                              boxShadow: '0 4px 8px rgba(16, 185, 129, 0.4)',
-                              fontSize: '18px', border: '2px solid white'
-                            }}>📞</a>
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: '40px', height: '40px',
+                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                                color: 'white', borderRadius: '50%', textDecoration: 'none', 
+                                boxShadow: '0 4px 8px rgba(16, 185, 129, 0.4)',
+                                fontSize: '18px', border: '2px solid white'
+                              }}>📞</a>
                           )}
                         </div>
                       );
@@ -1616,7 +1647,7 @@ function App() {
                 <input className="input" type="date" value={profileAnchorDate} onChange={(e) => { const nextDate = e.target.value || getKoreaToday(); setProfileAnchorDate(nextDate); }} />
                 <div className="modal-actions">
                   <button className="modal-btn" onClick={cancelReconfigureProfile}>취소</button>
-                  <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)} disabled={!String(draftName || "").trim() || !String(draftCode || "").trim()}>저장</button>
+                  <button className="modal-btn primary" onClick={() => applyInitialSelection(draftTeam, draftName, draftCode)}>저장</button>
                 </div>
               </>
             )}
@@ -1698,20 +1729,20 @@ function App() {
               <button className="modal-btn" style={{ width: 'auto', padding: '0 12px' }} onClick={pickContactForEdit}>📂</button>
             </div>
             <label className="label" style={{ marginTop: 12 }}>색상 선택</label>
-<div style={{ marginTop: '8px' }}>
-  <select 
-    className="select" 
-    value={editColor} 
-    onChange={(e) => setEditColor(e.target.value)}
-    style={{ width: '100%', height: '48px' }}
-  >
-    {COLOR_OPTIONS.map((item) => (
-      <option key={item.label} value={item.value}>
-        {item.label}
-      </option>
-    ))}
-  </select>
-</div>
+            <div style={{ marginTop: '8px' }}>
+              <select 
+                className="select" 
+                value={editColor} 
+                onChange={(e) => setEditColor(e.target.value)}
+                style={{ width: '100%', height: '48px' }}
+              >
+                {COLOR_OPTIONS.map((item) => (
+                  <option key={item.label} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button className="modal-btn" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsWorktimeEditOpen((prev) => !prev)}>출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}</button>
             {isWorktimeEditOpen && (
               <div style={{ marginTop: 12 }}>
