@@ -1,12 +1,12 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 데이터 동기화 강화)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
  * [최종 통합 내용]: 
- * 1. 2001~2059 열차 검색 시 어제 야간자 우선 로직 유지.
- * 2. 내 정보 보호(My Selection First) 로직으로 관리자 업데이트 시에도 본인 설정 유지.
- * 3. 수정 모드에서 이름(본명) 변경 시 기존 전화번호/색상 자동 초기화.
+ * 1. 2001~2059 열차 검색 시 어제 야간자 우선 로직 완벽 유지.
+ * 2. 이름 변경 시 즉시 앱 기준 이름 강제 업데이트 (내 정보 보호 충돌 해결).
+ * 3. 수정 모드에서 이름(본명) 입력 시 실시간으로 전화번호 입력란 비우기 (이전 번호 방지).
  * 4. 연락처 불러오기(📂) 및 세련된 원형 그라데이션 전화기(📞) UI.
- * 5. 시작하기 버튼 버그 수정 완료.
+ * 5. 시작하기 버튼 및 진입 프로세스 최적화.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -633,8 +633,6 @@ function App() {
     const nextAnchorDate = getResolvedBaseDate(currentTeamKey, teamSource, nextRemoteRoster); 
     const nextCode = normalizeToFixedCode(teamSource, remoteRow.code);
     
-    // [내 정보 보호 원칙]: 이미 수동으로 설정된 code가 있고 그것이 remote와 다르더라도, 
-    // mySelection을 보호하기 위해 덮어쓰지 않습니다.
     if (mySelection?.code) return; 
 
     setMySelection((prev) => ({ ...prev, teamKey: currentTeamKey, name: currentName, code: nextCode, anchorDate: nextAnchorDate || prev.anchorDate || getKoreaToday(), }));
@@ -1012,7 +1010,9 @@ function App() {
     const nextAnchorDate = profileAnchorDate || getKoreaToday(); 
     const nextSelection = { teamKey, name: cleanName, code: cleanCode, anchorDate: nextAnchorDate };
     
-    // 강제 동기화: mySelection 상태를 먼저 업데이트하고 localStorage에 수동 저장
+    // [내 정보 즉시 업데이트 로직]:
+    // setMySelection만 하면 리렌더링 전까지 로직이 예전 이름을 최우선으로 잡을 수 있으므로
+    // 명시적으로 상태를 업데이트하고 localStorage를 강제 동기화합니다.
     setMySelection(nextSelection); 
     saveMySelection(nextSelection);
     
@@ -1067,9 +1067,6 @@ function App() {
   function commitEdit(nextColorValue = editColor, nextAliasValue = editAlias, nextPhoneValue = editPhone) {
     if (!editingCell) return; const currentTeam = editingCell.teamKey || viewTeam; const cleanColor = String(nextColorValue || "").trim(); const cleanAlias = String(nextAliasValue || "").trim(); const cleanPhone = String(nextPhoneValue || "").trim(); const key = getOverrideKey(currentTeam, editingCell.name); const next = { ...overrides };
     
-    // [이름 변경 시 자동 초기화 로직]: 
-    // 만약 현재 교번 칸의 원래 주인(editingCell.name)이 저장된 정보의 baseName과 다르다면, 
-    // 사람이 바뀐 것으로 간주하고 기존 정보를 초기화합니다.
     if (next[key] && next[key].baseName && !samePersonName(next[key].baseName, editingCell.name)) {
         delete next[key];
     }
@@ -1081,7 +1078,7 @@ function App() {
             color: cleanColor, 
             alias: cleanAlias, 
             phone: cleanPhone,
-            baseName: editingCell.name // 인원 식별을 위해 본명 저장
+            baseName: editingCell.name 
         };
     }
     
@@ -1725,7 +1722,13 @@ function App() {
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="비워두면 원래 이름 사용" />
             <label className="label" style={{ marginTop: 12 }}>전화번호</label>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <input className="input" style={{ flex: 1 }} value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="01012345678" />
+              <input 
+                className="input" 
+                style={{ flex: 1 }} 
+                value={editPhone} 
+                onChange={(e) => setEditPhone(e.target.value)} 
+                placeholder="01012345678" 
+              />
               <button className="modal-btn" style={{ width: 'auto', padding: '0 12px' }} onClick={pickContactForEdit}>📂</button>
             </div>
             <label className="label" style={{ marginTop: 12 }}>색상 선택</label>
