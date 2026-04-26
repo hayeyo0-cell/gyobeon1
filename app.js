@@ -1075,6 +1075,7 @@ function App() {
         delete next[key];
     } else {
         next[key] = { 
+            ...next[key],
             color: cleanColor, 
             alias: cleanAlias, 
             phone: cleanPhone,
@@ -1254,6 +1255,31 @@ function App() {
   function closeUpdatePopup() { setShowUpdatePopup(false); }
 
   const canEnterApp = !!effectiveData && !!mySelection?.teamKey && !!String(mySelection?.name || "").trim() && !!mySelection?.code && !allowProfileEdit;
+
+  // [월교번 개별 교번 수정 함수 추가]
+  function openMonthShiftEdit(date, currentItem) {
+    const nextCode = window.prompt(`${date} 교번 수정\n현재: ${currentItem?.code || "-"}\n수정할 교번을 입력하세요 (예: 대1, 휴1, 15d 등)`, currentItem?.code || "");
+    if (nextCode === null) return;
+    const cleanCode = nextCode.trim();
+    const teamKey = mySelection?.teamKey || selectedTeam;
+    const name = mySelection?.name;
+    if (!name) return;
+    
+    const key = getOverrideKey(teamKey, name);
+    const next = { ...overrides };
+    const currentEntry = next[key] || { baseName: name };
+    
+    if (!currentEntry.monthShifts) currentEntry.monthShifts = {};
+    if (!cleanCode) {
+        delete currentEntry.monthShifts[date];
+    } else {
+        currentEntry.monthShifts[date] = cleanCode;
+    }
+    
+    next[key] = currentEntry;
+    setOverrides(next);
+    saveOverrides(next);
+  }
 
   return (
     <>
@@ -1494,10 +1520,10 @@ function App() {
                         const { startTime, endTime } = splitWorktime(worktime);
                         
                         return (
-                          <button key={date} className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`} onClick={() => { if (item?.code) { openPathDialogForTeamAndDate(targetTeamKey, { code: item.code, name: item.name || mySelection?.name || "", displayName: item.displayName || mySelection?.name || "", idx: -1 }, date); } else { setMonthDate(date); } }}>
+                          <button key={date} className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`} onClick={() => { if (item?.code) { openPathDialogForTeamAndDate(targetTeamKey, { code: item.code, name: item.name || mySelection?.name || "", displayName: item.displayName || mySelection?.name || "", idx: -1 }, date); } else { setMonthDate(date); } }} onContextMenu={(e) => { e.preventDefault(); openMonthShiftEdit(date, item); }}>
                             <div className={`month-cell-inner ${toneClass}`}>
                               <div className={`month-day ${toneClass}`}>{parseLocalDate(date).getDate()}</div>
-                              <div className={`month-code-line ${toneClass}`}>{item?.code || "-"}</div>
+                              <div className={`month-code-line ${toneClass}`} style={{ cursor: "pointer", borderBottom: "1px dashed #ccc" }} onClick={(e) => { e.stopPropagation(); openMonthShiftEdit(date, item); }}>{item?.code || "-"}</div>
                               <div className="month-time-wrap">
                                 <div className={`month-time-line ${toneClass}`}>{startTime || "-"}</div>
                                 <div className={`month-time-line ${toneClass}`}>{endTime || ""}</div>
@@ -1817,6 +1843,12 @@ function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, over
   if (!data) return null;
   const team = data[teamKey]; if (!team) return null;
   const override = overrides[getOverrideKey(teamKey, name)] || {};
+  
+  // [월교번 개별 수정 날짜 체크]
+  if (override.monthShifts && override.monthShifts[dateStr]) {
+    return { code: override.monthShifts[dateStr], name, displayName: override.alias || name, teamKey: teamKey };
+  }
+  
   const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
   const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
   const code = shiftCodeByDays(team, anchor.code, dayOffset);
