@@ -1,4 +1,4 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 안정성 강화)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 행로표 자동 표시 복구)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
  **/
@@ -673,7 +673,11 @@ function App() {
         const savedRemoteDate = localStorage.getItem(LS_REMOTE_ROSTER_DATE) || ""; if (savedRemoteDate) { setGlobalRemoteRosterDate(savedRemoteDate); setRemoteRosterDate(savedRemoteDate); }
         try { 
           parsedSaved = await loadParsedData(); 
-          if (!cancelled && parsedSaved?.data) setData(parsedSaved.data); 
+          if (!cancelled && parsedSaved?.data) {
+            setData(parsedSaved.data);
+            setInitialRemoteChecked(false);
+            setPostSetupRemoteCheckNeeded(true);
+          }
           savedZip = await loadZipBlob(); 
           if (!cancelled && !parsedSaved?.data && savedZip?.blob) { 
             setZipName(savedZip.name || "저장된 ZIP"); 
@@ -894,6 +898,24 @@ function App() {
   }, [allGrid, searchQuery, browseDate, effectiveData, remoteRoster, overrides, teamAnchors]);
 
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
+
+  useEffect(() => {
+    if (activeTab === 'all' && searchQuery && visibleAllGrid.length > 0) {
+      const firstItem = visibleAllGrid[0];
+      const targetTeam = effectiveData[firstItem.teamKey];
+      const image = findPathImage(targetTeam, browseDate, firstItem.code);
+      if (image && pathImage !== image) {
+        setPathTeamKey(firstItem.teamKey);
+        setPathTarget(firstItem);
+        setPathDate(browseDate);
+        setPathImage(image);
+      } else if (!image && pathImage !== "") {
+        setPathImage("");
+      }
+    } else if (!searchQuery && pathImage !== "") {
+      setPathImage("");
+    }
+  }, [searchQuery, visibleAllGrid, browseDate, activeTab, effectiveData]);
 
   const allGridLayout = useMemo(() => { return getAllGridLayout(visibleAllGrid.length || 0); }, [visibleAllGrid.length]);
   const allGridRows = useMemo(() => { return Math.max(1, Math.ceil((visibleAllGrid.length || 1) / allGridLayout.cols)); }, [visibleAllGrid.length, allGridLayout.cols]);
@@ -1460,6 +1482,14 @@ function App() {
                         })}
                       </div>
                     </div>
+                    {searchQuery && pathImage && (
+                      <div className="card" style={{ marginTop: 10, padding: 10 }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, textAlign: 'center', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
+                          🔍 {pathTarget?.displayName || pathTarget?.name} ({pathTarget?.code}) 행로표
+                        </div>
+                        <img src={pathImage} alt="행로표 미리보기" style={{ width: '100%', borderRadius: 16, border: isDarkMode ? '1px solid #334155' : '1px solid #c8d2e3' }} />
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="card" style={{ padding: 0, overflow: "hidden", ...swipeStyle, borderRadius: "10px", marginTop: "15px" }}>
