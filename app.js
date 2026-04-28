@@ -1316,6 +1316,7 @@ function App() {
     
     setEditAlias(currentItem?.code || ""); 
     setEditColor(current.color || "");
+    setEditPhone(current.phone || "");
     setEditOpen(true);
   }
 
@@ -1840,8 +1841,8 @@ function App() {
           <div className="viewer-body">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, padding: '0 4px' }}>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
-                <div style={{ color: "#6b7280", marginTop: 4 }}>{pathDate} {weekdayName(pathDate)}</div>
+                <div className="viewer-info-line" style={{ fontSize: 18, fontWeight: 700 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
+                <div className="viewer-info-line" style={{ color: "#6b7280", marginTop: 4 }}>{pathDate} {weekdayName(pathDate)}</div>
               </div>
               {overrides[getOverrideKey(pathTeamKey || viewTeam, pathTarget?.name)]?.phone && (
                 <a href={`tel:${overrides[getOverrideKey(pathTeamKey || viewTeam, pathTarget?.name)].phone}`} style={{ 
