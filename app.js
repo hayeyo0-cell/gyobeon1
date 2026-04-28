@@ -558,7 +558,7 @@ function App() {
 
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
-  isSwipingRef = useRef(false);
+  const isSwipingRef = useRef(false);
 
   const onTouchStart = (e) => {
     const blockList = '.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4';
@@ -908,7 +908,13 @@ function App() {
     if (activeTab === 'all' && searchQuery && visibleAllGrid.length > 0) {
       const firstItem = visibleAllGrid[0];
       const targetTeam = effectiveData[firstItem.teamKey];
-      const image = findPathImage(targetTeam, browseDate, firstItem.code);
+
+      /* 🚀 [교정] 이름이 없거나 유효하지 않은 데이터인 경우 행로표 표시 방지 */
+      const nameTxt = String(firstItem.name || "").trim();
+      const isInvalidName = !nameTxt || nameTxt === "-" || nameTxt === "공백";
+
+      const image = isInvalidName ? null : findPathImage(targetTeam, browseDate, firstItem.code);
+      
       if (image && pathImage !== image) {
         setPathTeamKey(firstItem.teamKey);
         setPathTarget(firstItem);
@@ -937,10 +943,7 @@ function App() {
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthDate), [monthDate]);
   const monthHeaderDate = parseLocalDate(monthDate);
-
-  /* 🚀 [교정] weekDates 계산 기준을 groupBaseDate로 변경하여 스와이프 연동 해결 */
   const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
-
   const groupMembers = groups[currentGroup] || [];
   const groupMonthOptions = useMemo(() => getMonthOptions(todayStr, 12), [todayStr]);
 
@@ -1080,6 +1083,11 @@ function App() {
     } else {
       const currentTeamKey = item.teamKey || viewTeam;
       const team = effectiveData[currentTeamKey];
+
+      /* 🚀 [교정] 이름이 없거나 유효하지 않은 경우 행로표 팝업 차단 */
+      const nameTxt = String(item.name || "").trim();
+      if (!nameTxt || nameTxt === "-" || nameTxt === "공백") return;
+
       const image = findPathImage(team, browseDate, item.code);
       
       if (searchQuery) {
@@ -1149,6 +1157,11 @@ function App() {
 
   function openPathDialog(item, dateStr = todayStr) { 
     if (!effectiveData || !item?.code) return; 
+
+    /* 🚀 [교정] 이름이 없거나 유효하지 않은 경우 팝업 차단 */
+    const nameTxt = String(item.name || "").trim();
+    if (!nameTxt || nameTxt === "-" || nameTxt === "공백") return;
+
     const currentTeamKey = item.teamKey || viewTeam; 
     const team = effectiveData[currentTeamKey]; 
     const image = findPathImage(team, dateStr, item.code); 
@@ -1159,7 +1172,22 @@ function App() {
     setPathOpen(true); 
   }
 
-  function openPathDialogForTeamAndDate(teamKey, item, dateStr) { const team = effectiveData?.[teamKey]; if (!team || !item?.code) return; const image = findPathImage(team, dateStr, item.code); setViewTeam(teamKey); setPathTeamKey(teamKey); setPathTarget(item); setPathDate(dateStr); setPathImage(image || ""); setPathOpen(true); }
+  function openPathDialogForTeamAndDate(teamKey, item, dateStr) { 
+    const team = effectiveData?.[teamKey]; 
+    if (!team || !item?.code) return; 
+
+    /* 🚀 [교정] 이름 유효성 검사 추가 */
+    const nameTxt = String(item.name || "").trim();
+    if (!nameTxt || nameTxt === "-" || nameTxt === "공백") return;
+
+    const image = findPathImage(team, dateStr, item.code); 
+    setViewTeam(teamKey); 
+    setPathTeamKey(teamKey); 
+    setPathTarget(item); 
+    setPathDate(dateStr); 
+    setPathImage(image || ""); 
+    setPathOpen(true); 
+  }
   function closePathDialog() { if (pathOpenRef.current) window.history.back(); else setPathOpen(false); }
 
   function handleGroupSubmit() { 
@@ -1505,7 +1533,7 @@ function App() {
                         <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, textAlign: 'center', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
                           🔍 {pathTarget?.displayName || pathTarget?.name} ({pathTarget?.code}) 행로표
                         </div>
-                        <img src={pathImage} alt="행로표 미리보기" style={{ width: '100%', borderRadius: 16, border: isDarkMode ? '1px solid #334155' : '1px solid #c8d2e3' }} />
+                        <img src={pathImage} style={{ width: '100%', borderRadius: 16, border: isDarkMode ? '1px solid #334155' : '1px solid #c8d2e3' }} />
                       </div>
                     )}
                   </>
@@ -1518,7 +1546,12 @@ function App() {
                       
                       return (
                         <div key={`${idx}`} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: idx === diaList.length - 1 ? "none" : (isDarkMode ? "1px solid #334155" : "1px solid #c8d2e3"), background: isMine ? (isDarkMode ? "rgba(56, 189, 248, 0.25)" : "#d9e9ff") : "transparent", borderLeft: isMine ? (isDarkMode ? "4px solid #38bdf8" : "4px solid #3b82f6") : "4px solid transparent", cursor: "pointer" }}>
-                          <div onClick={() => openPathDialog(item, browseDate)} style={{ flex: 1, display: "flex", alignItems: "center", gap: "16px", fontSize: 18 }}>
+                          <div onClick={() => {
+                            const nameTxt = String(item.name || "").trim();
+                            if (nameTxt && nameTxt !== "-" && nameTxt !== "공백") {
+                              openPathDialog(item, browseDate);
+                            }
+                          }} style={{ flex: 1, display: "flex", alignItems: "center", gap: "16px", fontSize: 18 }}>
                             <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
                             <div style={{ fontWeight: 600 }}>{item.displayName || item.name}</div>
                           </div>
@@ -1564,7 +1597,14 @@ function App() {
                         const { startTime, endTime } = splitWorktime(worktime);
                         
                         return (
-                          <button key={date} className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`} onClick={() => { if (item?.code) { openPathDialogForTeamAndDate(targetTeamKey, { code: item.code, name: item.name || mySelection?.name || "", displayName: item.displayName || mySelection?.name || "", idx: -1 }, date); } else { setMonthDate(date); } }} onContextMenu={(e) => { e.preventDefault(); openMonthShiftEdit(date, item); }}>
+                          <button key={date} className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`} onClick={() => { 
+                            const nameTxt = String(item?.name || "").trim();
+                            if (item?.code && nameTxt && nameTxt !== "-" && nameTxt !== "공백") { 
+                              openPathDialogForTeamAndDate(targetTeamKey, { code: item.code, name: item.name || mySelection?.name || "", displayName: item.displayName || mySelection?.name || "", idx: -1 }, date); 
+                            } else { 
+                              setMonthDate(date); 
+                            } 
+                          }} onContextMenu={(e) => { e.preventDefault(); openMonthShiftEdit(date, item); }}>
                             <div className={`month-cell-inner ${toneClass}`}>
                               <div className={`month-day ${toneClass}`}>{parseLocalDate(date).getDate()}</div>
                               <div className={`month-code-line ${toneClass}`} style={{ cursor: "pointer", borderBottom: "1px dashed #ccc" }} onClick={(e) => { e.stopPropagation(); openMonthShiftEdit(date, item); }}>{item?.code || "-"}</div>
@@ -1645,7 +1685,13 @@ function App() {
                                 const isSelectedCol = selectedGroupDate === date;
 
                                 return (
-                                  <td key={date} onClick={() => { setSelectedGroupDate(date); if (item?.code) { openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); } }} className={`${isSelectedCol ? "active-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
+                                  <td key={date} onClick={() => { 
+                                    const nameTxt = String(member.name || "").trim();
+                                    setSelectedGroupDate(date); 
+                                    if (item?.code && nameTxt && nameTxt !== "-" && nameTxt !== "공백") { 
+                                      openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); 
+                                    } 
+                                  }} className={`${isSelectedCol ? "active-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
                                     <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
                                       {item?.code || "-"}
                                     </div>
