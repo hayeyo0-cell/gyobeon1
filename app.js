@@ -1,4 +1,4 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 행로표 자동 표시 복구)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 열번 검색 최적화)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
  **/
@@ -673,11 +673,7 @@ function App() {
         const savedRemoteDate = localStorage.getItem(LS_REMOTE_ROSTER_DATE) || ""; if (savedRemoteDate) { setGlobalRemoteRosterDate(savedRemoteDate); setRemoteRosterDate(savedRemoteDate); }
         try { 
           parsedSaved = await loadParsedData(); 
-          if (!cancelled && parsedSaved?.data) {
-            setData(parsedSaved.data);
-            setInitialRemoteChecked(false);
-            setPostSetupRemoteCheckNeeded(true);
-          }
+          if (!cancelled && parsedSaved?.data) setData(parsedSaved.data); 
           savedZip = await loadZipBlob(); 
           if (!cancelled && !parsedSaved?.data && savedZip?.blob) { 
             setZipName(savedZip.name || "저장된 ZIP"); 
@@ -904,15 +900,13 @@ function App() {
       const firstItem = visibleAllGrid[0];
       const targetTeam = effectiveData[firstItem.teamKey];
       const image = findPathImage(targetTeam, browseDate, firstItem.code);
-      if (image && pathImage !== image) {
+      if (image) {
         setPathTeamKey(firstItem.teamKey);
         setPathTarget(firstItem);
         setPathDate(browseDate);
         setPathImage(image);
-      } else if (!image && pathImage !== "") {
-        setPathImage("");
       }
-    } else if (!searchQuery && pathImage !== "") {
+    } else if (!searchQuery) {
       setPathImage("");
     }
   }, [searchQuery, visibleAllGrid, browseDate, activeTab, effectiveData]);
@@ -1067,18 +1061,25 @@ function App() {
   function resetMyProfile() { const today = getKoreaToday(); clearMySelection(); setMySelection({ teamKey: "ks", name: "", code: "", anchorDate: today }); setDraftTeam("ks"); setDraftName(""); setDraftCode(""); setProfileAnchorDate(today); setAllowProfileEdit(true); setSelectedTeam("ks"); setViewTeam("ks"); setInitialRemoteChecked(false); setHomeDate(today); setBrowseDate(today); setMonthDate(today); setGroupBaseDate(today); setGroupMonth(getDisplayMonthValue(today)); setSelectedGroupDate(""); }
 
   function handleAllCellTap(item) { 
-    if (editMode) openEditDialog(item); 
-    else {
+    if (editMode) {
+      openEditDialog(item);
+    } else {
       const currentTeamKey = item.teamKey || viewTeam;
       const team = effectiveData[currentTeamKey];
       const image = findPathImage(team, browseDate, item.code);
-      if (image) {
-        setPathTeamKey(currentTeamKey);
-        setPathTarget(item);
-        setPathDate(browseDate);
-        setPathImage(image);
-        setPathOpen(true);
+      
+      if (searchQuery) {
+        // 열번 검색 중일 때는 하단 미리보기만 갱신 (모달 안 띄움)
+        if (image) {
+          setPathTeamKey(currentTeamKey);
+          setPathTarget(item);
+          setPathDate(browseDate);
+          setPathImage(image);
+        } else {
+          alert("해당 인원의 행로표를 찾을 수 없습니다.");
+        }
       } else {
+        // 일반 전체보기 모드일 때는 큰 화면 모달 띄움
         openPathDialog(item, browseDate);
       }
     }
