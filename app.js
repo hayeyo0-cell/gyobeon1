@@ -906,22 +906,28 @@ function App() {
 
   useEffect(() => {
     if (activeTab === 'all' && searchQuery && visibleAllGrid.length > 0) {
-      const firstItem = visibleAllGrid[0];
-      const targetTeam = effectiveData[firstItem.teamKey];
-
-      /* 🚀 [교정] 이름이 없거나 유효하지 않은 데이터인 경우 행로표 표시 방지 */
-      const nameTxt = String(firstItem.name || "").trim();
-      const isInvalidName = !nameTxt || nameTxt === "-" || nameTxt === "공백";
-
-      const image = isInvalidName ? null : findPathImage(targetTeam, browseDate, firstItem.code);
       
-      if (image && pathImage !== image) {
-        setPathTeamKey(firstItem.teamKey);
-        setPathTarget(firstItem);
-        setPathDate(browseDate);
-        setPathImage(image);
-      } else if (!image) {
-        setPathImage("");
+      /* 🚀 [교정] 이름이 있는 유효한 검색 데이터만 추출 */
+      const validResults = visibleAllGrid.filter(item => {
+          const nameTxt = String(item.name || "").trim();
+          return nameTxt && nameTxt !== "-" && nameTxt !== "공백";
+      });
+
+      if (validResults.length > 0) {
+        const firstValid = validResults[0];
+        const targetTeam = effectiveData[firstValid.teamKey];
+        const image = findPathImage(targetTeam, browseDate, firstValid.code);
+        
+        if (image && pathImage !== image) {
+          setPathTeamKey(firstValid.teamKey);
+          setPathTarget(firstValid);
+          setPathDate(browseDate);
+          setPathImage(image);
+        } else if (!image) {
+          setPathImage("");
+        }
+      } else {
+          setPathImage("");
       }
     } else if (!searchQuery && pathImage !== "") {
       setPathImage("");
@@ -943,7 +949,10 @@ function App() {
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthDate), [monthDate]);
   const monthHeaderDate = parseLocalDate(monthDate);
+
+  /* 🚀 [교정] weekDates 계산 기준을 groupBaseDate로 변경하여 스와이프 연동 해결 */
   const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
+
   const groupMembers = groups[currentGroup] || [];
   const groupMonthOptions = useMemo(() => getMonthOptions(todayStr, 12), [todayStr]);
 
