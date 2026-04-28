@@ -181,13 +181,13 @@ function getDiaOrder(team) { return team?.diaOrder?.length ? team.diaOrder : get
 function normalizeToFixedCode(team, code) { const fixedCodes = getGyobunOrder(team); return fixedCodes.find((item) => normalizeCodeKey(item) === normalizeCodeKey(code)) || code || ""; }
 function shiftCodeByDays(team, baseCode, dayOffset) { const order = getGyobunOrder(team); const baseIdx = order.findIndex((code) => normalizeCodeKey(code) === normalizeCodeKey(baseCode)); if (baseIdx < 0) return baseCode || ""; return order[positiveMod(baseIdx + dayOffset, order.length)] || baseCode || ""; }
 function getAllGridLayout(count) { if (count >= 49) return { cols: 6, className: "density-6" }; if (count >= 36) return { cols: 5, className: "density-5" }; return { cols: 4, className: "density-4" }; }
-function createTeamBucket(teamKey) { return { key: teamKey, label: TEAM_LABELS[teamKey], names: [], gyobun: [], diaOrder: [], people: [], info: { totalCount: 0, baseDate: null, baseCode: null, baseName: null, raw: [] }, worktimes: { nor: {}, sat: {}, hol: {} }, paths: { nor: {}, sat: {}, hol: {}, nor_sat: {}, sat_hol: {}, hol_nor: {} }, trainData: {} }; }
+function createTeamBucket(teamKey) { return { key: teamKey, label: TEAM_LABELS[teamKey], names: [], gyobun: [], diaOrder: [], people: [], info: { totalCount: 0, baseDate: null, baseCode: null, baseName: null, raw: [] }, worktimes: { nor: {}, sat: {}, hol: {} }, paths: { nor: {}, sat: {}, hol: {}, nor_sat: {}, nor_hol: {}, sat_hol: {}, sat_nor: {}, hol_nor: {}, hol_sat: {} }, trainData: {} }; }
 
 function cloneTeamData(data) {
   const result = {};
   TEAM_ORDER.forEach((teamKey) => {
     const team = data?.[teamKey]; if (!team) return;
-    result[teamKey] = { ...team, names: Array.isArray(team.names) ? [...team.names] : [], gyobun: Array.isArray(team.gyobun) ? [...team.gyobun] : [], diaOrder: Array.isArray(team.diaOrder) ? [...team.diaOrder] : [], people: Array.isArray(team.people) ? team.people.map((p) => ({ ...p })) : [], info: team.info ? { ...team.info, raw: [...(team.info.raw || [])] } : createTeamBucket(teamKey).info, worktimes: { nor: { ...(team.worktimes?.nor || {}) }, sat: { ...(team.worktimes?.sat || {}) }, hol: { ...(team.worktimes?.hol || {}) } }, paths: { nor: { ...(team.paths?.nor || {}) }, sat: { ...(team.paths?.sat || {}) }, hol: { ...(team.paths?.hol || {}) }, nor_sat: { ...(team.paths?.nor_sat || {}) }, sat_hol: { ...(team.paths?.sat_hol || {}) }, hol_nor: { ...(team.paths?.hol_nor || {}) } }, trainData: { ...(team.trainData || {}) } };
+    result[teamKey] = { ...team, names: Array.isArray(team.names) ? [...team.names] : [], gyobun: Array.isArray(team.gyobun) ? [...team.gyobun] : [], diaOrder: Array.isArray(team.diaOrder) ? [...team.diaOrder] : [], people: Array.isArray(team.people) ? team.people.map((p) => ({ ...p })) : [], info: team.info ? { ...team.info, raw: [...(team.info.raw || [])] } : createTeamBucket(teamKey).info, worktimes: { nor: { ...(team.worktimes?.nor || {}) }, sat: { ...(team.worktimes?.sat || {}) }, hol: { ...(team.worktimes?.hol || {}) } }, paths: { nor: { ...(team.paths?.nor || {}) }, sat: { ...(team.paths?.sat || {}) }, hol: { ...(team.paths?.hol || {}) }, nor_sat: { ...(team.paths?.nor_sat || {}) }, nor_hol: { ...(team.paths?.nor_hol || {}) }, sat_hol: { ...(team.paths?.sat_hol || {}) }, sat_nor: { ...(team.paths?.sat_nor || {}) }, hol_nor: { ...(team.paths?.hol_nor || {}) }, hol_sat: { ...(team.paths?.hol_sat || {}) } }, trainData: { ...(team.trainData || {}) } };
   });
   return result;
 }
@@ -438,7 +438,7 @@ function openZipDB() { return new Promise((resolve, reject) => { const request =
 async function saveZipBlob(blob, name) { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readwrite"); const store = tx.objectStore("files"); store.put({ blob, name, savedAt: Date.now() }, "latestZip"); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
 async function loadZipBlob() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); const req = store.get("latestZip"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
 async function saveParsedData(value) { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readwrite"); const store = tx.objectStore("files"); store.put({ data: value, savedAt: Date.now() }, "parsedData"); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
-async function loadParsedData() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); store.get("parsedData"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
+async function loadParsedData() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); const req = store.get("parsedData"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
 function promptAdminPassword() { const value = window.prompt("관리자 비밀번호를 입력하세요"); if (value == null) return null; if (String(value).trim() !== ADMIN_PASSWORD) { alert("비밀번호가 올바르지 않습니다."); return null; } return String(value).trim(); }
 
 function App() {
@@ -671,7 +671,19 @@ function App() {
       try {
         const shared = loadCachedSharedConfig(); if (shared?.baseDate) { setGlobalBaseDate(shared.baseDate); setRemoteBaseDate(shared.baseDate); }
         const savedRemoteDate = localStorage.getItem(LS_REMOTE_ROSTER_DATE) || ""; if (savedRemoteDate) { setGlobalRemoteRosterDate(savedRemoteDate); setRemoteRosterDate(savedRemoteDate); }
-        try { parsedSaved = await loadParsedData(); if (!cancelled && parsedSaved?.data) setData(parsedSaved.data); savedZip = await loadZipBlob(); if (!cancelled && !parsedSaved?.data && savedZip?.blob) { setZipName(savedZip.name || "저장된 ZIP"); await parseAndSetZip(savedZip.blob, false, true, initialAppliedRemoteRoster, false); } } catch (e) { console.log("로컬 복원 실패", e); }
+        try { 
+          parsedSaved = await loadParsedData(); 
+          if (!cancelled && parsedSaved?.data) {
+            setData(parsedSaved.data);
+            setInitialRemoteChecked(false);
+            setPostSetupRemoteCheckNeeded(true);
+          }
+          savedZip = await loadZipBlob(); 
+          if (!cancelled && !parsedSaved?.data && savedZip?.blob) { 
+            setZipName(savedZip.name || "저장된 ZIP"); 
+            await parseAndSetZip(savedZip.blob, false, true, initialAppliedRemoteRoster, false); 
+          } 
+        } catch (e) { console.log("로컬 복원 실패", e); }
       } catch (e) {}
       try { const thisYear = getYearFromDateStr(getKoreaToday()); const preloadYears = [thisYear - 1, thisYear, thisYear + 1]; await Promise.all(preloadYears.map((year) => ensureHolidayYear(year, () => { if (!cancelled) setHolidayVersion((v) => v + 1); }))); } catch (e) {}
       try { const shared = await fetchSharedConfigJsonp(4000); if (cancelled) return; if (shared?.baseDate) { saveCachedSharedConfig(shared); setGlobalBaseDate(shared.baseDate); setRemoteBaseDate(shared.baseDate); } } catch (e) {}
