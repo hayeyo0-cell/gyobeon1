@@ -1,4 +1,4 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 초고속 로딩 최적화)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 행로표 잔상 제거 및 초기화 강화)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
  **/
@@ -163,8 +163,12 @@ function getPathFolder(teamKey, dateStr, code) {
 
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
+  const s = normalizeCodeKey(code);
+  // 대기(대) 또는 휴일(휴) 교번은 행로표가 없으므로 즉시 차단
+  if (s.startsWith("대") || s.startsWith("휴")) return null;
+
   const folder = getPathFolder(team.key, dateStr, code).toLowerCase(); 
-  const raw = normalizeCodeKey(code).replace('~', 'd');
+  const raw = s.replace('~', 'd');
   const strippedD = raw.replace(/d$/, ""); 
   const candidates = [raw, strippedD, `제${strippedD}`, `${raw}.png`, `${raw}.jpg`, `${raw}.jpeg`, `${strippedD}.png`, `${strippedD}.jpg`, `${strippedD}.jpeg` ];
   const bucket = team?.paths?.[folder]; 
@@ -673,13 +677,7 @@ function App() {
         const savedRemoteDate = localStorage.getItem(LS_REMOTE_ROSTER_DATE) || ""; if (savedRemoteDate) { setGlobalRemoteRosterDate(savedRemoteDate); setRemoteRosterDate(savedRemoteDate); }
         try { 
           parsedSaved = await loadParsedData(); 
-          if (!cancelled && parsedSaved?.data) {
-             setData(parsedSaved.data);
-             // 분석된 데이터가 있으면 바로 초기 체크 시작
-             setInitialRemoteChecked(false);
-             setPostSetupRemoteCheckNeeded(true);
-          } 
-          // ZIP은 백그라운드에서 유지용으로만 확인 (느려지는 원인이므로 파싱된 데이터가 없을때만 시도)
+          if (!cancelled && parsedSaved?.data) setData(parsedSaved.data); 
           if (!parsedSaved?.data) {
             savedZip = await loadZipBlob(); 
             if (!cancelled && savedZip?.blob) { 
@@ -913,6 +911,9 @@ function App() {
         setPathTarget(firstItem);
         setPathDate(browseDate);
         setPathImage(image);
+      } else if (!image) {
+        // 이미지가 없거나(대기/휴일) 결과가 비었을 때 미리보기 초기화
+        setPathImage("");
       }
     } else if (!searchQuery && pathImage !== "") {
       setPathImage("");
@@ -1083,7 +1084,7 @@ function App() {
           setPathDate(browseDate);
           setPathImage(image);
         } else {
-          alert("해당 인원의 행로표를 찾을 수 없습니다.");
+          setPathImage("");
         }
       } else {
         openPathDialog(item, browseDate);
