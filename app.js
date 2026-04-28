@@ -92,11 +92,7 @@ async function ensureHolidayYear(year, onApplied) {
   } finally { HOLIDAY_FETCHING_YEARS.delete(y); }
 }
 
-function guessDayType(dateStr) { 
-  if (isSunday(dateStr) || isHolidayDate(dateStr)) return "hol"; 
-  if (isSaturday(dateStr)) return "sat"; 
-  return "nor"; 
-}
+function guessDayType(dateStr) { if (isSunday(dateStr) || isHolidayDate(dateStr)) return "hol"; if (isSaturday(dateStr)) return "sat"; return "nor"; }
 function getDateToneClass(dateStr) { if (isSunday(dateStr) || isHolidayDate(dateStr)) return "tone-sun"; if (isSaturday(dateStr)) return "tone-sat"; return "tone-normal"; }
 function getDateBasedColor(dateStr) { if (isSunday(dateStr) || isHolidayDate(dateStr)) return "#ef4444"; if (isSaturday(dateStr)) return "#2563eb"; return "inherit"; }
 
@@ -144,22 +140,21 @@ function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr);
 
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
-  // ~ 교번은 어제 밤 근무의 아침 파트이므로 어제 날짜 기준으로 폴더 판단
-  const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
-  const nextDate = addDays(targetDate, 1);
+  const isNight = isNightStartCode(teamKey, code);
   
-  const curType = guessDayType(targetDate); // 'nor', 'sat', 'hol'
-  const nxtType = guessDayType(nextDate);
-  
-  // 야간 근무자(~ 교번 포함) 판정
-  if (isNightStartCode(teamKey, code) || isTilde) {
-    // 4/30(nor) -> 5/1(hol) 이면 nor_hol
-    // 5/1(hol) -> 5/2(sat) 이면 hol_sat
+  if (isNight || isTilde) {
+    // 야간 시작(d)이든 아침 종료(~)이든 "출근한 어제 요일"과 "퇴근하는 오늘 요일"의 조합임
+    const startDate = isTilde ? addDays(dateStr, -1) : dateStr;
+    const endDate = addDays(startDate, 1);
+    
+    const curType = guessDayType(startDate); // 'nor', 'sat', 'hol'
+    const nxtType = guessDayType(endDate);
+    
     if (curType === nxtType) return curType;
-    return `${curType}_${nxtType}`;
+    return `${curType}_${nxtType}`; // 예: 평휴는 nor_hol, 휴토는 hol_sat
   }
   
-  return curType; // 주간 근무자는 당일 성격 그대로
+  return guessDayType(dateStr);
 }
 
 function findPathImage(team, dateStr, code) {
@@ -625,7 +620,7 @@ function App() {
   useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
 
   function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
-    const currentTeamKey = mySelection?.teamKey || ""; currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
+    const currentTeamKey = mySelection?.teamKey || ""; const currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
     const teamSource = nextDataOverride?.[currentTeamKey] || data?.[currentTeamKey] || effectiveData?.[currentTeamKey]; if (!teamSource) return;
     
     const remoteRow = findRemoteRowByName(currentTeamKey, currentName, nextRemoteRoster); 
