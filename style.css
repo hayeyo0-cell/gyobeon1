@@ -691,16 +691,13 @@ body.dark-mode .viewer-title {
   color: #f8fafc !important;
 }
 
-/* 🚀 [교정] 안 보였던 행로표 상단 정보 및 홈화면 메인 글자색 강제 흰색 처리 */
-body.dark-mode .main-code,
-body.dark-mode .viewer-info-line,
-body.dark-mode .viewer-body div,
-body.dark-mode .viewer-body span {
+/* 🚀 [최종 교정] 행로표 뷰어 상단 정보 글자색 (다크모드에서도 선명한 흰색으로 강제 고정) */
+body.dark-mode .viewer-info-line {
   color: #ffffff !important;
 }
 
 body.dark-mode .fullscreen-image {
-  background: #ffffff !important; /* 👈 행로표 본체는 가독성을 위해 흰색 유지 */
+  background: #ffffff !important; /* 👈 이미지 본체는 흰색 유지 (글씨 보임 처리) */
   filter: none !important;
   border: 1px solid #475569 !important;
 }
@@ -716,4 +713,9 @@ body.dark-mode .modal.month-edit-modal {
   border-radius: 20px !important;
   padding: 24px !important;
   max-width: 340px !important;
+}
+
+/* 🚀 [최종 교정] 홈화면 미리보기 위 '요일' 글자색 강제 보정 */
+body.dark-mode .main-code {
+  color: #ffffff !important;
 }
