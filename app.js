@@ -142,7 +142,7 @@ function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
   const isNightStart = isNightStartCode(teamKey, code);
   
-  // 물결(~) 교번이거나 야간시작(d) 교번인 경우 무조건 출근일(startDate)과 퇴근일(endDate) 조합으로 판단
+  // 물결(~)이든 야간출근(d)이든 핵심은 [어제출근-오늘퇴근] 성격의 조합임
   if (isTilde || isNightStart) {
     const startDate = isTilde ? addDays(dateStr, -1) : dateStr;
     const endDate = addDays(startDate, 1);
@@ -151,7 +151,7 @@ function getPathFolder(teamKey, dateStr, code) {
     const nxtType = guessDayType(endDate);
     
     if (curType === nxtType) return curType;
-    return `${curType}_${nxtType}`; // 예: 평일출근-휴일퇴근 이면 nor_hol
+    return `${curType}_${nxtType}`; // 예: 평일->휴일이면 nor_hol, 휴일->토욜이면 hol_sat
   }
   
   return guessDayType(dateStr);
@@ -873,7 +873,7 @@ function App() {
       const image = findPathImage(targetTeam, browseDate, firstItem.code);
       if (image) {
         setPathTeamKey(firstItem.teamKey);
-        setPathTarget(item);
+        setPathTarget(firstItem);
         setPathDate(browseDate);
         setPathImage(image);
       } else {
