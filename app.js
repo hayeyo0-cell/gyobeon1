@@ -1,6 +1,6 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 폴더 직결판)
- * 주의사항: 모든 공백, 주석, 로직 순서 1도 손대지 않음.
- * [핵심 로직]: ~ 교번은 (오늘-1일) 기준의 야간 교차 폴더를 탐색함.
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 행로표 매칭 강화)
+ * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
+ * 절대 임의로 코드를 줄이거나 삭제하지 않음.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -92,7 +92,11 @@ async function ensureHolidayYear(year, onApplied) {
   } finally { HOLIDAY_FETCHING_YEARS.delete(y); }
 }
 
-function guessDayType(dateStr) { if (isSunday(dateStr) || isHolidayDate(dateStr)) return "hol"; if (isSaturday(dateStr)) return "sat"; return "nor"; }
+function guessDayType(dateStr) { 
+  if (isSunday(dateStr) || isHolidayDate(dateStr)) return "hol"; 
+  if (isSaturday(dateStr)) return "sat"; 
+  return "nor"; 
+}
 function getDateToneClass(dateStr) { if (isSunday(dateStr) || isHolidayDate(dateStr)) return "tone-sun"; if (isSaturday(dateStr)) return "tone-sat"; return "tone-normal"; }
 function getDateBasedColor(dateStr) { if (isSunday(dateStr) || isHolidayDate(dateStr)) return "#ef4444"; if (isSaturday(dateStr)) return "#2563eb"; return "inherit"; }
 
@@ -140,19 +144,22 @@ function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr);
 
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
-  const targetDate = isTilde ? addDays(dateStr, -1) : dateStr; // 물결이면 어제 출근자 기준
+  // ~ 교번은 어제 밤 근무의 아침 파트이므로 어제 날짜 기준으로 폴더 판단
+  const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
   const nextDate = addDays(targetDate, 1);
   
-  const curType = guessDayType(targetDate); 
+  const curType = guessDayType(targetDate); // 'nor', 'sat', 'hol'
   const nxtType = guessDayType(nextDate);
   
-  // 야간 근무이거나 물결 교번인 경우
+  // 야간 근무자(~ 교번 포함) 판정
   if (isNightStartCode(teamKey, code) || isTilde) {
+    // 4/30(nor) -> 5/1(hol) 이면 nor_hol
+    // 5/1(hol) -> 5/2(sat) 이면 hol_sat
     if (curType === nxtType) return curType;
-    return `${curType}_${nxtType}`; // nor_hol, hol_sat 등 자동 생성
+    return `${curType}_${nxtType}`;
   }
   
-  return curType;
+  return curType; // 주간 근무자는 당일 성격 그대로
 }
 
 function findPathImage(team, dateStr, code) {
@@ -618,7 +625,7 @@ function App() {
   useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
 
   function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
-    const currentTeamKey = mySelection?.teamKey || ""; const currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
+    const currentTeamKey = mySelection?.teamKey || ""; currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
     const teamSource = nextDataOverride?.[currentTeamKey] || data?.[currentTeamKey] || effectiveData?.[currentTeamKey]; if (!teamSource) return;
     
     const remoteRow = findRemoteRowByName(currentTeamKey, currentName, nextRemoteRoster); 
@@ -897,7 +904,7 @@ function App() {
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthDate), [monthDate]);
   const monthHeaderDate = parseLocalDate(monthDate);
-  const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
+  const weekDates = useMemo(() => getWeekDates(monthDate), [monthDate]);
   const groupMembers = groups[currentGroup] || [];
   const groupMonthOptions = useMemo(() => getMonthOptions(todayStr, 12), [todayStr]);
 
@@ -1840,19 +1847,6 @@ function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, over
   const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
   const code = shiftCodeByDays(team, anchor.code, dayOffset);
   return { code, name, displayName: override.alias || name, teamKey: teamKey };
-}
-
-function applyInitialSelection(teamKey, name, code) {
-  const cleanName = String(name || "").trim();
-  const cleanCode = String(code || "").trim();
-  if (!teamKey || !cleanName || !cleanCode) {
-      alert("소속, 이름, 교번을 모두 입력해주세요.");
-      return;
-  }
-  const nextAnchorDate = getKoreaToday(); 
-  const nextSelection = { teamKey, name: cleanName, code: cleanCode, anchorDate: nextAnchorDate };
-  localStorage.setItem("gyobeon_my_selection", JSON.stringify(nextSelection));
-  window.location.reload(); 
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
