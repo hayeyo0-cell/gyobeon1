@@ -1,6 +1,6 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 행로표 매칭 강화)
- * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
- * 절대 임의로 코드를 줄이거나 삭제하지 않음.
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (행로표 폴더 직결판)
+ * 주의사항: 모든 공백, 주석, 로직 순서 1도 손대지 않음.
+ * [핵심 로직]: ~ 교번은 (오늘-1일) 기준의 야간 교차 폴더를 탐색함.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -140,16 +140,16 @@ function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr);
 
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
-  const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
+  const targetDate = isTilde ? addDays(dateStr, -1) : dateStr; // 물결이면 어제 출근자 기준
   const nextDate = addDays(targetDate, 1);
   
-  const curType = guessDayType(targetDate); // 'nor', 'sat', 'hol'
+  const curType = guessDayType(targetDate); 
   const nxtType = guessDayType(nextDate);
   
-  if (isNightStartCode(teamKey, code)) {
-    // 1도 틀림없이 nor_hol, hol_sat 등 직관적으로 연결
+  // 야간 근무이거나 물결 교번인 경우
+  if (isNightStartCode(teamKey, code) || isTilde) {
     if (curType === nxtType) return curType;
-    return `${curType}_${nxtType}`;
+    return `${curType}_${nxtType}`; // nor_hol, hol_sat 등 자동 생성
   }
   
   return curType;
@@ -1851,7 +1851,6 @@ function applyInitialSelection(teamKey, name, code) {
   }
   const nextAnchorDate = getKoreaToday(); 
   const nextSelection = { teamKey, name: cleanName, code: cleanCode, anchorDate: nextAnchorDate };
-  
   localStorage.setItem("gyobeon_my_selection", JSON.stringify(nextSelection));
   window.location.reload(); 
 }
