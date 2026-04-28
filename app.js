@@ -1119,10 +1119,10 @@ function App() {
     // 🚀 [추가] 월교번 개별 날짜 수정 처리
     if (editingCell.isMonthEdit && editingCell.date) {
         if (!currentEntry.monthShifts) currentEntry.monthShifts = {};
-        currentEntry.monthShifts[editingCell.date] = cleanAlias; // 여기서는 별명을 임시로 교번으로 씀
+        currentEntry.monthShifts[editingCell.date] = cleanAlias; 
     } else {
-        currentEntry.color = cleanColor;
         currentEntry.alias = cleanAlias;
+        currentEntry.color = cleanColor;
         currentEntry.phone = cleanPhone;
     }
     
@@ -1314,9 +1314,8 @@ function App() {
     const key = getOverrideKey(mySelection?.teamKey || selectedTeam, name);
     const current = overrides[key] || {};
     
-    setEditAlias(currentItem?.code || ""); // 교번 수정을 위해 별명 칸을 활용
+    setEditAlias(currentItem?.code || ""); 
     setEditColor(current.color || "");
-    setEditPhone(current.phone || "");
     setEditOpen(true);
   }
 
@@ -1782,12 +1781,15 @@ function App() {
 
       {editOpen && (
         <div className="modal-backdrop" onClick={closeEditDialog}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal month-edit-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">{editingCell?.isMonthEdit ? "교번 수정" : "표시 수정"}</div>
             <div className="modal-sub">
               {editingCell?.isMonthEdit ? `${editingCell.date} - ${editingCell.name}` : `${TEAM_LABELS[editingCell?.teamKey || viewTeam]} ${editingCell?.code} ${editingCell?.name}`}
             </div>
             <label className="label" style={{ marginTop: 12 }}>{editingCell?.isMonthEdit ? "수정할 교번" : "표시 이름"}</label>
+            <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '8px' }}>
+              {editingCell?.isMonthEdit && `현재: ${editingCell.code}`}
+            </div>
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder={editingCell?.isMonthEdit ? "예: 15d, 대1, 휴1" : "비워두면 원래 이름 사용"} />
             
             {!editingCell?.isMonthEdit && (
@@ -1797,18 +1799,12 @@ function App() {
                   <input className="input" style={{ flex: 1 }} value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="01012345678" />
                   <button className="modal-btn" style={{ width: 'auto', padding: '0 12px' }} onClick={pickContactForEdit}>📂</button>
                 </div>
-              </>
-            )}
-
-            <label className="label" style={{ marginTop: 12 }}>색상 선택</label>
-            <div style={{ marginTop: '8px' }}>
-              <select className="select" value={editColor} onChange={(e) => setEditColor(e.target.value)} style={{ width: '100%', height: '48px' }}>
-                {COLOR_OPTIONS.map((item) => (<option key={item.label} value={item.value}>{item.label}</option>))}
-              </select>
-            </div>
-
-            {!editingCell?.isMonthEdit && (
-              <>
+                <label className="label" style={{ marginTop: 12 }}>색상 선택</label>
+                <div style={{ marginTop: '8px' }}>
+                  <select className="select" value={editColor} onChange={(e) => setEditColor(e.target.value)} style={{ width: '100%', height: '48px' }}>
+                    {COLOR_OPTIONS.map((item) => (<option key={item.label} value={item.value}>{item.label}</option>))}
+                  </select>
+                </div>
                 <button className="modal-btn" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsWorktimeEditOpen((prev) => !prev)}>출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}</button>
                 {isWorktimeEditOpen && (
                   <div style={{ marginTop: 12 }}>
