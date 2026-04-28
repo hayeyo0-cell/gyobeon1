@@ -1,10 +1,6 @@
 /** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 행로표 매칭 강화)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
- * [최종 업데이트]: 
- * 1. 야간 근무 시 평휴(nor_hol), 휴토(hol_sat), 토휴(sat_hol) 등 교차 요일 폴더 완벽 대응.
- * 2. 5월 1일(근로자의 날), 7월 17일(제헌절) 공휴일 강제 반영.
- * 3. 1호선(1001~1090) 및 2호선(2001~2090) 열번 검색 범위 확장 및 야간자 우선 검색.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -147,16 +143,16 @@ function getPathFolder(teamKey, dateStr, code) {
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
   const nextDate = addDays(targetDate, 1);
   
-  const currentType = guessDayType(targetDate); // 'nor', 'sat', 'hol'
-  const nextType = guessDayType(nextDate);
+  const curType = guessDayType(targetDate); // 'nor', 'sat', 'hol'
+  const nxtType = guessDayType(nextDate);
   
   if (isNightStartCode(teamKey, code)) {
-    // 야간근무: 현재요일_다음날요일 형식 (예: nor_hol(평휴), hol_sat(휴토) 등)
-    if (currentType === nextType) return currentType;
-    return `${currentType}_${nextType}`;
+    // 1도 틀림없이 nor_hol, hol_sat 등 직관적으로 연결
+    if (curType === nxtType) return curType;
+    return `${curType}_${nxtType}`;
   }
   
-  return currentType;
+  return curType;
 }
 
 function findPathImage(team, dateStr, code) {
@@ -1844,6 +1840,20 @@ function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, over
   const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
   const code = shiftCodeByDays(team, anchor.code, dayOffset);
   return { code, name, displayName: override.alias || name, teamKey: teamKey };
+}
+
+function applyInitialSelection(teamKey, name, code) {
+  const cleanName = String(name || "").trim();
+  const cleanCode = String(code || "").trim();
+  if (!teamKey || !cleanName || !cleanCode) {
+      alert("소속, 이름, 교번을 모두 입력해주세요.");
+      return;
+  }
+  const nextAnchorDate = getKoreaToday(); 
+  const nextSelection = { teamKey, name: cleanName, code: cleanCode, anchorDate: nextAnchorDate };
+  
+  localStorage.setItem("gyobeon_my_selection", JSON.stringify(nextSelection));
+  window.location.reload(); 
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
