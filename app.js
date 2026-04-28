@@ -1,13 +1,6 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 데이터 동기화 강화)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 행로표 매칭 강화)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
- * [최종 통합 내용]: 
- * 1. 2001~2090 / 1001~1090 열차 검색 시 어제 야간자 우선 로직 완벽 유지 및 범위 확장.
- * 2. 5월 1일, 7월 17일 공휴일 강제 지정 (휴일 교번/행로 적용).
- * 3. 이름 변경 시 즉시 앱 기준 이름 강제 업데이트 (내 정보 보호 충돌 해결).
- * 4. 수정 모드에서 이름(본명) 입력 시 실시간으로 전화번호 입력란 비우기 (이전 번호 방지).
- * 5. 연락처 불러오기(📂) 및 세련된 원형 그라데이션 전화기(📞) UI.
- * 6. 월교번 교번 개별 수정 기능 포함.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -148,18 +141,21 @@ function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr);
 function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
   const targetDate = isTilde ? addDays(dateStr, -1) : dateStr;
-  const d = parseLocalDate(targetDate);
-  const day = d.getDay(); 
-  const isHol = isHolidayDate(targetDate);
+  const nextDate = addDays(targetDate, 1);
+  
+  const currentType = guessDayType(targetDate); // 'nor', 'sat', 'hol'
+  const nextType = guessDayType(nextDate);
+  
   if (isNightStartCode(teamKey, code)) {
-    if (isHol || day === 0) return "hol_nor"; 
-    if (day === 6) return "sat_hol";           
-    if (day === 5) return "nor_sat";          
-    return "nor";                               
+    // 야간근무: 현재요일_다음날요일 형식 (예: 평휴, 휴토 등)
+    const cur = currentType === 'nor' ? 'nor' : (currentType === 'sat' ? 'sat' : 'hol');
+    const nxt = nextType === 'nor' ? 'nor' : (nextType === 'sat' ? 'sat' : 'hol');
+    
+    if (cur === nxt) return cur; // 같은 타입이면 그냥 nor, sat, hol 중 하나
+    return `${cur}_${nxt}`; // 예: nor_hol (평휴), hol_sat (휴토) 등
   }
-  if (isHol || day === 0) return "hol";
-  if (day === 6) return "sat";
-  return "nor";
+  
+  return currentType; // 주간근무는 당일 타입만 반환
 }
 
 function findPathImage(team, dateStr, code) {
