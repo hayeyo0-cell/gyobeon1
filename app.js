@@ -143,8 +143,9 @@ function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
 function getPathFolder(teamKey, dateStr, code) {
-  const isTilde = String(code || "").includes("~");
-  const isNightStart = isNightStartCode(teamKey, code);
+  const s = normalizeCodeKey(code);
+  const isTilde = s.includes("~"); 
+  const isNightStart = isNightStartCode(teamKey, code); 
   
   if (isTilde || isNightStart) {
     const startDate = isTilde ? addDays(dateStr, -1) : dateStr;
@@ -162,7 +163,7 @@ function getPathFolder(teamKey, dateStr, code) {
 
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
-  const folder = getPathFolder(team.key, dateStr, code).toLowerCase(); // 폴더명을 소문자로 통일해서 찾음
+  const folder = getPathFolder(team.key, dateStr, code).toLowerCase(); 
   const raw = normalizeCodeKey(code).replace('~', 'd');
   const strippedD = raw.replace(/d$/, ""); 
   const candidates = [raw, strippedD, `제${strippedD}`, `${raw}.png`, `${raw}.jpg`, `${raw}.jpeg`, `${strippedD}.png`, `${strippedD}.jpg`, `${strippedD}.jpeg` ];
@@ -196,7 +197,7 @@ function parseZipToData(parsedFiles) {
   Object.entries(parsedFiles).forEach(([path, content]) => {
     const clean = path.replace(/^\/+/, ""); 
     const parts = clean.split("/"); 
-    const teamKey = parts.find((p) => TEAM_ORDER.includes(p.toLowerCase())); // 대소문자 방어
+    const teamKey = parts.find((p) => TEAM_ORDER.includes(p.toLowerCase())); 
     if (!teamKey) return;
     const team = result[teamKey]; const fileName = parts[parts.length - 1];
     if (fileName === "name.txt") team.names = parseLines(content); if (fileName === "gyobun.txt") team.gyobun = parseLines(content); if (fileName === "info.txt") team.info = parseInfo(content); if (fileName === "dialist.txt") team.diaOrder = parseLines(content);
@@ -211,10 +212,10 @@ function parseZipToData(parsedFiles) {
   });
   Object.entries(parsedFiles).forEach(([path, content]) => {
     const clean = path.replace(/^\/+/, ""); const parts = clean.split("/"); 
-    const lowerParts = parts.map(p => p.toLowerCase()); // 모든 경로 소문자화 비교용
+    const lowerParts = parts.map(p => p.toLowerCase()); 
     const teamKey = parts.find((p) => TEAM_ORDER.includes(p.toLowerCase())); 
     if (!teamKey) return;
-    const team = result[teamKey]; const fileName = parts[parts.length - 1]; const parent = parts[parts.length - 2]?.toLowerCase(); // 부모 폴더명 소문자 통일
+    const team = result[teamKey]; const fileName = parts[parts.length - 1]; const parent = parts[parts.length - 2]?.toLowerCase(); 
     const gyobunOrder = team.gyobun.length ? team.gyobun : DEFAULT_GYOBUN;
     if (fileName === "nor_worktime.txt") team.worktimes.nor = parseWorktime(content, gyobunOrder); if (fileName === "sat_worktime.txt") team.worktimes.sat = parseWorktime(content, gyobunOrder); if (fileName === "hol_worktime.txt") team.worktimes.hol = parseWorktime(content, gyobunOrder);
 
@@ -437,7 +438,7 @@ function openZipDB() { return new Promise((resolve, reject) => { const request =
 async function saveZipBlob(blob, name) { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readwrite"); const store = tx.objectStore("files"); store.put({ blob, name, savedAt: Date.now() }, "latestZip"); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
 async function loadZipBlob() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); const req = store.get("latestZip"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
 async function saveParsedData(value) { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readwrite"); const store = tx.objectStore("files"); store.put({ data: value, savedAt: Date.now() }, "parsedData"); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
-async function loadParsedData() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); const req = store.get("parsedData"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
+async function loadParsedData() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); store.get("parsedData"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
 function promptAdminPassword() { const value = window.prompt("관리자 비밀번호를 입력하세요"); if (value == null) return null; if (String(value).trim() !== ADMIN_PASSWORD) { alert("비밀번호가 올바르지 않습니다."); return null; } return String(value).trim(); }
 
 function App() {
