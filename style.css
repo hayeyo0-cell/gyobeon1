@@ -669,3 +669,32 @@ body.dark-mode .all-cell-real.cell-my:not([style*="background-color"]) .all-code
 body.dark-mode .all-cell-real.cell-my:not([style*="background-color"]) .all-name {
   color: #ffffff !important;
 }
+
+/* 🚀 [다크모드 정밀 타격 패치 - 배경 및 뷰어] */
+body.dark-mode .home-path-preview img {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+body.dark-mode .preview-label {
+  background: rgba(30, 41, 59, 0.9) !important;
+  color: #94a3b8 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+body.dark-mode .viewer-page {
+  background: #05080f !important;
+}
+body.dark-mode .viewer-header {
+  background: rgba(15, 23, 42, 0.9) !important;
+  border-bottom: 1px solid #334155 !important;
+}
+body.dark-mode .viewer-title {
+  color: #f8fafc !important;
+}
+body.dark-mode .fullscreen-image {
+  border: 1px solid #475569 !important;
+}
+body.dark-mode .empty-box {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
