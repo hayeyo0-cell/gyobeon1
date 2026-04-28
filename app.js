@@ -640,11 +640,11 @@ function App() {
   useEffect(() => { if (!data) return; const migrated = migrateLegacyOverrides(loadOverrides(), data); setOverrides(migrated); }, [data]);
   useEffect(() => { const years = [getYearFromDateStr(homeDate), getYearFromDateStr(browseDate), getYearFromDateStr(monthDate), getYearFromDateStr(groupBaseDate)].filter(Boolean); [...new Set(years)].forEach((year) => { ensureHolidayYear(year, () => setHolidayVersion((v) => v + 1)); }); }, [homeDate, browseDate, monthDate, groupBaseDate]);
   useEffect(() => { if (!allowProfileEdit) return; setDraftTeam(selectedTeam || mySelection?.teamKey || "ks"); setDraftName(String(mySelection?.name || "").trim()); setDraftCode(String(mySelection?.code || "").trim()); }, [allowProfileEdit, selectedTeam, mySelection]);
-  useEffect(() => { if (!allowProfileEdit) return; const teamKey = draftTeam || "ks"; const currentName = String(draftName || "").trim(); if (!currentName) return; const team = setupSourceData?.[teamKey] || data?.[teamKey]; if (!team) return; if (String(draftCode || "").trim()) return; let nextCode = ""; const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster); if (remoteRow?.code) { nextCode = normalizeToFixedCode(team, remoteRow.code); } else { const zipPerson = findZipPersonByName(team, currentName); if (zipPerson?.baseCode) { nextCode = normalizeToFixedCode(team, zipPerson.baseCode); } } if (!nextCode) return; setDraftCode(nextCode); }, [ allowProfileEdit, draftTeam, draftName, draftCode, remoteRoster, setupSourceData, data, ]);
+  useEffect(() => { if (!allowProfileEdit) return; const teamKey = draftTeam || "ks"; const currentName = String(draftName || "").trim(); if (!currentName) return; const team = setupSourceData?.[draftTeam] || data?.[draftTeam]; if (!team) return; if (String(draftCode || "").trim()) return; let nextCode = ""; const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster); if (remoteRow?.code) { nextCode = normalizeToFixedCode(team, remoteRow.code); } else { const zipPerson = findZipPersonByName(team, currentName); if (zipPerson?.baseCode) { nextCode = normalizeToFixedCode(team, zipPerson.baseCode); } } if (!nextCode) return; setDraftCode(nextCode); }, [ allowProfileEdit, draftTeam, draftName, draftCode, remoteRoster, setupSourceData, data, ]);
   useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
 
   function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
-    const currentTeamKey = mySelection?.teamKey || ""; currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
+    const currentTeamKey = mySelection?.teamKey || ""; const currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
     const teamSource = nextDataOverride?.[currentTeamKey] || data?.[currentTeamKey] || effectiveData?.[currentTeamKey]; if (!teamSource) return;
     
     const remoteRow = findRemoteRowByName(currentTeamKey, currentName, nextRemoteRoster); 
@@ -1102,25 +1102,33 @@ function App() {
   }
   function closeEditDialog() { if (editOpenRef.current) window.history.back(); else setEditOpen(false); }
   function commitEdit(nextColorValue = editColor, nextAliasValue = editAlias, nextPhoneValue = editPhone) {
-    if (!editingCell) return; const currentTeam = editingCell.teamKey || viewTeam; const cleanColor = String(nextColorValue || "").trim(); const cleanAlias = String(nextAliasValue || "").trim(); const cleanPhone = String(nextPhoneValue || "").trim(); const key = getOverrideKey(currentTeam, editingCell.name); const next = { ...overrides };
+    if (!editingCell) return; 
+    const currentTeam = editingCell.teamKey || viewTeam; 
+    const cleanColor = String(nextColorValue || "").trim(); 
+    const cleanAlias = String(nextAliasValue || "").trim(); 
+    const cleanPhone = String(nextPhoneValue || "").trim(); 
+    const key = getOverrideKey(currentTeam, editingCell.name); 
+    const next = { ...overrides };
     
     if (next[key] && next[key].baseName && !samePersonName(next[key].baseName, editingCell.name)) {
         delete next[key];
     }
     
-    if (!cleanColor && !cleanAlias && !cleanPhone) {
-        delete next[key];
+    const currentEntry = next[key] || { baseName: editingCell.name };
+
+    // 🚀 [추가] 월교번 개별 날짜 수정 처리
+    if (editingCell.isMonthEdit && editingCell.date) {
+        if (!currentEntry.monthShifts) currentEntry.monthShifts = {};
+        currentEntry.monthShifts[editingCell.date] = cleanAlias; // 여기서는 별명을 임시로 교번으로 씀
     } else {
-        next[key] = { 
-            ...next[key],
-            color: cleanColor, 
-            alias: cleanAlias, 
-            phone: cleanPhone,
-            baseName: editingCell.name 
-        };
+        currentEntry.color = cleanColor;
+        currentEntry.alias = cleanAlias;
+        currentEntry.phone = cleanPhone;
     }
     
-    if (isWorktimeEditOpen) { const built = buildTimeValueFromParts(editStartHour, editStartMin, editEndHour, editEndMin); if (!built) return alert("출퇴근시간 형식을 다시 확인해주세요."); const dayType = guessDayType(browseDate); const allWorktimeOverrides = loadWorktimeOverrides(); const wtKey = getWorktimeOverrideKey(currentTeam, editingCell.code); const currentEntry = { ...(allWorktimeOverrides[wtKey] || {}) }; currentEntry[dayType] = built; allWorktimeOverrides[wtKey] = currentEntry; saveWorktimeOverrides(allWorktimeOverrides); setWorktimeVersion((v) => v + 1); }
+    next[key] = currentEntry;
+    
+    if (isWorktimeEditOpen) { const built = buildTimeValueFromParts(editStartHour, editStartMin, editEndHour, editEndMin); if (!built) return alert("출퇴근시간 형식을 다시 확인해주세요."); const dayType = guessDayType(browseDate); const allWorktimeOverrides = loadWorktimeOverrides(); const wtKey = getWorktimeOverrideKey(currentTeam, editingCell.code); const wtEntry = { ...(allWorktimeOverrides[wtKey] || {}) }; wtEntry[dayType] = built; allWorktimeOverrides[wtKey] = wtEntry; saveWorktimeOverrides(allWorktimeOverrides); setWorktimeVersion((v) => v + 1); }
     setOverrides(next); saveOverrides(next); setEditOpen(false); setEditingCell(null); setEditColor(""); setEditAlias(""); setEditPhone(""); setIsWorktimeEditOpen(false); setEditStartHour(""); setEditStartMin(""); setEditEndHour(""); setEditEndMin("");
   }
 
@@ -1292,27 +1300,24 @@ function App() {
   function closeUpdatePopup() { setShowUpdatePopup(false); }
 
   function openMonthShiftEdit(date, currentItem) {
-    const nextCode = window.prompt(`${date} 교번 수정\n현재: ${currentItem?.code || "-"}\n수정할 교번을 입력하세요 (예: 대1, 휴1, 15d 등)`, currentItem?.code || "");
-    if (nextCode === null) return;
-    const cleanCode = nextCode.trim();
-    const teamKey = mySelection?.teamKey || selectedTeam;
     const name = mySelection?.name;
     if (!name) return;
+
+    setEditingCell({
+      code: currentItem?.code || "",
+      name: name,
+      date: date,
+      isMonthEdit: true,
+      teamKey: mySelection?.teamKey || selectedTeam
+    });
+
+    const key = getOverrideKey(mySelection?.teamKey || selectedTeam, name);
+    const current = overrides[key] || {};
     
-    const key = getOverrideKey(teamKey, name);
-    const next = { ...overrides };
-    const currentEntry = next[key] || { baseName: name };
-    
-    if (!currentEntry.monthShifts) currentEntry.monthShifts = {};
-    if (!cleanCode) {
-        delete currentEntry.monthShifts[date];
-    } else {
-        currentEntry.monthShifts[date] = cleanCode;
-    }
-    
-    next[key] = currentEntry;
-    setOverrides(next);
-    saveOverrides(next);
+    setEditAlias(currentItem?.code || ""); // 교번 수정을 위해 별명 칸을 활용
+    setEditColor(current.color || "");
+    setEditPhone(current.phone || "");
+    setEditOpen(true);
   }
 
   const canEnterApp = !!effectiveData && !!mySelection?.teamKey && !!String(mySelection?.name || "").trim() && !!mySelection?.code && !allowProfileEdit;
@@ -1778,54 +1783,53 @@ function App() {
       {editOpen && (
         <div className="modal-backdrop" onClick={closeEditDialog}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">표시 수정</div>
-            <div className="modal-sub">{TEAM_LABELS[editingCell?.teamKey || viewTeam]} {editingCell?.code} {editingCell?.name}</div>
-            <label className="label" style={{ marginTop: 12 }}>표시 이름</label>
-            <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="비워두면 원래 이름 사용" />
-            <label className="label" style={{ marginTop: 12 }}>전화번호</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input 
-                className="input" 
-                style={{ flex: 1 }} 
-                value={editPhone} 
-                onChange={(e) => setEditPhone(e.target.value)} 
-                placeholder="01012345678" 
-              />
-              <button className="modal-btn" style={{ width: 'auto', padding: '0 12px' }} onClick={pickContactForEdit}>📂</button>
+            <div className="modal-title">{editingCell?.isMonthEdit ? "교번 수정" : "표시 수정"}</div>
+            <div className="modal-sub">
+              {editingCell?.isMonthEdit ? `${editingCell.date} - ${editingCell.name}` : `${TEAM_LABELS[editingCell?.teamKey || viewTeam]} ${editingCell?.code} ${editingCell?.name}`}
             </div>
+            <label className="label" style={{ marginTop: 12 }}>{editingCell?.isMonthEdit ? "수정할 교번" : "표시 이름"}</label>
+            <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder={editingCell?.isMonthEdit ? "예: 15d, 대1, 휴1" : "비워두면 원래 이름 사용"} />
+            
+            {!editingCell?.isMonthEdit && (
+              <>
+                <label className="label" style={{ marginTop: 12 }}>전화번호</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input className="input" style={{ flex: 1 }} value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="01012345678" />
+                  <button className="modal-btn" style={{ width: 'auto', padding: '0 12px' }} onClick={pickContactForEdit}>📂</button>
+                </div>
+              </>
+            )}
+
             <label className="label" style={{ marginTop: 12 }}>색상 선택</label>
             <div style={{ marginTop: '8px' }}>
-              <select 
-                className="select" 
-                value={editColor} 
-                onChange={(e) => setEditColor(e.target.value)}
-                style={{ width: '100%', height: '48px' }}
-              >
-                {COLOR_OPTIONS.map((item) => (
-                  <option key={item.label} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
+              <select className="select" value={editColor} onChange={(e) => setEditColor(e.target.value)} style={{ width: '100%', height: '48px' }}>
+                {COLOR_OPTIONS.map((item) => (<option key={item.label} value={item.value}>{item.label}</option>))}
               </select>
             </div>
-            <button className="modal-btn" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsWorktimeEditOpen((prev) => !prev)}>출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}</button>
-            {isWorktimeEditOpen && (
-              <div style={{ marginTop: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, marginBottom: 12 }}>
-                  <input className="input" inputMode="numeric" value={editStartHour} onChange={(e) => setEditStartHour(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="06" />
-                  <div style={{ fontWeight: 700 }}>:</div>
-                  <input className="input" inputMode="numeric" value={editStartMin} onChange={(e) => setEditStartMin(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="33" />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
-                  <input className="input" inputMode="numeric" value={editEndHour} onChange={(e) => setEditEndHour(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="15" />
-                  <div style={{ fontWeight: 700 }}>:</div>
-                  <input className="input" inputMode="numeric" value={editEndMin} onChange={(e) => setEditEndMin(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="54" />
-                </div>
-              </div>
+
+            {!editingCell?.isMonthEdit && (
+              <>
+                <button className="modal-btn" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsWorktimeEditOpen((prev) => !prev)}>출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}</button>
+                {isWorktimeEditOpen && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, marginBottom: 12 }}>
+                      <input className="input" inputMode="numeric" value={editStartHour} onChange={(e) => setEditStartHour(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="06" />
+                      <div style={{ fontWeight: 700 }}>:</div>
+                      <input className="input" inputMode="numeric" value={editStartMin} onChange={(e) => setEditStartMin(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="33" />
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                      <input className="input" inputMode="numeric" value={editEndHour} onChange={(e) => setEditEndHour(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="15" />
+                      <div style={{ fontWeight: 700 }}>:</div>
+                      <input className="input" inputMode="numeric" value={editEndMin} onChange={(e) => setEditEndMin(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="54" />
+                    </div>
+                  </div>
+                )}
+              </>
             )}
+
             <div className="modal-actions">
-              <button className="modal-btn" onClick={closeEditDialog}>아니요</button>
-              <button className="modal-btn primary" onClick={() => commitEdit(editColor, editAlias, editPhone)}>변경</button>
+              <button className="modal-btn" onClick={closeEditDialog}>취소</button>
+              <button className="modal-btn primary" onClick={() => commitEdit(editColor, editAlias, editPhone)}>적용</button>
             </div>
           </div>
         </div>
