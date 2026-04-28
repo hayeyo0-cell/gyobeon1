@@ -146,16 +146,14 @@ function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
   const isNightStart = isNightStartCode(teamKey, code);
   
-  // 물결(~)이든 야간출근(d)이든 [어제출근-오늘퇴근] 요일 조합 판단
   if (isTilde || isNightStart) {
     const startDate = isTilde ? addDays(dateStr, -1) : dateStr;
     const endDate = addDays(startDate, 1);
     
-    const curType = guessDayType(startDate); // 'nor', 'sat', 'hol'
+    const curType = guessDayType(startDate); 
     const nxtType = guessDayType(endDate);
     
     if (curType === nxtType) return curType;
-    // nor_hol, hol_sat 등 기관사님이 말씀하신 폴더명으로 직결
     return `${curType}_${nxtType}`; 
   }
   
@@ -164,7 +162,7 @@ function getPathFolder(teamKey, dateStr, code) {
 
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
-  const folder = getPathFolder(team.key, dateStr, code);
+  const folder = getPathFolder(team.key, dateStr, code).toLowerCase(); // 폴더명을 소문자로 통일해서 찾음
   const raw = normalizeCodeKey(code).replace('~', 'd');
   const strippedD = raw.replace(/d$/, ""); 
   const candidates = [raw, strippedD, `제${strippedD}`, `${raw}.png`, `${raw}.jpg`, `${raw}.jpeg`, `${strippedD}.png`, `${strippedD}.jpg`, `${strippedD}.jpeg` ];
@@ -196,7 +194,10 @@ function cloneTeamData(data) {
 function parseZipToData(parsedFiles) {
   const result = {}; TEAM_ORDER.forEach((teamKey) => { result[teamKey] = createTeamBucket(teamKey); });
   Object.entries(parsedFiles).forEach(([path, content]) => {
-    const clean = path.replace(/^\/+/, ""); const parts = clean.split("/"); const teamKey = parts.find((p) => TEAM_ORDER.includes(p)); if (!teamKey) return;
+    const clean = path.replace(/^\/+/, ""); 
+    const parts = clean.split("/"); 
+    const teamKey = parts.find((p) => TEAM_ORDER.includes(p.toLowerCase())); // 대소문자 방어
+    if (!teamKey) return;
     const team = result[teamKey]; const fileName = parts[parts.length - 1];
     if (fileName === "name.txt") team.names = parseLines(content); if (fileName === "gyobun.txt") team.gyobun = parseLines(content); if (fileName === "info.txt") team.info = parseInfo(content); if (fileName === "dialist.txt") team.diaOrder = parseLines(content);
   });
@@ -209,11 +210,15 @@ function parseZipToData(parsedFiles) {
     if (!team.info.baseCode && team.people[0]?.baseCode) team.info.baseCode = team.people[0].baseCode;
   });
   Object.entries(parsedFiles).forEach(([path, content]) => {
-    const clean = path.replace(/^\/+/, ""); const parts = clean.split("/"); const teamKey = parts.find((p) => TEAM_ORDER.includes(p)); if (!teamKey) return;
-    const team = result[teamKey]; const fileName = parts[parts.length - 1]; const parent = parts[parts.length - 2]; const gyobunOrder = team.gyobun.length ? team.gyobun : DEFAULT_GYOBUN;
+    const clean = path.replace(/^\/+/, ""); const parts = clean.split("/"); 
+    const lowerParts = parts.map(p => p.toLowerCase()); // 모든 경로 소문자화 비교용
+    const teamKey = parts.find((p) => TEAM_ORDER.includes(p.toLowerCase())); 
+    if (!teamKey) return;
+    const team = result[teamKey]; const fileName = parts[parts.length - 1]; const parent = parts[parts.length - 2]?.toLowerCase(); // 부모 폴더명 소문자 통일
+    const gyobunOrder = team.gyobun.length ? team.gyobun : DEFAULT_GYOBUN;
     if (fileName === "nor_worktime.txt") team.worktimes.nor = parseWorktime(content, gyobunOrder); if (fileName === "sat_worktime.txt") team.worktimes.sat = parseWorktime(content, gyobunOrder); if (fileName === "hol_worktime.txt") team.worktimes.hol = parseWorktime(content, gyobunOrder);
 
-    if (parts.includes("train_data") && fileName.endsWith(".txt")) {
+    if (lowerParts.includes("train_data") && fileName.endsWith(".txt")) {
         const type = fileName.replace("_train_data.txt", "").replace(".txt", ""); 
         const lines = parseLines(content);
         const mapping = {}; let lastCode = "";
@@ -226,7 +231,17 @@ function parseZipToData(parsedFiles) {
         team.trainData[type] = mapping;
     }
 
-    if (parts.includes("path") && /\.(png|jpg|jpeg)$/i.test(fileName)) { const kind = parent; if (team.paths[kind]) { const originalName = fileName; const lowerName = fileName.toLowerCase(); const baseName = lowerName.replace(/\.(png|jpg|jpeg)$/i, ""); team.paths[kind][originalName] = content; team.paths[kind][lowerName] = content; team.paths[kind][baseName] = content; } }
+    if (lowerParts.includes("path") && /\.(png|jpg|jpeg)$/i.test(fileName)) { 
+        const kind = parent; 
+        if (team.paths[kind]) { 
+            const originalName = fileName; 
+            const lowerName = fileName.toLowerCase(); 
+            const baseName = lowerName.replace(/\.(png|jpg|jpeg)$/i, ""); 
+            team.paths[kind][originalName] = content; 
+            team.paths[kind][lowerName] = content; 
+            team.paths[kind][baseName] = content; 
+        } 
+    }
   });
   return result;
 }
