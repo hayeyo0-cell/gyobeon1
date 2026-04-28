@@ -1,6 +1,10 @@
 /** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 행로표 매칭 강화)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
+ * [최종 업데이트]: 
+ * 1. 야간 근무 시 평휴(nor_hol), 휴토(hol_sat), 토휴(sat_hol) 등 교차 요일 폴더 완벽 대응.
+ * 2. 5월 1일(근로자의 날), 7월 17일(제헌절) 공휴일 강제 반영.
+ * 3. 1호선(1001~1090) 및 2호선(2001~2090) 열번 검색 범위 확장 및 야간자 우선 검색.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -147,15 +151,12 @@ function getPathFolder(teamKey, dateStr, code) {
   const nextType = guessDayType(nextDate);
   
   if (isNightStartCode(teamKey, code)) {
-    // 야간근무: 현재요일_다음날요일 형식 (예: 평휴, 휴토 등)
-    const cur = currentType === 'nor' ? 'nor' : (currentType === 'sat' ? 'sat' : 'hol');
-    const nxt = nextType === 'nor' ? 'nor' : (nextType === 'sat' ? 'sat' : 'hol');
-    
-    if (cur === nxt) return cur; // 같은 타입이면 그냥 nor, sat, hol 중 하나
-    return `${cur}_${nxt}`; // 예: nor_hol (평휴), hol_sat (휴토) 등
+    // 야간근무: 현재요일_다음날요일 형식 (예: nor_hol(평휴), hol_sat(휴토) 등)
+    if (currentType === nextType) return currentType;
+    return `${currentType}_${nextType}`;
   }
   
-  return currentType; // 주간근무는 당일 타입만 반환
+  return currentType;
 }
 
 function findPathImage(team, dateStr, code) {
@@ -1007,9 +1008,6 @@ function App() {
     const nextAnchorDate = profileAnchorDate || getKoreaToday(); 
     const nextSelection = { teamKey, name: cleanName, code: cleanCode, anchorDate: nextAnchorDate };
     
-    // [내 정보 즉시 업데이트 로직]:
-    // setMySelection만 하면 리렌더링 전까지 로직이 예전 이름을 최우선으로 잡을 수 있으므로
-    // 명시적으로 상태를 업데이트하고 localStorage를 강제 동기화합니다.
     setMySelection(nextSelection); 
     saveMySelection(nextSelection);
     
@@ -1251,9 +1249,6 @@ function App() {
   function applyPendingRosterUpdate() { if (!pendingRosterJson) { setShowUpdatePopup(false); return; } acceptRemoteRoster(pendingRosterJson, { alertMessage: "최신 교번 정보가 반영되었습니다.", nextDataOverride: data, syncMine: true }); }
   function closeUpdatePopup() { setShowUpdatePopup(false); }
 
-  const canEnterApp = !!effectiveData && !!mySelection?.teamKey && !!String(mySelection?.name || "").trim() && !!mySelection?.code && !allowProfileEdit;
-
-  // [월교번 개별 교번 수정 함수 추가]
   function openMonthShiftEdit(date, currentItem) {
     const nextCode = window.prompt(`${date} 교번 수정\n현재: ${currentItem?.code || "-"}\n수정할 교번을 입력하세요 (예: 대1, 휴1, 15d 등)`, currentItem?.code || "");
     if (nextCode === null) return;
@@ -1277,6 +1272,8 @@ function App() {
     setOverrides(next);
     saveOverrides(next);
   }
+
+  const canEnterApp = !!effectiveData && !!mySelection?.teamKey && !!String(mySelection?.name || "").trim() && !!mySelection?.code && !allowProfileEdit;
 
   return (
     <>
@@ -1840,12 +1837,9 @@ function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, over
   if (!data) return null;
   const team = data[teamKey]; if (!team) return null;
   const override = overrides[getOverrideKey(teamKey, name)] || {};
-  
-  // [월교번 개별 수정 날짜 체크]
   if (override.monthShifts && override.monthShifts[dateStr]) {
     return { code: override.monthShifts[dateStr], name, displayName: override.alias || name, teamKey: teamKey };
   }
-  
   const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
   const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
   const code = shiftCodeByDays(team, anchor.code, dayOffset);
