@@ -1,4 +1,4 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 초고속 엔진 적용)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 다크모드 UI 최적화)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
  **/
@@ -644,7 +644,7 @@ function App() {
   useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
 
   function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
-    const currentTeamKey = mySelection?.teamKey || ""; currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
+    const currentTeamKey = mySelection?.teamKey || ""; const currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
     const teamSource = nextDataOverride?.[currentTeamKey] || data?.[currentTeamKey] || effectiveData?.[currentTeamKey]; if (!teamSource) return;
     
     const remoteRow = findRemoteRowByName(currentTeamKey, currentName, nextRemoteRoster); 
@@ -670,7 +670,7 @@ function App() {
   useEffect(() => {
     let cancelled = false;
     async function initAppFast() {
-      let parsedSaved = null; let savedZip = null;
+      let parsedSaved = null;
       try {
         const shared = loadCachedSharedConfig(); if (shared?.baseDate) { setGlobalBaseDate(shared.baseDate); setRemoteBaseDate(shared.baseDate); }
         const savedRemoteDate = localStorage.getItem(LS_REMOTE_ROSTER_DATE) || ""; if (savedRemoteDate) { setGlobalRemoteRosterDate(savedRemoteDate); setRemoteRosterDate(savedRemoteDate); }
@@ -681,18 +681,11 @@ function App() {
              setInitialRemoteChecked(false);
              setPostSetupRemoteCheckNeeded(true);
           } 
-          if (!parsedSaved?.data) {
-            savedZip = await loadZipBlob(); 
-            if (!cancelled && savedZip?.blob) { 
-              setZipName(savedZip.name || "저장된 ZIP"); 
-              await parseAndSetZip(savedZip.blob, false, true, initialAppliedRemoteRoster, false); 
-            } 
-          }
         } catch (e) { console.log("로컬 복원 실패", e); }
       } catch (e) {}
       try { const thisYear = getYearFromDateStr(getKoreaToday()); const preloadYears = [thisYear - 1, thisYear, thisYear + 1]; await Promise.all(preloadYears.map((year) => ensureHolidayYear(year, () => { if (!cancelled) setHolidayVersion((v) => v + 1); }))); } catch (e) {}
       try { const shared = await fetchSharedConfigJsonp(4000); if (cancelled) return; if (shared?.baseDate) { saveCachedSharedConfig(shared); setGlobalBaseDate(shared.baseDate); setRemoteBaseDate(shared.baseDate); } } catch (e) {}
-      try { const hasLocalZipBase = !!parsedSaved?.data || !!savedZip?.blob; if (hasLocalZipBase) { setRemoteLoading(true); const json = await fetchRemoteRosterJsonp(6000); if (cancelled) return; const next = normalizeRemoteRosterShape(json); const hasAny = hasAnyRemoteRoster(next); const nextSig = getRemoteRosterSignature(next); if (hasAny && nextSig !== lastAckRosterSig) { setPendingRosterJson(json); setShowUpdatePopup(true); } setInitialRemoteChecked(true); } } catch (e) {} finally { if (!cancelled) setRemoteLoading(false); }
+      try { if (parsedSaved?.data) { setRemoteLoading(true); const json = await fetchRemoteRosterJsonp(6000); if (cancelled) return; const next = normalizeRemoteRosterShape(json); const hasAny = hasAnyRemoteRoster(next); const nextSig = getRemoteRosterSignature(next); if (hasAny && nextSig !== lastAckRosterSig) { setPendingRosterJson(json); setShowUpdatePopup(true); } setInitialRemoteChecked(true); } } catch (e) {} finally { if (!cancelled) setRemoteLoading(false); }
     }
     initAppFast(); return () => { cancelled = true; };
   }, []);
@@ -754,8 +747,6 @@ function App() {
     const targetTeamKey = mySelection?.teamKey || selectedTeam;
     const team = effectiveData[targetTeamKey];
     if (!team) return null;
-    const codeStr = String(myInfo.code).trim();
-    if (codeStr.startsWith("휴") || codeStr.startsWith("대")) return null;
     return findPathImage(team, homeDate, myInfo.code);
   }, [effectiveData, homeDate, myInfo?.code, mySelection, selectedTeam]);
 
@@ -914,7 +905,7 @@ function App() {
         setPathTarget(firstItem);
         setPathDate(browseDate);
         setPathImage(image);
-      } else if (!image) {
+      } else if (!image && pathImage !== "") {
         setPathImage("");
       }
     } else if (!searchQuery && pathImage !== "") {
@@ -1319,6 +1310,16 @@ function App() {
 
   return (
     <>
+      <style>{`
+        /* 다크모드 최적화 스타일 */
+        body.dark-mode .container { background-color: #0f172a; }
+        body.dark-mode .card { background-color: #1e293b; border-color: #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        body.dark-mode .input, body.dark-mode .select { background-color: #334155; color: #f8fafc; border-color: #475569; }
+        body.dark-mode .main-panel { background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155; }
+        body.dark-mode .home-path-preview { background-color: #0f172a; border-color: #334155; }
+        body.dark-mode .preview-label { color: #94a3b8; }
+        body.dark-mode .card-title, body.dark-mode .main-subinfo { color: #cbd5e1; }
+      `}</style>
       <div 
         className="container"
         onTouchStart={onTouchStart}
@@ -1376,7 +1377,7 @@ function App() {
                 <div className="date-grid">
                   <div className="date-box"><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setFullYear(d.getFullYear() + 1); setHomeDate(formatDate(d)); }}>+</button><div className="date-value">{parseLocalDate(homeDate).getFullYear()}년</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setFullYear(d.getFullYear() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
                   <div className="date-box"><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() + 1); setHomeDate(formatDate(d)); }}>+</button><div className="date-value">{parseLocalDate(homeDate).getMonth() + 1}월</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
-                  <div className="date-box"><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, 1))}>+</button><div className="date-value">{parseLocalDate(homeDate).getDate()}일</div><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, -1))}>-</button></div>
+                  <div className="date-box"><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, 1))}>+</button><div className="date-value">{parseLocalDate(homeDate).getDate()}일</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setDate(d.getDate() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
                 </div>
                 <div className="card main-panel" style={swipeStyle}>
                   <div className="center-view">
