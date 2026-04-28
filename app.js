@@ -558,7 +558,7 @@ function App() {
 
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
-  const isSwipingRef = useRef(false);
+  isSwipingRef = useRef(false);
 
   const onTouchStart = (e) => {
     const blockList = '.settings-btn, .quick-btn, .install-btn, select, input, .bottom-tabs, .all-team-tabs, .group-top-bar-v4';
@@ -937,7 +937,10 @@ function App() {
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthDate), [monthDate]);
   const monthHeaderDate = parseLocalDate(monthDate);
-  const weekDates = useMemo(() => getWeekDates(monthDate), [monthDate]);
+
+  /* 🚀 [교정] weekDates 계산 기준을 groupBaseDate로 변경하여 스와이프 연동 해결 */
+  const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
+
   const groupMembers = groups[currentGroup] || [];
   const groupMonthOptions = useMemo(() => getMonthOptions(todayStr, 12), [todayStr]);
 
