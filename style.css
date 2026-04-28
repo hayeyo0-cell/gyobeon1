@@ -50,6 +50,7 @@ button:active { transform: scale(0.97); }
 .main-panel { min-height: 210px; background-color: rgba(250, 250, 248, 0.92); border-radius: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: 0; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72); border: 1px solid rgba(255, 255, 255, 0.8); transition: background-color 0.2s ease, border-color 0.2s ease; }
 .center-view { text-align: center; padding: 0; width: 100%; }
 .main-code { font-size: clamp(40px, 9vw, 56px); line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
+.main-code[style*="color: inherit"] { color: #111827 !important; }
 .main-time { margin-top: 14px; font-size: clamp(24px, 6vw, 36px); line-height: 1.15; font-weight: 700; }
 .main-subinfo { margin-top: 12px; font-size: 15px; font-weight: 700; color: #64748b; letter-spacing: -0.01em; transition: color 0.2s ease; }
 
@@ -691,10 +692,20 @@ body.dark-mode .viewer-title {
   color: #f8fafc !important;
 }
 body.dark-mode .fullscreen-image {
+  background: #ffffff !important; /* 👈 이미지 본체는 흰색 유지 (글씨 보임 처리) */
+  filter: none !important;
   border: 1px solid #475569 !important;
 }
 body.dark-mode .empty-box {
   background: #1e293b !important;
   border-color: #334155 !important;
   color: #94a3b8 !important;
+}
+
+/* 🚀 월교번 수정창 - 사진 3번 심플 버전 디자인 */
+body.dark-mode .modal.month-edit-modal {
+  background: #1e293b !important;
+  border-radius: 20px !important;
+  padding: 24px !important;
+  max-width: 340px !important;
 }
