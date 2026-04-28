@@ -1,4 +1,4 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 행로표 잔상 제거 및 초기화 강화)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 초고속 엔진 적용)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
  **/
@@ -164,7 +164,6 @@ function getPathFolder(teamKey, dateStr, code) {
 function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
   const s = normalizeCodeKey(code);
-  // 대기(대) 또는 휴일(휴) 교번은 행로표가 없으므로 즉시 차단
   if (s.startsWith("대") || s.startsWith("휴")) return null;
 
   const folder = getPathFolder(team.key, dateStr, code).toLowerCase(); 
@@ -645,7 +644,7 @@ function App() {
   useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
 
   function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
-    const currentTeamKey = mySelection?.teamKey || ""; const currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
+    const currentTeamKey = mySelection?.teamKey || ""; currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
     const teamSource = nextDataOverride?.[currentTeamKey] || data?.[currentTeamKey] || effectiveData?.[currentTeamKey]; if (!teamSource) return;
     
     const remoteRow = findRemoteRowByName(currentTeamKey, currentName, nextRemoteRoster); 
@@ -677,7 +676,11 @@ function App() {
         const savedRemoteDate = localStorage.getItem(LS_REMOTE_ROSTER_DATE) || ""; if (savedRemoteDate) { setGlobalRemoteRosterDate(savedRemoteDate); setRemoteRosterDate(savedRemoteDate); }
         try { 
           parsedSaved = await loadParsedData(); 
-          if (!cancelled && parsedSaved?.data) setData(parsedSaved.data); 
+          if (!cancelled && parsedSaved?.data) {
+             setData(parsedSaved.data);
+             setInitialRemoteChecked(false);
+             setPostSetupRemoteCheckNeeded(true);
+          } 
           if (!parsedSaved?.data) {
             savedZip = await loadZipBlob(); 
             if (!cancelled && savedZip?.blob) { 
@@ -912,7 +915,6 @@ function App() {
         setPathDate(browseDate);
         setPathImage(image);
       } else if (!image) {
-        // 이미지가 없거나(대기/휴일) 결과가 비었을 때 미리보기 초기화
         setPathImage("");
       }
     } else if (!searchQuery && pathImage !== "") {
