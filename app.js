@@ -1,4 +1,4 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 다크모드 홈 화면 디자인 수정)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 초고속 엔진 적용)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
  **/
@@ -914,7 +914,7 @@ function App() {
         setPathTarget(firstItem);
         setPathDate(browseDate);
         setPathImage(image);
-      } else if (!image && pathImage !== "") {
+      } else if (!image) {
         setPathImage("");
       }
     } else if (!searchQuery && pathImage !== "") {
@@ -1319,20 +1319,6 @@ function App() {
 
   return (
     <>
-      <style>{`
-        /* 다크모드 카드 배경색 일체화 및 홈 화면 미리보기 최적화 */
-        body.dark-mode .container { background-color: #0f172a; }
-        body.dark-mode .card { background-color: #1e293b; border-color: #334155; }
-        body.dark-mode .home-path-preview { 
-          background-color: transparent !important; 
-          border: none !important;
-          box-shadow: none !important;
-          padding: 0 !important;
-        }
-        body.dark-mode .preview-label { color: #94a3b8; }
-        body.dark-mode .main-panel { background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155; }
-        body.dark-mode .input, body.dark-mode .select { background-color: #334155; color: #f8fafc; border-color: #475569; }
-      `}</style>
       <div 
         className="container"
         onTouchStart={onTouchStart}
@@ -1390,7 +1376,7 @@ function App() {
                 <div className="date-grid">
                   <div className="date-box"><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setFullYear(d.getFullYear() + 1); setHomeDate(formatDate(d)); }}>+</button><div className="date-value">{parseLocalDate(homeDate).getFullYear()}년</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setFullYear(d.getFullYear() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
                   <div className="date-box"><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() + 1); setHomeDate(formatDate(d)); }}>+</button><div className="date-value">{parseLocalDate(homeDate).getMonth() + 1}월</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
-                  <div className="date-box"><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, 1))}>+</button><div className="date-value">{parseLocalDate(homeDate).getDate()}일</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setDate(d.getDate() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
+                  <div className="date-box"><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, 1))}>+</button><div className="date-value">{parseLocalDate(homeDate).getDate()}일</div><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, -1))}>-</button></div>
                 </div>
                 <div className="card main-panel" style={swipeStyle}>
                   <div className="center-view">
