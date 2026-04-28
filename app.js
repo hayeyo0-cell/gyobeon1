@@ -1,4 +1,4 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 행로표 매칭 강화)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 행로표 폴더 직결판)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
  **/
@@ -92,7 +92,11 @@ async function ensureHolidayYear(year, onApplied) {
   } finally { HOLIDAY_FETCHING_YEARS.delete(y); }
 }
 
-function guessDayType(dateStr) { if (isSunday(dateStr) || isHolidayDate(dateStr)) return "hol"; if (isSaturday(dateStr)) return "sat"; return "nor"; }
+function guessDayType(dateStr) { 
+  if (isSunday(dateStr) || isHolidayDate(dateStr)) return "hol"; 
+  if (isSaturday(dateStr)) return "sat"; 
+  return "nor"; 
+}
 function getDateToneClass(dateStr) { if (isSunday(dateStr) || isHolidayDate(dateStr)) return "tone-sun"; if (isSaturday(dateStr)) return "tone-sat"; return "tone-normal"; }
 function getDateBasedColor(dateStr) { if (isSunday(dateStr) || isHolidayDate(dateStr)) return "#ef4444"; if (isSaturday(dateStr)) return "#2563eb"; return "inherit"; }
 
@@ -142,7 +146,7 @@ function getPathFolder(teamKey, dateStr, code) {
   const isTilde = String(code || "").includes("~");
   const isNightStart = isNightStartCode(teamKey, code);
   
-  // 물결(~)이든 야간출근(d)이든 핵심은 [어제출근-오늘퇴근] 성격의 조합임
+  // 물결(~)이든 야간출근(d)이든 [어제출근-오늘퇴근] 요일 조합 판단
   if (isTilde || isNightStart) {
     const startDate = isTilde ? addDays(dateStr, -1) : dateStr;
     const endDate = addDays(startDate, 1);
@@ -151,7 +155,8 @@ function getPathFolder(teamKey, dateStr, code) {
     const nxtType = guessDayType(endDate);
     
     if (curType === nxtType) return curType;
-    return `${curType}_${nxtType}`; // 예: 평일->휴일이면 nor_hol, 휴일->토욜이면 hol_sat
+    // nor_hol, hol_sat 등 기관사님이 말씀하신 폴더명으로 직결
+    return `${curType}_${nxtType}`; 
   }
   
   return guessDayType(dateStr);
@@ -873,7 +878,7 @@ function App() {
       const image = findPathImage(targetTeam, browseDate, firstItem.code);
       if (image) {
         setPathTeamKey(firstItem.teamKey);
-        setPathTarget(firstItem);
+        setPathTarget(item);
         setPathDate(browseDate);
         setPathImage(image);
       } else {
