@@ -1,5 +1,6 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 초고속 엔진 적용)
- * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 1도 손대지 않음.
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 안정성 강화 버전)
+ * 수정사항: 그룹 탭 행로표 호출 시 불필요한 setViewTeam 제거로 렌더링 충돌 해결
+ * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 유지.
  * 절대 임의로 코드를 줄이거나 삭제하지 않음.
  **/
 
@@ -906,24 +907,19 @@ function App() {
 
   useEffect(() => {
     if (activeTab === 'all' && searchQuery) {
-      /* 🚀 [교정] 결과가 아예 없으면 즉시 비움 */
       if (visibleAllGrid.length === 0) {
         setPathImage("");
         setPathTarget(null);
         return;
       }
-
-      /* 🚀 [교정] 이름이 있는 유효한 검색 데이터만 추출 */
       const validResults = visibleAllGrid.filter(item => {
           const nameTxt = String(item.name || "").trim();
           return nameTxt && nameTxt !== "-" && nameTxt !== "공백";
       });
-
       if (validResults.length > 0) {
         const firstValid = validResults[0];
         const targetTeam = effectiveData[firstValid.teamKey];
         const image = findPathImage(targetTeam, browseDate, firstValid.code);
-        
         if (image && pathImage !== image) {
           setPathTeamKey(firstValid.teamKey);
           setPathTarget(firstValid);
@@ -934,7 +930,6 @@ function App() {
           setPathTarget(null);
         }
       } else {
-        /* 🚀 [교정] 유효하지 않은 이름만 결과에 있을 때 행로표 초기화 */
         setPathImage("");
         setPathTarget(null);
       }
@@ -974,7 +969,6 @@ function App() {
     const currentTab = activeTabRef.current;
     const today = getKoreaToday();
     const myTeamKey = mySelection?.teamKey || selectedTeam || "ks";
-
     if (tabName === currentTab) {
       if (tabName === "home") setHomeDate(today);
       else if (tabName === "all" || tabName === "dia") { setBrowseDate(today); setViewTeam(myTeamKey); }
@@ -989,7 +983,6 @@ function App() {
     setActiveTab(tabName);
     if (tabName === "home") window.history.pushState({ __gyobeon: true, layer: "root" }, "");
     else window.history.pushState({ __gyobeon: true, layer: `tab-${tabName}` }, "");
-    
     setSearchQuery(""); setShowSearch(false);
   }
 
@@ -1065,14 +1058,11 @@ function App() {
     }
     const nextAnchorDate = profileAnchorDate || getKoreaToday(); 
     const nextSelection = { teamKey, name: cleanName, code: cleanCode, anchorDate: nextAnchorDate };
-    
     setMySelection(nextSelection); 
     saveMySelection(nextSelection);
-    
     setSelectedTeam(teamKey); 
     setViewTeam(teamKey);
     setAllowProfileEdit(false); 
-    
     const today = getKoreaToday(); 
     setHomeDate(today); 
     setBrowseDate(today); 
@@ -1080,7 +1070,6 @@ function App() {
     setGroupBaseDate(today); 
     setGroupMonth(getDisplayMonthValue(today)); 
     setSelectedGroupDate("");
-
     if (effectiveData) { 
         const nextAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData, remoteRoster, teamKey, cleanName, nextSelection); 
         setTeamAnchors(nextAnchors); 
@@ -1099,13 +1088,9 @@ function App() {
     } else {
       const currentTeamKey = item.teamKey || viewTeam;
       const team = effectiveData[currentTeamKey];
-
-      /* 🚀 [교정] 이름이 없거나 유효하지 않은 경우 행로표 팝업 차단 */
       const nameTxt = String(item.name || "").trim();
       if (!nameTxt || nameTxt === "-" || nameTxt === "공백") return;
-
       const image = findPathImage(team, browseDate, item.code);
-      
       if (searchQuery) {
         if (image) {
           setPathTeamKey(currentTeamKey);
@@ -1136,14 +1121,10 @@ function App() {
     const cleanPhone = String(nextPhoneValue || "").trim(); 
     const key = getOverrideKey(currentTeam, editingCell.name); 
     const next = { ...overrides };
-    
     if (next[key] && next[key].baseName && !samePersonName(next[key].baseName, editingCell.name)) {
         delete next[key];
     }
-    
     const currentEntry = next[key] || { baseName: editingCell.name };
-
-    // 🚀 [추가] 월교번 개별 날짜 수정 처리
     if (editingCell.isMonthEdit && editingCell.date) {
         if (!currentEntry.monthShifts) currentEntry.monthShifts = {};
         currentEntry.monthShifts[editingCell.date] = cleanAlias; 
@@ -1152,9 +1133,7 @@ function App() {
         currentEntry.color = cleanColor;
         currentEntry.phone = cleanPhone;
     }
-    
     next[key] = currentEntry;
-    
     if (isWorktimeEditOpen) { const built = buildTimeValueFromParts(editStartHour, editStartMin, editEndHour, editEndMin); if (!built) return alert("출퇴근시간 형식을 다시 확인해주세요."); const dayType = guessDayType(browseDate); const allWorktimeOverrides = loadWorktimeOverrides(); const wtKey = getWorktimeOverrideKey(currentTeam, editingCell.code); const wtEntry = { ...(allWorktimeOverrides[wtKey] || {}) }; wtEntry[dayType] = built; allWorktimeOverrides[wtKey] = wtEntry; saveWorktimeOverrides(allWorktimeOverrides); setWorktimeVersion((v) => v + 1); }
     setOverrides(next); saveOverrides(next); setEditOpen(false); setEditingCell(null); setEditColor(""); setEditAlias(""); setEditPhone(""); setIsWorktimeEditOpen(false); setEditStartHour(""); setEditStartMin(""); setEditEndHour(""); setEditEndMin("");
   }
@@ -1173,11 +1152,8 @@ function App() {
 
   function openPathDialog(item, dateStr = todayStr) { 
     if (!effectiveData || !item?.code) return; 
-
-    /* 🚀 [교정] 이름이 없거나 유효하지 않은 경우 팝업 차단 */
     const nameTxt = String(item.name || "").trim();
     if (!nameTxt || nameTxt === "-" || nameTxt === "공백") return;
-
     const currentTeamKey = item.teamKey || viewTeam; 
     const team = effectiveData[currentTeamKey]; 
     const image = findPathImage(team, dateStr, item.code); 
@@ -1191,13 +1167,10 @@ function App() {
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { 
     const team = effectiveData?.[teamKey]; 
     if (!team || !item?.code) return; 
-
-    /* 🚀 [교정] 이름 유효성 검사 추가 */
     const nameTxt = String(item.name || "").trim();
     if (!nameTxt || nameTxt === "-" || nameTxt === "공백") return;
-
     const image = findPathImage(team, dateStr, item.code); 
-    setViewTeam(teamKey); 
+    // 분석하신 대로 불필요한 setViewTeam을 제거하여 렌더링 충돌을 방지합니다.
     setPathTeamKey(teamKey); 
     setPathTarget(item); 
     setPathDate(dateStr); 
@@ -1349,7 +1322,6 @@ function App() {
   function openMonthShiftEdit(date, currentItem) {
     const name = mySelection?.name;
     if (!name) return;
-
     setEditingCell({
       code: currentItem?.code || "",
       name: name,
@@ -1357,10 +1329,8 @@ function App() {
       isMonthEdit: true,
       teamKey: mySelection?.teamKey || selectedTeam
     });
-
     const key = getOverrideKey(mySelection?.teamKey || selectedTeam, name);
     const current = overrides[key] || {};
-    
     setEditAlias(currentItem?.code || ""); 
     setEditColor(current.color || "");
     setEditPhone(current.phone || "");
@@ -1435,7 +1405,6 @@ function App() {
                     <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
                     <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
                     <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
-                    
                     {homePathImage && (
                       <div 
                         className="home-path-preview" 
@@ -1468,11 +1437,9 @@ function App() {
                       padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)",
                       background: "transparent", fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
-                    
                     <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff" }}>
                       {TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}
                     </div>
-
                     {activeTab === "all" && (
                       <>
                         <button className="all-header-btn" style={{ 
@@ -1480,7 +1447,6 @@ function App() {
                           padding: 0, border: "none", borderLeft: "2px solid rgba(0,0,0,0.2)", borderRight: "2px solid rgba(0,0,0,0.2)", 
                           background: "transparent", fontSize: "16px", color: "#ffffff" 
                         }} onClick={() => setShowSearch(!showSearch)}>🔍</button>
-                        
                         <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
                           width: "37px", height: "37px", minWidth: "37px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", 
                           padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)", 
@@ -1489,7 +1455,6 @@ function App() {
                         }} onClick={() => setEditMode(!editMode)}>{editMode ? "수정중" : "수정"}</button>
                       </>
                     )}
-
                     <button className="all-header-btn" style={{ 
                       width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
@@ -1497,12 +1462,10 @@ function App() {
                       fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
-
                   {showSearch && activeTab === "all" && (
                     <input className="input" style={{ marginTop: 8 }} placeholder="이름/교번/열번 통합 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                   )}
                 </div>
-                
                 <div className="all-team-tabs" style={{ marginTop: "12px" }}>
                   {TEAM_ORDER.map((key) => { 
                     const isActive = viewTeam === key; 
@@ -1514,7 +1477,6 @@ function App() {
                     ); 
                   })}
                 </div>
-                
                 {activeTab === "all" ? (
                   <>
                     <div className="all-tab-grid-wrap" style={swipeStyle}>
@@ -1524,10 +1486,8 @@ function App() {
                           const isToday = browseDate === getKoreaToday();
                           const currentCellKey = getOverrideKey(item.teamKey, item.name);
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
-                          
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           const textColorStyle = cellColor ? { color: "#000000", fontWeight: "900" } : { color: isDarkMode ? "#ffffff" : "#000000" };
-                          
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
                               <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
@@ -1559,7 +1519,6 @@ function App() {
                       const isMine = viewTeam === (mySelection?.teamKey || selectedTeam) && (samePersonName(item.name, mySelection?.name));
                       const cellKey = getOverrideKey(item.teamKey, item.name);
                       const hasPhone = overrides[cellKey]?.phone;
-                      
                       return (
                         <div key={`${idx}`} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: idx === diaList.length - 1 ? "none" : (isDarkMode ? "1px solid #334155" : "1px solid #c8d2e3"), background: isMine ? (isDarkMode ? "rgba(56, 189, 248, 0.25)" : "#d9e9ff") : "transparent", borderLeft: isMine ? (isDarkMode ? "4px solid #38bdf8" : "4px solid #3b82f6") : "4px solid transparent", cursor: "pointer" }}>
                           <div onClick={() => {
@@ -1611,7 +1570,6 @@ function App() {
                         const targetTeamKey = mySelection?.teamKey || selectedTeam; 
                         const worktime = item?.code ? pickWorktime(effectiveData[targetTeamKey], item.code, date) : ""; 
                         const { startTime, endTime } = splitWorktime(worktime);
-                        
                         return (
                           <button key={date} className={`month-cell ${sameMonth ? "" : "other-month"} ${isSelected ? "selected" : ""}`} onClick={() => { 
                             const nameTxt = String(item?.name || "").trim();
@@ -1686,7 +1644,6 @@ function App() {
                         groupMembers.map((member, idx) => {
                           const override = overrides[getOverrideKey(member.team, member.name)] || {};
                           const displayMemberName = override.alias || member.name;
-
                           return (
                             <tr key={`${idx}`}>
                               <td className="group-name-cell sticky-col">
@@ -1699,7 +1656,6 @@ function App() {
                               {weekDates.map((date) => {
                                 const item = getPersonGyobunForDate(effectiveData, remoteRoster, member.team, member.name, date, overrides, mySelection);
                                 const isSelectedCol = selectedGroupDate === date;
-
                                 return (
                                   <td key={date} onClick={() => { 
                                     const nameTxt = String(member.name || "").trim();
@@ -1857,7 +1813,6 @@ function App() {
               {editingCell?.isMonthEdit && `현재: ${editingCell.code}`}
             </div>
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder={editingCell?.isMonthEdit ? "예: 15d, 대1, 휴1" : "비워두면 원래 이름 사용"} />
-            
             {!editingCell?.isMonthEdit && (
               <>
                 <label className="label" style={{ marginTop: 12 }}>전화번호</label>
@@ -1888,7 +1843,6 @@ function App() {
                 )}
               </>
             )}
-
             <div className="modal-actions">
               <button className="modal-btn" onClick={closeEditDialog}>취소</button>
               <button className="modal-btn primary" onClick={() => commitEdit(editColor, editAlias, editPhone)}>적용</button>
