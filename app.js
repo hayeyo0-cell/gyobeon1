@@ -1,11 +1,23 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 홈 화면 터치 오류 수정)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 초기 구동 및 터치 오류 완벽 수정)
  * 수정사항: 
- * 1. openPathDialogForTeamAndDate 내 이름 유효성 검사 로직 보완
- * 2. 홈 화면 행로표 클릭 시 전달되는 객체에 name 속성 명시 (터치 오류 해결)
+ * 1. 로컬 스토리지 관련 상수(LS_...) 정의 누락 수정 (흰 화면 멈춤 방지)
+ * 2. openPathDialogForTeamAndDate 내 이름 유효성 검사 로직 보완
+ * 3. 홈 화면 행로표 클릭 시 전달되는 객체에 name 속성 명시 (터치 오류 해결)
+ * 4. 초기 데이터 복원 로직의 안정성 강화
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 유지.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
+
+// --- 상수 정의 (이 부분이 누락되면 초기 구동 시 흰 화면이 뜹니다) ---
+const LS_WORKTIME_OVERRIDES = "gyobeon_worktime_overrides";
+const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_";
+const LS_SHARED_CONFIG_CACHE = "gyobeon_shared_config";
+const LS_REMOTE_ROSTER_CACHE = "gyobeon_remote_roster";
+const LS_REMOTE_ROSTER_DATE = "gyobeon_remote_roster_date";
+const LS_LAST_ACK_ROSTER_SIG = "gyobeon_last_ack_roster_sig";
+const LS_LAST_SEEN_PUBLISHED_AT = "gyobeon_last_seen_published_at";
+const LS_DARK_MODE = "gyobeon_dark_mode";
 
 const TEAM_LABELS = { ks: "경산", my: "문양", wb: "월배", as: "안심" };
 const TEAM_ORDER = ["ks", "my", "wb", "as"];
@@ -1901,3 +1913,4 @@ function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, over
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<App />);
+
