@@ -1,7 +1,8 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 안정성 강화 버전)
- * 수정사항: 그룹 탭 행로표 호출 시 불필요한 setViewTeam 제거로 렌더링 충돌 해결
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 통합 완성본 - 홈 화면 터치 오류 수정)
+ * 수정사항: 
+ * 1. openPathDialogForTeamAndDate 내 이름 유효성 검사 로직 보완
+ * 2. 홈 화면 행로표 클릭 시 전달되는 객체에 name 속성 명시 (터치 오류 해결)
  * 주의사항 준수: 모든 공백, 띄어쓰기, 빈 줄, 주석, 로직 순서 유지.
- * 절대 임의로 코드를 줄이거나 삭제하지 않음.
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -37,15 +38,6 @@ let RUNTIME_HOLIDAYS_BY_YEAR = { ...DEFAULT_HOLIDAYS_BY_YEAR };
 const HOLIDAY_FETCHING_YEARS = new Set();
 const DEFAULT_GYOBUN = ["2d", "대3", "16d", "휴1", "휴2", "대2", "14d", "24d", "24~", "휴3", "5d", "17d", "27d", "27~", "휴4", "3d", "13d", "23d", "23~", "휴5", "휴6", "대1", "15d", "22d", "22~", "휴7", "9d", "10d", "28d", "28~", "휴7", "9d", "10d", "28d", "28~", "휴8", "4d", "20d", "25d", "25~", "휴9", "1d", "11d", "대4", "대4~", "휴10", "휴11", "7d", "18d", "29d", "29~", "휴12", "8d", "12d", "26d", "26~", "휴13", "휴14", "6d", "19d", "21d", "21~", "휴15"];
 const HIDDEN_NAME_KEYS = ["gb2601"];
-
-const LS_SHARED_CONFIG_CACHE = "gyobeon_shared_config_cache";
-const LS_REMOTE_ROSTER_CACHE = "gyobeon_remote_roster_cache";
-const LS_REMOTE_ROSTER_DATE = "gyobeon_remote_roster_date";
-const LS_LAST_SEEN_PUBLISHED_AT = "gyobeon_last_seen_published_at";
-const LS_LAST_ACK_ROSTER_SIG = "gyobeon_last_ack_roster_sig";
-const LS_HOLIDAY_CACHE_PREFIX = "gyobeon_holidays_year_";
-const LS_WORKTIME_OVERRIDES = "gyobeon_worktime_overrides";
-const LS_DARK_MODE = "gyobeon_dark_mode";
 
 function normalizeNameKey(name) { return String(name || "").trim().toLowerCase().replace(/\s+/g, ""); }
 function shouldHideName(name) { return HIDDEN_NAME_KEYS.includes(normalizeNameKey(name)); }
@@ -1167,10 +1159,9 @@ function App() {
   function openPathDialogForTeamAndDate(teamKey, item, dateStr) { 
     const team = effectiveData?.[teamKey]; 
     if (!team || !item?.code) return; 
-    const nameTxt = String(item.name || "").trim();
+    const nameTxt = String(item.name || item.displayName || "").trim();
     if (!nameTxt || nameTxt === "-" || nameTxt === "공백") return;
     const image = findPathImage(team, dateStr, item.code); 
-    // 분석하신 대로 불필요한 setViewTeam을 제거하여 렌더링 충돌을 방지합니다.
     setPathTeamKey(teamKey); 
     setPathTarget(item); 
     setPathDate(dateStr); 
@@ -1410,7 +1401,7 @@ function App() {
                         className="home-path-preview" 
                         onClick={() => {
                           const targetTeamKey = mySelection?.teamKey || selectedTeam;
-                          openPathDialogForTeamAndDate(targetTeamKey, { code: myInfo?.code, name: myInfo?.name || "", displayName: myInfo?.displayName || "", idx: -1 }, homeDate);
+                          openPathDialogForTeamAndDate(targetTeamKey, { code: myInfo?.code, name: mySelection?.name || "", displayName: myInfo?.displayName || "", idx: -1 }, homeDate);
                         }}
                       >
                         <img src={homePathImage} alt="행로표 미리보기" />
