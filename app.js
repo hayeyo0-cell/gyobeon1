@@ -905,8 +905,14 @@ function App() {
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
 
   useEffect(() => {
-    if (activeTab === 'all' && searchQuery && visibleAllGrid.length > 0) {
-      
+    if (activeTab === 'all' && searchQuery) {
+      /* 🚀 [교정] 결과가 아예 없으면 즉시 비움 */
+      if (visibleAllGrid.length === 0) {
+        setPathImage("");
+        setPathTarget(null);
+        return;
+      }
+
       /* 🚀 [교정] 이름이 있는 유효한 검색 데이터만 추출 */
       const validResults = visibleAllGrid.filter(item => {
           const nameTxt = String(item.name || "").trim();
@@ -925,12 +931,16 @@ function App() {
           setPathImage(image);
         } else if (!image) {
           setPathImage("");
+          setPathTarget(null);
         }
       } else {
-          setPathImage("");
+        /* 🚀 [교정] 유효하지 않은 이름만 결과에 있을 때 행로표 초기화 */
+        setPathImage("");
+        setPathTarget(null);
       }
     } else if (!searchQuery && pathImage !== "") {
       setPathImage("");
+      setPathTarget(null);
     }
   }, [searchQuery, visibleAllGrid, browseDate, activeTab, effectiveData]);
 
@@ -949,10 +959,7 @@ function App() {
 
   const monthMatrix = useMemo(() => getMonthMatrix(monthDate), [monthDate]);
   const monthHeaderDate = parseLocalDate(monthDate);
-
-  /* 🚀 [교정] weekDates 계산 기준을 groupBaseDate로 변경하여 스와이프 연동 해결 */
   const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
-
   const groupMembers = groups[currentGroup] || [];
   const groupMonthOptions = useMemo(() => getMonthOptions(todayStr, 12), [todayStr]);
 
