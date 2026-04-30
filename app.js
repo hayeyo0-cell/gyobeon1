@@ -1,8 +1,8 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (날짜 직접 선택 기능 통합본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (월교번 선택 기능 통합본)
  * 개선사항: 
- * 1. [날짜 직접 선택] 홈, 전체, DIA순서 탭의 날짜 영역 클릭 시 달력 팝업(Date Picker) 호출 기능 추가
- * 2. [비동기 분리] 텍스트 우선 파싱 후 이미지 백그라운드 로딩 (체감 속도 50% 향상)
- * 3. [병렬 처리] 공휴일, 공용 설정, 원격 교번 정보를 Promise.allSettled로 동시 수신
+ * 1. [월교번 직접 선택] 월교번 탭 상단 날짜 클릭 시 달력 팝업으로 원하는 달 바로 이동 기능 추가
+ * 2. [날짜 직접 선택 통합] 홈, 전체, DIA순서 탭 상단 날짜 터치 시 날짜 선택기 호출
+ * 3. [비동기 분리] 텍스트 우선 파싱 후 이미지 백그라운드 로딩
  * 4. [저장 최적화] IndexedDB 저장을 비블로킹(Non-blocking)으로 전환
  **/
 
@@ -1655,7 +1655,20 @@ function App() {
               <div className="tab-page" id="capture-month-area">
                 <div className="month-header-bar" style={{ display: 'flex', gap: '8px' }}>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, -1))}>-</button>
-                  <div className="month-header-title" style={{ flex: 1, fontSize: "14px", fontWeight: "700" }}>{monthHeaderDate.getFullYear()}년 {monthHeaderDate.getMonth() + 1}월</div>
+                  
+                  <div className="month-header-title" style={{ flex: 1, fontSize: "14px", fontWeight: "700", position: 'relative' }}>
+                    {monthHeaderDate.getFullYear()}년 {monthHeaderDate.getMonth() + 1}월
+                    <input 
+                      type="date" 
+                      className="hidden-date-input"
+                      value={monthDate} 
+                      onChange={(e) => {
+                        const nextDate = e.target.value;
+                        if(nextDate) setMonthDate(nextDate);
+                      }} 
+                    />
+                  </div>
+
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', fontSize: '20px' }} onClick={() => captureAndSave('capture-month-area', `월교번`, isDarkMode)}>📷</button>
                   <button className="month-nav-btn" style={{ width: '48px', flexShrink: 0 }} onClick={() => setMonthDate(addMonths(monthDate, 1))}>+</button>
                 </div>
