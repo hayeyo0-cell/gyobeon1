@@ -1,9 +1,9 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (성능 최적화 통합본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (날짜 직접 선택 기능 통합본)
  * 개선사항: 
- * 1. [비동기 분리] 텍스트 우선 파싱 후 이미지 백그라운드 로딩 (체감 속도 50% 향상)
- * 2. [병렬 처리] 공휴일, 공용 설정, 원격 교번 정보를 Promise.allSettled로 동시 수신
- * 3. [저장 최적화] IndexedDB 저장을 비블로킹(Non-blocking)으로 전환
- * 4. [터치 수정] 홈 화면 행로표 클릭 시 name 속성 명시 보완
+ * 1. [날짜 직접 선택] 홈, 전체, DIA순서 탭의 날짜 영역 클릭 시 달력 팝업(Date Picker) 호출 기능 추가
+ * 2. [비동기 분리] 텍스트 우선 파싱 후 이미지 백그라운드 로딩 (체감 속도 50% 향상)
+ * 3. [병렬 처리] 공휴일, 공용 설정, 원격 교번 정보를 Promise.allSettled로 동시 수신
+ * 4. [저장 최적화] IndexedDB 저장을 비블로킹(Non-blocking)으로 전환
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -671,11 +671,10 @@ function App() {
     setPendingRosterJson(null); setShowUpdatePopup(false); setInitialRemoteChecked(true); if (alertMessage) alert(alertMessage);
   }
 
-  // ① parseAndSetZip 함수 교체 (성능 개선 버전)
   async function parseAndSetZip(fileOrBlob, saveToIdb = true, keepSavedSelection = false, rosterForApply = remoteRoster, showBusy = true) {
     if (showBusy) setLoading(true); setError("");
     try {
-      if (saveToIdb) saveZipBlob(fileOrBlob, fileOrBlob.name || "gyobeon-data.zip"); // await 제거 (백그라운드 저장)
+      if (saveToIdb) saveZipBlob(fileOrBlob, fileOrBlob.name || "gyobeon-data.zip"); 
 
       const zip = await JSZip.loadAsync(fileOrBlob);
       const parsedFiles = {};
@@ -695,20 +694,17 @@ function App() {
         }
       });
 
-      // 텍스트 먼저 파싱 → 즉시 화면 표시
       await Promise.all(textTasks);
       const textOnlyData = parseZipToData({ ...parsedFiles });
-      setData(textOnlyData); // 이미지 없이 먼저 렌더링하여 반응성 확보
-      if (showBusy) setLoading(false); // 로딩 스피너 조기 해제
+      setData(textOnlyData); 
+      if (showBusy) setLoading(false); 
 
-      // 이미지 백그라운드 파싱 시작
       await Promise.all(imageTasks);
       const fullData = parseZipToData(parsedFiles);
 
-      // IndexedDB 저장 (백그라운드)
       saveParsedData(fullData); 
 
-      setData(fullData); // 이미지 포함된 최종 데이터로 교체
+      setData(fullData); 
 
       const nextSetupData = applyRemoteRosterNamesForSetup(fullData, rosterForApply || getEmptyRemoteRoster());
       if (!keepSavedSelection) {
@@ -724,7 +720,6 @@ function App() {
     }
   }
 
-  // ② initAppFast 함수 교체 (성능 개선 버전)
   useEffect(() => {
     let cancelled = false;
     async function initAppFast() {
@@ -746,25 +741,20 @@ function App() {
             savedZip = await loadZipBlob();
             if (!cancelled && savedZip?.blob) {
               setZipName(savedZip.name || "저장된 ZIP");
-              // 텍스트/이미지 분리 처리를 위해 await로 실행 (내부에서 setData 중복 발생)
               await parseAndSetZip(savedZip.blob, false, true, initialAppliedRemoteRoster, false);
             }
           }
         } catch (e) { console.log("로컬 복원 실패", e); }
       } catch (e) {}
 
-      // 공휴일 + 원격통신 병렬 실행
       const thisYear = getYearFromDateStr(getKoreaToday());
       const preloadYears = [thisYear - 1, thisYear, thisYear + 1];
 
       const [, sharedResult, rosterResult] = await Promise.allSettled([
-        // 공휴일 프리로드
         Promise.all(preloadYears.map((year) =>
           ensureHolidayYear(year, () => { if (!cancelled) setHolidayVersion((v) => v + 1); })
         )),
-        // 공용 기준일 (fetchSharedConfigJsonp)
         fetchSharedConfigJsonp(4000),
-        // 원격 교번 (fetchRemoteRosterJsonp, 로컬 데이터 있을 때만)
         (parsedSaved?.data || savedZip?.blob)
           ? fetchRemoteRosterJsonp(6000)
           : Promise.resolve(null)
@@ -772,7 +762,6 @@ function App() {
 
       if (cancelled) return;
 
-      // 공용 기준일 처리
       if (sharedResult.status === 'fulfilled' && sharedResult.value?.baseDate) {
         const shared = sharedResult.value;
         saveCachedSharedConfig(shared);
@@ -780,7 +769,6 @@ function App() {
         setRemoteBaseDate(shared.baseDate);
       }
 
-      // 원격 교번 처리
       if (rosterResult.status === 'fulfilled' && rosterResult.value) {
         const json = rosterResult.value;
         const next = normalizeRemoteRosterShape(json);
@@ -1479,9 +1467,30 @@ function App() {
                   <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>
                 </div>
                 <div className="date-grid">
-                  <div className="date-box"><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setFullYear(d.getFullYear() + 1); setHomeDate(formatDate(d)); }}>+</button><div className="date-value">{parseLocalDate(homeDate).getFullYear()}년</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setFullYear(d.getFullYear() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
-                  <div className="date-box"><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() + 1); setHomeDate(formatDate(d)); }}>+</button><div className="date-value">{parseLocalDate(homeDate).getMonth() + 1}월</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
-                  <div className="date-box"><button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, 1))}>+</button><div className="date-value">{parseLocalDate(homeDate).getDate()}일</div><button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setDate(d.getDate() - 1); setHomeDate(formatDate(d)); }}>-</button></div>
+                  <div className="date-box">
+                    <button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setFullYear(d.getFullYear() + 1); setHomeDate(formatDate(d)); }}>+</button>
+                    <div className="date-value" style={{ position: 'relative' }}>
+                      {parseLocalDate(homeDate).getFullYear()}년
+                      <input type="date" className="hidden-date-input" value={homeDate} onChange={(e) => setHomeDate(e.target.value)} />
+                    </div>
+                    <button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setFullYear(d.getFullYear() - 1); setHomeDate(formatDate(d)); }}>-</button>
+                  </div>
+                  <div className="date-box">
+                    <button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() + 1); setHomeDate(formatDate(d)); }}>+</button>
+                    <div className="date-value" style={{ position: 'relative' }}>
+                      {parseLocalDate(homeDate).getMonth() + 1}월
+                      <input type="date" className="hidden-date-input" value={homeDate} onChange={(e) => setHomeDate(e.target.value)} />
+                    </div>
+                    <button className="date-btn" onClick={() => { const d = parseLocalDate(homeDate); d.setMonth(d.getMonth() - 1); setHomeDate(formatDate(d)); }}>-</button>
+                  </div>
+                  <div className="date-box">
+                    <button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, 1))}>+</button>
+                    <div className="date-value" style={{ position: 'relative' }}>
+                      {parseLocalDate(homeDate).getDate()}일
+                      <input type="date" className="hidden-date-input" value={homeDate} onChange={(e) => setHomeDate(e.target.value)} />
+                    </div>
+                    <button className="date-btn" onClick={() => setHomeDate(addDays(homeDate, -1))}>-</button>
+                  </div>
                 </div>
                 <div className="card main-panel" style={swipeStyle}>
                   <div className="center-view">
@@ -1520,9 +1529,20 @@ function App() {
                       padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)",
                       background: "transparent", fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
-                    <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff" }}>
-                      {TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayName(browseDate)}
+                    
+                    <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff", position: 'relative' }}>
+                      {TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayShort(browseDate)}
+                      <input 
+                        type="date" 
+                        className="hidden-date-input"
+                        value={browseDate} 
+                        onChange={(e) => {
+                          const nextDate = e.target.value;
+                          if(nextDate) setBrowseDate(nextDate);
+                        }} 
+                      />
                     </div>
+
                     {activeTab === "all" && (
                       <>
                         <button className="all-header-btn" style={{ 
@@ -1974,6 +1994,29 @@ function App() {
           </div>
         </div>
       )}
+      
+      <style>{`
+        .hidden-date-input {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          opacity: 0;
+          cursor: pointer;
+          -webkit-appearance: none;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          cursor: pointer;
+        }
+      `}</style>
     </>
   );
 }
