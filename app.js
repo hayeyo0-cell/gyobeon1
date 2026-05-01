@@ -1,9 +1,9 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (검색 뒤로가기 최적화 통합본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (검색 이미지 복구 및 복구 알림 통합본)
  * 개선사항: 
- * 1. [검색 뒤로가기] 검색창 활성 시 브라우저 히스토리 스택 추가하여 뒤로가기 시 검색만 종료되도록 개선
- * 2. [검색 Ref 도입] popstate 이벤트에서 최신 검색창 상태를 즉시 감지하도록 showSearchRef 적용
- * 3. [날짜 직접 선택] 홈, 전체, DIA, 월교번 탭 상단 날짜 클릭 시 달력 호출
- * 4. [성능 최적화] 비동기 데이터 파싱 및 IndexedDB 비블로킹 저장 유지
+ * 1. [검색 이미지 복구] 검색 결과가 있을 때 하단에 행로표 이미지를 즉시 표시하는 로직 복원
+ * 2. [복구 알림] 설정의 '복구하기' 기능 완료 후 성공 안내 메시지(alert) 표시 로직 보완
+ * 3. [뒤로가기 최적화] 검색창 활성 시 히스토리 스택을 쌓아 뒤로가기 시 검색만 종료되도록 개선
+ * 4. [날짜/월 직접 선택] 홈, 전체, DIA, 월교번 탭 상단 날짜 클릭 시 달력 팝업 호출
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -536,7 +536,7 @@ function App() {
   const editOpenRef = useRef(false);
   const showGroupAddRef = useRef(false);
   const showSettingsRef = useRef(false);
-  const showSearchRef = useRef(false); // ✅ 추가
+  const showSearchRef = useRef(false);
 
   const effectiveData = data;
   const setupSourceData = useMemo(() => { if (!data) return null; if (!allowProfileEdit) return data; return applyRemoteRosterNamesForSetup(data, remoteRoster); }, [data, remoteRoster, allowProfileEdit]);
@@ -647,7 +647,7 @@ function App() {
   useEffect(() => { if (!allowProfileEdit) return; setDraftTeam(selectedTeam || mySelection?.teamKey || "ks"); setDraftName(String(mySelection?.name || "").trim()); setDraftCode(String(mySelection?.code || "").trim()); }, [allowProfileEdit, selectedTeam, mySelection]);
   useEffect(() => { if (!allowProfileEdit) return; const teamKey = draftTeam || "ks"; const currentName = String(draftName || "").trim(); if (!currentName) return; const team = setupSourceData?.[draftTeam] || data?.[draftTeam]; if (!team) return; if (String(draftCode || "").trim()) return; let nextCode = ""; const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster); if (remoteRow?.code) { nextCode = normalizeToFixedCode(team, remoteRow.code); } else { const zipPerson = findZipPersonByName(team, currentName); if (zipPerson?.baseCode) { nextCode = normalizeToFixedCode(team, zipPerson.baseCode); } } if (!nextCode) return; setDraftCode(nextCode); }, [ allowProfileEdit, draftTeam, draftName, draftCode, remoteRoster, setupSourceData, data, ]);
   useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
-  useEffect(() => { showSearchRef.current = showSearch; }, [showSearch]); // ✅ 추가
+  useEffect(() => { showSearchRef.current = showSearch; }, [showSearch]);
 
   function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
     const currentTeamKey = mySelection?.teamKey || ""; const currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
@@ -811,19 +811,12 @@ function App() {
       if (showUpdatePopup) { setShowUpdatePopup(false); return; }
       if (showGroupAddRef.current) { setShowGroupAdd(false); return; } 
       if (showSettingsRef.current) { setShowSettings(false); return; } 
-
-      // ✅ 검색창 레이어 처리
-      if (showSearchRef.current || searchQuery) {
-        setSearchQuery("");
-        setShowSearch(false);
-        return;
-      }
-
+      if (showSearchRef.current || searchQuery) { setSearchQuery(""); setShowSearch(false); return; }
       if (activeTabRef.current !== "home") { setActiveTab("home"); setHomeDate(getKoreaToday()); return; }
       window.history.pushState({ __gyobeon: true, layer: "root" }, "");
     }
     window.addEventListener("popstate", handlePopState); return () => window.removeEventListener("popstate", handlePopState);
-  }, [showUpdatePopup, searchQuery]); // searchQuery 의존성 추가
+  }, [showUpdatePopup, searchQuery]);
 
   useEffect(() => { if (pathOpen && (!window.history.state || window.history.state.layer !== "path")) window.history.pushState({ __gyobeon: true, layer: "path" }, ""); }, [pathOpen]);
   useEffect(() => { if (editOpen && (!window.history.state || window.history.state.layer !== "edit")) window.history.pushState({ __gyobeon: true, layer: "edit" }, ""); }, [editOpen]);
@@ -1349,7 +1342,7 @@ function App() {
         if (imported.isDarkMode !== undefined) {
            setIsDarkMode(imported.isDarkMode);
         }
-        alert("설정이 성공적으로 복구되었습니다!");
+        alert("설정이 성공적으로 복구되었습니다!"); // ✅ 기관사님 요청사항 적용
         if (showSettingsRef.current) window.history.back(); else setShowSettings(false);
       } catch(err) {
         alert("잘못된 백업 파일입니다.");
@@ -1565,7 +1558,6 @@ function App() {
                           const nextShow = !showSearch;
                           setShowSearch(nextShow);
                           if (nextShow) {
-                            // ✅ 검색 열 때 history 스택에 추가
                             window.history.pushState({ __gyobeon: true, layer: "search" }, "");
                           } else {
                             setSearchQuery("");
@@ -1628,6 +1620,15 @@ function App() {
                         })}
                       </div>
                     </div>
+                    {/* ✅ 기관사님 요청사항: 검색 시 하단 행로표 이미지 복구 */}
+                    {searchQuery && pathImage && (
+                      <div className="card" style={{ marginTop: 10, padding: 10 }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, textAlign: 'center', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
+                          🔍 {pathTarget?.displayName || pathTarget?.name} ({pathTarget?.code}) 행로표
+                        </div>
+                        <img src={pathImage} style={{ width: '100%', borderRadius: 16, border: isDarkMode ? '1px solid #334155' : '1px solid #c8d2e3' }} />
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="card" style={{ padding: 0, overflow: "hidden", ...swipeStyle, borderRadius: "10px", marginTop: "15px" }}>
