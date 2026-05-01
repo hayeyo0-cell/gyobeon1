@@ -1,9 +1,9 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (검색 이미지 복구 및 복구 알림 통합본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (글씨 가독성 강화 및 통합본)
  * 개선사항: 
- * 1. [검색 이미지 복구] 검색 결과가 있을 때 하단에 행로표 이미지를 즉시 표시하는 로직 복원
- * 2. [복구 알림] 설정의 '복구하기' 기능 완료 후 성공 안내 메시지(alert) 표시 로직 보완
- * 3. [뒤로가기 최적화] 검색창 활성 시 히스토리 스택을 쌓아 뒤로가기 시 검색만 종료되도록 개선
- * 4. [날짜/월 직접 선택] 홈, 전체, DIA, 월교번 탭 상단 날짜 클릭 시 달력 팝업 호출
+ * 1. [가독성 강화] 전체 탭의 교번과 이름 글씨 두께를 보강 (900 Bold 적용)
+ * 2. [검색 이미지] 검색 결과 하단 행로표 이미지 표시 로직 유지
+ * 3. [복구 알림] 설정 복구 시 성공 안내(alert) 표시 보완
+ * 4. [뒤로가기/날짜선택] 검색창 히스토리 제어 및 날짜 직접 선택 기능 통합
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -811,7 +811,13 @@ function App() {
       if (showUpdatePopup) { setShowUpdatePopup(false); return; }
       if (showGroupAddRef.current) { setShowGroupAdd(false); return; } 
       if (showSettingsRef.current) { setShowSettings(false); return; } 
-      if (showSearchRef.current || searchQuery) { setSearchQuery(""); setShowSearch(false); return; }
+
+      if (showSearchRef.current || searchQuery) {
+        setSearchQuery("");
+        setShowSearch(false);
+        return;
+      }
+
       if (activeTabRef.current !== "home") { setActiveTab("home"); setHomeDate(getKoreaToday()); return; }
       window.history.pushState({ __gyobeon: true, layer: "root" }, "");
     }
@@ -1342,7 +1348,7 @@ function App() {
         if (imported.isDarkMode !== undefined) {
            setIsDarkMode(imported.isDarkMode);
         }
-        alert("설정이 성공적으로 복구되었습니다!"); // ✅ 기관사님 요청사항 적용
+        alert("설정이 성공적으로 복구되었습니다!");
         if (showSettingsRef.current) window.history.back(); else setShowSettings(false);
       } catch(err) {
         alert("잘못된 백업 파일입니다.");
@@ -1603,14 +1609,19 @@ function App() {
                           const currentCellKey = getOverrideKey(item.teamKey, item.name);
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
-                          const textColorStyle = cellColor ? { color: "#000000", fontWeight: "900" } : { color: isDarkMode ? "#ffffff" : "#000000" };
+                          
+                          // ✅ 글자 두께(900) 보강 로직
+                          const textColorStyle = cellColor 
+                            ? { color: "#000000", fontWeight: "900" } 
+                            : { color: isDarkMode ? "#ffffff" : "#000000", fontWeight: "900" };
+                            
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
                               <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
-                              <div className="all-name" style={textColorStyle}>
+                              <div className="all-name" style={{ ...textColorStyle, fontWeight: "800" }}>
                                   {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
                                   {searchQuery && (
-                                    <div style={{fontSize: '9px', opacity: 0.8}}>
+                                    <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
                                       [{TEAM_LABELS[item.teamKey]}]
                                     </div>
                                   )}
@@ -1620,7 +1631,6 @@ function App() {
                         })}
                       </div>
                     </div>
-                    {/* ✅ 기관사님 요청사항: 검색 시 하단 행로표 이미지 복구 */}
                     {searchQuery && pathImage && (
                       <div className="card" style={{ marginTop: 10, padding: 10 }}>
                         <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, textAlign: 'center', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
@@ -1644,8 +1654,8 @@ function App() {
                               openPathDialog(item, browseDate);
                             }
                           }} style={{ flex: 1, display: "flex", alignItems: "center", gap: "16px", fontSize: 18 }}>
-                            <div style={{ fontWeight: 800, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
-                            <div style={{ fontWeight: 600 }}>{item.displayName || item.name}</div>
+                            <div style={{ fontWeight: 900, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
+                            <div style={{ fontWeight: 800 }}>{item.displayName || item.name}</div>
                           </div>
                           {hasPhone && (
                             <a href={`tel:${overrides[cellKey].phone}`} style={{ 
@@ -1711,7 +1721,7 @@ function App() {
                           }} onContextMenu={(e) => { e.preventDefault(); openMonthShiftEdit(date, item); }}>
                             <div className={`month-cell-inner ${toneClass}`}>
                               <div className={`month-day ${toneClass}`}>{parseLocalDate(date).getDate()}</div>
-                              <div className={`month-code-line ${toneClass}`} style={{ cursor: "pointer", borderBottom: "1px dashed #ccc" }} onClick={(e) => { e.stopPropagation(); openMonthShiftEdit(date, item); }}>{item?.code || "-"}</div>
+                              <div className={`month-code-line ${toneClass}`} style={{ cursor: "pointer", borderBottom: "1px dashed #ccc", fontWeight: "900" }} onClick={(e) => { e.stopPropagation(); openMonthShiftEdit(date, item); }}>{item?.code || "-"}</div>
                               <div className="month-time-wrap">
                                 <div className={`month-time-line ${toneClass}`}>{startTime || "-"}</div>
                                 <div className={`month-time-line ${toneClass}`}>{endTime || ""}</div>
@@ -1778,7 +1788,7 @@ function App() {
                             <tr key={`${idx}`}>
                               <td className="group-name-cell sticky-col">
                                 <div className="group-name-cell-inner">
-                                  <div className="name-txt">{displayMemberName}</div>
+                                  <div className="name-txt" style={{ fontWeight: "800" }}>{displayMemberName}</div>
                                   <div className="team-badge">{TEAM_LABELS[member.team]}</div>
                                   <button className="row-del-btn-text" onClick={() => removeFromGroup(member.team, member.name)}>삭제</button>
                                 </div>
@@ -1794,7 +1804,7 @@ function App() {
                                       openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); 
                                     } 
                                   }} className={`${isSelectedCol ? "active-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
-                                    <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                                    <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: "900" }}>
                                       {item?.code || "-"}
                                     </div>
                                   </td>
@@ -2042,6 +2052,13 @@ function App() {
           margin: 0;
           padding: 0;
           cursor: pointer;
+        }
+        /* ✅ 전체 탭 교번/이름 두께 강화 CSS */
+        .all-code {
+          font-weight: 900 !important;
+        }
+        .all-name {
+          font-weight: 800 !important;
         }
       `}</style>
     </>
