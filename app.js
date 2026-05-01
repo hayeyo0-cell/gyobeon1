@@ -1,9 +1,9 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (월교번 선택 기능 통합본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (뒤로가기 및 날짜선택 최적화 통합본)
  * 개선사항: 
- * 1. [월교번 직접 선택] 월교번 탭 상단 날짜 클릭 시 달력 팝업으로 원하는 달 바로 이동 기능 추가
- * 2. [날짜 직접 선택 통합] 홈, 전체, DIA순서 탭 상단 날짜 터치 시 날짜 선택기 호출
- * 3. [비동기 분리] 텍스트 우선 파싱 후 이미지 백그라운드 로딩
- * 4. [저장 최적화] IndexedDB 저장을 비블로킹(Non-blocking)으로 전환
+ * 1. [뒤로가기 개선] 열번/이름 검색 후 행로표 팝업 상태에서 뒤로가기 시 홈으로 튕기지 않고 검색 결과로 복귀
+ * 2. [날짜/월 직접 선택] 홈, 전체, DIA, 월교번 탭 상단 날짜 클릭 시 달력 팝업으로 즉시 이동
+ * 3. [비동기 분리] 텍스트 우선 파싱 후 이미지 백그라운드 로딩 (반응성 강화)
+ * 4. [저장 최적화] IndexedDB 비블로킹 저장 적용
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -804,8 +804,8 @@ function App() {
   useEffect(() => {
     if (!window.history.state || !window.history.state.__gyobeon) window.history.replaceState({ __gyobeon: true, layer: "root" }, "");
     function handlePopState() {
-      if (editOpenRef.current) { setEditOpen(false); return; }
       if (pathOpenRef.current) { setPathOpen(false); return; }
+      if (editOpenRef.current) { setEditOpen(false); return; }
       if (showUpdatePopup) { setShowUpdatePopup(false); return; }
       if (showGroupAddRef.current) { setShowGroupAdd(false); return; } 
       if (showSettingsRef.current) { setShowSettings(false); return; } 
@@ -1169,6 +1169,9 @@ function App() {
           setPathTarget(item);
           setPathDate(browseDate);
           setPathImage(image);
+          // 검색 도중 행로표 열 때 히스토리 스택 쌓기
+          if (!window.history.state || window.history.state.layer !== "path") window.history.pushState({ __gyobeon: true, layer: "path" }, "");
+          setPathOpen(true);
         } else {
           setPathImage("");
         }
@@ -1607,14 +1610,6 @@ function App() {
                         })}
                       </div>
                     </div>
-                    {searchQuery && pathImage && (
-                      <div className="card" style={{ marginTop: 10, padding: 10 }}>
-                        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, textAlign: 'center', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
-                          🔍 {pathTarget?.displayName || pathTarget?.name} ({pathTarget?.code}) 행로표
-                        </div>
-                        <img src={pathImage} style={{ width: '100%', borderRadius: 16, border: isDarkMode ? '1px solid #334155' : '1px solid #c8d2e3' }} />
-                      </div>
-                    )}
                   </>
                 ) : (
                   <div className="card" style={{ padding: 0, overflow: "hidden", ...swipeStyle, borderRadius: "10px", marginTop: "15px" }}>
