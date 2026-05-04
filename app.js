@@ -1,8 +1,8 @@
 /** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (글씨 가독성 강화 및 통합본)
  * 개선사항: 
  * 1. [가독성 강화] 전체 탭의 교번과 이름 글씨 두께를 보강 (900 Bold 적용)
- * 2. [검색 이미지] 검색 결과 하단 행로표 이미지 표시 로직 유지
- * 3. [복구 알림] 설정 복구 시 성공 안내(alert) 표시 보완
+ * 2. [디자인 복구] 날짜 선택 인풋으로 인해 뚱뚱해진 헤더 높이 및 정렬 정밀 교정
+ * 3. [검색 이미지] 검색 결과 하단 행로표 이미지 표시 로직 유지
  * 4. [뒤로가기/날짜선택] 검색창 히스토리 제어 및 날짜 직접 선택 기능 통합
  **/
 
@@ -843,7 +843,7 @@ function App() {
     const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
     if (mySelection?.teamKey === myTeamKey && mySelection?.code) { const code = getMyCodeForDate(team, homeDate, mySelection); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; }
     const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster); if (remoteRow?.code) { const anchorDate = getRemoteAnchorBaseDate(team); const dayOffset = diffDays(anchorDate, homeDate); const code = shiftCodeByDays(team, remoteRow.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; }
-    const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, myName, mySelection); if (!anchor?.code) return null;
+    const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
     const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color };
   }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, wordtimeVersion, overrides]);
 
@@ -1528,24 +1528,35 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  <div className="all-header" style={{ 
-                    display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", 
+                  {/* 🚀 [교정] 헤더 높이를 날렵한 50px로 고정하고 인풋 요소를 투명하게 배치 */}
+                  <div className={`${activeTab === "all" ? "all-header" : "dia-header"}`} style={{ 
+                    display: "grid", 
+                    width: "100%", 
+                    height: "50px", 
+                    alignItems: "center",
+                    gridTemplateColumns: activeTab === "all" ? "42px 1fr 42px 58px 42px" : "42px 1fr 42px",
                     background: editMode ? "#ef4444" : "#3b82f6", 
-                    borderRadius: "25px", overflow: "hidden",
-                    boxShadow: "0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)",
+                    borderRadius: "16px", 
+                    overflow: "hidden",
+                    boxShadow: "0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.25)",
                     transition: "background 0.3s ease"
                   }}>
                     <button className="all-header-btn" style={{ 
-                      width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
-                      padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)",
-                      background: "transparent", fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
+                      width: "100%", height: "50px", display: "flex", alignItems: "center", justifyContent: "center", 
+                      padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)",
+                      background: "transparent", fontSize: "22px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
-                    <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff", position: 'relative' }}>
+                    <div className="all-header-title" style={{ 
+                      width: "100%", height: "50px", display: "flex", alignItems: "center", justifyContent: "center",
+                      textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff", 
+                      position: 'relative', borderRight: "1px solid rgba(255,255,255,0.2)"
+                    }}>
                       {TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayShort(browseDate)}
                       <input 
                         type="date" 
                         className="hidden-date-input"
+                        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
                         value={browseDate} 
                         onChange={(e) => {
                           const nextDate = e.target.value;
@@ -1557,8 +1568,8 @@ function App() {
                     {activeTab === "all" && (
                       <>
                         <button className="all-header-btn" style={{ 
-                          width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
-                          padding: 0, border: "none", borderLeft: "2px solid rgba(0,0,0,0.2)", borderRight: "2px solid rgba(0,0,0,0.2)", 
+                          width: "100%", height: "50px", display: "flex", alignItems: "center", justifyContent: "center", 
+                          padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
                           background: "transparent", fontSize: "16px", color: "#ffffff" 
                         }} onClick={() => {
                           const nextShow = !showSearch;
@@ -1570,18 +1581,17 @@ function App() {
                           }
                         }}>🔍</button>
                         <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
-                          width: "37px", height: "37px", minWidth: "37px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", 
-                          padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)", 
+                          width: "100%", height: "50px", fontSize: "11px", display: "flex", alignItems: "center", justifyContent: "center", 
+                          padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
                           background: "transparent",
                           color: "#ffffff", fontWeight: "bold" 
                         }} onClick={() => setEditMode(!editMode)}>{editMode ? "수정중" : "수정"}</button>
                       </>
                     )}
                     <button className="all-header-btn" style={{ 
-                      width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
+                      width: "100%", height: "50px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
-                      borderLeft: (activeTab === "dia") ? "2px solid rgba(0,0,0,0.2)" : "none",
-                      fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
+                      fontSize: "22px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
                   {showSearch && activeTab === "all" && (
@@ -1610,7 +1620,7 @@ function App() {
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
-                          // ✅ 글자 두께(900) 보강 로직
+                          // ✅ 글자 두께(900) 보강
                           const textColorStyle = cellColor 
                             ? { color: "#000000", fontWeight: "900" } 
                             : { color: isDarkMode ? "#ffffff" : "#000000", fontWeight: "900" };
@@ -1685,6 +1695,7 @@ function App() {
                     <input 
                       type="date" 
                       className="hidden-date-input"
+                      style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
                       value={monthDate} 
                       onChange={(e) => {
                         const nextDate = e.target.value;
