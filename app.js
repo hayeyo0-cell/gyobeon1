@@ -1,10 +1,9 @@
 /** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (글씨 가독성 강화 및 통합본)
- * 주의사항 준수: 코드 압축 및 기능 생략 절대 금지, 원본 로직 100% 유지
  * 개선사항: 
- * 1. [가독성 강화] 전체 탭의 교번/이름 글씨 두께 900 적용 (인라인 스타일 보강)
+ * 1. [가독성 강화] 전체 탭의 교번과 이름 글씨 두께를 보강 (900 Bold 적용)
  * 2. [검색 이미지] 검색 결과 하단 행로표 이미지 표시 로직 유지
- * 3. [복구 알림] 설정 복구(Import) 시 성공 안내(alert) 표시 보완
- * 4. [기능 통합] 날짜 직접 선택 및 검색창 히스토리 제어 통합
+ * 3. [복구 알림] 설정 복구 시 성공 안내(alert) 표시 보완
+ * 4. [뒤로가기/날짜선택] 검색창 히스토리 제어 및 날짜 직접 선택 기능 통합
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -51,7 +50,6 @@ const HOLIDAY_FETCHING_YEARS = new Set();
 const DEFAULT_GYOBUN = ["2d", "대3", "16d", "휴1", "휴2", "대2", "14d", "24d", "24~", "휴3", "5d", "17d", "27d", "27~", "휴4", "3d", "13d", "23d", "23~", "휴5", "휴6", "대1", "15d", "22d", "22~", "휴7", "9d", "10d", "28d", "28~", "휴7", "9d", "10d", "28d", "28~", "휴8", "4d", "20d", "25d", "25~", "휴9", "1d", "11d", "대4", "대4~", "휴10", "휴11", "7d", "18d", "29d", "29~", "휴12", "8d", "12d", "26d", "26~", "휴13", "휴14", "6d", "19d", "21d", "21~", "휴15"];
 const HIDDEN_NAME_KEYS = ["gb2601"];
 
-// --- 유틸리티 함수 ---
 function normalizeNameKey(name) { return String(name || "").trim().toLowerCase().replace(/\s+/g, ""); }
 function shouldHideName(name) { return HIDDEN_NAME_KEYS.includes(normalizeNameKey(name)); }
 function samePersonName(a, b) { return String(a || "").trim().replace(/\s/g, "") === String(b || "").trim().replace(/\s/g, ""); }
@@ -66,6 +64,7 @@ function diffDays(a, b) { const da = parseLocalDate(a); const db = parseLocalDat
 function positiveMod(n, mod) { return ((n % mod) + mod) % mod; }
 function weekdayShort(dateStr) { const names = ["일", "월", "화", "수", "목", "금", "토"]; return names[parseLocalDate(dateStr).getDay()]; }
 function weekdayName(dateStr) { const names = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"]; return names[parseLocalDate(dateStr).getDay()]; }
+
 function isSaturday(dateStr) { return parseLocalDate(dateStr).getDay() === 6; }
 function isSunday(dateStr) { return parseLocalDate(dateStr).getDay() === 0; }
 function getYearFromDateStr(dateStr) { return Number(String(dateStr || "").slice(0, 4)); }
@@ -1349,11 +1348,10 @@ function App() {
         if (imported.isDarkMode !== undefined) {
            setIsDarkMode(imported.isDarkMode);
         }
-        // ✅ [복구 알림] 성공 시 사용자에게 피드백 보강
-        alert("🎉 설정이 성공적으로 복구되었습니다!");
+        alert("설정이 성공적으로 복구되었습니다!");
         if (showSettingsRef.current) window.history.back(); else setShowSettings(false);
       } catch(err) {
-        alert("⚠️ 잘 못된 백업 파일입니다.");
+        alert("잘못된 백업 파일입니다.");
       }
     };
     reader.readAsText(file);
@@ -1531,18 +1529,20 @@ function App() {
               <div className="tab-page all-page">
                 <div className="all-tab-header">
                   <div className="all-header" style={{ 
-                    display: "grid", width: "100%", height: "60px", alignItems: "center",
+                    display: "flex", width: "100%", height: "50px", alignItems: "center", justifyContent: "space-between", 
                     background: editMode ? "#ef4444" : "#3b82f6", 
-                    borderRadius: "16px", overflow: "hidden",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2)",
-                    border: "1px solid rgba(0,0,0,0.15)",
+                    borderRadius: "25px", overflow: "hidden",
+                    boxShadow: "0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)",
                     transition: "background 0.3s ease"
                   }}>
-                    <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
+                    <button className="all-header-btn" style={{ 
+                      width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
+                      padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)",
+                      background: "transparent", fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
+                    }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
-                    <div className="all-header-title" style={{ position: 'relative' }}>
+                    <div className="all-header-title" style={{ flex: 1, textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff", position: 'relative' }}>
                       {TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayShort(browseDate)}
-                      {/* ✅ [날짜 직접 선택] 통합 */}
                       <input 
                         type="date" 
                         className="hidden-date-input"
@@ -1556,7 +1556,11 @@ function App() {
 
                     {activeTab === "all" && (
                       <>
-                        <button className="all-header-btn" onClick={() => {
+                        <button className="all-header-btn" style={{ 
+                          width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
+                          padding: 0, border: "none", borderLeft: "2px solid rgba(0,0,0,0.2)", borderRight: "2px solid rgba(0,0,0,0.2)", 
+                          background: "transparent", fontSize: "16px", color: "#ffffff" 
+                        }} onClick={() => {
                           const nextShow = !showSearch;
                           setShowSearch(nextShow);
                           if (nextShow) {
@@ -1565,10 +1569,20 @@ function App() {
                             setSearchQuery("");
                           }
                         }}>🔍</button>
-                        <button className={`all-edit-btn ${editMode ? "active" : ""}`} onClick={() => setEditMode(!editMode)}>{editMode ? "수정중" : "수정"}</button>
+                        <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
+                          width: "37px", height: "37px", minWidth: "37px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", 
+                          padding: 0, border: "none", borderRight: "2px solid rgba(0,0,0,0.2)", 
+                          background: "transparent",
+                          color: "#ffffff", fontWeight: "bold" 
+                        }} onClick={() => setEditMode(!editMode)}>{editMode ? "수정중" : "수정"}</button>
                       </>
                     )}
-                    <button className="all-header-btn" onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
+                    <button className="all-header-btn" style={{ 
+                      width: "37px", height: "37px", minWidth: "37px", display: "flex", alignItems: "center", justifyContent: "center", 
+                      padding: 0, border: "none", background: "transparent", 
+                      borderLeft: (activeTab === "dia") ? "2px solid rgba(0,0,0,0.2)" : "none",
+                      fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
+                    }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
                   {showSearch && activeTab === "all" && (
                     <input className="input" style={{ marginTop: 8 }} placeholder="이름/교번/열번 통합 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
@@ -1596,11 +1610,10 @@ function App() {
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
-                          // ✅ [가독성 강화] 전체 탭 교번(900)/이름(800) 두께 강제 적용
-                          const textColorStyle = { 
-                            color: cellColor ? "#000000" : (isDarkMode ? "#ffffff" : "#000000"),
-                            fontWeight: "900" 
-                          };
+                          // ✅ 글자 두께(900) 보강 로직
+                          const textColorStyle = cellColor 
+                            ? { color: "#000000", fontWeight: "900" } 
+                            : { color: isDarkMode ? "#ffffff" : "#000000", fontWeight: "900" };
                             
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
@@ -1618,13 +1631,12 @@ function App() {
                         })}
                       </div>
                     </div>
-                    {/* ✅ [검색 이미지] 검색 결과 하단 행로표 표시 로직 유지 */}
                     {searchQuery && pathImage && (
-                      <div className="card" style={{ marginTop: 10, padding: 10, border: isDarkMode ? '1px solid #334155' : '1px solid #c8d2e3' }}>
-                        <div style={{ fontSize: 13, fontWeight: 900, marginBottom: 8, textAlign: 'center', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
+                      <div className="card" style={{ marginTop: 10, padding: 10 }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, textAlign: 'center', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
                           🔍 {pathTarget?.displayName || pathTarget?.name} ({pathTarget?.code}) 행로표
                         </div>
-                        <img src={pathImage} style={{ width: '100%', borderRadius: 16 }} />
+                        <img src={pathImage} style={{ width: '100%', borderRadius: 16, border: isDarkMode ? '1px solid #334155' : '1px solid #c8d2e3' }} />
                       </div>
                     )}
                   </>
@@ -2040,6 +2052,13 @@ function App() {
           margin: 0;
           padding: 0;
           cursor: pointer;
+        }
+        /* ✅ 전체 탭 교번/이름 두께 강화 CSS */
+        .all-code {
+          font-weight: 900 !important;
+        }
+        .all-name {
+          font-weight: 800 !important;
         }
       `}</style>
     </>
