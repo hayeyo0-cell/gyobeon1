@@ -1,4 +1,4 @@
-/* 수정된 CSS 부분 - 월교번의 오늘 강조 방식 및 선 굵기만 정밀 수정되었습니다. */
+/* 수정된 CSS 부분 - 날짜 인풋 삽입으로 인한 헤더 레이아웃 및 굵기 정밀 교정 */
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -152,42 +152,12 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 .month-header-title { height: 48px; display: flex; align-items: center; justify-content: center; background: #ffffff; border-radius: 16px; font-size: 24px; font-weight: 800; border: 1px solid #d7dce5; transition: background-color 0.2s ease, border-color 0.2s ease; }
 
 .all-page { padding-bottom: 20px; }
-.all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
-.dia-header { grid-template-columns: 40px 1fr 38px 40px; }
-.all-header-btn { height: 52px; font-size: 18px; }
-.all-edit-btn { height: 52px; font-size: 12px; }
-.all-header-title { font-size: 14px; padding: 0 5px; }
 
-.all-team-tabs { gap: 4px; margin-top: 6px; margin-bottom: 6px; }
-.all-team-tab { font-size: 13px; padding: 9px 0; border-radius: 14px; }
-.all-tab-grid-wrap { padding: 6px; border-radius: 22px; margin-bottom: 10px; }
-.all-cell-real { min-height: 48px; border-radius: 8px; padding: 2px 1px; }
-
-.all-grid-real.density-4 { display: grid; width: 100%; height: auto; gap: 2px; align-items: stretch; grid-template-columns: repeat(4, 1fr); }
-.all-grid-real.density-5 { display: grid; width: 100%; height: auto; gap: 2px; align-items: stretch; grid-template-columns: repeat(5, 1fr); }
-.all-grid-real.density-6 { display: grid; width: 100%; height: auto; gap: 2px; align-items: stretch; grid-template-columns: repeat(6, 1fr); }
-
-.all-grid-real.density-4 .all-code { font-size: 17px; } .all-grid-real.density-4 .all-name { font-size: 12.5px; }
-.all-grid-real.density-5 .all-code { font-size: 15px; } .all-grid-real.density-5 .all-name { font-size: 11.5px; }
-.all-grid-real.density-6 .all-code { font-size: 14px; } .all-grid-real.density-6 .all-name { font-size: 10px; }
-
-.group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
-.nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
-.group-select-display { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
-.group-add-btn-v4 { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
-
-.code-txt { font-size: 13px; }
-.row-del-btn-text { padding: 3px 10px; font-size: 10px; border-radius: 10px; }
-
-.modal { padding: 16px; border-radius: 20px; }
-.modal-title { font-size: 22px; }
-.modal-sub { font-size: 16px; }
-
-/* 🚀 상단 헤더 복구 */
+/* 🚀 [교정 핵심] 뚱뚱해진 헤더 높이 복구 및 그리드 정교화 */
 .all-header {
-    height: 60px;
-    display: grid;
-    grid-template-columns: 44px 1fr 44px 62px 44px;
+    height: 52px !important; /* 👈 날렵한 52px로 강제 고정 */
+    display: grid !important;
+    grid-template-columns: 44px 1fr 44px 62px 44px !important; /* [ - ] [ 날짜 ] [ 🔍 ] [ 수정 ] [ + ] */
     background: #3b82f6 !important;
     background-image: none !important;
     color: #ffffff !important;
@@ -195,13 +165,16 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
     border: 1px solid rgba(0,0,0,0.15) !important;
+    align-items: center;
 }
 
 .dia-header {
-    grid-template-columns: 44px 1fr 44px 44px !important;
+    height: 52px !important;
+    grid-template-columns: 44px 1fr 44px !important; /* [ - ] [ 날짜 ] [ + ] */
     background: #3b82f6 !important;
     border-radius: 16px !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    align-items: center;
 }
 
 .all-header-btn, .all-edit-btn, .all-header-title {
@@ -211,12 +184,27 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
     font-size: 22px;
     font-weight: 800;
     cursor: pointer;
-    height: 60px;
+    height: 52px !important; /* 높이 통일 */
     color: #ffffff !important;
     display: flex;
     align-items: center;
     justify-content: center;
     white-space: nowrap;
+    position: relative; /* 👈 날짜 인풋 공중부양용 */
+}
+
+/* 🎯 [날짜 선택 인풋 스텔스 보정] 글자를 가리지 않고 터치만 가로챔 */
+.all-header-title input[type="date"], .hidden-date-input {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 0 !important; /* 완전히 투명하게 */
+    cursor: pointer !important;
+    z-index: 10 !important;
+    appearance: none;
+    -webkit-appearance: none;
 }
 
 .all-edit-btn.active {
@@ -225,8 +213,8 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 }
 
 .all-header-btn:last-child { border-right: none !important; }
-.all-header-title { padding: 0 6px; font-size: 17px; line-height: 1.08; font-weight: 800; word-break: keep-all; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.all-edit-btn { font-size: 14px; }
+.all-header-title { padding: 0 6px; font-size: 16px; line-height: 1.08; font-weight: 800; word-break: keep-all; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.all-edit-btn { font-size: 12px; }
 
 .all-team-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; margin-bottom: 8px; }
 
@@ -273,8 +261,10 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 .all-cell-real { min-width: 0; min-height: 52px; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border-radius: 10px; padding: 2px 1px; text-align: center; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0px; user-select: none; touch-action: manipulation; border: 1px solid #c8d6f0; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255,255,255,0.92); transition: transform 0.12s ease, border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease; }
 .all-cell-real:hover { background: linear-gradient(180deg, #ffffff 0%, #f3f8ff 100%); }
 .all-cell-real:active { transform: scale(0.985); }
-.all-code { margin: 0; font-size: 18.5px; line-height: 1; font-weight: 900; color: #000000; white-space: nowrap; transition: color 0.2s ease; }
-.all-name { margin: 0; margin-top: 1px; font-size: 13.5px; line-height: 1; font-weight: 800; color: #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 98%; transition: color 0.2s ease; }
+
+/* ✅ [가독성 강화] 전체 탭 글자 굵기 900 보강 */
+.all-code { margin: 0; font-size: 18.5px; line-height: 1; font-weight: 900 !important; color: #000000; white-space: nowrap; transition: color 0.2s ease; }
+.all-name { margin: 0; margin-top: 1px; font-size: 13.5px; line-height: 1; font-weight: 800 !important; color: #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 98%; transition: color 0.2s ease; }
 
 .all-cell-real[style*="background-color"] {
   background-image: none !important;
@@ -583,11 +573,11 @@ body.dark-mode .day-date { color: #94a3b8 !important; }
   .month-time-wrap { grid-template-rows: 20px 20px; }
   .month-time-line { font-size: 10.2px !important; } 
   .all-page { padding-bottom: 20px; }
-  .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
-  .dia-header { grid-template-columns: 40px 1fr 38px 40px; }
-  .all-header-btn { height: 52px; font-size: 18px; }
-  .all-edit-btn { height: 52px; font-size: 12px; }
-  .all-header-title { font-size: 14px; padding: 0 5px; }
+
+  /* 모바일 헤더 높이 추가 보정 */
+  .all-header, .dia-header { height: 48px !important; }
+  .all-header-btn, .all-edit-btn, .all-header-title { height: 48px !important; }
+
   .all-team-tabs { gap: 4px; margin-top: 6px; margin-bottom: 6px; }
   .all-team-tab { font-size: 13px; padding: 9px 0; border-radius: 14px; }
   .all-tab-grid-wrap { padding: 6px; border-radius: 22px; margin-bottom: 10px; }
