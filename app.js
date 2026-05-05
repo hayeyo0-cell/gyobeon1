@@ -1163,33 +1163,26 @@ function App() {
   function cancelReconfigureProfile() { if (mySelection?.teamKey) { setSelectedTeam(mySelection.teamKey); setViewTeam(mySelection.teamKey); } setProfileAnchorDate(mySelection?.anchorDate || todayStr); setAllowProfileEdit(false); }
   function resetMyProfile() { const today = getKoreaToday(); clearMySelection(); setMySelection({ teamKey: "ks", name: "", code: "", anchorDate: today }); setDraftTeam("ks"); setDraftName(""); setDraftCode(""); setProfileAnchorDate(today); setAllowProfileEdit(true); setSelectedTeam("ks"); setViewTeam("ks"); setInitialRemoteChecked(false); setHomeDate(today); setBrowseDate(today); setMonthDate(today); setGroupBaseDate(today); setGroupMonth(getDisplayMonthValue(today)); setSelectedGroupDate(""); }
 
- function handleAllCellTap(item) { 
+  function handleAllCellTap(item) { 
     if (editMode) {
       openEditDialog(item);
     } else {
       const currentTeamKey = item.teamKey || viewTeam;
       const team = effectiveData[currentTeamKey];
       const nameTxt = String(item.name || "").trim();
-      
       if (!nameTxt || nameTxt === "-" || nameTxt === "공백") return;
-      
       const image = findPathImage(team, browseDate, item.code);
-
-      // 🚀 핵심 수정 구간: 검색어(searchQuery)가 있을 때 로직 변경
       if (searchQuery) {
         if (image) {
-          // 팝업을 띄우는 대신 하단 미리보기 데이터만 즉시 업데이트
           setPathTeamKey(currentTeamKey);
           setPathTarget(item);
           setPathDate(browseDate);
           setPathImage(image);
-          // window.history.pushState 및 setPathOpen(true) 로직을 제거하여 팝업 차단
+          // 팝업 없이 데이터만 갱신
         } else {
           setPathImage("");
-          setPathTarget(null);
         }
       } else {
-        // 검색 중이 아닐 때만 원래대로 큰 팝업창을 띄움
         openPathDialog(item, browseDate);
       }
     }
@@ -1534,26 +1527,29 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
+                  {/* 🚀 [최종 교정] 사진 3번 규격에 맞춰 돋보기(44)와 수정(48) 영역을 정밀 조정 */}
                   <div className={`${activeTab === "all" ? "all-header" : "dia-header"}`} style={{ 
                     display: "grid", 
                     width: "100%", 
-                    height: "52px", 
+                    height: "48px", 
                     alignItems: "center",
-                    gridTemplateColumns: activeTab === "all" ? "44px 1fr 44px 48px 44px" : "44px 1fr 44px",
+                    gridTemplateColumns: activeTab === "all" ? "40px 1fr 40px 40px 40px" : "40px 1fr 40px",
                     background: editMode ? "#ef4444" : "#3b82f6", 
                     borderRadius: "16px", 
                     overflow: "hidden",
                     boxShadow: "0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.25)",
                     transition: "background 0.3s ease"
                   }}>
+                    {/* 마이너스 버튼 */}
                     <button className="all-header-btn" style={{ 
-                      width: "100%", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", 
+                      width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)",
-                      background: "transparent", fontSize: "22px", fontWeight: "bold", color: "#ffffff" 
+                      background: "transparent", fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
+                    {/* 날짜 표시 영역 (중앙) */}
                     <div className="all-header-title" style={{ 
-                      width: "100%", height: "52px", display: "flex", alignItems: "center", justifyContent: "center",
+                      width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center",
                       textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff", 
                       position: 'relative', borderRight: "1px solid rgba(255,255,255,0.2)"
                     }}>
@@ -1570,10 +1566,11 @@ function App() {
                       />
                     </div>
 
+                    {/* 전체 탭일 때만 돋보기와 수정 버튼 표시 */}
                     {activeTab === "all" && (
                       <>
                         <button className="all-header-btn" style={{ 
-                          width: "44px", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", 
+                          width: "40px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", 
                           padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
                           background: "transparent", fontSize: "16px", color: "#ffffff" 
                         }} onClick={() => {
@@ -1585,27 +1582,23 @@ function App() {
                             setSearchQuery("");
                           }
                         }}>🔍</button>
-                        <button 
-                          className={`all-edit-btn ${editMode ? "active" : ""}`} 
-                          style={{ 
-                            width: "48px", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", 
-                            padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
-                            background: "transparent", color: "#ffffff", fontWeight: "bold", position: "relative"
-                          }} 
-                          onClick={(e) => { 
-                            e.stopPropagation();
-                            setEditMode(prev => !prev); 
-                          }}
-                        >
-                          {!editMode && "수정"}
-                        </button>
+                        <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
+                          width: "40px", height: "48px", fontSize: "11.5px", display: "flex", alignItems: "center", justifyContent: "center", 
+                          padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
+                          background: "transparent",
+                          color: "#ffffff", fontWeight: "bold" 
+                        }} onClick={(e) => { 
+                          e.stopPropagation();
+                          setEditMode(prev => !prev); 
+                        }}>{!editMode && "수정"}</button>
                       </>
                     )}
 
+                    {/* 플러스 버튼 */}
                     <button className="all-header-btn" style={{ 
-                      width: "100%", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", 
+                      width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
-                      fontSize: "22px", fontWeight: "bold", color: "#ffffff" 
+                      fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
                   </div>
                   {showSearch && activeTab === "all" && (
@@ -1983,13 +1976,13 @@ function App() {
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input
                     type="tel"
+                    className="input"
                     style={{
                       flex: 1,
                       minWidth: 0,
                       padding: '11px 12px',
                       borderRadius: '16px',
                       border: '1px solid rgba(203,213,225,0.95)',
-                      background: 'rgba(255,255,255,0.95)',
                       outline: 'none',
                       fontSize: 'inherit',
                       fontFamily: 'inherit',
@@ -2122,18 +2115,5 @@ function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, over
   return { code, name, displayName: override.alias || name, teamKey: teamKey };
 }
 
-// --- 렌더링 안정화 로직 ---
-const rootElement = document.getElementById("root");
-if (rootElement) {
-  const root = ReactDOM.createRoot(rootElement);
-  root.render(<App />);
-} else {
-  // 만약 root가 늦게 로드될 경우를 대비
-  window.addEventListener('DOMContentLoaded', () => {
-    const rootEl = document.getElementById("root");
-    if (rootEl) {
-      const root = ReactDOM.createRoot(rootEl);
-      root.render(<App />);
-    }
-  });
-}
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
