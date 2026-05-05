@@ -1528,7 +1528,6 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {/* 🚀 [최종 교정] 사진 3번 규격에 맞춰 돋보기(44)와 수정(48) 영역을 정밀 조정 */}
                   <div className={`${activeTab === "all" ? "all-header" : "dia-header"}`} style={{ 
                     display: "grid", 
                     width: "100%", 
@@ -1541,14 +1540,12 @@ function App() {
                     boxShadow: "0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.25)",
                     transition: "background 0.3s ease"
                   }}>
-                    {/* 마이너스 버튼 */}
                     <button className="all-header-btn" style={{ 
                       width: "100%", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)",
                       background: "transparent", fontSize: "22px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
-                    {/* 날짜 표시 영역 (중앙) */}
                     <div className="all-header-title" style={{ 
                       width: "100%", height: "52px", display: "flex", alignItems: "center", justifyContent: "center",
                       textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff", 
@@ -1567,7 +1564,6 @@ function App() {
                       />
                     </div>
 
-                    {/* 전체 탭일 때만 돋보기와 수정 버튼 표시 */}
                     {activeTab === "all" && (
                       <>
                         <button className="all-header-btn" style={{ 
@@ -1583,24 +1579,23 @@ function App() {
                             setSearchQuery("");
                           }
                         }}>🔍</button>
-                        /* JS 파일 내 all-edit-btn 버튼 부분을 이 코드로 교체 */
-<button 
-  className={`all-edit-btn ${editMode ? "active" : ""}`} 
-  style={{ 
-    width: "48px", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", 
-    padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
-    background: "transparent", color: "#ffffff", fontWeight: "bold", position: "relative"
-  }} 
-  onClick={(e) => { 
-    e.stopPropagation();
-    setEditMode(prev => !prev); 
-  }}
->
-  {/* 중요: 수정 모드일 때는 JS 텍스트를 비워야 CSS의 '수정중'이 깜빡이지 않고 고정됩니다 */}
-  {!editMode && "수정"}
-</button>
+                        <button 
+                          className={`all-edit-btn ${editMode ? "active" : ""}`} 
+                          style={{ 
+                            width: "48px", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", 
+                            padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
+                            background: "transparent", color: "#ffffff", fontWeight: "bold", position: "relative"
+                          }} 
+                          onClick={(e) => { 
+                            e.stopPropagation();
+                            setEditMode(prev => !prev); 
+                          }}
+                        >
+                          {!editMode && "수정"}
+                        </button>
+                      </>
+                    )}
 
-                    {/* 플러스 버튼 */}
                     <button className="all-header-btn" style={{ 
                       width: "100%", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
@@ -2121,5 +2116,18 @@ function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, over
   return { code, name, displayName: override.alias || name, teamKey: teamKey };
 }
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
+// --- 렌더링 안정화 로직 ---
+const rootElement = document.getElementById("root");
+if (rootElement) {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(<App />);
+} else {
+  // 만약 root가 늦게 로드될 경우를 대비
+  window.addEventListener('DOMContentLoaded', () => {
+    const rootEl = document.getElementById("root");
+    if (rootEl) {
+      const root = ReactDOM.createRoot(rootEl);
+      root.render(<App />);
+    }
+  });
+}
