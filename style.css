@@ -840,3 +840,88 @@ body.dark-mode .main-code {
 .all-tab-grid-wrap {
     background: #c2d3f5 !important; /* 그라데이션 대신 단색 처리로 노이즈 차단 */
 }
+/* [최종 교정] 전체 탭 헤더 (5칸 구성) */
+.all-header {
+    height: 48px !important; /* 높이 48px로 축소 */
+    display: grid !important;
+    /* 마이너스(40) | 날짜(1fr) | 돋보기(40) | 수정(40) | 플러스(40) */
+    grid-template-columns: 40px 1fr 40px 40px 40px !important;
+    background: #3b82f6 !important;
+    color: #ffffff !important;
+    border-radius: 16px !important;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    border: 1px solid rgba(0,0,0,0.15) !important;
+}
+
+/* [최종 교정] DIA순서 탭 헤더 (3칸 구성) */
+.dia-header {
+    height: 48px !important; /* 높이 48px로 축소 */
+    display: grid !important;
+    /* 마이너스(40) | 날짜(1fr) | 플러스(40) */
+    grid-template-columns: 40px 1fr 40px !important;
+    background: #3b82f6 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    overflow: hidden;
+}
+
+/* 헤더 내 공통 버튼 및 타이틀 높이 정렬 */
+.all-header-btn, .all-edit-btn, .all-header-title {
+    border: none !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.2) !important;
+    background: transparent !important;
+    cursor: pointer;
+    height: 48px !important; /* 헤더 높이에 맞춤 */
+    color: #ffffff !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+/* [교정 핵심] 40px 너비에 맞춘 수정 버튼 텍스트 최적화 */
+.all-edit-btn { 
+    font-size: 11.5px !important; /* 글자 크기 축소 */
+    min-width: 40px !important;   /* 너비 40px로 고정 */
+    letter-spacing: -0.5px;       /* 자간 조절로 가독성 확보 */
+}
+
+/* '수정중' 상태일 때의 강제 보정 */
+.all-edit-btn.active::after {
+    content: "수정중" !important;
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px !important;   /* '수정중' 세 글자가 들어가도록 미세 조정 */
+    color: #ffffff !important;    /* 배경이 빨간색이므로 흰색 글씨 추천 (빨간글씨 원하시면 #ff3333) */
+    background-color: #ef4444 !important;
+    font-weight: 900 !important;
+    letter-spacing: -1px;         /* 좁은 칸을 위한 자간 압축 */
+}
+
+/* 마이너스/플러스 버튼 텍스트 크기 살짝 조정 */
+.all-header-btn {
+    font-size: 20px !important; 
+}
+
+/* 중앙 날짜 타이틀 크기 조정 */
+.all-header-title { 
+    font-size: 14px !important; 
+    line-height: 1;
+}
+
+/* [중요] 모바일 환경에서의 대응 (반응형) */
+@media (max-width: 420px) {
+    .all-header, .dia-header {
+        height: 48px !important;
+    }
+    .all-edit-btn {
+        font-size: 10.5px !important; /* 모바일에서는 조금 더 작게 */
+    }
+    .all-edit-btn.active::after {
+        font-size: 9.5px !important;
+    }
+}
