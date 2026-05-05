@@ -1,4 +1,4 @@
-/* 수정된 CSS 전체 완성본 - 전화번호 칸 버그 및 글자 크기 정밀 복구 완료 */
+/* 수정된 CSS 전체 완성본 - 전체 탭 격자 가독성 및 글자 크기 복구 완료 */
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -29,7 +29,7 @@ button:active { transform: scale(0.97); }
 .notice-box { background: rgba(233, 242, 255, 0.95); border: 1px solid rgba(189, 210, 255, 0.95); color: #2146a6; border-radius: 16px; padding: 10px 12px; margin-top: 10px; font-size: 13px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7); }
 .label { display: block; margin-bottom: 6px; color: #4b5563; font-size: 14px; font-weight: 700; }
 
-/* 🚀 [교정] 전화번호 칸이 두 개로 보이던 레이아웃 버그 해결 (flex 컨테이너 대응) */
+/* 🚀 [교정 핵심] 전화번호 칸 중복 버그 해결 - width: auto 및 min-width: 0 반영 */
 .input, .select { 
   width: 100%; 
   min-width: 0; /* ✅ flex 계산 꼬임 방지 */
@@ -43,10 +43,9 @@ button:active { transform: scale(0.97); }
 }
 .input:focus, .select:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12); }
 
-/* JSX의 flex: 1과 충돌하지 않도록 input 스타일 정밀 조정 */
-input.input {
+/* JSX의 flex: 1 스타일과 충돌하지 않도록 input 스타일 정밀 조정 */
+input.input { 
   width: auto; /* ✅ flex 컨테이너 안에서 width: 100%가 영역을 깨뜨리는 것 방지 */
-  width: 100%; /* 기본값은 유지하되 아래에서 flex-grow가 우선되도록 설정 */
 }
 
 .settings-row { min-height: 52px; display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -213,7 +212,9 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
     white-space: nowrap;
 }
 
-/* 🚀 [교정 핵심] 버튼 활성화 시 '수정중' 빨간색 강조 및 문구 처리 강제 패치 */
+/* 🚀 [교정 핵심] 수정 버튼 활성화 시 '수정중' 빨간색 강조 및 중복 문구 방지 강제 패치 */
+.all-edit-btn { font-size: 13px !important; min-width: 48px !important; position: relative; }
+
 .all-edit-btn.active {
     color: transparent !important; /* 👈 기존 '중' 문구가 겹치지 않게 투명 처리 */
     text-shadow: none !important;
@@ -297,7 +298,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 /* 🚀 [교정 핵심] 교번과 이름 스타일 정밀 수정 (이전 사진처럼 작고 쨍하게 복구) */
 .all-code { 
   margin: 0; 
-  font-size: 15.2px !important;  /* 👈 미세하게 컸던 숫자를 이전 크기로 복구 */
+  font-size: 14.8px !important;  /* 👈 미세하게 컸던 숫자를 이전 크기로 복구 */
   line-height: 1.1; 
   font-weight: 900; 
   color: #000000; 
@@ -307,7 +308,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 .all-name { 
   margin: 0; 
   margin-top: 1.5px;
-  font-size: 11.2px !important;  /* 👈 미세하게 컸던 이름을 이전 크기로 복구 */
+  font-size: 10.8px !important;  /* 👈 미세하게 컸던 이름을 이전 크기로 복구 */
   line-height: 1; 
   font-weight: 800; 
   color: #000000; 
@@ -444,6 +445,8 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 .viewer-body { padding: 16px; overflow: visible; color: #111827; }
 .fullscreen-image { width: 100%; max-width: 950px; display: block; margin: 0 auto; background: white; border: 1px solid #cbd5e1; box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08); }
 .empty-box { border: 1px dashed #94a3b8; padding: 40px 16px; background: white; border-radius: 16px; color: #64748b; text-align: center; }
+
+@keyframes myCellBlink { 0%, 100% { transform: translateY(-2px) scale(1.015); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); } 50% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.4); } }
 
 /* 🌙 [디자인 교정] 다크 모드 (대비 강화 및 시인성 극대화) */
 body.dark-mode { background: #05080f !important; color: #f8fafc !important; }
