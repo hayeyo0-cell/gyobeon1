@@ -1528,27 +1528,29 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {/* 🚀 [교정] 헤더 높이를 날렵한 50px로 고정하고 인풋 요소를 투명하게 배치 */}
+                  {/* 🚀 [최종 교정] 사진 3번 규격에 맞춰 돋보기(44)와 수정(48) 영역을 정밀 조정 */}
                   <div className={`${activeTab === "all" ? "all-header" : "dia-header"}`} style={{ 
                     display: "grid", 
                     width: "100%", 
-                    height: "50px", 
+                    height: "52px", 
                     alignItems: "center",
-                    gridTemplateColumns: activeTab === "all" ? "42px 1fr 42px 58px 42px" : "42px 1fr 42px",
+                    gridTemplateColumns: activeTab === "all" ? "44px 1fr 44px 48px 44px" : "44px 1fr 44px",
                     background: editMode ? "#ef4444" : "#3b82f6", 
                     borderRadius: "16px", 
                     overflow: "hidden",
                     boxShadow: "0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.25)",
                     transition: "background 0.3s ease"
                   }}>
+                    {/* 마이너스 버튼 */}
                     <button className="all-header-btn" style={{ 
-                      width: "100%", height: "50px", display: "flex", alignItems: "center", justifyContent: "center", 
+                      width: "100%", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)",
                       background: "transparent", fontSize: "22px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
+                    {/* 날짜 표시 영역 (중앙) */}
                     <div className="all-header-title" style={{ 
-                      width: "100%", height: "50px", display: "flex", alignItems: "center", justifyContent: "center",
+                      width: "100%", height: "52px", display: "flex", alignItems: "center", justifyContent: "center",
                       textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff", 
                       position: 'relative', borderRight: "1px solid rgba(255,255,255,0.2)"
                     }}>
@@ -1556,7 +1558,7 @@ function App() {
                       <input 
                         type="date" 
                         className="hidden-date-input"
-                        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
+                        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: 2 }}
                         value={browseDate} 
                         onChange={(e) => {
                           const nextDate = e.target.value;
@@ -1565,10 +1567,11 @@ function App() {
                       />
                     </div>
 
+                    {/* 전체 탭일 때만 돋보기와 수정 버튼 표시 */}
                     {activeTab === "all" && (
                       <>
                         <button className="all-header-btn" style={{ 
-                          width: "100%", height: "50px", display: "flex", alignItems: "center", justifyContent: "center", 
+                          width: "44px", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", 
                           padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
                           background: "transparent", fontSize: "16px", color: "#ffffff" 
                         }} onClick={() => {
@@ -1581,15 +1584,17 @@ function App() {
                           }
                         }}>🔍</button>
                         <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
-                          width: "100%", height: "50px", fontSize: "11px", display: "flex", alignItems: "center", justifyContent: "center", 
+                          width: "48px", height: "52px", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center", 
                           padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
                           background: "transparent",
                           color: "#ffffff", fontWeight: "bold" 
-                        }} onClick={() => setEditMode(!editMode)}>{editMode ? "수정중" : "수정"}</button>
+                        }} onClick={() => setEditMode(!editMode)}>{editMode ? "중" : "수정"}</button>
                       </>
                     )}
+
+                    {/* 플러스 버튼 */}
                     <button className="all-header-btn" style={{ 
-                      width: "100%", height: "50px", display: "flex", alignItems: "center", justifyContent: "center", 
+                      width: "100%", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
                       fontSize: "22px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, 1))}>+</button>
@@ -1620,7 +1625,6 @@ function App() {
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
-                          // ✅ 글자 두께(900) 보강
                           const textColorStyle = cellColor 
                             ? { color: "#000000", fontWeight: "900" } 
                             : { color: isDarkMode ? "#ffffff" : "#000000", fontWeight: "900" };
@@ -1969,6 +1973,7 @@ function App() {
                 <label className="label" style={{ marginTop: 12 }}>전화번호</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <input className="input" style={{ flex: 1 }} value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="01012345678" />
+                  <input className="input" style={{ flex: 1 }} value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="01012345678" />
                   <button className="modal-btn" style={{ width: 'auto', padding: '0 12px' }} onClick={pickContactForEdit}>📂</button>
                 </div>
                 <label className="label" style={{ marginTop: 12 }}>색상 선택</label>
@@ -2064,7 +2069,6 @@ function App() {
           padding: 0;
           cursor: pointer;
         }
-        /* ✅ 전체 탭 교번/이름 두께 강화 CSS */
         .all-code {
           font-weight: 900 !important;
         }
