@@ -152,43 +152,13 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 .month-header-title { height: 48px; display: flex; align-items: center; justify-content: center; background: #ffffff; border-radius: 16px; font-size: 24px; font-weight: 800; border: 1px solid #d7dce5; transition: background-color 0.2s ease, border-color 0.2s ease; }
 
 .all-page { padding-bottom: 20px; }
-.all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
-.dia-header { grid-template-columns: 40px 1fr 38px 40px; }
-.all-header-btn { height: 52px; font-size: 18px; }
-.all-edit-btn { height: 52px; font-size: 12px; }
-.all-header-title { font-size: 14px; padding: 0 5px; }
 
-.all-team-tabs { gap: 4px; margin-top: 6px; margin-bottom: 6px; }
-.all-team-tab { font-size: 13px; padding: 9px 0; border-radius: 14px; }
-.all-tab-grid-wrap { padding: 6px; border-radius: 22px; margin-bottom: 10px; }
-.all-cell-real { min-height: 48px; border-radius: 8px; padding: 2px 1px; }
-
-.all-grid-real.density-4 { display: grid; width: 100%; height: auto; gap: 2px; align-items: stretch; grid-template-columns: repeat(4, 1fr); }
-.all-grid-real.density-5 { display: grid; width: 100%; height: auto; gap: 2px; align-items: stretch; grid-template-columns: repeat(5, 1fr); }
-.all-grid-real.density-6 { display: grid; width: 100%; height: auto; gap: 2px; align-items: stretch; grid-template-columns: repeat(6, 1fr); }
-
-/* 🚀 [교정] 전체 탭 격자 안의 교번과 이름 정밀 크기 및 두께 설정 */
-.all-grid-real.density-4 .all-code { font-size: 17px !important; } .all-grid-real.density-4 .all-name { font-size: 12.5px !important; }
-.all-grid-real.density-5 .all-code { font-size: 15px !important; } .all-grid-real.density-5 .all-name { font-size: 11.5px !important; }
-.all-grid-real.density-6 .all-code { font-size: 14px !important; } .all-grid-real.density-6 .all-name { font-size: 10px !important; }
-
-.group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
-.nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
-.group-select-display { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
-.group-add-btn-v4 { padding: 6px 2px; font-size: 12px; border-radius: 10px; }
-
-.code-txt { font-size: 13px; }
-.row-del-btn-text { padding: 3px 10px; font-size: 10px; border-radius: 10px; }
-
-.modal { padding: 16px; border-radius: 20px; }
-.modal-title { font-size: 22px; }
-.modal-sub { font-size: 16px; }
-
-/* 🚀 상단 헤더 복구 */
+/* 🚀 [최종 교정] 사진 3번 규격에 맞춰 돋보기(44)와 수정(48) 영역을 정밀 조정 */
 .all-header {
-    height: 60px;
-    display: grid;
-    grid-template-columns: 44px 1fr 44px 62px 44px;
+    height: 52px !important;
+    display: grid !important;
+    /* 마이너스(44) | 날짜(1fr) | 돋보기(44) | 수정(48) | 플러스(44) */
+    grid-template-columns: 44px 1fr 44px 48px 44px !important;
     background: #3b82f6 !important;
     background-image: none !important;
     color: #ffffff !important;
@@ -198,11 +168,16 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
     border: 1px solid rgba(0,0,0,0.15) !important;
 }
 
+/* 🚀 [최종 교정] DIA순서 탭에서 플러스 버튼이 어긋나지 않도록 3분할 고정 */
 .dia-header {
-    grid-template-columns: 44px 1fr 44px 44px !important;
+    height: 52px !important;
+    display: grid !important;
+    /* 마이너스(44) | 날짜(1fr) | 플러스(44) */
+    grid-template-columns: 44px 1fr 44px !important;
     background: #3b82f6 !important;
     border-radius: 16px !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    overflow: hidden;
 }
 
 .all-header-btn, .all-edit-btn, .all-header-title {
@@ -212,9 +187,9 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
     font-size: 22px;
     font-weight: 800;
     cursor: pointer;
-    height: 60px;
+    height: 52px !important;
     color: #ffffff !important;
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
     white-space: nowrap;
@@ -226,8 +201,21 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 }
 
 .all-header-btn:last-child { border-right: none !important; }
-.all-header-title { padding: 0 6px; font-size: 17px; line-height: 1.08; font-weight: 800; word-break: keep-all; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.all-edit-btn { font-size: 14px; }
+
+.all-header-title { 
+    padding: 0 6px; 
+    font-size: 15px !important; 
+    line-height: 1.08; 
+    font-weight: 800; 
+    word-break: keep-all; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    min-width: 0; 
+}
+
+/* 🚀 [교정] 수정 버튼 칸 사진처럼 작고 날렵하게 고정 */
+.all-edit-btn { font-size: 13px !important; min-width: 48px !important; }
 
 .all-team-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; margin-bottom: 8px; }
 
@@ -586,11 +574,22 @@ body.dark-mode .day-date { color: #94a3b8 !important; }
   .month-time-wrap { grid-template-rows: 20px 20px; }
   .month-time-line { font-size: 10.2px !important; } 
   .all-page { padding-bottom: 20px; }
-  .all-header { height: 52px; grid-template-columns: 40px 1fr 38px 62px 40px; border-radius: 16px !important; }
-  .dia-header { grid-template-columns: 40px 1fr 38px 40px; }
-  .all-header-btn { height: 52px; font-size: 18px; }
-  .all-edit-btn { height: 52px; font-size: 12px; }
-  .all-header-title { font-size: 14px; padding: 0 5px; }
+  
+  /* 🚀 [최종 교정] 모바일 최적화에서도 헤더 칸 비율 고정 */
+  .all-header { 
+    height: 52px !important; 
+    grid-template-columns: 44px 1fr 44px 48px 44px !important; 
+    border-radius: 16px !important; 
+  }
+  .dia-header { 
+    height: 52px !important; 
+    grid-template-columns: 44px 1fr 44px !important; 
+    border-radius: 16px !important; 
+  }
+
+  .all-header-btn { height: 52px !important; font-size: 18px !important; }
+  .all-edit-btn { height: 52px !important; font-size: 12px !important; }
+  .all-header-title { font-size: 14px !important; padding: 0 5px; }
   .all-team-tabs { gap: 4px; margin-top: 6px; margin-bottom: 6px; }
   .all-team-tab { font-size: 13px; padding: 9px 0; border-radius: 14px; }
   .all-tab-grid-wrap { padding: 6px; border-radius: 22px; margin-bottom: 10px; }
