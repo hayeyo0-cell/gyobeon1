@@ -29,8 +29,14 @@ button:active { transform: scale(0.97); }
 .notice-box { background: rgba(233, 242, 255, 0.95); border: 1px solid rgba(189, 210, 255, 0.95); color: #2146a6; border-radius: 16px; padding: 10px 12px; margin-top: 10px; font-size: 13px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7); }
 .label { display: block; margin-bottom: 6px; color: #4b5563; font-size: 14px; font-weight: 700; }
 
-/* 🚀 [교정] 전화번호 칸 겹침 및 중복 현상 해결 (표준 input 스타일 복구) */
-.input, .select { width: 100%; padding: 11px 12px; border-radius: 16px; border: 1px solid rgba(203, 213, 225, 0.95); background: rgba(255, 255, 255, 0.95); outline: none; box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.02); transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease; }
+/* 🚀 [교정] 전화번호 칸이 두 개로 보이던 레이아웃 버그 해결 (input 스타일 표준화) */
+.input, .select { 
+  width: 100%; padding: 11px 12px; border-radius: 16px; 
+  border: 1px solid rgba(203, 213, 225, 0.95); 
+  background: rgba(255, 255, 255, 0.95); outline: none; 
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.02); 
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease; 
+}
 .input:focus, .select:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12); }
 
 .settings-row { min-height: 52px; display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -274,7 +280,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 .all-tab-grid-wrap { overflow: visible; background: linear-gradient(180deg, rgba(194, 211, 245, 0.78) 0%, rgba(178, 198, 238, 0.72) 100%); border-radius: 28px; padding: 8px; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255,255,255,0.38); margin-bottom: 12px; transition: background 0.2s ease; }
 .all-grid-real { display: grid; width: 100%; height: auto; gap: 2px; align-items: stretch; }
 
-.all-cell-real { min-width: 0; min-height: 52px; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border-radius: 10px; padding: 3px 1px; text-align: center; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0px; user-select: none; touch-action: manipulation; border: 1px solid #c8d6f0; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255,255,255,0.92); transition: transform 0.12s ease, border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease; }
+.all-cell-real { min-width: 0; min-height: 52px; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border-radius: 10px; padding: 2px 1px; text-align: center; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0px; user-select: none; touch-action: manipulation; border: 1px solid #c8d6f0; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255,255,255,0.92); transition: transform 0.12s ease, border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease; }
 .all-cell-real:hover { background: linear-gradient(180deg, #ffffff 0%, #f3f8ff 100%); }
 .all-cell-real:active { transform: scale(0.985); }
 
@@ -626,8 +632,8 @@ body.dark-mode .day-date { color: #94a3b8 !important; }
   .all-cell-real { min-height: 48px; border-radius: 8px; padding: 2px 1px; }
 
   /* 🚀 [모바일 최종 교정] 모바일에서도 글자가 넘치지 않도록 세부 크기 복구 */
-  .all-code { font-size: 14.8px !important; }
-  .all-name { font-size: 10.8px !important; }
+  .all-code { font-size: 15.2px !important; }
+  .all-name { font-size: 11.2px !important; }
 
   .group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
   .nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
@@ -755,4 +761,23 @@ body.dark-mode .modal.month-edit-modal {
 /* 🚀 [최종 교정] 홈화면 미리보기 위 '요일' 글자색 강제 보정 */
 body.dark-mode .main-code {
   color: #ffffff !important;
+}
+
+/* 🚀 [교정 핵심] 버튼 활성화 시 '수정중' 빨간색 강조 및 문구 처리 강제 패치 */
+/* 기존 코드의 미비점을 보완하여 쨍한 빨간색과 '수정중' 한글이 확실히 나오도록 보장 */
+.all-edit-btn.active {
+    color: transparent !important; /* 👈 기존 '중' 문구가 겹치지 않게 투명 처리 */
+    text-shadow: none !important;
+}
+.all-edit-btn.active::after {
+    content: "수정중" !important; /* 활성화 시 문구 변경 */
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11.5px !important;   /* 길어진 문구에 맞춘 크기 */
+    color: #ff3333 !important;
+    font-weight: 900 !important;
+    text-shadow: 0 0 8px rgba(255,0,0,0.3);
 }
