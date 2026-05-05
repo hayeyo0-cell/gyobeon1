@@ -1588,7 +1588,10 @@ function App() {
                           padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
                           background: "transparent",
                           color: "#ffffff", fontWeight: "bold" 
-                        }} onClick={() => setEditMode(!editMode)}>{editMode ? "중" : "수정"}</button>
+                        }} onClick={(e) => { 
+                          e.stopPropagation();
+                          setEditMode(prev => !prev); 
+                        }}>{editMode ? "중" : "수정"}</button>
                       </>
                     )}
 
@@ -1971,10 +1974,30 @@ function App() {
             {!editingCell?.isMonthEdit && (
               <>
                 <label className="label" style={{ marginTop: 12 }}>전화번호</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input className="input" style={{ flex: 1 }} value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="01012345678" />
-                  <input className="input" style={{ flex: 1 }} value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="01012345678" />
-                  <button className="modal-btn" style={{ width: 'auto', padding: '0 12px' }} onClick={pickContactForEdit}>📂</button>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="tel"
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      padding: '11px 12px',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(203,213,225,0.95)',
+                      background: 'rgba(255,255,255,0.95)',
+                      outline: 'none',
+                      fontSize: 'inherit',
+                      fontFamily: 'inherit',
+                      boxSizing: 'border-box'
+                    }}
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="01012345678"
+                  />
+                  <button
+                    className="modal-btn"
+                    style={{ flexShrink: 0, width: '48px', height: '48px', padding: 0 }}
+                    onClick={pickContactForEdit}
+                  >📂</button>
                 </div>
                 <label className="label" style={{ marginTop: 12 }}>색상 선택</label>
                 <div style={{ marginTop: '8px' }}>
