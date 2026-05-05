@@ -794,3 +794,43 @@ body.dark-mode .main-code {
     font-weight: 900 !important;
     text-shadow: 0 0 8px rgba(255,0,0,0.3);
 }
+/* 🚀 [문제 해결 1] 격자 사이의 잔상 및 무늬 완전 제거 */
+.all-grid-real::before, 
+.all-grid-real::after,
+.all-tab-grid-wrap::before, 
+.all-tab-grid-wrap::after,
+.all-cell-real::before,
+.all-cell-real::after {
+    display: none !important;
+    content: none !important;
+    background: none !important;
+}
+
+/* 🚀 [문제 해결 2] '수정중' 글씨 고정 및 배경색 강조 */
+.all-edit-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.all-edit-btn.active {
+    background-color: #ef4444 !important; /* 수정 모드일 때 선명한 빨간색 고정 */
+    transition: none !important;
+}
+
+.all-edit-btn.active::after {
+    content: "수정중" !important;
+    position: absolute;
+    inset: 0;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px !important;
+    color: #ffffff !important;
+    font-weight: 900 !important;
+    z-index: 10;
+}
+
+/* 격자판 배경을 깔끔하게 정리 */
+.all-tab-grid-wrap {
+    background: #c2d3f5 !important; /* 그라데이션 대신 단색 처리로 노이즈 차단 */
+}
