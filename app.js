@@ -1583,17 +1583,22 @@ function App() {
                             setSearchQuery("");
                           }
                         }}>🔍</button>
-                        <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
-                          width: "48px", height: "52px", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center", 
-                          padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
-                          background: "transparent",
-                          color: "#ffffff", fontWeight: "bold" 
-                        }} onClick={(e) => { 
-                          e.stopPropagation();
-                          setEditMode(prev => !prev); 
-                        }}>{editMode ? "중" : "수정"}</button>
-                      </>
-                    )}
+                        /* JS 파일 내 all-edit-btn 버튼 부분을 이 코드로 교체 */
+<button 
+  className={`all-edit-btn ${editMode ? "active" : ""}`} 
+  style={{ 
+    width: "48px", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", 
+    padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
+    background: "transparent", color: "#ffffff", fontWeight: "bold", position: "relative"
+  }} 
+  onClick={(e) => { 
+    e.stopPropagation();
+    setEditMode(prev => !prev); 
+  }}
+>
+  {/* 중요: 수정 모드일 때는 JS 텍스트를 비워야 CSS의 '수정중'이 깜빡이지 않고 고정됩니다 */}
+  {!editMode && "수정"}
+</button>
 
                     {/* 플러스 버튼 */}
                     <button className="all-header-btn" style={{ 
