@@ -1163,27 +1163,33 @@ function App() {
   function cancelReconfigureProfile() { if (mySelection?.teamKey) { setSelectedTeam(mySelection.teamKey); setViewTeam(mySelection.teamKey); } setProfileAnchorDate(mySelection?.anchorDate || todayStr); setAllowProfileEdit(false); }
   function resetMyProfile() { const today = getKoreaToday(); clearMySelection(); setMySelection({ teamKey: "ks", name: "", code: "", anchorDate: today }); setDraftTeam("ks"); setDraftName(""); setDraftCode(""); setProfileAnchorDate(today); setAllowProfileEdit(true); setSelectedTeam("ks"); setViewTeam("ks"); setInitialRemoteChecked(false); setHomeDate(today); setBrowseDate(today); setMonthDate(today); setGroupBaseDate(today); setGroupMonth(getDisplayMonthValue(today)); setSelectedGroupDate(""); }
 
-  function handleAllCellTap(item) { 
+ function handleAllCellTap(item) { 
     if (editMode) {
       openEditDialog(item);
     } else {
       const currentTeamKey = item.teamKey || viewTeam;
       const team = effectiveData[currentTeamKey];
       const nameTxt = String(item.name || "").trim();
+      
       if (!nameTxt || nameTxt === "-" || nameTxt === "공백") return;
+      
       const image = findPathImage(team, browseDate, item.code);
+
+      // 🚀 핵심 수정 구간: 검색어(searchQuery)가 있을 때 로직 변경
       if (searchQuery) {
         if (image) {
+          // 팝업을 띄우는 대신 하단 미리보기 데이터만 즉시 업데이트
           setPathTeamKey(currentTeamKey);
           setPathTarget(item);
           setPathDate(browseDate);
           setPathImage(image);
-          if (!window.history.state || window.history.state.layer !== "path") window.history.pushState({ __gyobeon: true, layer: "path" }, "");
-          setPathOpen(true);
+          // window.history.pushState 및 setPathOpen(true) 로직을 제거하여 팝업 차단
         } else {
           setPathImage("");
+          setPathTarget(null);
         }
       } else {
+        // 검색 중이 아닐 때만 원래대로 큰 팝업창을 띄움
         openPathDialog(item, browseDate);
       }
     }
