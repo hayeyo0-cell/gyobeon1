@@ -5,16 +5,6 @@
  * 3. [디자인 복구] 날짜 선택 인풋 헤더 높이 정렬 정밀 교정 유지
  * 4. [검색 이미지] 검색 결과 하단 행로표 이미지 표시 로직 완벽 유지
  **/
-const style = document.createElement('style');
-style.innerHTML = `
-  .all-code { font-size: 16px !important; font-weight: 900 !important; color: #000000 !important; letter-spacing: -0.5px; }
-  .all-name { font-size: 11px !important; font-weight: 500 !important; color: #555555 !important; margin-top: 3px; }
-  @media (max-width: 420px) {
-    .all-code { font-size: 15px !important; }
-    .all-name { font-size: 10.2px !important; }
-  }
-`;
-document.head.appendChild(style);
 const { useEffect, useMemo, useRef, useState } = React;
 
 // --- 상수 정의 ---
