@@ -321,10 +321,10 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 /* 🚀 [교번 대강화] 첫 번째 문양 사진 규격 그대로 900 울트라볼드 적용 및 진한 리얼블랙 박멸 고정 */
 .all-code { 
   margin: 0; 
-  font-size: 15.5px !important; 
+  font-size: 16px !important; 
   line-height: 1.1 !important; 
-  font-weight: 900 !important; 
-  color: #000000 !important; /* 👈 완전 검정으로 고정하여 흐려짐 차단 */
+  font-weight: 900 !important; /* 👈 900으로 가장 굵게 */
+  color: #000000 !important; /* 👈 완전 검정 */
   white-space: nowrap; 
   transition: color 0.2s ease; 
 }
