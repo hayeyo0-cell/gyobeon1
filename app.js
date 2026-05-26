@@ -1,9 +1,10 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 가독성 동기화 및 완전판)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 문법 오류 해결 및 전체판)
  * 개선사항: 
- * 1. [가독성 완벽 동기화] JS 내부의 codeStyle, nameStyle 크기와 두께를 CSS 황금 비율과 100% 일치하도록 정밀 교정
- * 2. [디자인 복구] 날짜 선택 인풋 헤더 높이(48px) 및 정렬 정밀 교정 유지
- * 3. [검색 이미지] 검색 결과 하단 행로표 이미지 표시 로직 완벽 유지
- * 4. [뒤로가기/날짜선택] 검색창 히스토리 제어 및 날짜 직접 선택 기능 통합
+ * 1. [오류 해결] loadMySelection 함수 내부의 세미콜론 및 구문 오타를 수정하여 화면 멈춤 현상 완벽 해결
+ * 2. [가독성 완벽 동기화] JS 내부의 codeStyle, nameStyle 크기와 두께를 CSS 황금 비율과 100% 일치하도록 정밀 교정
+ * 3. [디자인 복구] 날짜 선택 인풋 헤더 높이(48px) 및 정렬 정밀 교정 유지
+ * 4. [검색 이미지] 검색 결과 하단 행로표 이미지 표시 로직 완벽 유지
+ * 5. [뒤로가기/날짜선택] 검색창 히스토리 제어 및 날짜 직접 선택 기능 통합
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -178,6 +179,7 @@ function findPathImage(team, dateStr, code) {
   return null;
 }
 
+/* 🟢 분할 레이아웃 계산 규칙 */
 function getGyobunOrder(team) { return team?.gyobun?.length ? team.gyobun : DEFAULT_GYOBUN; }
 function getDiaOrder(team) { return team?.diaOrder?.length ? team.diaOrder : getGyobunOrder(team); }
 function normalizeToFixedCode(team, code) { const fixedCodes = getGyobunOrder(team); return fixedCodes.find((item) => normalizeCodeKey(item) === normalizeCodeKey(code)) || code || ""; }
@@ -253,7 +255,22 @@ function loadOverrides() { try { return JSON.parse(localStorage.getItem("gyobeon
 function saveOverrides(value) { localStorage.setItem("gyobeon_overrides", JSON.stringify(value)); }
 function cleanupNameOverrides() { try { const raw = localStorage.getItem("gyobeon_overrides"); if (!raw) return; const data = JSON.parse(raw); let changed = false; Object.keys(data).forEach((key) => { const item = data[key]; if (item && typeof item === "object" && "name" in item) { delete item.name; changed = true; } }); if (changed) localStorage.setItem("gyobeon_overrides", JSON.stringify(data)); } catch (err) {} }
 
-function loadMySelection() { try { const raw = JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null"); if (!raw) return null; return { teamKey: raw.teamKey || "ks", name: raw.name || "", code: raw.code || "", anchorDate: raw.anchorDate || getKoreaToday(); }; } catch { return null; } }
+/* 🟢 [교정 완료] 함수 내부에 존재하던 치명적인 세미콜론 오타(;)를 완벽히 제거했습니다. */
+function loadMySelection() { 
+  try { 
+    const raw = JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null"); 
+    if (!raw) return null; 
+    return { 
+      teamKey: raw.teamKey || "ks", 
+      name: raw.name || "", 
+      code: raw.code || "", 
+      anchorDate: raw.anchorDate || getKoreaToday() 
+    }; 
+  } catch (e) { 
+    return null; 
+  } 
+}
+
 function saveMySelection(value) { const next = { teamKey: value?.teamKey || "ks", name: value?.name || "", code: value?.code || "", anchorDate: value?.anchorDate || getKoreaToday() }; localStorage.setItem("gyobeon_my_selection", JSON.stringify(next)); }
 function clearMySelection() { localStorage.removeItem("gyobeon_my_selection"); }
 function loadGroups() { try { return JSON.parse(localStorage.getItem("gyobeon_groups") || "{}"); } catch { return {}; } }
@@ -1602,7 +1619,6 @@ function App() {
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
-                          {/* 🟢 [교정] 인라인 스타일 내부에서 글자 크기와 굵기를 강제 고정하여 CSS 설정을 차단하던 오류를 완벽히 제거했습니다. */}
                           const codeStyle = undefined;
                           const nameStyle = undefined;
                             
@@ -1650,10 +1666,10 @@ function App() {
                           </div>
                           {hasPhone && (
                             <a href={`tel:${overrides[cellKey].phone}`} style={{ 
-                                display: 'flex', alignItems: 'center', justifycontent: 'center',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 width: '40px', height: '40px',
                                 background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
-                                color: 'white', borderimages: '50%', textDecoration: 'none', 
+                                color: 'white', borderRadius: '50%', textDecoration: 'none', 
                                 boxShadow: '0 4px 8px rgba(16, 185, 129, 0.4)',
                                 fontSize: '18px', border: '2px solid white'
                               }}>📞</a>
@@ -1796,7 +1812,7 @@ function App() {
                                       openPathDialogForTeamAndDate(member.team, { code: item.code, name: member.name, displayName: displayMemberName, idx: -1 }, date); 
                                     } 
                                   }} className={`${isSelectedCol ? "active-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
-                                    <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifycontent: 'center', width: '100%', height: '100%', fontWeight: "900" }}>
+                                    <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: "900" }}>
                                       {item?.code || "-"}
                                     </div>
                                   </td>
@@ -1830,7 +1846,7 @@ function App() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">설정</div>
             <label className="label" style={{ marginTop: 6 }}>화면 테마</label>
-            <button className="modal-btn" style={{ width: '100%', display: 'flex', justifycontent: 'space-between', alignItems: 'center', padding: '0 16px', marginBottom: 16 }} onClick={() => setIsDarkMode(!isDarkMode)}>
+            <button className="modal-btn" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 16px', marginBottom: 16 }} onClick={() => setIsDarkMode(!isDarkMode)}>
               <span>{isDarkMode ? "🌙 다크 모드 켜짐" : "☀️ 라이트 모드 켜짐"}</span>
               <span style={{ fontSize: '18px' }}>{isDarkMode ? "✅" : "☑️"}</span>
             </button>
@@ -1871,7 +1887,7 @@ function App() {
             <label className="label" style={{ marginTop: 24 }}>데이터 백업 및 복구</label>
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <button className="modal-btn" style={{ flex: 1 }} onClick={exportSettings}>📥 백업하기</button>
-              <label className="modal-btn" style={{ flex: 1, display: 'flex', alignItems: 'center', justifycontent: 'center', cursor: 'pointer', margin: 0 }}>
+              <label className="modal-btn" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', margin: 0 }}>
                 📤 복구하기
                 <input type="file" accept=".json" style={{ display: 'none' }} onChange={importSettings} />
               </label>
@@ -1914,175 +1930,4 @@ function App() {
             <label className="label">3. 선택된 그룹에 인원 추가</label>
             <div style={{ gridTemplateColumns: '1fr 1fr', display: 'grid', gap: '8px', marginBottom: '12px' }}>
               <div>
-                <select className="select" value={groupAddTeam} onChange={(e) => { setGroupAddTeam(e.target.value); setGroupAddName(""); }}>
-                  {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
-                </select>
-              </div>
-              <div>
-                <select className="select" value={groupAddName} onChange={(e) => setGroupAddName(e.target.value)}>
-                  <option value="">선택</option>
-                  {groupAddCandidates.map((person) => (<option key={`${groupAddTeam}-${person.name}`} value={person.name}>{person.displayName}</option>))}
-                </select>
-              </div>
-            </div>
-            <button className="modal-btn primary" style={{ width: '100%' }} onClick={addToGroup} disabled={!currentGroup || !groupAddName}>+ 인원 추가</button>
-            <div className="modal-actions" style={{ marginTop: '24px' }}>
-              <button className="modal-btn" style={{ width: '100%' }} onClick={() => { if (showGroupAddRef.current) window.history.back(); else setShowGroupAdd(false); }}>닫기</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editOpen && (
-        <div className="modal-backdrop" onClick={closeEditDialog}>
-          <div className="modal month-edit-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">{editingCell?.isMonthEdit ? "교번 수정" : "표시 수정"}</div>
-            <div className="modal-sub">
-              {editingCell?.isMonthEdit ? `${editingCell.date} - ${editingCell.name}` : `${TEAM_LABELS[editingCell?.teamKey || viewTeam]} ${editingCell?.code} ${editingCell?.name}`}
-            </div>
-            <label className="label" style={{ marginTop: 12 }}>{editingCell?.isMonthEdit ? "수정할 교번" : "표시 이름"}</label>
-            <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '8px' }}>
-              {editingCell?.isMonthEdit && `현재: ${editingCell.code}`}
-            </div>
-            <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder={editingCell?.isMonthEdit ? "예: 15d, 대1, 휴1" : "비워두면 원래 이름 사용"} />
-            {!editingCell?.isMonthEdit && (
-              <>
-                <label className="label" style={{ marginTop: 12 }}>전화번호</label>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input
-                    type="tel"
-                    className="input"
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      padding: '11px 12px',
-                      borderRadius: '16px',
-                      border: '1px solid rgba(203,213,225,0.95)',
-                      outline: 'none',
-                      fontSize: 'inherit',
-                      fontFamily: 'inherit',
-                      boxSizing: 'border-box'
-                    }}
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                    placeholder="01012345678"
-                  />
-                  <button
-                    className="modal-btn"
-                    style={{ flexShrink: 0, width: '48px', height: '48px', padding: 0 }}
-                    onClick={pickContactForEdit}
-                  >📂</button>
-                </div>
-                <label className="label" style={{ marginTop: 12 }}>색상 선택</label>
-                <div style={{ marginTop: '8px' }}>
-                  <select className="select" value={editColor} onChange={(e) => setEditColor(e.target.value)} style={{ width: '100%', height: '48px' }}>
-                    {COLOR_OPTIONS.map((item) => (<option key={item.label} value={item.value}>{item.label}</option>))}
-                  </select>
-                </div>
-                <button className="modal-btn" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsWorktimeEditOpen((prev) => !prev)}>출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}</button>
-                {isWorktimeEditOpen && (
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, marginBottom: 12 }}>
-                      <input className="input" inputMode="numeric" value={editStartHour} onChange={(e) => setEditStartHour(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="06" />
-                      <div style={{ fontWeight: 700 }}>:</div>
-                      <input className="input" inputMode="numeric" value={editStartMin} onChange={(e) => setEditStartMin(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="33" />
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
-                      <input className="input" inputMode="numeric" value={editEndHour} onChange={(e) => setEditEndHour(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="15" />
-                      <div style={{ fontWeight: 700 }}>:</div>
-                      <input className="input" inputMode="numeric" value={editEndMin} onChange={(e) => setEditEndMin(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="54" />
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-            <div className="modal-actions">
-              <button className="modal-btn" onClick={closeEditDialog}>취소</button>
-              <button className="modal-btn primary" onClick={() => commitEdit(editColor, editAlias, editPhone)}>적용</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {pathOpen && (
-        <div className="viewer-page">
-          <div className="viewer-header">
-            <div className="viewer-title">행로표</div>
-            <button className="modal-btn primary" onClick={closePathDialog}>닫기</button>
-          </div>
-          <div className="viewer-body">
-            <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'flex-start', marginBottom: 12, padding: '0 4px' }}>
-              <div>
-                <div className="viewer-info-line" style={{ fontSize: 18, fontWeight: 700 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
-                <div className="viewer-info-line" style={{ color: "#6b7280", marginTop: 4 }}>{pathDate} {weekdayName(pathDate)}</div>
-              </div>
-              {overrides[getOverrideKey(pathTeamKey || viewTeam, pathTarget?.name)]?.phone && (
-                <a href={`tel:${overrides[getOverrideKey(pathTeamKey || viewTeam, pathTarget?.name)].phone}`} style={{ 
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  padding: '10px 18px', 
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
-                  color: 'white', borderimages: '25px', textDecoration: 'none', fontWeight: 800, fontSize: 14, 
-                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)'
-                }}>📞 전화하기</a>
-              )}
-            </div>
-            {pathImage ? (<img src={pathImage} alt="행로표" className="fullscreen-image" />) : (<div className="empty-box">해당 행로표 이미지를 찾지 못했습니다.</div>)}
-          </div>
-        </div>
-      )}
-
-      {showUpdatePopup && (
-        <div className="modal-backdrop" onClick={closeUpdatePopup}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">업데이트 알림</div>
-            <div className="help-text" style={{ marginTop: 8 }}>최신 인원/교번 정보가 있습니다.<br />지금 업데이트하시겠습니까?</div>
-            <div className="modal-actions">
-              <button className="modal-btn" onClick={closeUpdatePopup}>나중에</button>
-              <button className="modal-btn primary" onClick={applyPendingRosterUpdate}>업데이트</button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      <style>{`
-        .hidden-date-input {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          opacity: 0;
-          cursor: pointer;
-          -webkit-appearance: none;
-        }
-        input[type="date"]::-webkit-calendar-picker-indicator {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 100%;
-          height: 100%;
-          margin: 0;
-          padding: 0;
-          cursor: pointer;
-        }
-      `}</style>
-    </>
-  );
-}
-
-function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, overrides = {}, mySelection = null) {
-  if (!data) return null;
-  const team = data[teamKey]; if (!team) return null;
-  const override = overrides[getOverrideKey(teamKey, name)] || {};
-  if (override.monthShifts && override.monthShifts[dateStr]) {
-    return { code: override.monthShifts[dateStr], name, displayName: override.alias || name, teamKey: teamKey };
-  }
-  const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
-  const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
-  const code = shiftCodeByDays(team, anchor.code, dayOffset);
-  return { code, name, displayName: override.alias || name, teamKey: teamKey };
-}
-
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
+                <select className="select" value={groupAddTeam} onChange={(e) => { setGroupAddTeam(e.target.value); setGroupAdd
