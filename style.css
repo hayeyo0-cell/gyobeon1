@@ -925,3 +925,17 @@ body.dark-mode .main-code {
         font-size: 9.5px !important;
     }
 }
+/* 🚀 교번 & 이름: 색상을 둘 다 진한 검은색(#000000)으로 통일 */
+.all-cell-real .all-code { 
+    font-size: 18px !important; 
+    font-weight: 900 !important; 
+    color: #000000 !important; /* 진한 검은색 */
+    letter-spacing: -0.5px !important; 
+    margin-bottom: 2px !important;
+}
+.all-cell-real .all-name { 
+    font-size: 14px !important;   /* 가독성 위해 키운 크기 유지 */
+    font-weight: 700 !important;  /* 가독성 위해 높인 두께 유지 */
+    color: #000000 !important;    /* 👈 교번과 똑같이 진한 검은색으로 변경 */
+    margin-top: 2px !important; 
+}
