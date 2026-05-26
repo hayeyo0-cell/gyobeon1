@@ -473,12 +473,28 @@ body.dark-mode .month-header-title {
   color: #ffffff !important; 
 }
 
-/* 🚀 [교환/복원 핵심] 다크모드 사용자 지정 배경색 보존 로직 강화 */
+/* 🚀 [교환/복원 핵심] 다크모드 사용자 지정 배경색 보존 및 글자색 레이어 분리 패치 */
 body.dark-mode .month-cell[style*="background-color"], 
 body.dark-mode .group-table td[style*="background-color"],
 body.dark-mode .all-cell-real[style*="background-color"] { 
   background-image: none !important;
-  color: #000000 !important; 
+}
+
+/* 💡 전체 탭에서 셀 배경색이 지정되었을 때 내부 텍스트 정밀 교정 */
+body.dark-mode .all-cell-real[style*="background-color"] .all-code {
+  color: #000000 !important; /* 숫자는 가장 선명한 순수 검정색 */
+  font-weight: 900 !important;
+}
+
+body.dark-mode .all-cell-real[style*="background-color"] .all-name {
+  color: #222222 !important; /* 이름은 사진 밸런스에 맞춰 미세하게 부드러운 진한 먹색 */
+  font-weight: 600 !important; /* 이름 굵기 600 고정 유지! */
+}
+
+/* 💡 월달력 및 그룹 탭에서도 지정색이 있으면 글자가 선명하게 보이도록 처리 */
+body.dark-mode .month-cell[style*="background-color"] *,
+body.dark-mode .group-table td[style*="background-color"] * {
+  color: #000000 !important;
 }
 
 /* 2. [설정창 가독성 복구] */
