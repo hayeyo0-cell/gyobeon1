@@ -65,6 +65,7 @@ function positiveMod(n, mod) { return ((n % mod) + mod) % mod; }
 function weekdayShort(dateStr) { const names = ["일", "월", "화", "수", "목", "금", "토"]; return names[parseLocalDate(dateStr).getDay()]; }
 function weekdayName(dateStr) { const names = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"]; return names[parseLocalDate(dateStr).getDay()]; }
 
+// 토요일/일요일 판정 (참고: 대구지하철은 토요일 전용 다이아가 따로 있으므로 분리 관리)
 function isSaturday(dateStr) { return parseLocalDate(dateStr).getDay() === 6; }
 function isSunday(dateStr) { return parseLocalDate(dateStr).getDay() === 0; }
 function getYearFromDateStr(dateStr) { return Number(String(dateStr || "").slice(0, 4)); }
@@ -843,7 +844,7 @@ function App() {
     const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
     if (mySelection?.teamKey === myTeamKey && mySelection?.code) { const code = getMyCodeForDate(team, homeDate, mySelection); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; }
     const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster); if (remoteRow?.code) { const anchorDate = getRemoteAnchorBaseDate(team); const dayOffset = diffDays(anchorDate, homeDate); const code = shiftCodeByDays(team, remoteRow.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; }
-    const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
+    const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, myName, mySelection); if (!anchor?.code) return null;
     const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color };
   }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, wordtimeVersion, overrides]);
 
@@ -1178,7 +1179,6 @@ function App() {
           setPathTarget(item);
           setPathDate(browseDate);
           setPathImage(image);
-          // 팝업 없이 데이터만 갱신
         } else {
           setPathImage("");
         }
@@ -1527,7 +1527,6 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {/* 🚀 [최종 교정] 사진 3번 규격에 맞춰 돋보기(44)와 수정(48) 영역을 정밀 조정 */}
                   <div className={`${activeTab === "all" ? "all-header" : "dia-header"}`} style={{ 
                     display: "grid", 
                     width: "100%", 
@@ -1540,14 +1539,12 @@ function App() {
                     boxShadow: "0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.25)",
                     transition: "background 0.3s ease"
                   }}>
-                    {/* 마이너스 버튼 */}
                     <button className="all-header-btn" style={{ 
                       width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)",
                       background: "transparent", fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
-                    {/* 날짜 표시 영역 (중앙) */}
                     <div className="all-header-title" style={{ 
                       width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center",
                       textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff", 
@@ -1566,7 +1563,6 @@ function App() {
                       />
                     </div>
 
-                    {/* 전체 탭일 때만 돋보기와 수정 버튼 표시 */}
                     {activeTab === "all" && (
                       <>
                         <button className="all-header-btn" style={{ 
@@ -1594,7 +1590,6 @@ function App() {
                       </>
                     )}
 
-                    {/* 플러스 버튼 */}
                     <button className="all-header-btn" style={{ 
                       width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
@@ -1627,32 +1622,27 @@ function App() {
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
-                          // 교번(숫자) 스타일: 무조건 선명하고 두껍게 처리
-const codeStyle = cellColor
-  ? { color: "#000000", fontWeight: "900", fontSize: "16px" }
-  : { color: isDarkMode ? "#ffffff" : "#000000", fontWeight: "900", fontSize: "16px" };
+                          const codeStyle = cellColor
+                            ? { color: "#000000" }
+                            : { color: isDarkMode ? "#ffffff" : "#000000" };
 
-// 이름 스타일: 사진처럼 약간의 물이 빠진 흑색/회색 계열에 얇은 두께(600) 부여
-const nameStyle = cellColor
-  ? { color: "#222222", fontWeight: "600", fontSize: "11px" }
-  : { color: isDarkMode ? "#94a3b8" : "#475569", fontWeight: "600", fontSize: "11px" };
+                          const nameStyle = cellColor
+                            ? { color: "#222222" }
+                            : { color: isDarkMode ? "#94a3b8" : "#475569" };
                             
                           return (
-  <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-    {/* 분리된 900 두께의 전용 스타일 적용 */}
-    <div className="all-code" style={{ ...codeStyle, letterSpacing: "-0.5px", marginBottom: "2px" }}>{item.code || "-"}</div>
-    
-    {/* 분리된 600 두께의 전용 스타일 적용 및 불필요한 인라인 덮어쓰기 제거 */}
-    <div className="all-name" style={{ ...nameStyle, letterSpacing: "-0.3px" }}>
-        {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
-        {searchQuery && (
-          <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
-            [{TEAM_LABELS[item.teamKey]}]
-          </div>
-        )}
-    </div>
-  </div>
-);
+                            <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
+                              <div className="all-code" style={{ ...codeStyle, letterSpacing: "-0.5px", marginBottom: "2px" }}>{item.code || "-"}</div>
+                              <div className="all-name" style={{ ...nameStyle, letterSpacing: "-0.3px" }}>
+                                  {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
+                                  {searchQuery && (
+                                    <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
+                                      [{TEAM_LABELS[item.teamKey]}]
+                                    </div>
+                                  )}
+                              </div>
+                            </div>
+                          );
                         })}
                       </div>
                     </div>
@@ -2079,6 +2069,7 @@ const nameStyle = cellColor
         </div>
       )}
       
+      {/* 🚀 [교정] 글자 가독성 전용 스타일시트 */}
       <style>{`
         .hidden-date-input {
           position: absolute;
@@ -2100,11 +2091,18 @@ const nameStyle = cellColor
           padding: 0;
           cursor: pointer;
         }
+        
+        /* 1. 교번: 900 울트라 볼드로 눈에 가장 띄도록 크기 및 두께 지정 */
         .all-code {
           font-weight: 900 !important;
+          font-size: 16px !important;
         }
+        
+        /* 2. 이름: 500 미디엄 두께로 낮춰 글자가 뭉개지는 현상을 방지하고 깔끔하게 비율 매칭 */
         .all-name {
-          font-weight: 800 !important;
+          font-weight: 500 !important;
+          font-size: 11.5px !important;
+          opacity: 0.88;
         }
       `}</style>
     </>
