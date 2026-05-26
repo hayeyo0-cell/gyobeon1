@@ -1730,3 +1730,20 @@ body.dark-mode .all-cell-real[style*="background-color"] .all-code,
 body.dark-mode .all-cell-real[style*="background-color"] .all-name {
   color: #000000 !important;
 }
+/* 오른쪽 사진의 굵고 큰 교번 / 가늘고 작은 이름 스타일 */
+.all-code { 
+    font-size: 16px !important; 
+    font-weight: 900 !important; 
+    color: #000000 !important; 
+    letter-spacing: -0.5px !important; 
+}
+.all-name { 
+    font-size: 11px !important; 
+    font-weight: 500 !important; 
+    color: #555555 !important; 
+    margin-top: 3px !important; 
+}
+@media (max-width: 420px) {
+    .all-code { font-size: 15px !important; }
+    .all-name { font-size: 10.2px !important; }
+}
