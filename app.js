@@ -1627,14 +1627,18 @@ function App() {
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
-                          const textColorStyle = cellColor 
-  ? { color: "#000000" } 
-  : { color: isDarkMode ? "#ffffff" : "#000000" };
+                          const codeStyle = cellColor 
+  ? { color: "#000000", fontWeight: "900" } 
+  : { color: isDarkMode ? "#ffffff" : "#000000", fontWeight: "900" };
+
+const nameStyle = cellColor 
+  ? { color: "#555555", fontWeight: "500" } 
+  : { color: isDarkMode ? "#cccccc" : "#555555", fontWeight: "500" };
                             
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                              <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
-                              <div className="all-name" style={textColorStyle}>
+                              <div className="all-code" style={codeStyle}>{item.code || "-"}</div>
+                              <div className="all-name" style={nameStyle}>
                                   {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
                                   {searchQuery && (
                                     <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
