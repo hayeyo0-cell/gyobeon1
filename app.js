@@ -403,7 +403,7 @@ function getMonthOptions(centerDateStr, range = 12) {
 function getDisplayMonthValue(dateStr) { return String(dateStr || "").slice(0, 7); }
 function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "").split("-").map(Number); if (!y || !m) return getKoreaToday(); return `${y}-${String(m).padStart(2, "0")}-01`; }
 function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
-function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: "" }; } return { startTime: raw, endTime: "" }; }
+function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: end || "-" }; } return { startTime: raw, endTime: "" }; }
 
 const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
   if (!window.html2canvas) {
@@ -843,7 +843,7 @@ function App() {
     const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
     if (mySelection?.teamKey === myTeamKey && mySelection?.code) { const code = getMyCodeForDate(team, homeDate, mySelection); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; }
     const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster); if (remoteRow?.code) { const anchorDate = getRemoteAnchorBaseDate(team); const dayOffset = diffDays(anchorDate, homeDate); const code = shiftCodeByDays(team, remoteRow.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; }
-    const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, myName, mySelection); if (!anchor?.code) return null;
+    const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
     const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color };
   }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, wordtimeVersion, overrides]);
 
@@ -1178,6 +1178,7 @@ function App() {
           setPathTarget(item);
           setPathDate(browseDate);
           setPathImage(image);
+          // 팝업 없이 데이터만 갱신
         } else {
           setPathImage("");
         }
@@ -1526,6 +1527,7 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
+                  {/* 🚀 [최종 교정] 사진 3번 규격에 맞춰 돋보기(44)와 수정(48) 영역을 정밀 조정 */}
                   <div className={`${activeTab === "all" ? "all-header" : "dia-header"}`} style={{ 
                     display: "grid", 
                     width: "100%", 
@@ -1538,12 +1540,14 @@ function App() {
                     boxShadow: "0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.25)",
                     transition: "background 0.3s ease"
                   }}>
+                    {/* 마이너스 버튼 */}
                     <button className="all-header-btn" style={{ 
                       width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)",
                       background: "transparent", fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
+                    {/* 날짜 표시 영역 (중앙) */}
                     <div className="all-header-title" style={{ 
                       width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center",
                       textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff", 
@@ -1562,6 +1566,7 @@ function App() {
                       />
                     </div>
 
+                    {/* 전체 탭일 때만 돋보기와 수정 버튼 표시 */}
                     {activeTab === "all" && (
                       <>
                         <button className="all-header-btn" style={{ 
@@ -1589,6 +1594,7 @@ function App() {
                       </>
                     )}
 
+                    {/* 플러스 버튼 */}
                     <button className="all-header-btn" style={{ 
                       width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
@@ -1621,10 +1627,14 @@ function App() {
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
+                          const textColorStyle = cellColor 
+                            ? { color: "#000000", fontWeight: "900" } 
+                            : { color: isDarkMode ? "#ffffff" : "#000000", fontWeight: "900" };
+                            
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                              <div className="all-code">{item.code || "-"}</div>
-                              <div className="all-name">
+                              <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
+                              <div className="all-name" style={{ ...textColorStyle, fontWeight: "800" }}>
                                   {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
                                   {searchQuery && (
                                     <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
@@ -2026,7 +2036,7 @@ function App() {
             <button className="modal-btn primary" onClick={closePathDialog}>닫기</button>
           </div>
           <div className="viewer-body">
-            <div style={{ display: 'flex', justifycontent: 'space-between', alignitems: 'flex-start', marginbottom: 12, padding: '0 4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, padding: '0 4px' }}>
               <div>
                 <div className="viewer-info-line" style={{ fontSize: 18, fontWeight: 700 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
                 <div className="viewer-info-line" style={{ color: "#6b7280", marginTop: 4 }}>{pathDate} {weekdayName(pathDate)}</div>
@@ -2080,6 +2090,12 @@ function App() {
           margin: 0;
           padding: 0;
           cursor: pointer;
+        }
+        .all-code {
+          font-weight: 900 !important;
+        }
+        .all-name {
+          font-weight: 800 !important;
         }
       `}</style>
     </>
