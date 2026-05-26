@@ -2,12 +2,12 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-/* 🟢 [선명도 잠금] 글씨를 얇게 깎아먹거나 흐리게 만들던 모든 안티앨리어싱 필터를 완전히 제거하여 쨍한 화질 복구 */
+/* 🟢 [디자인 철학 복구] 불필요하게 글씨를 얇게 깎아먹던 폰트 스무딩 옵션을 제거하여 쨍한 화질 복구! */
 html, body {
   margin: 0; width: 100%; height: 100%; overflow: hidden; overflow-x: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", "Malgun Gothic", sans-serif;
-  background: #dbe1e8; color: #000000; /* 👈 텍스트 기본색을 완전 검정으로 고정 */
-  -webkit-font-smoothing: subpixel-antialiased !important;
+  font-family: "Samsung One", "Segoe UI", "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  background: #dbe1e8; color: #111827; /* 👈 바닥 배경을 살짝 더 눌러서 달력을 강조함 */
+  -webkit-font-smoothing: subpixel-antialiased !important; /* 👈 서체가 흐려지거나 얇게 깎이지 않도록 서브픽셀 강제 주입 */
   -moz-osx-font-smoothing: auto !important;
   text-rendering: optimizeLegibility !important;
 }
@@ -171,39 +171,37 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 
 /* 🚀 [최종 교정] 사진 3번 규격에 맞춰 돋보기(44)와 수정(48) 영역을 정밀 조정 */
 .all-header {
-    height: 52px !important;
+    height: 48px !important;
     display: grid !important;
-    /* 마이너스(44) | 날짜(1fr) | 돋보기(44) | 수정(48) | 플러스(44) */
-    grid-template-columns: 44px 1fr 44px 48px 44px !important;
+    /* 마이너스(40) | 날짜(1fr) | 돋보기(40) | 수정(40) | 플러스(40) */
+    grid-template-columns: 40px 1fr 40px 40px 40px !important;
     background: #3b82f6 !important;
-    background-image: none !important;
     color: #ffffff !important;
     border-radius: 16px !important;
     overflow: hidden;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.25) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
     border: 1px solid rgba(0,0,0,0.15) !important;
 }
 
-/* 🚀 [최종 교정] DIA순서 탭에서 플러스 버튼이 어긋나지 않도록 3분할 고정 */
+/* 🚀 [최종 교정] DIA순서 탭 헤더 (3칸 구성) */
 .dia-header {
-    height: 52px !important;
+    height: 48px !important;
     display: grid !important;
-    /* 마이너스(44) | 날짜(1fr) | 플러스(44) */
-    grid-template-columns: 44px 1fr 44px !important;
+    /* 마이너스(40) | 날짜(1fr) | 플러스(40) */
+    grid-template-columns: 40px 1fr 40px !important;
     background: #3b82f6 !important;
     border-radius: 16px !important;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.25) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2) !important;
     overflow: hidden;
 }
 
+/* 헤더 내 공통 버튼 및 타이틀 높이 정렬 */
 .all-header-btn, .all-edit-btn, .all-header-title {
     border: none !important;
     border-right: 1px solid rgba(255, 255, 255, 0.2) !important;
     background: transparent !important;
-    font-size: 22px;
-    font-weight: 800;
     cursor: pointer;
-    height: 52px !important;
+    height: 48px !important;
     color: #ffffff !important;
     display: flex !important;
     align-items: center;
@@ -211,42 +209,38 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
     white-space: nowrap;
 }
 
-/* 🚀 [교정 핵심] 수정 버튼 활성화 시 '수정중' 빨간색 강조 및 중복 문구 방지 강제 패치 */
-.all-edit-btn.active {
-    color: transparent !important; /* 👈 기존 '중' 문구가 겹치지 않게 투명 처리 */
-    text-shadow: none !important;
+/* [교정 핵심] 40px 너비에 맞춘 수정 버튼 텍스트 최적화 */
+.all-edit-btn { 
+    font-size: 11.5px !important;
+    min-width: 40px !important;
+    letter-spacing: -0.5px;
 }
+
+/* '수정중' 상태일 때의 강제 보정 */
 .all-edit-btn.active::after {
-    content: "수정중" !important; /* 활성화 시 문구 변경 */
+    content: "수정중" !important;
     position: absolute;
     inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 11.5px !important;   /* 길어진 문구에 맞춘 크기 */
+    font-size: 10px !important;
     color: #ffffff !important;
     background-color: #ef4444 !important;
     font-weight: 900 !important;
-    text-shadow: 0 0 8px rgba(255,0,0,0.3);
-    z-index: 10;
+    letter-spacing: -1px;
 }
 
-.all-header-btn:last-child { border-right: none !important; }
+/* 마이너스/플러스 버튼 텍스트 크기 살짝 조정 */
+.all-header-btn {
+    font-size: 20px !important; 
+}
 
+/* 중앙 날짜 타이틀 크기 조정 */
 .all-header-title { 
-    padding: 0 6px; 
-    font-size: 15px !important; 
-    line-height: 1.08; 
-    font-weight: 800; 
-    word-break: keep-all; 
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
-    min-width: 0; 
+    font-size: 14px !important; 
+    line-height: 1;
 }
-
-/* 🚀 [교정] 수정 버튼 칸 사진처럼 작고 날렵하게 고정 */
-.all-edit-btn { font-size: 13px !important; min-width: 48px !important; position: relative; overflow: hidden; }
 
 .all-team-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; margin-bottom: 8px; }
 
@@ -299,12 +293,13 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
     background: none !important;
 }
 
+/* 🛠️ [높이 완전 복원] 찌그러지던 박스 세로 길이를 58px로 확실하게 상향 조정하여 여백 복구 */
 .all-cell-real { 
   min-width: 0; 
-  min-height: 52px; 
+  min-height: 58px !important; 
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); 
   border-radius: 10px; 
-  padding: 2px 1px; 
+  padding: 4px 1px !important; 
   text-align: center; 
   cursor: pointer; 
   overflow: hidden; 
@@ -312,35 +307,36 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
   flex-direction: column; 
   align-items: center; 
   justify-content: center; 
-  gap: 0px; 
+  gap: 1.5px !important; 
   user-select: none; 
   touch-action: manipulation; 
-  border: 1px solid #c8d6f0; 
+  border: 1px solid #cbd5e1; 
   box-shadow: none !important; 
   transition: transform 0.12s ease, border-color 0.18s ease, background-color 0.18s ease; 
 }
 .all-cell-real:hover { background: linear-gradient(180deg, #ffffff 0%, #f3f8ff 100%); }
 .all-cell-real:active { transform: scale(0.985); }
 
-/* 🚀 [교정 핵심] 교번과 이름 스타일 정밀 수정 (이전 사진 규격으로 최종 복구) */
+/* 🚀 [교번 대강화] 첫 번째 문양 사진 규격 그대로 900 울트라볼드 적용 및 진한 리얼블랙 박멸 고정 */
 .all-code { 
   margin: 0; 
-  font-size: 15.5px !important;
+  font-size: 15.5px !important; 
   line-height: 1.1 !important; 
-  font-weight: 900 !important; /* 👈 무조건 900 볼드로 고정 */
-  color: #000000 !important; /* 👈 연해지지 않도록 완전한 순수 검정 고정 */
+  font-weight: 900 !important; 
+  color: #000000 !important; /* 👈 완전 검정으로 고정하여 흐려짐 차단 */
   white-space: nowrap; 
   transition: color 0.2s ease; 
 }
 
+/* 🚀 [이름 진하게 복원] 가늘어서 안 보이던 버그 해결을 위해 두께를 700 고정 잠금 및 불투명도 100% 락인 */
 .all-name { 
   margin: 0; 
   margin-top: 1px !important;
   font-size: 11.5px !important;  
   line-height: 1.1 !important; 
-  font-weight: 700 !important; /* 👈 형님 폰에서 흐리지 않게 600에서 700 볼드로 긴급 상향! */
-  color: #000000 !important; /* 👈 시인성을 높이기 위해 더 진하고 선명한 흑색 매칭 */
-  opacity: 1 !important; /* 👈 흐릿하게 보이지 않도록 불투명도 강제 잠금 */
+  font-weight: 700 !important; /* 👈 가늘어지지 않고 똑 부러지게 보이도록 700 볼드로 상향 고정 */
+  color: #1e293b !important; /* 👈 원본 서식 파일에 맞춘 선명하고 명확한 흑색 계열 지정 */
+  opacity: 1 !important; /* 👈 흐릿하게 보이지 않도록 불투명도 강제 고정 */
   white-space: nowrap; 
   overflow: hidden; 
   text-overflow: ellipsis; 
@@ -633,6 +629,9 @@ body.dark-mode .team-badge { color: #94a3b8 !important; font-weight: 700 !import
 body.dark-mode .group-table th div, body.dark-mode .group-table td div { color: #ffffff !important; }
 body.dark-mode .day-date { color: #94a3b8 !important; }
 
+/* ========================================================= */
+/* 📱 스마트폰 모바일 화면 가독성 최종 정밀 타격 피드백 반영 */
+/* ========================================================= */
 @media (max-width: 420px) {
   .container { padding: 22px 6px 20px !important; touch-action: pan-y; }
   .container::after { height: calc(92px + env(safe-area-inset-bottom, 0px)); }
@@ -656,40 +655,34 @@ body.dark-mode .day-date { color: #94a3b8 !important; }
   .month-cell { min-height: 102px; }
   .month-cell-inner { min-height: 100px; padding: 5px 5px 4px; grid-template-rows: 16px 24px 1fr; }
   .month-day { font-size: 14px; }
-  /* 🚀 [교정] 모바일 최적화에서도 한 줄 고정 및 노이즈 격리 */
-  .month-code-line { 
-    font-size: 14.5px !important; 
-    margin-top: 3px; 
-    letter-spacing: -0.3px !important; 
-    white-space: nowrap !important;
-  }
+  
+  .month-code-line { font-size: 14.5px !important; margin-top: 3px; letter-spacing: -0.3px !important; white-space: nowrap !important; }
   .month-time-wrap { grid-template-rows: 20px 20px; }
   .month-time-line { font-size: 10.2px !important; } 
   .all-page { padding-bottom: 20px; }
   
-  /* 🚀 [최종 교정] 모바일 최적화에서도 헤더 칸 비율 고정 */
-  .all-header { 
-    height: 52px !important; 
-    grid-template-columns: 44px 1fr 44px 48px 44px !important; 
-    border-radius: 16px !important; 
-  }
-  .dia-header { 
-    height: 52px !important; 
-    grid-template-columns: 44px 1fr 44px !important; 
-    border-radius: 16px !important; 
-  }
-
-  .all-header-btn { height: 52px !important; font-size: 18px !important; }
-  .all-edit-btn { height: 52px !important; font-size: 12px !important; }
+  .all-header { height: 48px !important; grid-template-columns: 40px 1fr 40px 40px 40px !important; border-radius: 16px !important; }
+  .dia-header { height: 48px !important; grid-template-columns: 40px 1fr 40px !important; border-radius: 16px !important; }
+  .all-header-btn { height: 48px !important; font-size: 18px !important; }
+  
+  .all-edit-btn { height: 48px !important; font-size: 10.5px !important; min-width: 40px !important; }
+  .all-edit-btn.active::after { font-size: 9.5px !important; }
+  
   .all-header-title { font-size: 14px !important; padding: 0 5px; }
   .all-team-tabs { gap: 4px; margin-top: 6px; margin-bottom: 6px; }
   .all-team-tab { font-size: 13px; padding: 9px 0; border-radius: 14px; }
+  
+  /* 🛠️ [모바일 버그 패치] 짓눌려 뭉개지던 셀 높이를 확보하고 글자 서체 고정 정밀 조율 */
   .all-tab-grid-wrap { padding: 6px; border-radius: 22px; margin-bottom: 10px; }
-  .all-cell-real { min-height: 48px; border-radius: 8px; padding: 2px 1px; }
+  .all-cell-real { 
+    min-height: 54px !important; /* 👈 모바일 전용 세로 공간 확보 */
+    border-radius: 8px; 
+    padding: 3px 1px !important; 
+  }
 
-  /* 🚀 [모바일 최종 교정] 모바일에서도 글자가 넘치지 않도록 세부 크기 복구 */
-  .all-code { font-size: 14.8px !important; }
-  .all-name { font-size: 10.8px !important; }
+  /* 🚀 [모바일 최종 잠금] 해상도가 좁아지더라도 선명하고 두꺼운 글씨체 유지 고정 */
+  .all-code { font-size: 15px !important; line-height: 1.1 !important; font-weight: 900 !important; color: #000000 !important; }
+  .all-name { font-size: 11px !important; line-height: 1.1 !important; font-weight: 600 !important; color: #2b323f !important; opacity: 1 !important; }
 
   .group-top-bar-v4 { padding: 8px 6px; gap: 4px; border-radius: 16px; }
   .nav-btn-v4 { padding: 6px 8px; font-size: 14px; border-radius: 10px; }
@@ -708,20 +701,35 @@ body.dark-mode .day-date { color: #94a3b8 !important; }
   .modal-sub { font-size: 16px; }
 }
 
-/* 🌙 다크모드 선택창 화살표 보정 */
-body.dark-mode select.select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' fill='none' viewBox='0 0 24 24' stroke='%23f8fafc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
-}
-
-/* 🚀 [최종 보정] 다크모드 사용자 지정색 칸 가독성 잠금 및 배경 복구 로직 */
-body.dark-mode .all-cell-real[style*="background-color"] {
-  background-image: none !important; 
-  color: #000000 !important; 
-}
+body.dark-mode .all-cell-real[style*="background-color"] { background-image: none !important; color: #000000 !important; }
 body.dark-mode .all-cell-real[style*="background-color"] .all-code,
-body.dark-mode .all-cell-real[style*="background-color"] .all-name {
-  color: #000000 !important;
-}
+body.dark-mode .all-cell-real[style*="background-color"] .all-name { color: #000000 !important; font-weight: 900 !important; }
+
+body.dark-mode .all-cell-real[style] { background-image: none !important; }
+
+body.dark-mode .group-table th.active-col,
+body.dark-mode .group-table td.active-col { background-color: rgba(56, 189, 248, 0.4) !important; }
+
+body.dark-mode .group-table th.today-col { border-bottom: 3px solid #3b82f6 !important; background-color: rgba(250, 204, 21, 0.35) !important; }
+
+body.dark-mode .all-cell-real.cell-my { border: 3px solid #3b82f6 !important; box-shadow: 0 0 8px rgba(37, 99, 235, 0.3) !important; z-index: 10 !important; }
+
+body.dark-mode .all-cell-real.cell-my[style*="background-color"] .all-code,
+body.dark-mode .all-cell-real.cell-my[style*="background-color"] .all-name { color: #000000 !important; font-weight: 900 !important; }
+
+body.dark-mode .all-cell-real.cell-my:not([style*="background-color"]) .all-code,
+body.dark-mode .all-cell-real.cell-my:not([style*="background-color"]) .all-name { color: #ffffff !important; }
+
+body.dark-mode .home-path-preview img { background: #1e293b !important; border-color: #334155 !important; }
+body.dark-mode .preview-label { background: rgba(30, 41, 59, 0.9) !important; color: #94a3b8 !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05) !important; }
+body.dark-mode .viewer-page { background: #05080f !important; }
+body.dark-mode .viewer-header { background: rgba(15, 23, 42, 0.9) !important; border-bottom: 1px solid #334155 !important; }
+body.dark-mode .viewer-title { color: #f8fafc !important; }
+body.dark-mode .viewer-info-line { color: #ffffff !important; }
+body.dark-mode .fullscreen-image { background: #ffffff !important; filter: none !important; border: 1px solid #475569 !important; }
+body.dark-mode .empty-box { background: #1e293b !important; border-color: #334155 !important; color: #94a3b8 !important; }
+body.dark-mode .modal.month-edit-modal { background: #1e293b !important; border-radius: 20px !important; padding: 24px !important; max-width: 340px !important; }
+body.dark-mode .main-code { color: #ffffff !important; }
 
 /* ============================= */
 /* 🚀🔥 [최종 강제 덮어쓰기 패치] */
