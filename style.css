@@ -947,25 +947,23 @@ body.dark-mode .main-code {
     opacity: 1 !important; /* 강제 투명도 100% (흐려짐 방지) */
 }
 
-/* 2. 모바일 (스마트폰) 화면 황금 비율 렌더링 */
 @media (max-width: 420px) {
-    /* 모바일 칸 크기 및 안쪽 여백 균형 잡기 */
-    .all-cell-real {
-        min-height: 52px !important;
-        padding: 4px 1px !important; 
-        justify-content: center !important;
-    }
-    /* 모바일 교번 크기 */
+    /* 모바일 교번 크기 및 강제 두께 */
     .all-cell-real .all-code { 
-        font-size: 15.5px !important; /* 사진처럼 크고 뚜렷하게 */
+        font-size: 15.5px !important; 
         font-weight: 900 !important; 
+        color: #000000 !important;
+        -webkit-text-stroke: 0.4px #000000 !important; /* 물리적으로 글씨 테두리를 두껍게 칠함 */
         letter-spacing: -0.3px !important;
         margin-bottom: 2px !important;
     }
-    /* 모바일 이름 크기 */
+    /* 모바일 이름 크기 및 강제 두께 */
     .all-cell-real .all-name { 
-        font-size: 11.5px !important; /* 교번보다 확연히 작게, 하지만 진하게 */
-        font-weight: 800 !important;
+        font-size: 12px !important; /* 비율에 맞게 살짝 키움 */
+        font-weight: 800 !important; 
+        color: #000000 !important;
+        -webkit-text-stroke: 0.2px #000000 !important; /* 이름도 물리적으로 뚜렷하게 칠함 */
         letter-spacing: -0.3px !important;
+        opacity: 1 !important;
     }
 }
