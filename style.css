@@ -925,17 +925,47 @@ body.dark-mode .main-code {
         font-size: 9.5px !important;
     }
 }
-/* 🚀 교번 & 이름: 색상을 둘 다 진한 검은색(#000000)으로 통일 */
+/* ============================= */
+/* 🚀🔥 [교번/이름 황금 비율 완벽 복구] */
+/* ============================= */
+
+/* 1. 기본 화면 (PC, 태블릿) 폰트 설정 */
 .all-cell-real .all-code { 
-    font-size: 18px !important; 
-    font-weight: 900 !important; 
-    color: #000000 !important; /* 진한 검은색 */
-    letter-spacing: -0.5px !important; 
-    margin-bottom: 2px !important;
+    font-size: 17px !important; 
+    font-weight: 900 !important; /* 가장 굵게 (Black) */
+    color: #000000 !important; /* 흐려짐 없는 완전한 검정 */
+    letter-spacing: -0.4px !important; 
+    margin: 0 0 2px 0 !important; /* 교번과 이름 사이 간격 2px */
+    line-height: 1.1 !important;
 }
 .all-cell-real .all-name { 
-    font-size: 14px !important;   /* 가독성 위해 키운 크기 유지 */
-    font-weight: 700 !important;  /* 가독성 위해 높인 두께 유지 */
-    color: #000000 !important;    /* 👈 교번과 똑같이 진한 검은색으로 변경 */
-    margin-top: 2px !important; 
+    font-size: 13px !important;   
+    font-weight: 800 !important; /* 교번보단 덜 굵지만 선명하게 (ExtraBold) */
+    color: #000000 !important;    
+    margin: 0 !important; 
+    line-height: 1.1 !important;
+    opacity: 1 !important; /* 강제 투명도 100% (흐려짐 방지) */
+}
+
+/* 2. 모바일 (스마트폰) 화면 황금 비율 렌더링 */
+@media (max-width: 420px) {
+    /* 모바일 칸 크기 및 안쪽 여백 균형 잡기 */
+    .all-cell-real {
+        min-height: 52px !important;
+        padding: 4px 1px !important; 
+        justify-content: center !important;
+    }
+    /* 모바일 교번 크기 */
+    .all-cell-real .all-code { 
+        font-size: 15.5px !important; /* 사진처럼 크고 뚜렷하게 */
+        font-weight: 900 !important; 
+        letter-spacing: -0.3px !important;
+        margin-bottom: 2px !important;
+    }
+    /* 모바일 이름 크기 */
+    .all-cell-real .all-name { 
+        font-size: 11.5px !important; /* 교번보다 확연히 작게, 하지만 진하게 */
+        font-weight: 800 !important;
+        letter-spacing: -0.3px !important;
+    }
 }
