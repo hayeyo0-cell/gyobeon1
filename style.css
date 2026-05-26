@@ -297,10 +297,10 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 /* 🛠️ [높이 완전 복원] 찌그러지던 박스 세로 길이를 58px로 확실하게 상향 조정하여 여백 복구 */
 .all-cell-real { 
   min-width: 0; 
-  min-height: 58px !important; 
+  min-height: 62px !important; /* 👈 높이를 62px로 키워야 글씨가 안 뭉개집니다 */
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); 
-  border-radius: 10px; 
-  padding: 4px 1px !important; 
+  border-radius: 12px; 
+  padding: 6px 2px !important; /* 👈 위아래 여백을 넉넉히 줌 */
   text-align: center; 
   cursor: pointer; 
   overflow: hidden; 
@@ -308,12 +308,12 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
   flex-direction: column; 
   align-items: center; 
   justify-content: center; 
-  gap: 1.5px !important; 
+  gap: 2px !important; /* 👈 교번과 이름 사이 간격 */
   user-select: none; 
   touch-action: manipulation; 
-  border: 1px solid #cbd5e1; 
+  border: 1px solid #94a3b8; 
   box-shadow: none !important; 
-  transition: transform 0.12s ease, border-color 0.18s ease, background-color 0.18s ease; 
+  transition: transform 0.12s ease; 
 }
 .all-cell-real:hover { background: linear-gradient(180deg, #ffffff 0%, #f3f8ff 100%); }
 .all-cell-real:active { transform: scale(0.985); }
