@@ -65,7 +65,6 @@ function positiveMod(n, mod) { return ((n % mod) + mod) % mod; }
 function weekdayShort(dateStr) { const names = ["일", "월", "화", "수", "목", "금", "토"]; return names[parseLocalDate(dateStr).getDay()]; }
 function weekdayName(dateStr) { const names = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"]; return names[parseLocalDate(dateStr).getDay()]; }
 
-// 토요일/일요일 판정 (참고: 대구지하철은 토요일 전용 다이아가 따로 있으므로 분리 관리)
 function isSaturday(dateStr) { return parseLocalDate(dateStr).getDay() === 6; }
 function isSunday(dateStr) { return parseLocalDate(dateStr).getDay() === 0; }
 function getYearFromDateStr(dateStr) { return Number(String(dateStr || "").slice(0, 4)); }
@@ -138,6 +137,7 @@ function isNightStartCode(teamKey, code) {
   return num >= range.start && num <= range.end; 
 }
 
+// 로컬 스토리지 오버라이드 관리 및 데이터 백업 연동 규칙 정의
 function loadWorktimeOverrides() { try { return JSON.parse(localStorage.getItem(LS_WORKTIME_OVERRIDES) || "{}"); } catch { return {}; } }
 function saveWorktimeOverrides(value) { localStorage.setItem(LS_WORKTIME_OVERRIDES, JSON.stringify(value || {})); }
 function getWorktimeOverrideKey(teamKey, personName) { return `${teamKey}::${normalizeNameKey(personName)}`; }
@@ -1622,13 +1622,9 @@ function App() {
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
-                          const codeStyle = cellColor
-                            ? { color: "#000000" }
-                            : { color: isDarkMode ? "#ffffff" : "#000000" };
-
-                          const nameStyle = cellColor
-                            ? { color: "#222222" }
-                            : { color: isDarkMode ? "#94a3b8" : "#475569" };
+                          // 🚀 [정밀 교정] JS 인라인에서 크기/두께 지정을 지워 하단 CSS가 100% 밀어주도록 연동
+                          const codeStyle = cellColor ? { color: "#000000" } : { color: isDarkMode ? "#ffffff" : "#000000" };
+                          const nameStyle = cellColor ? { color: "#222222" } : { color: isDarkMode ? "#94a3b8" : "#475569" };
                             
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
@@ -2069,7 +2065,7 @@ function App() {
         </div>
       )}
       
-      {/* 🚀 [교정] 글자 가독성 전용 스타일시트 */}
+      {/* 🚀 [최종 교정 완료] 인라인 스타일과 간섭 없이 100% 매칭되는 CSS 영역 보강 */}
       <style>{`
         .hidden-date-input {
           position: absolute;
@@ -2092,13 +2088,13 @@ function App() {
           cursor: pointer;
         }
         
-        /* 1. 교번: 900 울트라 볼드로 눈에 가장 띄도록 크기 및 두께 지정 */
+        /* 1. 교번: 900 울트라볼드 가독성 확보 및 16px 고정 */
         .all-code {
           font-weight: 900 !important;
           font-size: 16px !important;
         }
         
-        /* 2. 이름: 500 미디엄 두께로 낮춰 글자가 뭉개지는 현상을 방지하고 깔끔하게 비율 매칭 */
+        /* 2. 이름: 뭉개짐 없는 500 미디엄 두께 고정 및 크기 밸런스 배치 */
         .all-name {
           font-weight: 500 !important;
           font-size: 11.5px !important;
