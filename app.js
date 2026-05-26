@@ -1634,7 +1634,7 @@ function App() {
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
                               <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
-                              <div className="all-name" style={{ ...textColorStyle, fontWeight: "800" }}>
+                              <div className="all-name" style={textColorStyle}>
                                   {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
                                   {searchQuery && (
                                     <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
