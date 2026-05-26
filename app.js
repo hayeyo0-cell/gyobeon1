@@ -137,7 +137,6 @@ function isNightStartCode(teamKey, code) {
   return num >= range.start && num <= range.end; 
 }
 
-// 로컬 스토리지 오버라이드 관리 및 데이터 백업 연동 규칙 정의
 function loadWorktimeOverrides() { try { return JSON.parse(localStorage.getItem(LS_WORKTIME_OVERRIDES) || "{}"); } catch { return {}; } }
 function saveWorktimeOverrides(value) { localStorage.setItem(LS_WORKTIME_OVERRIDES, JSON.stringify(value || {})); }
 function getWorktimeOverrideKey(teamKey, personName) { return `${teamKey}::${normalizeNameKey(personName)}`; }
@@ -404,7 +403,7 @@ function getMonthOptions(centerDateStr, range = 12) {
 function getDisplayMonthValue(dateStr) { return String(dateStr || "").slice(0, 7); }
 function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "").split("-").map(Number); if (!y || !m) return getKoreaToday(); return `${y}-${String(m).padStart(2, "0")}-01`; }
 function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
-function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: end || "-" }; } return { startTime: raw, endTime: "" }; }
+function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: "" }; } return { startTime: raw, endTime: "" }; }
 
 const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
   if (!window.html2canvas) {
@@ -1622,14 +1621,10 @@ function App() {
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
-                          // 🚀 [정밀 교정] JS 인라인에서 크기/두께 지정을 지워 하단 CSS가 100% 밀어주도록 연동
-                          const codeStyle = cellColor ? { color: "#000000" } : { color: isDarkMode ? "#ffffff" : "#000000" };
-                          const nameStyle = cellColor ? { color: "#222222" } : { color: isDarkMode ? "#94a3b8" : "#475569" };
-                            
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                              <div className="all-code" style={{ ...codeStyle, letterSpacing: "-0.5px", marginBottom: "2px" }}>{item.code || "-"}</div>
-                              <div className="all-name" style={{ ...nameStyle, letterSpacing: "-0.3px" }}>
+                              <div className="all-code">{item.code || "-"}</div>
+                              <div className="all-name">
                                   {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
                                   {searchQuery && (
                                     <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
@@ -2031,7 +2026,7 @@ function App() {
             <button className="modal-btn primary" onClick={closePathDialog}>닫기</button>
           </div>
           <div className="viewer-body">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, padding: '0 4px' }}>
+            <div style={{ display: 'flex', justifycontent: 'space-between', alignitems: 'flex-start', marginbottom: 12, padding: '0 4px' }}>
               <div>
                 <div className="viewer-info-line" style={{ fontSize: 18, fontWeight: 700 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
                 <div className="viewer-info-line" style={{ color: "#6b7280", marginTop: 4 }}>{pathDate} {weekdayName(pathDate)}</div>
@@ -2065,7 +2060,6 @@ function App() {
         </div>
       )}
       
-      {/* 🚀 [최종 교정 완료] 인라인 스타일과 간섭 없이 100% 매칭되는 CSS 영역 보강 */}
       <style>{`
         .hidden-date-input {
           position: absolute;
@@ -2086,19 +2080,6 @@ function App() {
           margin: 0;
           padding: 0;
           cursor: pointer;
-        }
-        
-        /* 1. 교번: 900 울트라볼드 가독성 확보 및 16px 고정 */
-        .all-code {
-          font-weight: 900 !important;
-          font-size: 16px !important;
-        }
-        
-        /* 2. 이름: 뭉개짐 없는 500 미디엄 두께 고정 및 크기 밸런스 배치 */
-        .all-name {
-          font-weight: 500 !important;
-          font-size: 11.5px !important;
-          opacity: 0.88;
         }
       `}</style>
     </>
