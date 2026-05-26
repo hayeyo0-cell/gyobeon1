@@ -1627,23 +1627,32 @@ function App() {
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
-                          const textColorStyle = cellColor 
-                            ? { color: "#000000", fontWeight: "900" } 
-                            : { color: isDarkMode ? "#ffffff" : "#000000", fontWeight: "900" };
+                          // 교번(숫자) 스타일: 무조건 선명하고 두껍게 처리
+const codeStyle = cellColor
+  ? { color: "#000000", fontWeight: "900", fontSize: "16px" }
+  : { color: isDarkMode ? "#ffffff" : "#000000", fontWeight: "900", fontSize: "16px" };
+
+// 이름 스타일: 사진처럼 약간의 물이 빠진 흑색/회색 계열에 얇은 두께(600) 부여
+const nameStyle = cellColor
+  ? { color: "#222222", fontWeight: "600", fontSize: "11px" }
+  : { color: isDarkMode ? "#94a3b8" : "#475569", fontWeight: "600", fontSize: "11px" };
                             
                           return (
-                            <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-  <div className="all-code" style={{ ...textColorStyle, fontSize: "16px", fontWeight: "900", letterSpacing: "-0.5px", marginBottom: "2px" }}>{item.code || "-"}</div>
-  <div className="all-name" style={{ ...textColorStyle, fontSize: "12px", fontWeight: "800", letterSpacing: "-0.3px", opacity: 1 }}>
-      {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
-      {searchQuery && (
-        <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
-          [{TEAM_LABELS[item.teamKey]}]
-        </div>
-      )}
+  <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
+    {/* 분리된 900 두께의 전용 스타일 적용 */}
+    <div className="all-code" style={{ ...codeStyle, letterSpacing: "-0.5px", marginBottom: "2px" }}>{item.code || "-"}</div>
+    
+    {/* 분리된 600 두께의 전용 스타일 적용 및 불필요한 인라인 덮어쓰기 제거 */}
+    <div className="all-name" style={{ ...nameStyle, letterSpacing: "-0.3px" }}>
+        {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
+        {searchQuery && (
+          <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
+            [{TEAM_LABELS[item.teamKey]}]
+          </div>
+        )}
+    </div>
   </div>
-</div>
-                          );
+);
                         })}
                       </div>
                     </div>
