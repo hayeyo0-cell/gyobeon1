@@ -1628,8 +1628,8 @@ function App() {
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
                           const textColorStyle = cellColor 
-                            ? { color: "#000000", fontWeight: "900" } 
-                            : { color: isDarkMode ? "#ffffff" : "#000000", fontWeight: "900" };
+  ? { color: "#000000" } 
+  : { color: isDarkMode ? "#ffffff" : "#000000" };
                             
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
