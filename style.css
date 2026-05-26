@@ -298,7 +298,7 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
 .all-cell-real { 
   min-width: 0; 
   min-height: 62px !important; /* 👈 높이를 62px로 키워야 글씨가 안 뭉개집니다 */
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); 
+  background: linear-gradient(180deg, #fefefe 0%, #f8fbff 100%); 
   border-radius: 12px; 
   padding: 6px 2px !important; /* 👈 위아래 여백을 넉넉히 줌 */
   text-align: center; 
