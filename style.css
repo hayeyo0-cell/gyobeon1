@@ -930,9 +930,17 @@ body.dark-mode .main-code {
         height: 48px !important;
     }
     .all-edit-btn {
-        font-size: 10.5px !important; /* 모바일에서는 조금 더 작게 */
+        font-size: 10.5px !important;
     }
     .all-edit-btn.active::after {
         font-size: 9.5px !important;
+    }
+    
+    /* 🚀 여기가 형님의 이름 글씨가 가늘어지는 것을 막는 핵심 수정 구간입니다! */
+    .all-name { 
+        font-size: 12px !important;           /* 폰트 크기를 미세하게 상향 */
+        font-weight: 900 !important;          /* 굵기를 900으로 아주 진하게 */
+        color: #000000 !important;            /* 색상을 순수 검정으로 고정 */
+        -webkit-text-stroke: 0.3px #000000 !important; /* 👈 이게 글씨를 꽉 차 보이게 합니다 */
     }
 }
