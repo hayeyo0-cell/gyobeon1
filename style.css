@@ -5,6 +5,7 @@
 /* 🟢 [디자인 철학 복구] 불필요하게 글씨를 얇게 깎아먹던 폰트 스무딩 옵션을 제거하여 쨍한 화질 복구! */
 html, body {
   margin: 0; width: 100%; height: 100%; overflow: hidden; overflow-x: hidden;
+  /* 🚀 [폰트 전면 교정] 원치 않으셨던 딱딱한 고딕을 버리고, 오른쪽 문양 사진처럼 부드럽고 꽉 찬 갤럭시 시스템 최적화 서체를 1순위로 바인딩 */
   font-family: "Samsung One", "Segoe UI", "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
   background: #dbe1e8; color: #111827; /* 👈 바닥 배경을 살짝 더 눌러서 달력을 강조함 */
   -webkit-font-smoothing: subpixel-antialiased !important; /* 👈 서체가 흐려지거나 얇게 깎이지 않도록 서브픽셀 강제 주입 */
@@ -328,14 +329,14 @@ table, th, td, .group-table th, .group-table td { border: 1px solid #94a3b8 !imp
   transition: color 0.2s ease; 
 }
 
-/* 🚀 [이름 진하게 복원] 가늘어서 안 보이던 버그 해결을 위해 두께를 700 고정 잠금 및 불투명도 100% 락인 */
+/* 🚀 [이름 진하게 복원] 가늘어서 안 보이던 버그 해결을 위해 두께를 600 고정 잠금 및 불투명도 100% 락인 */
 .all-name { 
   margin: 0; 
   margin-top: 1px !important;
   font-size: 11.5px !important;  
   line-height: 1.1 !important; 
-  font-weight: 700 !important; /* 👈 가늘어지지 않고 똑 부러지게 보이도록 700 볼드로 상향 고정 */
-  color: #1e293b !important; /* 👈 원본 서식 파일에 맞춘 선명하고 명확한 흑색 계열 지정 */
+  font-weight: 600 !important; /* 👈 통통한 갤럭시 순수 시스템 서체와 매칭되는 황금비율 600 두께 고정 */
+  color: #2b323f !important; /* 👈 원본 서식 파일에 맞춘 선명하고 명확한 흑색 계열 지정 */
   opacity: 1 !important; /* 👈 흐릿하게 보이지 않도록 불투명도 강제 고정 */
   white-space: nowrap; 
   overflow: hidden; 
@@ -569,62 +570,24 @@ body.dark-mode .all-cell-real:not([style*="background-color"]) .all-name {
   color: #e2e8f0 !important;
 }
 
-/* 4. [홈 화면 날짜박스] 연/월/일 박스 가독성 */
 body.dark-mode .date-box { background-color: #111827 !important; border-color: #374151 !important; }
 body.dark-mode .date-btn { background-color: #1f2937 !important; color: #ffffff !important; }
 body.dark-mode .date-value { background-color: #111827 !important; color: #ffffff !important; }
 
-/* 5. [월교번/그룹 가독성] */
-body.dark-mode .month-calendar {
-  background-color: #05080f !important;
-  border-color: #334155 !important;
-}
-body.dark-mode .month-cell { 
-  background-color: #161e2e !important; 
-  border: 1px solid #334155 !important; 
-}
-
-/* 🚀 [교정] 다크모드 이달의 칸 테두리 강조 */
-body.dark-mode .month-cell:not(.other-month) {
-  border: 1px solid #4b5563 !important;
-}
-
-body.dark-mode .month-weekdays { 
-  background-color: #1a2236 !important; 
-  border-bottom: 1px solid #4b5563 !important; 
-}
-body.dark-mode .month-weekdays > div { 
-  color: #ffffff !important; 
-  font-weight: 900; 
-}
-
+body.dark-mode .month-calendar { background-color: #05080f !important; border-color: #334155 !important; }
+body.dark-mode .month-cell { background-color: #161e2e !important; border: 1px solid #334155 !important; }
+body.dark-mode .month-cell:not(.other-month) { border: 1px solid #4b5563 !important; }
+body.dark-mode .month-weekdays { background-color: #1a2236 !important; border-bottom: 1px solid #4b5563 !important; }
+body.dark-mode .month-weekdays > div { color: #ffffff !important; font-weight: 900; }
 body.dark-mode .month-day, body.dark-mode .tone-normal { color: #ffffff !important; }
 
-/* 🚀 [교번 줄바꿈 및 노이즈 해결 - 다크모드] */
-body.dark-mode .month-code-line { 
-  color: #ffffff !important; 
-  font-size: 15.2px !important; 
-  letter-spacing: -0.2px !important; 
-  white-space: nowrap !important; 
-} 
-
+body.dark-mode .month-code-line { color: #ffffff !important; font-size: 15.2px !important; font-weight: 900; white-space: nowrap !important; } 
 body.dark-mode .month-cell.other-month { opacity: 1 !important; background-color: #090e18 !important; border: 1px solid #1f2937 !important; }
-body.dark-mode .month-cell.other-month .month-day, 
-body.dark-mode .month-cell.other-month .month-code-line, 
-body.dark-mode .month-cell.other-month .month-time-line { color: #4b5563 !important; }
+body.dark-mode .month-cell.other-month .month-day, body.dark-mode .month-cell.other-month .month-code-line, body.dark-mode .month-cell.other-month .month-time-line { color: #4b5563 !important; }
 
-/* 다크모드 '오늘' 강조: 굵은 테두리 대신 배경색 하이라이트 적용 */
-body.dark-mode .month-cell.selected { 
-  border: 1px solid #334155 !important; 
-  background-color: rgba(16, 185, 129, 0.15) !important; 
-  box-shadow: inset 0 0 0 1.5px #10b981;
-}
-body.dark-mode .month-cell.selected .month-day {
-  color: #ffffff !important; 
-  font-weight: 900;
-}
+body.dark-mode .month-cell.selected { border: 1px solid #334155 !important; background-color: rgba(16, 185, 129, 0.15) !important; box-shadow: inset 0 0 0 1.5px #10b981; }
+body.dark-mode .month-cell.selected .month-day { color: #ffffff !important; font-weight: 900; }
 
-/* 6. [그룹 탭 글자색 보정] */
 body.dark-mode .team-badge { color: #94a3b8 !important; font-weight: 700 !important; }
 body.dark-mode .group-table th div, body.dark-mode .group-table td div { color: #ffffff !important; }
 body.dark-mode .day-date { color: #94a3b8 !important; }
@@ -680,7 +643,7 @@ body.dark-mode .day-date { color: #94a3b8 !important; }
     padding: 3px 1px !important; 
   }
 
-  /* 🚀 [모바일 최종 잠금] 해상도가 좁아지더라도 선명하고 두꺼운 글씨체 유지 고정 */
+  /* 🚀 [모바일 최종 잠금] 서체가 가늘게 뭉개지지 않도록 완전히 선명한 시스템 글꼴 단단하게 고정 */
   .all-code { font-size: 15px !important; line-height: 1.1 !important; font-weight: 900 !important; color: #000000 !important; }
   .all-name { font-size: 11px !important; line-height: 1.1 !important; font-weight: 600 !important; color: #2b323f !important; opacity: 1 !important; }
 
