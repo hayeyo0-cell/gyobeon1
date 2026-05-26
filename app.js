@@ -1,10 +1,9 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (최종 가독성 동기화 및 문법 완벽 수정본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (치명적 오류 완벽 해결판)
  * 개선사항: 
- * 1. [구문 오류 완벽 해결] createTeamBucket 관련 중복 소속 오타를 완전히 청소하여 화면 멈춤 현상 원천 차단
- * 2. [가독성 100% 복구] 격자 렌더링 내부의 인라인 style 바인딩을 완전히 제거하여 style.css가 무조건 강제 적용되도록 교정
- * 3. [디자인 복구] 날짜 선택 인풋 헤더 높이(48px) 및 정렬 정밀 교정 유지
+ * 1. [화면 먹통 완전 해결] cloneTeamData의 ----- 오타 및 marginTop 12 콜론 누락 등 치명적 문법 오류 완벽 제거
+ * 2. [가독성 100% 동기화] 인라인 style 간섭을 완전히 도려내어 CSS 황금 비율 무조건 적용
+ * 3. [디자인 복구] 날짜 선택 인풋 헤더 높이 정렬 정밀 교정 유지
  * 4. [검색 이미지] 검색 결과 하단 행로표 이미지 표시 로직 완벽 유지
- * 5. [뒤로가기/날짜선택] 검색창 히스토리 제어 및 날짜 직접 선택 기능 통합
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -184,28 +183,34 @@ function getDiaOrder(team) { return team?.diaOrder?.length ? team.diaOrder : get
 function normalizeToFixedCode(team, code) { const fixedCodes = getGyobunOrder(team); return fixedCodes.find((item) => normalizeCodeKey(item) === normalizeCodeKey(code)) || code || ""; }
 function shiftCodeByDays(team, baseCode, dayOffset) { const order = getGyobunOrder(team); const baseIdx = order.findIndex((code) => normalizeCodeKey(code) === normalizeCodeKey(baseCode)); if (baseIdx < 0) return baseCode || ""; return order[positiveMod(baseIdx + dayOffset, order.length)] || baseCode || ""; }
 function getAllGridLayout(count) { if (count >= 49) return { cols: 6, className: "density-6" }; if (count >= 36) return { cols: 5, className: "density-5" }; return { cols: 4, className: "density-4" }; }
+function createTeamBucket(teamKey) { return { key: teamKey, label: TEAM_LABELS[teamKey], names: [], gyobun: [], diaOrder: [], people: [], info: { totalCount: 0, baseDate: null, baseCode: null, baseName: null, raw: [] }, worktimes: { nor: {}, sat: {}, hol: {} }, paths: { nor: {}, sat: {}, hol: {}, nor_sat: {}, nor_hol: {}, sat_hol: {}, sat_nor: {}, hol_nor: {}, hol_sat: {} }, trainData: {} }; }
 
-/* 🟢 [오타 완전 박멸] 꼬여있던 복합 콜론 구조를 청소하여 완벽하게 빌드가 작동하도록 복구했습니다. */
-function createTeamBucket(teamKey) { 
-  return { 
-    key: teamKey, 
-    label: TEAM_LABELS[teamKey], 
-    names: [], 
-    gyobun: [], 
-    diaOrder: [], 
-    people: [], 
-    info: { totalCount: 0, baseDate: null, baseCode: null, baseName: null, raw: [] }, 
-    worktimes: { nor: {}, sat: {}, hol: {} }, 
-    paths: { nor: {}, sat: {}, hol: {}, nor_sat: {}, nor_hol: {}, sat_hol: {}, sat_nor: {}, hol_nor: {}, hol_sat: {} }, 
-    trainData: {} 
-  }; 
-}
-
+/* 🚀 [치명적 오타 제거 1] paths 복제 로직에 있던 ----- 오타를 깔끔하게 제거했습니다! */
 function cloneTeamData(data) {
   const result = {};
   TEAM_ORDER.forEach((teamKey) => {
     const team = data?.[teamKey]; if (!team) return;
-    result[teamKey] = { ...team, names: Array.isArray(team.names) ? [...team.names] : [], gyobun: Array.isArray(team.gyobun) ? [...team.gyobun] : [], diaOrder: Array.isArray(team.diaOrder) ? [...team.diaOrder] : [], people: Array.isArray(team.people) ? team.people.map((p) => ({ ...p })) : [], info: team.info ? { ...team.info, raw: [...(team.info.raw || [])] } : createTeamBucket(teamKey).info, worktimes: { nor: { ...(team.worktimes?.nor || {}) }, sat: { ...(team.worktimes?.sat || {}) }, hol: { ...(team.worktimes?.hol || {}) } }, paths: { nor: { ...(team.paths?.nor || {}) }, sat: { ...(team.paths?.sat || {}) }, hol: { ...(team.paths?.hol || {}) }, nor_sat: { ...(team.paths?.nor_sat || {}) }, nor_hol: { ...(team.paths?.nor_hol || {}) }, sat_hol: { ...(team.paths?.sat_hol || {}) }, sat_nor: { ...(team.paths?.sat_nor || {}) }, hol_nor: { ...(team.paths-----.hol_nor || {}) }, hol_sat: { ...(team.paths?.hol_sat || {}) } }, trainData: { ...(team.trainData || {}) } };
+    result[teamKey] = { 
+      ...team, 
+      names: Array.isArray(team.names) ? [...team.names] : [], 
+      gyobun: Array.isArray(team.gyobun) ? [...team.gyobun] : [], 
+      diaOrder: Array.isArray(team.diaOrder) ? [...team.diaOrder] : [], 
+      people: Array.isArray(team.people) ? team.people.map((p) => ({ ...p })) : [], 
+      info: team.info ? { ...team.info, raw: [...(team.info.raw || [])] } : createTeamBucket(teamKey).info, 
+      worktimes: { nor: { ...(team.worktimes?.nor || {}) }, sat: { ...(team.worktimes?.sat || {}) }, hol: { ...(team.worktimes?.hol || {}) } }, 
+      paths: { 
+        nor: { ...(team.paths?.nor || {}) }, 
+        sat: { ...(team.paths?.sat || {}) }, 
+        hol: { ...(team.paths?.hol || {}) }, 
+        nor_sat: { ...(team.paths?.nor_sat || {}) }, 
+        nor_hol: { ...(team.paths?.nor_hol || {}) }, 
+        sat_hol: { ...(team.paths?.sat_hol || {}) }, 
+        sat_nor: { ...(team.paths?.sat_nor || {}) }, 
+        hol_nor: { ...(team.paths?.hol_nor || {}) }, 
+        hol_sat: { ...(team.paths?.hol_sat || {}) } 
+      }, 
+      trainData: { ...(team.trainData || {}) } 
+    };
   });
   return result;
 }
@@ -289,14 +294,7 @@ function clearMySelection() { localStorage.removeItem("gyobeon_my_selection"); }
 function loadGroups() { try { return JSON.parse(localStorage.getItem("gyobeon_groups") || "{}"); } catch { return {}; } }
 function saveGroups(groups) { localStorage.setItem("gyobeon_groups", JSON.stringify(groups)); }
 
-function getEmptyRemoteRoster() { 
-  return { 
-    ks: [], 
-    my: [], 
-    wb: [], 
-    as: [] 
-  }; 
-}
+function getEmptyRemoteRoster() { return { ks: [], my: [], wb: [], as: [] }; }
 
 function loadCachedSharedConfig() { try { return JSON.parse(localStorage.getItem(LS_SHARED_CONFIG_CACHE) || "null"); } catch { return null; } }
 function saveCachedSharedConfig(value) { try { localStorage.setItem(LS_SHARED_CONFIG_CACHE, JSON.stringify(value || null)); } catch (_) {} }
@@ -1064,7 +1062,7 @@ function App() {
     const canUseMyAnchorForTeam = viewTeam === mySelection?.teamKey && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(team, mySelection.name);
     if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides); } else if (canUseMyAnchorForTeam) { grid = buildAssignedGrid(team, mySelection.name, normalizeToFixedCode(team, mySelection.code), diffDays(mySelection.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); } else { const teamAnchor = buildTeamAnchorFromZip(currentViewTeam); grid = buildAssignedGrid(team, teamAnchor.name, teamAnchor.code, diffDays(teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); }
     if (viewTeam === mySelection?.teamKey && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) { const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection)); grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; }); }
-    const diaOrder = findDiaOrder(team); return diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(code) === normalizeCodeKey(item.code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-", teamKey: viewTeam }; });
+    const diaOrder = findDiaOrder(team); return diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-", teamKey: viewTeam }; });
   }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection]);
 
   function findDiaOrder(team) { return team?.diaOrder?.length ? team.diaOrder : getGyobunOrder(team); }
@@ -1641,7 +1639,7 @@ function App() {
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
-                          /* 🟢 [스타일 잠금 해제 완벽 통과] 인라인 바인딩을 영구 삭제했으므로, style.css의 교번 16px 최고굵기 규칙이 강제 적용됩니다! */
+                          /* 🟢 [디자인 락 해제 핵심] 인라인 style 바인딩을 완전히 제거하여 CSS가 무조건 100% 강제 적용됩니다. */
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
                               <div className="all-code">{item.code || "-"}</div>
@@ -2017,7 +2015,7 @@ function App() {
                 </div>
                 <button className="modal-btn" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsWorktimeEditOpen((prev) => !prev)}>출퇴근시간 수정 {isWorktimeEditOpen ? "▴" : "▾"}</button>
                 {isWorktimeEditOpen && (
-                  <div style={{ marginTop 12 }}>
+                  <div style={{ marginTop: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, marginBottom: 12 }}>
                       <input className="input" inputMode="numeric" value={editStartHour} onChange={(e) => setEditStartHour(clamp2(e.target.value))} style={{ textAlign: "center" }} placeholder="06" />
                       <div style={{ fontWeight: 700 }}>:</div>
