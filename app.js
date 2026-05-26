@@ -1,10 +1,11 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (치명적 오류 완벽 해결판)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (글씨 가독성 강화 및 통합본)
  * 개선사항: 
- * 1. [화면 먹통 완전 해결] cloneTeamData의 ----- 오타 및 marginTop 12 콜론 누락 등 치명적 문법 오류 완벽 제거
- * 2. [가독성 100% 동기화] 인라인 style 간섭을 완전히 도려내어 CSS 황금 비율 무조건 적용
- * 3. [디자인 복구] 날짜 선택 인풋 헤더 높이 정렬 정밀 교정 유지
- * 4. [검색 이미지] 검색 결과 하단 행로표 이미지 표시 로직 완벽 유지
+ * 1. [가독성 강화] 전체 탭의 교번과 이름 글씨 두께를 보강 (900 Bold 적용)
+ * 2. [디자인 복구] 날짜 선택 인풋으로 인해 뚱뚱해진 헤더 높이 및 정렬 정밀 교정
+ * 3. [검색 이미지] 검색 결과 하단 행로표 이미지 표시 로직 유지
+ * 4. [뒤로가기/날짜선택] 검색창 히스토리 제어 및 날짜 직접 선택 기능 통합
  **/
+
 const { useEffect, useMemo, useRef, useState } = React;
 
 // --- 상수 정의 ---
@@ -145,18 +146,22 @@ function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
 function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
 
-function getGridFolder(teamKey, dateStr, code) {
+function getPathFolder(teamKey, dateStr, code) {
   const s = normalizeCodeKey(code);
   const isTilde = s.includes("~"); 
   const isNightStart = isNightStartCode(teamKey, code); 
+  
   if (isTilde || isNightStart) {
     const startDate = isTilde ? addDays(dateStr, -1) : dateStr;
     const endDate = addDays(startDate, 1);
+    
     const curType = guessDayType(startDate); 
     const nxtType = guessDayType(endDate);
+    
     if (curType === nxtType) return curType;
     return `${curType}_${nxtType}`; 
   }
+  
   return guessDayType(dateStr);
 }
 
@@ -164,7 +169,8 @@ function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
   const s = normalizeCodeKey(code);
   if (s.startsWith("대") || s.startsWith("휴")) return null;
-  const folder = getGridFolder(team.key, dateStr, code).toLowerCase(); 
+
+  const folder = getPathFolder(team.key, dateStr, code).toLowerCase(); 
   const raw = s.replace('~', 'd');
   const strippedD = raw.replace(/d$/, ""); 
   const candidates = [raw, strippedD, `제${strippedD}`, `${raw}.png`, `${raw}.jpg`, `${raw}.jpeg`, `${strippedD}.png`, `${strippedD}.jpg`, `${strippedD}.jpeg` ];
@@ -184,32 +190,11 @@ function shiftCodeByDays(team, baseCode, dayOffset) { const order = getGyobunOrd
 function getAllGridLayout(count) { if (count >= 49) return { cols: 6, className: "density-6" }; if (count >= 36) return { cols: 5, className: "density-5" }; return { cols: 4, className: "density-4" }; }
 function createTeamBucket(teamKey) { return { key: teamKey, label: TEAM_LABELS[teamKey], names: [], gyobun: [], diaOrder: [], people: [], info: { totalCount: 0, baseDate: null, baseCode: null, baseName: null, raw: [] }, worktimes: { nor: {}, sat: {}, hol: {} }, paths: { nor: {}, sat: {}, hol: {}, nor_sat: {}, nor_hol: {}, sat_hol: {}, sat_nor: {}, hol_nor: {}, hol_sat: {} }, trainData: {} }; }
 
-/* 🚀 [치명적 오타 제거 1] paths 복제 로직에 있던 ----- 오타를 깔끔하게 제거했습니다! */
 function cloneTeamData(data) {
   const result = {};
   TEAM_ORDER.forEach((teamKey) => {
     const team = data?.[teamKey]; if (!team) return;
-    result[teamKey] = { 
-      ...team, 
-      names: Array.isArray(team.names) ? [...team.names] : [], 
-      gyobun: Array.isArray(team.gyobun) ? [...team.gyobun] : [], 
-      diaOrder: Array.isArray(team.diaOrder) ? [...team.diaOrder] : [], 
-      people: Array.isArray(team.people) ? team.people.map((p) => ({ ...p })) : [], 
-      info: team.info ? { ...team.info, raw: [...(team.info.raw || [])] } : createTeamBucket(teamKey).info, 
-      worktimes: { nor: { ...(team.worktimes?.nor || {}) }, sat: { ...(team.worktimes?.sat || {}) }, hol: { ...(team.worktimes?.hol || {}) } }, 
-      paths: { 
-        nor: { ...(team.paths?.nor || {}) }, 
-        sat: { ...(team.paths?.sat || {}) }, 
-        hol: { ...(team.paths?.hol || {}) }, 
-        nor_sat: { ...(team.paths?.nor_sat || {}) }, 
-        nor_hol: { ...(team.paths?.nor_hol || {}) }, 
-        sat_hol: { ...(team.paths?.sat_hol || {}) }, 
-        sat_nor: { ...(team.paths?.sat_nor || {}) }, 
-        hol_nor: { ...(team.paths?.hol_nor || {}) }, 
-        hol_sat: { ...(team.paths?.hol_sat || {}) } 
-      }, 
-      trainData: { ...(team.trainData || {}) } 
-    };
+    result[teamKey] = { ...team, names: Array.isArray(team.names) ? [...team.names] : [], gyobun: Array.isArray(team.gyobun) ? [...team.gyobun] : [], diaOrder: Array.isArray(team.diaOrder) ? [...team.diaOrder] : [], people: Array.isArray(team.people) ? team.people.map((p) => ({ ...p })) : [], info: team.info ? { ...team.info, raw: [...(team.info.raw || [])] } : createTeamBucket(teamKey).info, worktimes: { nor: { ...(team.worktimes?.nor || {}) }, sat: { ...(team.worktimes?.sat || {}) }, hol: { ...(team.worktimes?.hol || {}) } }, paths: { nor: { ...(team.paths?.nor || {}) }, sat: { ...(team.paths?.sat || {}) }, hol: { ...(team.paths?.hol || {}) }, nor_sat: { ...(team.paths?.nor_sat || {}) }, nor_hol: { ...(team.paths?.nor_hol || {}) }, sat_hol: { ...(team.paths?.sat_hol || {}) }, sat_nor: { ...(team.paths?.sat_nor || {}) }, hol_nor: { ...(team.paths?.hol_nor || {}) }, hol_sat: { ...(team.paths?.hol_sat || {}) } }, trainData: { ...(team.trainData || {}) } };
   });
   return result;
 }
@@ -273,28 +258,12 @@ function loadOverrides() { try { return JSON.parse(localStorage.getItem("gyobeon
 function saveOverrides(value) { localStorage.setItem("gyobeon_overrides", JSON.stringify(value)); }
 function cleanupNameOverrides() { try { const raw = localStorage.getItem("gyobeon_overrides"); if (!raw) return; const data = JSON.parse(raw); let changed = false; Object.keys(data).forEach((key) => { const item = data[key]; if (item && typeof item === "object" && "name" in item) { delete item.name; changed = true; } }); if (changed) localStorage.setItem("gyobeon_overrides", JSON.stringify(data)); } catch (err) {} }
 
-function loadMySelection() { 
-  try { 
-    const raw = JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null"); 
-    if (!raw) return null; 
-    return { 
-      teamKey: raw.teamKey || "ks", 
-      name: raw.name || "", 
-      code: raw.code || "", 
-      anchorDate: raw.anchorDate || getKoreaToday() 
-    }; 
-  } catch (e) { 
-    return null; 
-  } 
-}
-
+function loadMySelection() { try { const raw = JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null"); if (!raw) return null; return { teamKey: raw.teamKey || "ks", name: raw.name || "", code: raw.code || "", anchorDate: raw.anchorDate || getKoreaToday() }; } catch { return null; } }
 function saveMySelection(value) { const next = { teamKey: value?.teamKey || "ks", name: value?.name || "", code: value?.code || "", anchorDate: value?.anchorDate || getKoreaToday() }; localStorage.setItem("gyobeon_my_selection", JSON.stringify(next)); }
 function clearMySelection() { localStorage.removeItem("gyobeon_my_selection"); }
 function loadGroups() { try { return JSON.parse(localStorage.getItem("gyobeon_groups") || "{}"); } catch { return {}; } }
 function saveGroups(groups) { localStorage.setItem("gyobeon_groups", JSON.stringify(groups)); }
-
 function getEmptyRemoteRoster() { return { ks: [], my: [], wb: [], as: [] }; }
-
 function loadCachedSharedConfig() { try { return JSON.parse(localStorage.getItem(LS_SHARED_CONFIG_CACHE) || "null"); } catch { return null; } }
 function saveCachedSharedConfig(value) { try { localStorage.setItem(LS_SHARED_CONFIG_CACHE, JSON.stringify(value || null)); } catch (_) {} }
 function normalizeTeamKey(value) { const v = String(value || "").trim().toLowerCase(); if (TEAM_ORDER.includes(v)) return v; const found = TEAM_ORDER.find((key) => TEAM_LABELS[key] === String(value || "").trim()); return found || ""; }
@@ -891,6 +860,7 @@ function App() {
   const allGrid = useMemo(() => {
     if (!currentViewTeam) return []; 
     let grid = [];
+    
     if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { 
       grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides); 
     } else {
@@ -898,6 +868,7 @@ function App() {
       let anchorCode = ""; 
       let anchorDate = getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster);
       const canUseMyAnchorForTeam = mySelection?.teamKey === viewTeam && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(currentViewTeam, mySelection.name);
+      
       if (canUseMyAnchorForTeam) { 
         anchorName = mySelection.name; 
         anchorCode = normalizeToFixedCode(currentViewTeam, mySelection.code); 
@@ -908,6 +879,7 @@ function App() {
         anchorCode = normalizeToFixedCode(currentViewTeam, teamAnchor?.code || ""); 
         anchorDate = teamAnchor?.anchorDate || getResolvedBaseDate(viewTeam, currentViewTeam, remoteRoster); 
       }
+      
       if (!anchorName || !anchorCode) { 
         grid = buildAssignedGrid(currentViewTeam, "", "", 0, overrides); 
       } else { 
@@ -915,6 +887,7 @@ function App() {
         grid = buildAssignedGrid(currentViewTeam, anchorName, anchorCode, dayOffset, overrides); 
       }
     }
+
     if (mySelection?.teamKey === viewTeam && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) {
       const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection));
       grid = grid.map((cell) => { 
@@ -930,14 +903,17 @@ function App() {
         return cell; 
       });
     }
+    
     return grid.map(item => ({ ...item, teamKey: viewTeam })); 
   }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection, myInfo]);
 
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
     if (!searchQuery) return allGrid;
+
     const q = String(searchQuery || "").trim().toLowerCase();
     const trainNum = parseInt(q);
+    
     const isEarlyMorningTrain = !isNaN(trainNum) && ((trainNum >= 2001 && trainNum <= 2090) || (trainNum >= 1001 && trainNum <= 1090));
     const isTodaySpecialTrain = !isNaN(trainNum) && ((trainNum >= 2091 && trainNum <= 2296) || (trainNum >= 1091 && trainNum <= 1296));
     const isTrainSearch = !isNaN(trainNum) && q.length >= 4 && (isEarlyMorningTrain || isTodaySpecialTrain);
@@ -945,12 +921,15 @@ function App() {
     if (isTrainSearch) {
       const yesterdayStr = addDays(browseDate, -1);
       let crossTeamResults = [];
+
       TEAM_ORDER.forEach(teamKey => {
         const team = effectiveData[teamKey];
         if (!team) return;
+
         const teamGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
           ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, browseDate, overrides)
           : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, browseDate), overrides);
+
         const yesterdayGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
           ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, yesterdayStr, overrides)
           : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, yesterdayStr), overrides);
@@ -958,7 +937,7 @@ function App() {
         if (isEarlyMorningTrain) {
           const matchedYesterday = yesterdayGrid.filter(item => {
             if (!isNightStartCode(teamKey, item.code)) return false;
-            const folder = getGridFolder(teamKey, yesterdayStr, item.code);
+            const folder = getPathFolder(teamKey, yesterdayStr, item.code);
             const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
             return trains.some(t => String(t) === q);
           }).map(item => ({ 
@@ -967,12 +946,13 @@ function App() {
             teamKey, 
             searchOrigin: 'yesterday' 
           }));
+          
           if (matchedYesterday.length > 0) {
             crossTeamResults = [...crossTeamResults, ...matchedYesterday];
           } else {
             const matchedTodayBackup = teamGrid.filter(item => {
               if (isNightStartCode(teamKey, item.code)) return false; 
-              const folder = getGridFolder(teamKey, browseDate, item.code);
+              const folder = getPathFolder(teamKey, browseDate, item.code);
               const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
               return trains.some(t => String(t) === q);
             }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
@@ -981,19 +961,21 @@ function App() {
         } 
         else if (isTodaySpecialTrain) {
           const matchedToday = teamGrid.filter(item => {
-            const folder = getGridFolder(teamKey, browseDate, item.code);
+            const folder = getPathFolder(teamKey, browseDate, item.code);
             const trains = team.trainData?.[folder]?.[normalizeCodeKey(item.code)] || [];
             return trains.some(t => String(t) === q);
           }).map(item => ({ ...item, teamKey, searchOrigin: 'today' }));
           crossTeamResults = [...crossTeamResults, ...matchedToday];
         }
       });
+
       const uniqueMap = new Map();
       crossTeamResults.forEach(item => {
           const key = `${item.teamKey}-${item.name}-${item.code}-${item.searchOrigin}`;
           if (!uniqueMap.has(key)) uniqueMap.set(key, item);
       });
       return Array.from(uniqueMap.values());
+
     } else {
       let crossTeamNameResults = [];
       TEAM_ORDER.forEach(teamKey => {
@@ -1002,6 +984,7 @@ function App() {
         const teamGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
           ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, browseDate, overrides)
           : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, browseDate), overrides);
+
         const matched = teamGrid.filter(item => {
           const cellKey = getOverrideKey(teamKey, item.name);
           const displayName = overrides[cellKey]?.alias || item.displayName || item.name;
@@ -1059,7 +1042,7 @@ function App() {
   const diaList = useMemo(() => {
     const team = currentViewTeam; if (!team) return []; let grid = [];
     const canUseMyAnchorForTeam = viewTeam === mySelection?.teamKey && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(team, mySelection.name);
-    if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, currentViewTeam, remoteRoster, browseDate, overrides); } else if (canUseMyAnchorForTeam) { grid = buildAssignedGrid(team, mySelection.name, normalizeToFixedCode(team, mySelection.code), diffDays(mySelection.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); } else { const teamAnchor = buildTeamAnchorFromZip(currentViewTeam); grid = buildAssignedGrid(team, teamAnchor.name, teamAnchor.code, diffDays(teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); }
+    if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, team, remoteRoster, browseDate, overrides); } else if (canUseMyAnchorForTeam) { grid = buildAssignedGrid(team, mySelection.name, normalizeToFixedCode(team, mySelection.code), diffDays(mySelection.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); } else { const teamAnchor = buildTeamAnchorFromZip(currentViewTeam); grid = buildAssignedGrid(team, teamAnchor.name, teamAnchor.code, diffDays(teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); }
     if (viewTeam === mySelection?.teamKey && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) { const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection)); grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; }); }
     const diaOrder = findDiaOrder(team); return diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-", teamKey: viewTeam }; });
   }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection]);
@@ -1195,6 +1178,7 @@ function App() {
           setPathTarget(item);
           setPathDate(browseDate);
           setPathImage(image);
+          // 팝업 없이 데이터만 갱신
         } else {
           setPathImage("");
         }
@@ -1462,7 +1446,7 @@ function App() {
             <label className="label" style={{ marginTop: 12 }}>내 이름</label>
             <input className="input" type="text" placeholder="이름 직접 입력" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
             <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
-            <select className="select" value={draftCode} onChange={(e) => { const nextCode = e.target.value; setDraftCode(nextCode); }}>
+            <select className="select" value={draftCode} onChange={(e) => { setDraftCode(e.target.value); }}>
               <option value="">선택</option>
               {(setupSourceData?.[draftTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (<option key={`${idx}`} value={code}>{code}</option>))}
             </select>
@@ -1543,6 +1527,7 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
+                  {/* 🚀 [최종 교정] 사진 3번 규격에 맞춰 돋보기(44)와 수정(48) 영역을 정밀 조정 */}
                   <div className={`${activeTab === "all" ? "all-header" : "dia-header"}`} style={{ 
                     display: "grid", 
                     width: "100%", 
@@ -1555,16 +1540,18 @@ function App() {
                     boxShadow: "0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.25)",
                     transition: "background 0.3s ease"
                   }}>
+                    {/* 마이너스 버튼 */}
                     <button className="all-header-btn" style={{ 
                       width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", 
-                      padding: 0, border: "none", borderRight: "1px solid rgba(255, 255, 255, 0.2)",
+                      padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)",
                       background: "transparent", fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
+                    {/* 날짜 표시 영역 (중앙) */}
                     <div className="all-header-title" style={{ 
                       width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center",
                       textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff", 
-                      position: 'relative', borderRight: "1px solid rgba(255, 255, 255, 0.2)"
+                      position: 'relative', borderRight: "1px solid rgba(255,255,255,0.2)"
                     }}>
                       {TEAM_LABELS[viewTeam]} {parseLocalDate(browseDate).getFullYear()}.{parseLocalDate(browseDate).getMonth() + 1}.{parseLocalDate(browseDate).getDate()} {weekdayShort(browseDate)}
                       <input 
@@ -1579,11 +1566,12 @@ function App() {
                       />
                     </div>
 
+                    {/* 전체 탭일 때만 돋보기와 수정 버튼 표시 */}
                     {activeTab === "all" && (
                       <>
                         <button className="all-header-btn" style={{ 
                           width: "40px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", 
-                          padding: 0, border: "none", borderRight: "1px solid rgba(255, 255, 255, 0.2)", 
+                          padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
                           background: "transparent", fontSize: "16px", color: "#ffffff" 
                         }} onClick={() => {
                           const nextShow = !showSearch;
@@ -1596,7 +1584,7 @@ function App() {
                         }}>🔍</button>
                         <button className={`all-edit-btn ${editMode ? "active" : ""}`} style={{ 
                           width: "40px", height: "48px", fontSize: "11.5px", display: "flex", alignItems: "center", justifyContent: "center", 
-                          padding: 0, border: "none", borderRight: "1px solid rgba(255, 255, 255, 0.2)", 
+                          padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)", 
                           background: "transparent",
                           color: "#ffffff", fontWeight: "bold" 
                         }} onClick={(e) => { 
@@ -1606,6 +1594,7 @@ function App() {
                       </>
                     )}
 
+                    {/* 플러스 버튼 */}
                     <button className="all-header-btn" style={{ 
                       width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
@@ -1638,11 +1627,14 @@ function App() {
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
-                          /* 🟢 [디자인 락 해제 핵심] 인라인 style 바인딩을 완전히 제거하여 CSS가 무조건 100% 강제 적용됩니다. */
+                          const textColorStyle = cellColor 
+                            ? { color: "#000000", fontWeight: "900" } 
+                            : { color: isDarkMode ? "#ffffff" : "#000000", fontWeight: "900" };
+                            
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                              <div className="all-code">{item.code || "-"}</div>
-                              <div className="all-name">
+                              <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
+                              <div className="all-name" style={{ ...textColorStyle, fontWeight: "800" }}>
                                   {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
                                   {searchQuery && (
                                     <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
@@ -1889,7 +1881,7 @@ function App() {
                 <label className="label" style={{ marginTop: 12 }}>내 이름</label>
                 <input className="input" type="text" placeholder="이름 직접 입력" value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCode(""); }} />
                 <label className="label" style={{ marginTop: 12 }}>오늘 교번</label>
-                <select className="select" value={draftCode} onChange={(e) => { const nextCode = e.target.value; setDraftCode(nextCode); }}>
+                <select className="select" value={draftCode} onChange={(e) => { setDraftCode(e.target.value); }}>
                   <option value="">선택</option>
                   {(setupSourceData?.[draftTeam]?.gyobun || DEFAULT_GYOBUN).map((code, idx) => (<option key={`${idx}`} value={code}>{code}</option>))}
                 </select>
@@ -2098,6 +2090,12 @@ function App() {
           margin: 0;
           padding: 0;
           cursor: pointer;
+        }
+        .all-code {
+          font-weight: 900 !important;
+        }
+        .all-name {
+          font-weight: 800 !important;
         }
       `}</style>
     </>
