@@ -1633,16 +1633,16 @@ function App() {
                             
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                              <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
-                              <div className="all-name" style={{ ...textColorStyle, fontWeight: "800" }}>
-                                  {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
-                                  {searchQuery && (
-                                    <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
-                                      [{TEAM_LABELS[item.teamKey]}]
-                                    </div>
-                                  )}
-                              </div>
-                            </div>
+  <div className="all-code" style={{ ...textColorStyle, fontSize: "16px", fontWeight: "900", letterSpacing: "-0.5px", marginBottom: "2px" }}>{item.code || "-"}</div>
+  <div className="all-name" style={{ ...textColorStyle, fontSize: "12px", fontWeight: "800", letterSpacing: "-0.3px", opacity: 1 }}>
+      {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
+      {searchQuery && (
+        <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
+          [{TEAM_LABELS[item.teamKey]}]
+        </div>
+      )}
+  </div>
+</div>
                           );
                         })}
                       </div>
