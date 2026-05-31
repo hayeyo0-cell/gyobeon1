@@ -2094,7 +2094,7 @@ function App() {
             <button className="modal-btn primary" onClick={closePathDialog}>닫기</button>
           </div>
           <div className="viewer-body">
-            <div style={{ display: 'flex', justifycontent: 'space-between', alignitems: 'flex-start', marginbottom: 12, padding: '0 4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, padding: '0 4px' }}>
               <div>
                 <div className="viewer-info-line" style={{ fontSize: 18, fontWeight: 700 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
                 <div className="viewer-info-line" style={{ color: "#6b7280", marginTop: 4 }}>{pathDate} {weekdayName(pathDate)}</div>
@@ -2107,7 +2107,7 @@ function App() {
                   color: 'white', borderRadius: '25px', textDecoration: 'none', fontWeight: 800, fontSize: 14, 
                   boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
                   border: '1px solid rgba(255, 255, 255, 0.2)'
-                }}>📞 전화하기</a>
+                }}>📞 전화연결</a>
               )}
             </div>
             {pathImage ? (<img src={pathImage} alt="행로표" className="fullscreen-image" />) : (<div className="empty-box">해당 행로표 이미지를 찾지 못했습니다.</div>)}
