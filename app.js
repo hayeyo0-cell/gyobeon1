@@ -47,7 +47,7 @@ const DEFAULT_HOLIDAYS_BY_YEAR = {
 
 let RUNTIME_HOLIDAYS_BY_YEAR = { ...DEFAULT_HOLIDAYS_BY_YEAR };
 const HOLIDAY_FETCHING_YEARS = new Set();
-const DEFAULT_GYOBUN = ["2d", "대3", "16d", "휴1", "휴2", "대2", "14d", "24d", "24~", "휴3", "5d", "17d", "27d", "27~", "휴4", "3d", "13d", "23d", "23~", "휴5", "휴6", "대1", "15d", "22d", "22~", "휴7", "9d", "10d", "28d", "28~", "휴8", "4d", "20d", "25d", "25~", "휴9", "1d", "11d", "대4", "대4~", "휴10", "휴11", "7d", "18d", "29d", "29~", "휴12", "8d", "12d", "26d", "26~", "휴13", "휴14", "6d", "19d", "21d", "21~", "휴15"];
+const DEFAULT_GYOBUN = ["2d", "대3", "16d", "휴1", "휴2", "대2", "14d", "24d", "24~", "휴3", "5d", "17d", "27d", "27~", "휴4", "3d", "13d", "23d", "23~", "휴5", "휴6", "대1", "15d", "22d", "22~", "휴7", "9d", "10d", "28d", "28~", "휴7", "9d", "10d", "28d", "28~", "휴8", "4d", "20d", "25d", "25~", "휴9", "1d", "11d", "대4", "대4~", "휴10", "휴11", "7d", "18d", "29d", "29~", "휴12", "8d", "12d", "26d", "26~", "휴13", "휴14", "6d", "19d", "21d", "21~", "휴15"];
 const HIDDEN_NAME_KEYS = ["gb2601"];
 
 function normalizeNameKey(name) { return String(name || "").trim().toLowerCase().replace(/\s+/g, ""); }
@@ -312,14 +312,55 @@ function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
 function getRemoteAnchorBaseDate(team) { return getGlobalBaseDate() || getZipBaseDate(team); }
 
 function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrides = {}) {
-  const fixedCodes = getGyobunOrder(team); const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : []; const originalPeople = Array.isArray(team?.people) ? team.people : []; const anchorDate = getRemoteAnchorBaseDate(team); const dayOffset = diffDays(anchorDate, targetDate);
+  const fixedCodes = getGyobunOrder(team);
+  const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : [];
+  const originalPeople = Array.isArray(team?.people) ? team.people : [];
+  const anchorDate = getRemoteAnchorBaseDate(team);
+  const dayOffset = diffDays(anchorDate, targetDate);
   const shiftedRows = rows.map((row) => ({ ...row, shiftedCode: shiftCodeByDays(team, row.code, dayOffset) }));
+
   return fixedCodes.map((slotCode, idx) => {
+    // 1️⃣ 스프레드시트(remoteRoster)에서 정확히 교번이 일치하는 사람을 우선 매칭
     const found = shiftedRows.find((row) => normalizeCodeKey(row.shiftedCode) === normalizeCodeKey(slotCode));
-    const fallback = originalPeople.find((p) => normalizeCodeKey(shiftCodeByDays(team, p.baseCode || "", dayOffset)) === normalizeCodeKey(slotCode)) || originalPeople[idx] || null;
-    const name = String(found?.name || fallback?.name || "").trim(); if (!name || shouldHideName(name)) return null;
-    const override = overrides[getOverrideKey(teamKey, name)] || {};
-    return { idx: fallback?.idx ?? idx, name, displayName: override.alias || name, code: slotCode, customColor: override.color || "", employeeId: found?.employeeId || fallback?.employeeId || "" };
+    if (found && found.name) {
+      if (shouldHideName(found.name)) return null;
+      const override = overrides[getOverrideKey(teamKey, found.name)] || {};
+      return {
+        idx,
+        name: found.name,
+        displayName: override.alias || found.name,
+        code: slotCode,
+        customColor: override.color || "",
+        employeeId: found.employeeId || ""
+      };
+    }
+
+    // 2️⃣ 스프레드시트에 없으면 ZIP의 fallback (단, 정확히 교번이 일치하는 사람만!)
+    // ⚠️ 기존의 originalPeople[idx] 로 떨어지는 위험한 fallback은 제거됨 — 이게 인사이동 시 엉뚱한 사람을 끌어오던 원인
+    const fallback = originalPeople.find((p) =>
+      normalizeCodeKey(shiftCodeByDays(team, p.baseCode || "", dayOffset)) === normalizeCodeKey(slotCode)
+    );
+
+    if (fallback && fallback.name) {
+      // ⚠️ ZIP의 사람이라도, 스프레드시트에서 이미 다른 자리에 배정되어 있으면 가져오지 않음
+      // (인사이동으로 다른 자리로 갔거나 퇴직한 경우 → 이중 표시 방지)
+      const alreadyAssigned = shiftedRows.some((row) => samePersonName(row.name, fallback.name));
+      if (alreadyAssigned) return null;
+
+      if (shouldHideName(fallback.name)) return null;
+      const override = overrides[getOverrideKey(teamKey, fallback.name)] || {};
+      return {
+        idx: fallback.idx ?? idx,
+        name: fallback.name,
+        displayName: override.alias || fallback.name,
+        code: slotCode,
+        customColor: override.color || "",
+        employeeId: fallback.employeeId || ""
+      };
+    }
+
+    // 3️⃣ 둘 다 없으면 빈 슬롯 (잘못된 사람을 끼워넣지 않음)
+    return null;
   }).filter(Boolean);
 }
 
@@ -334,23 +375,44 @@ function findRemoteRowByName(teamKey, name, remoteRoster) { const rows = remoteR
 function findZipPersonByName(team, name) { if (!team?.people?.length) return null; return team.people.find((p) => samePersonName(p.name, name)) || null; }
 
 function applyRemoteRosterNamesForSetup(baseData, remoteRoster) {
-  if (!baseData) return null; const next = cloneTeamData(baseData);
+  if (!baseData) return null;
+  const next = cloneTeamData(baseData);
   TEAM_ORDER.forEach((teamKey) => {
-    const team = next[teamKey]; if (!team) return; const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : []; if (!rows.length) return;
-    const fixedOrder = getGyobunOrder(team); const originalPeople = Array.isArray(team.people) ? team.people : [];
+    const team = next[teamKey];
+    if (!team) return;
+    const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : [];
+    if (!rows.length) return;
+    const fixedOrder = getGyobunOrder(team);
+    const originalPeople = Array.isArray(team.people) ? team.people : [];
+
     const mapped = fixedOrder.map((slotCode, idx) => {
-  const found = rows.find((row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode));
-  
-  // 수정: 위치(idx) 매칭을 버리고, 오직 교번(slotCode)이나 이름으로만 매칭하도록 변경
-  const fallback = originalPeople.find((p) => normalizeCodeKey(p.baseCode) === normalizeCodeKey(slotCode)) 
-                   || { idx, name: "", baseCode: slotCode, employeeId: "" };
-  
-  const name = String(found?.name || fallback?.name || "").trim();
-  if (!name || shouldHideName(name)) return null;
-  
-  return { idx: fallback?.idx ?? idx, name, baseCode: slotCode, employeeId: found?.employeeId || fallback?.employeeId || "" };
-}).filter(Boolean);
-    if (mapped.length > 0) { team.people = mapped; team.names = mapped.map((p) => p.name); }
+      // 1️⃣ 스프레드시트에서 정확히 교번 매칭되는 사람 우선
+      const found = rows.find((row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode));
+      if (found && found.name) {
+        if (shouldHideName(found.name)) return null;
+        return { idx, name: found.name, baseCode: slotCode, employeeId: found.employeeId || "" };
+      }
+
+      // 2️⃣ 스프레드시트에 없으면 ZIP의 정확히 일치하는 사람만 fallback
+      // ⚠️ originalPeople[idx] 로 떨어지는 위험한 fallback 제거
+      const fallback = originalPeople.find((p) => normalizeCodeKey(p.baseCode) === normalizeCodeKey(slotCode));
+      if (fallback && fallback.name) {
+        // ⚠️ 이미 스프레드시트에서 다른 자리에 배정된 사람이면 가져오지 않음
+        const alreadyAssigned = rows.some((row) => samePersonName(row.name, fallback.name));
+        if (alreadyAssigned) return null;
+
+        if (shouldHideName(fallback.name)) return null;
+        return { idx: fallback.idx ?? idx, name: fallback.name, baseCode: slotCode, employeeId: fallback.employeeId || "" };
+      }
+
+      // 3️⃣ 둘 다 없으면 빈 슬롯
+      return null;
+    }).filter(Boolean);
+
+    if (mapped.length > 0) {
+      team.people = mapped;
+      team.names = mapped.map((p) => p.name);
+    }
   });
   return next;
 }
@@ -409,7 +471,7 @@ function getMonthOptions(centerDateStr, range = 12) {
 function getDisplayMonthValue(dateStr) { return String(dateStr || "").slice(0, 7); }
 function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "").split("-").map(Number); if (!y || !m) return getKoreaToday(); return `${y}-${String(m).padStart(2, "0")}-01`; }
 function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
-function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: end || "-" }; } return { startTime: raw, endTime: "" }; }
+function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: "" }; } return { startTime: raw, endTime: "" }; }
 
 const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
   if (!window.html2canvas) {
@@ -849,7 +911,7 @@ function App() {
     const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
     if (mySelection?.teamKey === myTeamKey && mySelection?.code) { const code = getMyCodeForDate(team, homeDate, mySelection); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; }
     const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster); if (remoteRow?.code) { const anchorDate = getRemoteAnchorBaseDate(team); const dayOffset = diffDays(anchorDate, homeDate); const code = shiftCodeByDays(team, remoteRow.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; }
-    const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
+    const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, myName, mySelection); if (!anchor?.code) return null;
     const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color };
   }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, wordtimeVersion, overrides]);
 
@@ -1184,7 +1246,6 @@ function App() {
           setPathTarget(item);
           setPathDate(browseDate);
           setPathImage(image);
-          // 팝업 없이 데이터만 갱신
         } else {
           setPathImage("");
         }
@@ -1533,7 +1594,6 @@ function App() {
             {(activeTab === "all" || activeTab === "dia") && (
               <div className="tab-page all-page">
                 <div className="all-tab-header">
-                  {/* 🚀 [최종 교정] 사진 3번 규격에 맞춰 돋보기(44)와 수정(48) 영역을 정밀 조정 */}
                   <div className={`${activeTab === "all" ? "all-header" : "dia-header"}`} style={{ 
                     display: "grid", 
                     width: "100%", 
@@ -1546,14 +1606,12 @@ function App() {
                     boxShadow: "0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.25)",
                     transition: "background 0.3s ease"
                   }}>
-                    {/* 마이너스 버튼 */}
                     <button className="all-header-btn" style={{ 
                       width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.2)",
                       background: "transparent", fontSize: "20px", fontWeight: "bold", color: "#ffffff" 
                     }} onClick={() => setBrowseDate(addDays(browseDate, -1))}>-</button>
                     
-                    {/* 날짜 표시 영역 (중앙) */}
                     <div className="all-header-title" style={{ 
                       width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center",
                       textAlign: "center", fontSize: "14px", fontWeight: "800", color: "#ffffff", 
@@ -1572,7 +1630,6 @@ function App() {
                       />
                     </div>
 
-                    {/* 전체 탭일 때만 돋보기와 수정 버튼 표시 */}
                     {activeTab === "all" && (
                       <>
                         <button className="all-header-btn" style={{ 
@@ -1600,7 +1657,6 @@ function App() {
                       </>
                     )}
 
-                    {/* 플러스 버튼 */}
                     <button className="all-header-btn" style={{ 
                       width: "100%", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", 
                       padding: 0, border: "none", background: "transparent", 
@@ -1633,14 +1689,10 @@ function App() {
                           const cellColor = overrides[currentCellKey]?.color || item.customColor || "";
                           const customStyle = cellColor ? { backgroundColor: cellColor, backgroundImage: "none" } : undefined;
                           
-                          const textColorStyle = cellColor 
-                            ? { color: "#000000", fontWeight: "900" } 
-                            : { color: isDarkMode ? "#ffffff" : "#000000", fontWeight: "900" };
-                            
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                              <div className="all-code" style={textColorStyle}>{item.code || "-"}</div>
-                              <div className="all-name" style={{ ...textColorStyle, fontWeight: "800" }}>
+                              <div className="all-code">{item.code || "-"}</div>
+                              <div className="all-name">
                                   {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
                                   {searchQuery && (
                                     <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
@@ -2042,7 +2094,7 @@ function App() {
             <button className="modal-btn primary" onClick={closePathDialog}>닫기</button>
           </div>
           <div className="viewer-body">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, padding: '0 4px' }}>
+            <div style={{ display: 'flex', justifycontent: 'space-between', alignitems: 'flex-start', marginbottom: 12, padding: '0 4px' }}>
               <div>
                 <div className="viewer-info-line" style={{ fontSize: 18, fontWeight: 700 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
                 <div className="viewer-info-line" style={{ color: "#6b7280", marginTop: 4 }}>{pathDate} {weekdayName(pathDate)}</div>
@@ -2096,12 +2148,6 @@ function App() {
           margin: 0;
           padding: 0;
           cursor: pointer;
-        }
-        .all-code {
-          font-weight: 900 !important;
-        }
-        .all-name {
-          font-weight: 800 !important;
         }
       `}</style>
     </>
