@@ -339,11 +339,17 @@ function applyRemoteRosterNamesForSetup(baseData, remoteRoster) {
     const team = next[teamKey]; if (!team) return; const rows = Array.isArray(remoteRoster?.[teamKey]) ? remoteRoster[teamKey] : []; if (!rows.length) return;
     const fixedOrder = getGyobunOrder(team); const originalPeople = Array.isArray(team.people) ? team.people : [];
     const mapped = fixedOrder.map((slotCode, idx) => {
-      const found = rows.find((row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode));
-      const fallback = originalPeople.find((p) => normalizeCodeKey(p.baseCode) === normalizeCodeKey(slotCode)) || originalPeople[idx] || { idx, name: "", baseCode: slotCode, employeeId: "" };
-      const name = String(found?.name || fallback?.name || "").trim(); if (!name || shouldHideName(name)) return null;
-      return { idx: fallback?.idx ?? idx, name, baseCode: slotCode, employeeId: found?.employeeId || fallback?.employeeId || "" };
-    }).filter(Boolean);
+  const found = rows.find((row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode));
+  
+  // 수정: 위치(idx) 매칭을 버리고, 오직 교번(slotCode)이나 이름으로만 매칭하도록 변경
+  const fallback = originalPeople.find((p) => normalizeCodeKey(p.baseCode) === normalizeCodeKey(slotCode)) 
+                   || { idx, name: "", baseCode: slotCode, employeeId: "" };
+  
+  const name = String(found?.name || fallback?.name || "").trim();
+  if (!name || shouldHideName(name)) return null;
+  
+  return { idx: fallback?.idx ?? idx, name, baseCode: slotCode, employeeId: found?.employeeId || fallback?.employeeId || "" };
+}).filter(Boolean);
     if (mapped.length > 0) { team.people = mapped; team.names = mapped.map((p) => p.name); }
   });
   return next;
