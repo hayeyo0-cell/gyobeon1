@@ -769,27 +769,35 @@ function App() {
     
     if (!selected || selected.id === "none") {
       body.style.backgroundImage = "";
+      body.style.backgroundColor = "";
       body.classList.remove('has-bg');
       return;
     }
     
     if (selected.id === "custom") {
       if (backgroundImageData) {
+        // 🎨 자동으로 가장 자연스러운 방식: 가로 100% 채우고, 세로는 비율 유지
+        // 화면이 길면 위쪽부터 표시되고, 아래는 흐릿한 배경색으로 자연스럽게 처리됨
         body.style.backgroundImage = `url('${backgroundImageData}')`;
-        body.style.backgroundSize = "cover";
-        body.style.backgroundPosition = "center";
+        body.style.backgroundSize = "cover";  // 화면 꽉 채움
+        body.style.backgroundPosition = "center center";  // 가운데 정렬
         body.style.backgroundRepeat = "no-repeat";
-        body.style.backgroundAttachment = "fixed";
+        body.style.backgroundAttachment = "fixed";  // 스크롤해도 고정
+        body.style.backgroundColor = isDarkMode ? "#0f172a" : "#eef1f6";  // 빈 영역 보호색
         body.classList.add('has-bg');
       } else {
         body.style.backgroundImage = "";
+        body.style.backgroundColor = "";
         body.classList.remove('has-bg');
       }
     } else {
+      // 그라데이션은 항상 화면 꽉 채움
       body.style.backgroundImage = selected.value;
       body.style.backgroundSize = "cover";
-      body.style.backgroundPosition = "center";
+      body.style.backgroundPosition = "center center";
+      body.style.backgroundRepeat = "no-repeat";
       body.style.backgroundAttachment = "fixed";
+      body.style.backgroundColor = "";
       body.classList.add('has-bg');
     }
   }, [backgroundOption, backgroundImageData, isDarkMode]);
@@ -1238,7 +1246,7 @@ function App() {
   const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
   const groupMembers = groups[currentGroup] || [];
   const groupMonthOptions = useMemo(() => getMonthOptions(todayStr, 12), [todayStr]);
-  useEffect(() => { if (!weekDates.length) return; if (!selectedGroupDate || !weekDates.includes(selectedGroupDate)) setSelectedGroupDate(weekDates[0]); }, [weekDates, selectedGroupDate]);
+    useEffect(() => { if (!weekDates.length) return; if (!selectedGroupDate || !weekDates.includes(selectedGroupDate)) setSelectedGroupDate(weekDates[0]); }, [weekDates, selectedGroupDate]);
 
   function handleGroupMonthChange(nextMonthValue) {
     const today = getKoreaToday(); const todayMonth = getDisplayMonthValue(today); setGroupMonth(nextMonthValue);
@@ -2344,6 +2352,15 @@ function App() {
         }
 
         /* 🎨 ===== 배경화면 활성화 시 가독성 보호 ===== */
+        /* 모바일에서 배경이 잘리지 않도록 html과 body 모두 처리 */
+        html {
+          min-height: 100%;
+        }
+        body.has-bg {
+          min-height: 100vh;
+          min-height: 100dvh;
+          background-attachment: fixed !important;
+        }
         body.has-bg::before {
           content: "";
           position: fixed;
