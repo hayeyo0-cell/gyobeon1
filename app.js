@@ -762,42 +762,51 @@ function App() {
   }, []);
 
   // 🎨 배경 적용 (배경 옵션, 다크모드, 이미지 변경 시)
+  // 모바일 안정성을 위해 body가 아닌 별도의 fixed 레이어(#app-bg-layer)를 사용
+  // ⭐ inset:0 + 100% 사용으로 실제 화면(viewport)에 정확히 맞춤 — 페이지 길이 영향 X
   useEffect(() => {
     localStorage.setItem(LS_BACKGROUND, backgroundOption);
     const selected = BACKGROUND_OPTIONS.find(b => b.id === backgroundOption);
     const body = document.body;
     
+    // 배경 레이어 div 생성 또는 가져오기
+    let bgLayer = document.getElementById('app-bg-layer');
+    if (!bgLayer) {
+      bgLayer = document.createElement('div');
+      bgLayer.id = 'app-bg-layer';
+      bgLayer.style.position = 'fixed';
+      bgLayer.style.top = '0';
+      bgLayer.style.left = '0';
+      bgLayer.style.right = '0';
+      bgLayer.style.bottom = '0';
+      bgLayer.style.width = '100%';
+      bgLayer.style.height = '100%';
+      bgLayer.style.zIndex = '-1';
+      bgLayer.style.pointerEvents = 'none';
+      bgLayer.style.backgroundSize = 'cover';
+      bgLayer.style.backgroundPosition = 'center center';
+      bgLayer.style.backgroundRepeat = 'no-repeat';
+      document.body.insertBefore(bgLayer, document.body.firstChild);
+    }
+    
     if (!selected || selected.id === "none") {
-      body.style.backgroundImage = "";
-      body.style.backgroundColor = "";
+      bgLayer.style.backgroundImage = "";
       body.classList.remove('has-bg');
       return;
     }
     
     if (selected.id === "custom") {
       if (backgroundImageData) {
-        // 🎨 자동으로 가장 자연스러운 방식: 가로 100% 채우고, 세로는 비율 유지
-        // 화면이 길면 위쪽부터 표시되고, 아래는 흐릿한 배경색으로 자연스럽게 처리됨
-        body.style.backgroundImage = `url('${backgroundImageData}')`;
-        body.style.backgroundSize = "cover";  // 화면 꽉 채움
-        body.style.backgroundPosition = "center center";  // 가운데 정렬
-        body.style.backgroundRepeat = "no-repeat";
-        body.style.backgroundAttachment = "fixed";  // 스크롤해도 고정
-        body.style.backgroundColor = isDarkMode ? "#0f172a" : "#eef1f6";  // 빈 영역 보호색
+        bgLayer.style.backgroundImage = `url('${backgroundImageData}')`;
+        bgLayer.style.backgroundColor = isDarkMode ? "#0f172a" : "#eef1f6";
         body.classList.add('has-bg');
       } else {
-        body.style.backgroundImage = "";
-        body.style.backgroundColor = "";
+        bgLayer.style.backgroundImage = "";
         body.classList.remove('has-bg');
       }
     } else {
-      // 그라데이션은 항상 화면 꽉 채움
-      body.style.backgroundImage = selected.value;
-      body.style.backgroundSize = "cover";
-      body.style.backgroundPosition = "center center";
-      body.style.backgroundRepeat = "no-repeat";
-      body.style.backgroundAttachment = "fixed";
-      body.style.backgroundColor = "";
+      bgLayer.style.backgroundImage = selected.value;
+      bgLayer.style.backgroundColor = "";
       body.classList.add('has-bg');
     }
   }, [backgroundOption, backgroundImageData, isDarkMode]);
@@ -1246,7 +1255,7 @@ function App() {
   const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
   const groupMembers = groups[currentGroup] || [];
   const groupMonthOptions = useMemo(() => getMonthOptions(todayStr, 12), [todayStr]);
-    useEffect(() => { if (!weekDates.length) return; if (!selectedGroupDate || !weekDates.includes(selectedGroupDate)) setSelectedGroupDate(weekDates[0]); }, [weekDates, selectedGroupDate]);
+  useEffect(() => { if (!weekDates.length) return; if (!selectedGroupDate || !weekDates.includes(selectedGroupDate)) setSelectedGroupDate(weekDates[0]); }, [weekDates, selectedGroupDate]);
 
   function handleGroupMonthChange(nextMonthValue) {
     const today = getKoreaToday(); const todayMonth = getDisplayMonthValue(today); setGroupMonth(nextMonthValue);
@@ -2352,15 +2361,24 @@ function App() {
         }
 
         /* 🎨 ===== 배경화면 활성화 시 가독성 보호 ===== */
-        /* 모바일에서 배경이 잘리지 않도록 html과 body 모두 처리 */
-        html {
-          min-height: 100%;
-        }
+        /* 배경은 #app-bg-layer 가 처리 (모바일 안정) */
         body.has-bg {
-          min-height: 100vh;
-          min-height: 100dvh;
-          background-attachment: fixed !important;
+          background-color: transparent !important;
+          background-image: none !important;
         }
+        /* 배경 레이어가 화면(viewport)에 정확히 맞도록 보장 */
+        #app-bg-layer {
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          z-index: -1 !important;
+          pointer-events: none !important;
+        }
+        /* 배경 위 반투명 보호 레이어 */
         body.has-bg::before {
           content: "";
           position: fixed;
@@ -2372,10 +2390,21 @@ function App() {
         body.has-bg.dark-mode::before {
           background: rgba(5, 8, 15, 0.65);
         }
-        body.has-bg .container,
-        body.has-bg .bottom-tabs {
+        /* 메인 컨텐츠는 보호 레이어 위에 표시 */
+        body.has-bg .container {
           position: relative;
           z-index: 1;
+        }
+        /* ⭐ 하단 탭바는 항상 최상위로 (기본 z-index: 50 유지!) */
+        body.has-bg .bottom-tabs {
+          z-index: 50 !important;
+        }
+        /* 모달/팝업은 더 위로 */
+        body.has-bg .modal-backdrop {
+          z-index: 4000 !important;
+        }
+        body.has-bg .viewer-page {
+          z-index: 3000 !important;
         }
         /* 카드/메인패널은 백드롭 블러를 강화해서 글씨 보호 */
         body.has-bg .card,
