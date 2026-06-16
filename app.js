@@ -17,19 +17,6 @@ const LS_REMOTE_ROSTER_DATE = "gyobeon_remote_roster_date";
 const LS_LAST_ACK_ROSTER_SIG = "gyobeon_last_ack_roster_sig";
 const LS_LAST_SEEN_PUBLISHED_AT = "gyobeon_last_seen_published_at";
 const LS_DARK_MODE = "gyobeon_dark_mode";
-const LS_BACKGROUND = "gyobeon_background";
-const LS_BACKGROUND_IMAGE = "gyobeon_background_image";
-
-const BACKGROUND_OPTIONS = [
-  { id: "none", label: "🚫 없음", value: "" },
-  { id: "custom", label: "🖼️ 사진 업로드", value: "custom" },
-  { id: "sky", label: "🌅 하늘", value: "linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)" },
-  { id: "pink", label: "🌸 핑크", value: "linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)" },
-  { id: "green", label: "🌿 초록", value: "linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)" },
-  { id: "purple", label: "🌌 보라", value: "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)" },
-  { id: "sunset", label: "🌇 노을", value: "linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)" },
-  { id: "ocean", label: "🌊 바다", value: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" },
-];
 
 const TEAM_LABELS = { ks: "경산", my: "문양", wb: "월배", as: "안심" };
 const TEAM_ORDER = ["ks", "my", "wb", "as"];
@@ -527,37 +514,6 @@ async function saveZipBlob(blob, name) { const db = await openZipDB(); return ne
 async function loadZipBlob() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); const req = store.get("latestZip"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
 async function saveParsedData(value) { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readwrite"); const store = tx.objectStore("files"); store.put({ data: value, savedAt: Date.now() }, "parsedData"); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
 async function loadParsedData() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); const req = store.get("parsedData"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
-async function saveBackgroundImage(dataUrl) { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readwrite"); const store = tx.objectStore("files"); store.put({ dataUrl, savedAt: Date.now() }, "backgroundImage"); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
-async function loadBackgroundImage() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); const req = store.get("backgroundImage"); req.onsuccess = () => resolve(req.result?.dataUrl || null); req.onerror = () => reject(req.error); }); }
-async function deleteBackgroundImage() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readwrite"); const store = tx.objectStore("files"); store.delete("backgroundImage"); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
-
-// 이미지 압축 함수 (큰 사진을 자동으로 줄여서 저장)
-function compressImage(file, maxWidth = 1920, quality = 0.8) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        if (width > maxWidth) {
-          height = (maxWidth / width) * height;
-          width = maxWidth;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 function promptAdminPassword() { const value = window.prompt("관리자 비밀번호를 입력하세요"); if (value == null) return null; if (String(value).trim() !== ADMIN_PASSWORD) { alert("비밀번호가 올바르지 않습니다."); return null; } return String(value).trim(); }
 
 function App() {
@@ -638,8 +594,6 @@ function App() {
   const [postSetupRemoteCheckNeeded, setPostSetupRemoteCheckNeeded] = useState(false);
 
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(LS_DARK_MODE) === 'true');
-  const [backgroundOption, setBackgroundOption] = useState(() => localStorage.getItem(LS_BACKGROUND) || "none");
-  const [backgroundImageData, setBackgroundImageData] = useState("");
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [swipeTransition, setSwipeTransition] = useState("");
 
@@ -750,93 +704,6 @@ function App() {
       document.documentElement.style.backgroundColor = '#eef1f6';
     }
   }, [isDarkMode]);
-
-  // 🎨 배경 이미지 IndexedDB에서 로드 (앱 시작 시 1회)
-  useEffect(() => {
-    (async () => {
-      try {
-        const saved = await loadBackgroundImage();
-        if (saved) setBackgroundImageData(saved);
-      } catch (e) {}
-    })();
-  }, []);
-
-  // 🎨 배경 적용 (배경 옵션, 다크모드, 이미지 변경 시)
-  // 모바일 안정성을 위해 body가 아닌 별도의 fixed 레이어(#app-bg-layer)를 사용
-  // ⭐ inset:0 + 100% 사용으로 실제 화면(viewport)에 정확히 맞춤 — 페이지 길이 영향 X
-  useEffect(() => {
-    localStorage.setItem(LS_BACKGROUND, backgroundOption);
-    const selected = BACKGROUND_OPTIONS.find(b => b.id === backgroundOption);
-    const body = document.body;
-    
-    // 배경 레이어 div 생성 또는 가져오기
-    let bgLayer = document.getElementById('app-bg-layer');
-    if (!bgLayer) {
-      bgLayer = document.createElement('div');
-      bgLayer.id = 'app-bg-layer';
-      bgLayer.style.position = 'fixed';
-      bgLayer.style.top = '0';
-      bgLayer.style.left = '0';
-      bgLayer.style.right = '0';
-      bgLayer.style.bottom = '0';
-      bgLayer.style.width = '100%';
-      bgLayer.style.height = '100%';
-      bgLayer.style.zIndex = '-1';
-      bgLayer.style.pointerEvents = 'none';
-      bgLayer.style.backgroundSize = 'cover';
-      bgLayer.style.backgroundPosition = 'center center';
-      bgLayer.style.backgroundRepeat = 'no-repeat';
-      document.body.insertBefore(bgLayer, document.body.firstChild);
-    }
-    
-    if (!selected || selected.id === "none") {
-      bgLayer.style.backgroundImage = "";
-      body.classList.remove('has-bg');
-      return;
-    }
-    
-    if (selected.id === "custom") {
-      if (backgroundImageData) {
-        bgLayer.style.backgroundImage = `url('${backgroundImageData}')`;
-        bgLayer.style.backgroundColor = isDarkMode ? "#0f172a" : "#eef1f6";
-        body.classList.add('has-bg');
-      } else {
-        bgLayer.style.backgroundImage = "";
-        body.classList.remove('has-bg');
-      }
-    } else {
-      bgLayer.style.backgroundImage = selected.value;
-      bgLayer.style.backgroundColor = "";
-      body.classList.add('has-bg');
-    }
-  }, [backgroundOption, backgroundImageData, isDarkMode]);
-
-  // 🎨 배경 사진 업로드 핸들러
-  async function handleBackgroundUpload(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      alert("이미지 파일만 업로드 가능합니다.");
-      return;
-    }
-    try {
-      const compressed = await compressImage(file, 1920, 0.8);
-      await saveBackgroundImage(compressed);
-      setBackgroundImageData(compressed);
-      setBackgroundOption("custom");
-      alert("배경 사진이 적용되었습니다!");
-    } catch (e) {
-      alert("사진 업로드에 실패했습니다.");
-    }
-    event.target.value = null;
-  }
-
-  async function clearBackgroundImage() {
-    if (!window.confirm("업로드한 배경 사진을 삭제하시겠습니까?")) return;
-    await deleteBackgroundImage();
-    setBackgroundImageData("");
-    if (backgroundOption === "custom") setBackgroundOption("none");
-  }
   
   useEffect(() => { if (!window.html2canvas) { const script = document.createElement("script"); script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; script.id = "html2canvas-script"; document.body.appendChild(script); } }, []);
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
@@ -1255,6 +1122,7 @@ function App() {
   const weekDates = useMemo(() => getWeekDates(groupBaseDate), [groupBaseDate]);
   const groupMembers = groups[currentGroup] || [];
   const groupMonthOptions = useMemo(() => getMonthOptions(todayStr, 12), [todayStr]);
+
   useEffect(() => { if (!weekDates.length) return; if (!selectedGroupDate || !weekDates.includes(selectedGroupDate)) setSelectedGroupDate(weekDates[0]); }, [weekDates, selectedGroupDate]);
 
   function handleGroupMonthChange(nextMonthValue) {
@@ -1504,9 +1372,7 @@ function App() {
       overrides: loadOverrides(),
       groups: loadGroups(),
       worktimeOverrides: loadWorktimeOverrides(),
-      isDarkMode: isDarkMode,
-      backgroundOption: backgroundOption,
-      backgroundImageData: backgroundImageData  // 사진 데이터도 포함
+      isDarkMode: isDarkMode
     };
     const jsonStr = JSON.stringify(dataToSave, null, 2);
     const blob = new Blob([jsonStr], { type: "application/json" });
@@ -1523,7 +1389,7 @@ function App() {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = async (event) => {
+    reader.onload = (event) => {
       try {
         const imported = JSON.parse(event.target.result);
         if (imported.mySelection) {
@@ -1547,13 +1413,6 @@ function App() {
         }
         if (imported.isDarkMode !== undefined) {
            setIsDarkMode(imported.isDarkMode);
-        }
-        if (imported.backgroundImageData) {
-           await saveBackgroundImage(imported.backgroundImageData);
-           setBackgroundImageData(imported.backgroundImageData);
-        }
-        if (imported.backgroundOption) {
-           setBackgroundOption(imported.backgroundOption);
         }
         alert("설정이 성공적으로 복구되었습니다!");
         if (showSettingsRef.current) window.history.back(); else setShowSettings(false);
@@ -2058,75 +1917,6 @@ function App() {
               <span>{isDarkMode ? "🌙 다크 모드 켜짐" : "☀️ 라이트 모드 켜짐"}</span>
               <span style={{ fontSize: '18px' }}>{isDarkMode ? "✅" : "☑️"}</span>
             </button>
-
-            {/* 🎨 배경화면 설정 */}
-            <label className="label">배경화면</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '8px' }}>
-              {BACKGROUND_OPTIONS.map((bg) => {
-                const isSelected = backgroundOption === bg.id;
-                const isCustom = bg.id === "custom";
-                const isNone = bg.id === "none";
-                const previewStyle = isNone
-                  ? { background: isDarkMode ? '#1e293b' : '#f1f5f9' }
-                  : isCustom
-                    ? { background: backgroundImageData ? `url('${backgroundImageData}') center/cover` : (isDarkMode ? '#334155' : '#cbd5e1') }
-                    : { background: bg.value };
-                return (
-                  <button
-                    key={bg.id}
-                    onClick={() => {
-                      if (isCustom && !backgroundImageData) {
-                        document.getElementById('bg-upload-input')?.click();
-                        return;
-                      }
-                      setBackgroundOption(bg.id);
-                    }}
-                    style={{
-                      ...previewStyle,
-                      height: '56px',
-                      borderRadius: '12px',
-                      border: isSelected ? '3px solid #3b82f6' : '2px solid rgba(203,213,225,0.5)',
-                      cursor: 'pointer',
-                      padding: '4px',
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      color: isNone ? (isDarkMode ? '#94a3b8' : '#475569') : '#ffffff',
-                      textShadow: isNone ? 'none' : '0 1px 2px rgba(0,0,0,0.4)',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'flex-end',
-                      justifyContent: 'center',
-                      boxShadow: isSelected ? '0 0 0 3px rgba(59,130,246,0.2)' : 'none'
-                    }}
-                  >
-                    {bg.label}
-                  </button>
-                );
-              })}
-            </div>
-            <input
-              id="bg-upload-input"
-              type="file"
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={handleBackgroundUpload}
-            />
-            <div style={{ display: 'flex', gap: '6px', marginBottom: 16 }}>
-              <label className="modal-btn" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', margin: 0, fontSize: '13px' }}>
-                🖼️ {backgroundImageData ? "사진 변경" : "사진 업로드"}
-                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBackgroundUpload} />
-              </label>
-              {backgroundImageData && (
-                <button className="modal-btn" style={{ flex: 1, fontSize: '13px', color: '#ef4444', borderColor: '#fca5a5' }} onClick={clearBackgroundImage}>
-                  🗑️ 사진 삭제
-                </button>
-              )}
-            </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '16px', textAlign: 'center' }}>
-              ⓘ 사진은 자동으로 압축되어 저장됩니다
-            </div>
-
             <label className="label">기본자료 ZIP 등록 / 변경</label>
             <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
             {!allowProfileEdit ? (
@@ -2358,110 +2148,6 @@ function App() {
           margin: 0;
           padding: 0;
           cursor: pointer;
-        }
-
-        /* 🎨 ===== 배경화면 활성화 시 가독성 보호 ===== */
-        /* 배경은 #app-bg-layer 가 처리 (모바일 안정) */
-        body.has-bg {
-          background-color: transparent !important;
-          background-image: none !important;
-        }
-        /* 배경 레이어가 화면(viewport)에 정확히 맞도록 보장 */
-        #app-bg-layer {
-          position: fixed !important;
-          top: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          bottom: 0 !important;
-          width: 100% !important;
-          height: 100% !important;
-          z-index: -1 !important;
-          pointer-events: none !important;
-        }
-        /* 배경 위 반투명 보호 레이어 */
-        body.has-bg::before {
-          content: "";
-          position: fixed;
-          inset: 0;
-          background: rgba(238, 241, 246, 0.55);
-          z-index: 0;
-          pointer-events: none;
-        }
-        body.has-bg.dark-mode::before {
-          background: rgba(5, 8, 15, 0.65);
-        }
-        /* 메인 컨텐츠는 보호 레이어 위에 표시 */
-        body.has-bg .container {
-          position: relative;
-          z-index: 1;
-        }
-        /* ⭐ 하단 탭바는 항상 최상위로 (기본 z-index: 50 유지!) */
-        body.has-bg .bottom-tabs {
-          z-index: 50 !important;
-        }
-        /* 모달/팝업은 더 위로 */
-        body.has-bg .modal-backdrop {
-          z-index: 4000 !important;
-        }
-        body.has-bg .viewer-page {
-          z-index: 3000 !important;
-        }
-        /* 카드/메인패널은 백드롭 블러를 강화해서 글씨 보호 */
-        body.has-bg .card,
-        body.has-bg .main-panel,
-        body.has-bg .month-calendar,
-        body.has-bg .group-top-bar-v4,
-        body.has-bg .group-table-wrap {
-          backdrop-filter: blur(12px) saturate(1.1) !important;
-          -webkit-backdrop-filter: blur(12px) saturate(1.1) !important;
-          background-color: rgba(255, 255, 255, 0.88) !important;
-        }
-        body.has-bg.dark-mode .card,
-        body.has-bg.dark-mode .main-panel,
-        body.has-bg.dark-mode .month-calendar,
-        body.has-bg.dark-mode .group-top-bar-v4,
-        body.has-bg.dark-mode .group-table-wrap {
-          background-color: rgba(22, 30, 46, 0.88) !important;
-        }
-        /* 전체 탭 격자판 - 배경에 영향받지 않게 강화 */
-        body.has-bg .all-tab-grid-wrap {
-          background-color: rgba(194, 211, 245, 0.92) !important;
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-        }
-        body.has-bg.dark-mode .all-tab-grid-wrap {
-          background-color: rgba(5, 8, 15, 0.92) !important;
-        }
-        /* 격자 셀은 완전히 불투명하게 유지 (글씨 가독성 최우선) */
-        body.has-bg .all-cell-real {
-          background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
-        }
-        body.has-bg.dark-mode .all-cell-real:not([style*="background-color"]) {
-          background: #1a2236 !important;
-        }
-        /* 색상 지정된 셀은 그대로 유지 */
-        body.has-bg .all-cell-real[style*="background-color"] {
-          background-image: none !important;
-        }
-        /* 월교번 달력 셀도 불투명 유지 */
-        body.has-bg .month-cell {
-          background: #ffffff !important;
-        }
-        body.has-bg.dark-mode .month-cell {
-          background: #161e2e !important;
-        }
-        /* 날짜 박스, 헤더 버튼 등 강화 */
-        body.has-bg .date-box {
-          background: rgba(255, 255, 255, 0.85) !important;
-          backdrop-filter: blur(8px);
-        }
-        body.has-bg.dark-mode .date-box {
-          background: rgba(17, 24, 39, 0.85) !important;
-        }
-        /* 모달은 더 진하게 - 글씨 100% 보장 */
-        body.has-bg .modal {
-          backdrop-filter: blur(20px) saturate(1.2) !important;
-          -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
         }
       `}</style>
     </>
