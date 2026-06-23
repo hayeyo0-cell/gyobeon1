@@ -2129,27 +2129,27 @@ function App() {
       )}
       
       <style>{`
-  /* 👇 새로 추가된 부분 (안전영역 CSS) */
-  .bottom-tabs {
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-  }
-
-  .container {
-    padding-top: env(safe-area-inset-top, 0px) !important;
-    padding-left: env(safe-area-inset-left, 0px);
-    padding-right: env(safe-area-inset-right, 0px);
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 90px) !important;
-  }
-  /* 👆 여기까지가 추가 부분 */
-
-  .hidden-date-input {       ← 기존 코드는 그대로
-    position: absolute;
-    ...
-  }
-  input[type="date"]::-webkit-calendar-picker-indicator {
-    ...
-  }
-`}</style>
+        .hidden-date-input {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          opacity: 0;
+          cursor: pointer;
+          -webkit-appearance: none;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          cursor: pointer;
+        }
+      `}</style>
     </>
   );
 }
