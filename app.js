@@ -2129,6 +2129,10 @@ function App() {
       )}
       
       <style>{`
+        .bottom-tabs {
+          padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+        }
+
         .hidden-date-input {
           position: absolute;
           top: 0;
