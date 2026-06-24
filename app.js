@@ -1,9 +1,10 @@
-/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (글씨 가독성 강화 및 통합본)
+/** 🚀 대구교통공사 기관사용 교번/행로 조회 앱 (휴가 표시 기능 추가)
  * 개선사항: 
  * 1. [가독성 강화] 전체 탭의 교번과 이름 글씨 두께를 보강 (900 Bold 적용)
  * 2. [디자인 복구] 날짜 선택 인풋으로 인해 뚱뚱해진 헤더 높이 및 정렬 정밀 교정
  * 3. [검색 이미지] 검색 결과 하단 행로표 이미지 표시 로직 유지
  * 4. [뒤로가기/날짜선택] 검색창 히스토리 제어 및 날짜 직접 선택 기능 통합
+ * 5. [휴가 표시] 월교번 캘린더에 휴가자 수 동그라미 + 클릭 시 휴가자 목록 모달
  **/
 
 const { useEffect, useMemo, useRef, useState } = React;
@@ -27,6 +28,27 @@ const ADMIN_NAME = "권재림";
 const ADMIN_PASSWORD = "7717tutu";
 const KS_BAND_URL = "https://band.us/band/51746678/chat/C4U1ay";
 const KS_VACATION_URL = "https://docs.google.com/spreadsheets/d/16ao5ogtUlILby9a7PjIoUpU9e-lLh8c_jHJGjtWAleM/edit?usp=drivesdk";
+
+// 🆕 휴가 표시 관련 상수
+const VACATION_API_URL = "https://script.google.com/macros/s/AKfycby_p9K5jW7LTxAGy_uTTV88KcEGtnFQAEy7UctYq4Xkv2lpTj5RtR-mOACfic_BmE29kQ/exec";
+
+const VACATION_ICONS = {
+  vacation: "🏖️",
+  sick: "🏥",
+  education: "📚",
+  union: "🤝",
+  empty: "⬜",
+  other: "❓"
+};
+
+const VACATION_CATEGORY_ORDER = { vacation: 1, sick: 2, education: 3, union: 4, empty: 5, other: 6 };
+
+// 경산 휴가 보장 인원
+const VACATION_GUARANTEED = {
+  nor: 4,  // 평일
+  sat: 5,  // 토요일
+  hol: 7   // 휴일/공휴일
+};
 
 let SHARED_REMOTE_BASE_DATE = "";
 let CURRENT_REMOTE_ROSTER_DATE = "";
@@ -103,6 +125,51 @@ function guessDayType(dateStr) {
 }
 function getDateToneClass(dateStr) { if (isSunday(dateStr) || isHolidayDate(dateStr)) return "tone-sun"; if (isSaturday(dateStr)) return "tone-sat"; return "tone-normal"; }
 function getDateBasedColor(dateStr) { if (isSunday(dateStr) || isHolidayDate(dateStr)) return "#ef4444"; if (isSaturday(dateStr)) return "#2563eb"; return "inherit"; }
+
+// 🆕 휴가자 수에 따른 색상 계산
+// 보장 인원: 평일 4(비번 포함 시 5), 토 5(비번 포함 시 6), 휴/일 7(비번 포함 시 8)
+// 🔴 빨강: 보장 인원 달성/초과 (더 받을 자리 없음)
+// 🟡 노랑: 보장-1 (마지막 1자리 남음)
+// 🟢 초록: 여유 있음
+function getVacationCountColor(count, dateStr, allVacations = []) {
+  const dayType = guessDayType(dateStr);
+  const baseGuaranteed = VACATION_GUARANTEED[dayType] || 4;
+  
+  // 휴가자 중 비번이 1명이라도 있으면 보장 +1 (수와 상관없이)
+  // 비번 판별: DIA에 "비번" 포함 (예: "26비번") 또는 "휴X" 시작
+  // 단, 색상 카운트에서 제외된 휴가자(공란/병가/교육 등)의 비번은 무시
+  const hasOffDuty = (Array.isArray(allVacations) ? allVacations : []).some(v => {
+    if (isExcludedFromColorCount(v)) return false;  // 제외 대상의 비번은 무시
+    const dia = String(v.dia || '').trim();
+    return dia.includes('비번') || dia.startsWith('휴');
+  });
+  const offDutyBonus = hasOffDuty ? 1 : 0;
+  
+  const guaranteed = baseGuaranteed + offDutyBonus;
+  
+  if (count >= guaranteed) return '#ef4444';       // 🔴 빨강 (보장 달성/초과)
+  if (count >= guaranteed - 1) return '#f59e0b';   // 🟡 노랑 (보장-1)
+  return '#10b981';                                 // 🟢 초록 (여유)
+}
+
+// 🆕 색상 계산에서 제외할 휴가 판별
+// 제외 대상: 병가, 병가비, 공란, 교육, 노조, 청휴, 청휴비, 출장, 교휴(공휴), 대체휴무
+function isExcludedFromColorCount(vacation) {
+  // 카테고리 기준 제외 (병가, 교육, 노조, 공란)
+  const excludedCategories = ['sick', 'education', 'union', 'empty'];
+  if (excludedCategories.includes(vacation.category)) return true;
+  
+  // 휴가명 기준 추가 제외 (청휴, 청휴비, 출장, 교휴, 공휴, 대체휴무, 병가)
+  const type = String(vacation.type || '').trim();
+  const excludedKeywords = ['청휴', '출장', '교휴', '공휴', '대체휴무', '병가'];
+  return excludedKeywords.some(keyword => type.includes(keyword));
+}
+
+// 🆕 색상 계산용 휴가자 수 (제외 항목 빼고 카운트)
+function getVacationsForColorCount(vacations) {
+  if (!Array.isArray(vacations)) return 0;
+  return vacations.filter(v => !isExcludedFromColorCount(v)).length;
+}
 
 function parseLines(text) { return String(text || "").replace(/\r/g, "").split("\n").map((v) => v.trim()).filter(Boolean); }
 function parseInfo(text) {
@@ -320,7 +387,6 @@ function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrid
   const shiftedRows = rows.map((row) => ({ ...row, shiftedCode: shiftCodeByDays(team, row.code, dayOffset) }));
 
   return fixedCodes.map((slotCode, idx) => {
-    // 1️⃣ 스프레드시트(remoteRoster)에서 정확히 교번이 일치하는 사람을 우선 매칭
     const found = shiftedRows.find((row) => normalizeCodeKey(row.shiftedCode) === normalizeCodeKey(slotCode));
     if (found && found.name) {
       if (shouldHideName(found.name)) return null;
@@ -335,15 +401,11 @@ function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrid
       };
     }
 
-    // 2️⃣ 스프레드시트에 없으면 ZIP의 fallback (단, 정확히 교번이 일치하는 사람만!)
-    // ⚠️ 기존의 originalPeople[idx] 로 떨어지는 위험한 fallback은 제거됨 — 이게 인사이동 시 엉뚱한 사람을 끌어오던 원인
     const fallback = originalPeople.find((p) =>
       normalizeCodeKey(shiftCodeByDays(team, p.baseCode || "", dayOffset)) === normalizeCodeKey(slotCode)
     );
 
     if (fallback && fallback.name) {
-      // ⚠️ ZIP의 사람이라도, 스프레드시트에서 이미 다른 자리에 배정되어 있으면 가져오지 않음
-      // (인사이동으로 다른 자리로 갔거나 퇴직한 경우 → 이중 표시 방지)
       const alreadyAssigned = shiftedRows.some((row) => samePersonName(row.name, fallback.name));
       if (alreadyAssigned) return null;
 
@@ -359,7 +421,6 @@ function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrid
       };
     }
 
-    // 3️⃣ 둘 다 없으면 빈 슬롯 (잘못된 사람을 끼워넣지 않음)
     return null;
   }).filter(Boolean);
 }
@@ -386,18 +447,14 @@ function applyRemoteRosterNamesForSetup(baseData, remoteRoster) {
     const originalPeople = Array.isArray(team.people) ? team.people : [];
 
     const mapped = fixedOrder.map((slotCode, idx) => {
-      // 1️⃣ 스프레드시트에서 정확히 교번 매칭되는 사람 우선
       const found = rows.find((row) => normalizeCodeKey(row.code) === normalizeCodeKey(slotCode));
       if (found && found.name) {
         if (shouldHideName(found.name)) return null;
         return { idx, name: found.name, baseCode: slotCode, employeeId: found.employeeId || "" };
       }
 
-      // 2️⃣ 스프레드시트에 없으면 ZIP의 정확히 일치하는 사람만 fallback
-      // ⚠️ originalPeople[idx] 로 떨어지는 위험한 fallback 제거
       const fallback = originalPeople.find((p) => normalizeCodeKey(p.baseCode) === normalizeCodeKey(slotCode));
       if (fallback && fallback.name) {
-        // ⚠️ 이미 스프레드시트에서 다른 자리에 배정된 사람이면 가져오지 않음
         const alreadyAssigned = rows.some((row) => samePersonName(row.name, fallback.name));
         if (alreadyAssigned) return null;
 
@@ -405,7 +462,6 @@ function applyRemoteRosterNamesForSetup(baseData, remoteRoster) {
         return { idx: fallback.idx ?? idx, name: fallback.name, baseCode: slotCode, employeeId: fallback.employeeId || "" };
       }
 
-      // 3️⃣ 둘 다 없으면 빈 슬롯
       return null;
     }).filter(Boolean);
 
@@ -509,13 +565,74 @@ function fetchJsonp(params = {}, timeoutMs = 15000) {
 function fetchRemoteRosterJsonp(timeoutMs = 6000) { return fetchJsonp({ mode: "roster" }, timeoutMs); }
 function fetchSharedConfigJsonp(timeoutMs = 4000) { return fetchJsonp({ mode: "config" }, timeoutMs); }
 
+// 🆕 휴가 데이터 JSONP fetch
+function fetchVacationsJsonp(timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `gyobeonVacJsonp_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    const script = document.createElement("script");
+    const cleanup = () => { try { delete window[callbackName]; } catch (_) {} if (script.parentNode) script.parentNode.removeChild(script); };
+    const timeout = setTimeout(() => { cleanup(); reject(new Error("휴가 데이터 로드 시간 초과")); }, timeoutMs);
+    window[callbackName] = (data) => { clearTimeout(timeout); cleanup(); resolve(data); };
+    script.onerror = () => { clearTimeout(timeout); cleanup(); reject(new Error("휴가 데이터 로드 실패")); };
+    const search = new URLSearchParams({ callback: callbackName, t: String(Date.now()) });
+    script.src = `${VACATION_API_URL}?${search.toString()}`;
+    document.body.appendChild(script);
+  });
+}
+
 function openZipDB() { return new Promise((resolve, reject) => { const request = indexedDB.open("gyobeon-app-db", 1); request.onupgradeneeded = function () { const db = request.result; if (!db.objectStoreNames.contains("files")) { db.createObjectStore("files"); } }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); }
 async function saveZipBlob(blob, name) { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readwrite"); const store = tx.objectStore("files"); store.put({ blob, name, savedAt: Date.now() }, "latestZip"); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
 async function loadZipBlob() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); const req = store.get("latestZip"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
 async function saveParsedData(value) { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readwrite"); const store = tx.objectStore("files"); store.put({ data: value, savedAt: Date.now() }, "parsedData"); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
 async function loadParsedData() { const db = await openZipDB(); return new Promise((resolve, reject) => { const tx = db.transaction("files", "readonly"); const store = tx.objectStore("files"); const req = store.get("parsedData"); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
-function promptAdminPassword() { const value = window.prompt("관리자 비밀번호를 입력하세요"); if (value == null) return null; if (String(value).trim() !== ADMIN_PASSWORD) { alert("비밀번호가 올바르지 않습니다."); return null; } return String(value).trim(); }
 
+// 🆕 휴가 데이터 IndexedDB 저장/로드
+async function saveVacationsToIDB(data) {
+  const db = await openZipDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("files", "readwrite");
+    const store = tx.objectStore("files");
+    store.put({ data, savedAt: Date.now() }, "vacations");
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function loadVacationsFromIDB() {
+  const db = await openZipDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction("files", "readonly");
+    const store = tx.objectStore("files");
+    const req = store.get("vacations");
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => resolve(null);
+  });
+}
+
+// 🆕 휴가 데이터를 날짜별로 그룹핑하고 정렬
+function groupVacationsByDate(vacations) {
+  const result = {};
+  if (!Array.isArray(vacations)) return result;
+  
+  vacations.forEach(v => {
+    if (!v.date || v.cancelled) return; // 취소된 휴가 제외
+    if (!result[v.date]) result[v.date] = [];
+    result[v.date].push(v);
+  });
+  
+  // 각 날짜 내에서 정렬: 카테고리 순 → seq 순
+  Object.keys(result).forEach(date => {
+    result[date].sort((a, b) => {
+      const catDiff = (VACATION_CATEGORY_ORDER[a.category] || 99) - (VACATION_CATEGORY_ORDER[b.category] || 99);
+      if (catDiff !== 0) return catDiff;
+      return (a.seq || 0) - (b.seq || 0);
+    });
+  });
+  
+  return result;
+}
+
+function promptAdminPassword() { const value = window.prompt("관리자 비밀번호를 입력하세요"); if (value == null) return null; if (String(value).trim() !== ADMIN_PASSWORD) { alert("비밀번호가 올바르지 않습니다."); return null; } return String(value).trim(); }
 function App() {
   const initialSelection = loadMySelection();
   const initialGroups = loadGroups();
@@ -600,11 +717,18 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
+  // 🆕 휴가 표시 관련 state
+  const [vacations, setVacations] = useState([]);
+  const [vacationsByDate, setVacationsByDate] = useState({});
+  const [vacationModalOpen, setVacationModalOpen] = useState(false);
+  const [vacationModalDate, setVacationModalDate] = useState("");
+
   const pathOpenRef = useRef(false);
   const editOpenRef = useRef(false);
   const showGroupAddRef = useRef(false);
   const showSettingsRef = useRef(false);
   const showSearchRef = useRef(false);
+  const vacationModalOpenRef = useRef(false);
 
   const effectiveData = data;
   const setupSourceData = useMemo(() => { if (!data) return null; if (!allowProfileEdit) return data; return applyRemoteRosterNamesForSetup(data, remoteRoster); }, [data, remoteRoster, allowProfileEdit]);
@@ -716,6 +840,49 @@ function App() {
   useEffect(() => { if (!allowProfileEdit) return; const teamKey = draftTeam || "ks"; const currentName = String(draftName || "").trim(); if (!currentName) return; const team = setupSourceData?.[draftTeam] || data?.[draftTeam]; if (!team) return; if (String(draftCode || "").trim()) return; let nextCode = ""; const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster); if (remoteRow?.code) { nextCode = normalizeToFixedCode(team, remoteRow.code); } else { const zipPerson = findZipPersonByName(team, currentName); if (zipPerson?.baseCode) { nextCode = normalizeToFixedCode(team, zipPerson.baseCode); } } if (!nextCode) return; setDraftCode(nextCode); }, [ allowProfileEdit, draftTeam, draftName, draftCode, remoteRoster, setupSourceData, data, ]);
   useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
   useEffect(() => { showSearchRef.current = showSearch; }, [showSearch]);
+
+  // 🆕 휴가 모달 ref
+  useEffect(() => { vacationModalOpenRef.current = vacationModalOpen; }, [vacationModalOpen]);
+
+  // 🆕 휴가 데이터 자동 로드 (경산 소속만)
+  useEffect(() => {
+    if (mySelection?.teamKey !== 'ks') return;
+    
+    let cancelled = false;
+    
+    async function loadVacations() {
+      // 1. IndexedDB 캐시 먼저 표시 (빠른 로딩)
+      try {
+        const cached = await loadVacationsFromIDB();
+        if (!cancelled && cached?.data?.vacations) {
+          setVacations(cached.data.vacations);
+          setVacationsByDate(groupVacationsByDate(cached.data.vacations));
+        }
+      } catch (e) {}
+      
+      // 2. 최신 데이터 fetch
+      try {
+        const json = await fetchVacationsJsonp(8000);
+        if (cancelled) return;
+        if (json?.ok && Array.isArray(json.vacations)) {
+          setVacations(json.vacations);
+          setVacationsByDate(groupVacationsByDate(json.vacations));
+          saveVacationsToIDB(json).catch(() => {});
+        }
+      } catch (e) {
+        console.log("휴가 데이터 로드 실패:", e);
+      }
+    }
+    
+    loadVacations();
+    return () => { cancelled = true; };
+  }, [mySelection?.teamKey]);
+
+  // 🆕 휴가 모달 history 처리
+  useEffect(() => { 
+    if (vacationModalOpen && (!window.history.state || window.history.state.layer !== "vacation")) 
+      window.history.pushState({ __gyobeon: true, layer: "vacation" }, ""); 
+  }, [vacationModalOpen]);
 
   function syncMySelectionFromRemote(nextRemoteRoster, nextDataOverride = null) {
     const currentTeamKey = mySelection?.teamKey || ""; const currentName = String(mySelection?.name || "").trim(); if (!currentTeamKey || !currentName) return;
@@ -876,6 +1043,7 @@ function App() {
     function handlePopState() {
       if (pathOpenRef.current) { setPathOpen(false); return; }
       if (editOpenRef.current) { setEditOpen(false); return; }
+      if (vacationModalOpenRef.current) { setVacationModalOpen(false); return; }
       if (showUpdatePopup) { setShowUpdatePopup(false); return; }
       if (showGroupAddRef.current) { setShowGroupAdd(false); return; } 
       if (showSettingsRef.current) { setShowSettings(false); return; } 
@@ -1801,6 +1969,38 @@ function App() {
                                 <div className={`month-time-line ${toneClass}`}>{startTime || "-"}</div>
                                 <div className={`month-time-line ${toneClass}`}>{endTime || ""}</div>
                               </div>
+                              {mySelection?.teamKey === 'ks' && sameMonth && (() => {
+                                const dayVacs = vacationsByDate[date] || [];
+                                const totalCount = dayVacs.length;  // 표시용 (전체)
+                                const colorCount = getVacationsForColorCount(dayVacs);  // 색상용 (제외 빼고)
+                                const color = getVacationCountColor(colorCount, date, dayVacs);  // 비번 보너스 적용
+                                return (
+                                  <div
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setVacationModalDate(date);
+                                      setVacationModalOpen(true);
+                                    }}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      width: '20px',
+                                      height: '20px',
+                                      borderRadius: '50%',
+                                      backgroundColor: color,
+                                      color: 'white',
+                                      fontWeight: 800,
+                                      fontSize: '11px',
+                                      cursor: 'pointer',
+                                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)',
+                                      margin: '4px auto 0 auto'
+                                    }}
+                                  >
+                                    {totalCount}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </button>
                         );
@@ -2111,6 +2311,73 @@ function App() {
               )}
             </div>
             {pathImage ? (<img src={pathImage} alt="행로표" className="fullscreen-image" />) : (<div className="empty-box">해당 행로표 이미지를 찾지 못했습니다.</div>)}
+          </div>
+        </div>
+      )}
+
+      {/* 🆕 휴가자 목록 모달 */}
+      {vacationModalOpen && (
+        <div className="modal-backdrop" onClick={() => { if (vacationModalOpenRef.current) window.history.back(); else setVacationModalOpen(false); }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxHeight: '85vh', overflow: 'auto' }}>
+            <div className="modal-title">
+              {vacationModalDate} {weekdayName(vacationModalDate)}
+            </div>
+            <div className="modal-sub">
+              휴가자 {(vacationsByDate[vacationModalDate] || []).length}명
+            </div>
+            
+            {(vacationsByDate[vacationModalDate] || []).length === 0 ? (
+              <div className="help-text" style={{ marginTop: 20, textAlign: 'center', padding: '20px 0' }}>
+                이 날은 휴가자가 없습니다.
+              </div>
+            ) : (
+              <div style={{ marginTop: 14, borderRadius: 12, overflow: 'hidden', border: isDarkMode ? '1px solid #334155' : '1px solid #c8d2e3' }}>
+                {/* 헤더 */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '36px 1fr 1.2fr 70px',
+                  padding: '10px 8px',
+                  background: isDarkMode ? '#1e293b' : '#f1f5f9',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: isDarkMode ? '#cbd5e1' : '#475569',
+                  borderBottom: isDarkMode ? '1px solid #334155' : '1px solid #c8d2e3',
+                  textAlign: 'center'
+                }}>
+                  <div>구분</div>
+                  <div>이름</div>
+                  <div>휴가명</div>
+                  <div>DIA</div>
+                </div>
+                {/* 내용 */}
+                {(vacationsByDate[vacationModalDate] || []).map((v, idx, arr) => (
+                  <div key={`${v.date}-${v.seq}-${idx}`} style={{
+                    display: 'grid',
+                    gridTemplateColumns: '36px 1fr 1.2fr 70px',
+                    padding: '10px 8px',
+                    fontSize: '14px',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    borderBottom: idx === arr.length - 1 ? 'none' : (isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0')
+                  }}>
+                    <div style={{ fontSize: '16px' }}>
+                      {VACATION_ICONS[v.category] || '❓'}
+                    </div>
+                    <div style={{ fontWeight: 700 }}>{v.name || '-'}</div>
+                    <div>{v.type || '-'}</div>
+                    <div style={{ fontWeight: 700, color: isDarkMode ? '#94a3b8' : '#64748b' }}>
+                      {v.dia || '-'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <div className="modal-actions">
+              <button className="modal-btn primary" style={{ width: '100%' }} onClick={() => { if (vacationModalOpenRef.current) window.history.back(); else setVacationModalOpen(false); }}>
+                닫기
+              </button>
+            </div>
           </div>
         </div>
       )}
