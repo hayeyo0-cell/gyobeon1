@@ -733,7 +733,7 @@ function App() {
   const effectiveData = data;
   const setupSourceData = useMemo(() => { if (!data) return null; if (!allowProfileEdit) return data; return applyRemoteRosterNamesForSetup(data, remoteRoster); }, [data, remoteRoster, allowProfileEdit]);
 
-  const isAdminUser = samePersonName(mySelection?.name, ADMIN_NAME);
+  const isAdminUser = ADMIN_NAME.includes(mySelection?.name);
   const isKsUser = mySelection?.teamKey === "ks";
 
   const groupAddCandidates = useMemo(() => {
