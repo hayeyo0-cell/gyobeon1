@@ -24,7 +24,7 @@ const TEAM_ORDER = ["ks", "my", "wb", "as"];
 const NIGHT_RANGE_BY_TEAM = { ks: { start: 21, end: 29 }, my: { start: 24, end: 34 }, wb: { start: 25, end: 37 }, as: { start: 25, end: 37 } };
 
 const ADMIN_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw8NMVjH3J_Mt7SBymWOg44zvD4gd4GXkQB3r95QTl63M3aWqtf-OglLrG2rQPH7J6UjA/exec";
-const ADMIN_NAME = ["권재림", "조영빈"];
+const ADMIN_NAME = "권재림";
 const ADMIN_PASSWORD = "ks5826";
 const KS_BAND_URL = "https://band.us/band/51746678/chat/C4U1ay";
 const KS_VACATION_URL = "https://docs.google.com/spreadsheets/d/16ao5ogtUlILby9a7PjIoUpU9e-lLh8c_jHJGjtWAleM/edit?usp=drivesdk";
