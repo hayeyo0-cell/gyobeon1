@@ -632,6 +632,14 @@ function groupVacationsByDate(vacations) {
   return result;
 }
 
+// 🆕 메모 관련 함수들 (사용자명 + 날짜 + DIA) - 개인 수첩 기능
+function getMemoKey(userName, dateStr, diaCode) { return `gyobeon_memo_${String(userName || "").trim()}_${dateStr}_${String(diaCode || "").trim()}`; }
+function loadMemo(userName, dateStr, diaCode) { try { return localStorage.getItem(getMemoKey(userName, dateStr, diaCode)) || ""; } catch { return ""; } }
+function saveMemo(userName, dateStr, text, diaCode) { try { localStorage.setItem(getMemoKey(userName, dateStr, diaCode), String(text || "").trim()); } catch (_) {} }
+function deleteMemo(userName, dateStr, diaCode) { try { localStorage.removeItem(getMemoKey(userName, dateStr, diaCode)); } catch (_) {} }
+// 🆕 해당 날짜의 모든 메모 초기화 (수동 호출)
+function clearAllMemosForDate(userName, dateStr) { try { const keys = Object.keys(localStorage); keys.forEach(key => { if (key.startsWith(`gyobeon_memo_${String(userName || "").trim()}_${dateStr}_`)) { localStorage.removeItem(key); } }); } catch (_) {} }
+
 function promptAdminPassword() { const value = window.prompt("관리자 비밀번호를 입력하세요"); if (value == null) return null; if (String(value).trim() !== ADMIN_PASSWORD) { alert("비밀번호가 올바르지 않습니다."); return null; } return String(value).trim(); }
 function App() {
   const initialSelection = loadMySelection();
@@ -693,6 +701,7 @@ function App() {
   const [pathImage, setPathImage] = useState("");
   const [pathTeamKey, setPathTeamKey] = useState("");
   const [pathDate, setPathDate] = useState(todayStr);
+  const [memoText, setMemoText] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [allowProfileEdit, setAllowProfileEdit] = useState(!initialSelection?.name || !initialSelection?.code);
 
@@ -1061,6 +1070,8 @@ function App() {
   }, [showUpdatePopup, searchQuery]);
 
   useEffect(() => { if (pathOpen && (!window.history.state || window.history.state.layer !== "path")) window.history.pushState({ __gyobeon: true, layer: "path" }, ""); }, [pathOpen]);
+  // 🆕 행로표 열때 메모 로드 (사용자명 + 날짜 + DIA)
+  useEffect(() => { if (pathOpen && pathDate && pathTarget?.code && mySelection?.name) { setMemoText(loadMemo(mySelection.name, pathDate, pathTarget.code)); } }, [pathOpen, pathDate, pathTarget?.code, mySelection?.name]);
   useEffect(() => { if (editOpen && (!window.history.state || window.history.state.layer !== "edit")) window.history.pushState({ __gyobeon: true, layer: "edit" }, ""); }, [editOpen]);
   useEffect(() => { if (showUpdatePopup && (!window.history.state || window.history.state.layer !== "update")) window.history.pushState({ __gyobeon: true, layer: "update" }, ""); }, [showUpdatePopup]);
   useEffect(() => { if (showGroupAdd && (!window.history.state || window.history.state.layer !== "groupAdd")) window.history.pushState({ __gyobeon: true, layer: "groupAdd" }, ""); }, [showGroupAdd]);
@@ -2311,6 +2322,108 @@ function App() {
               )}
             </div>
             {pathImage ? (<img src={pathImage} alt="행로표" className="fullscreen-image" />) : (<div className="empty-box">해당 행로표 이미지를 찾지 못했습니다.</div>)}
+            
+            {/* 🆕 메모 섹션 - 개인 수첩 (사용자 설정 필수) */}
+            {mySelection?.name ? (
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: isDarkMode ? '#cbd5e1' : '#334155' }}>
+                📝 메모 - {pathTarget?.code || "행로표"}
+              </div>
+              <textarea
+                value={memoText}
+                onChange={(e) => setMemoText(e.target.value)}
+                placeholder="교대사항, 고장 내용 등을 기록하세요..."
+                style={{
+                  width: '100%',
+                  minHeight: '80px',
+                  padding: '10px 12px',
+                  borderRadius: '12px',
+                  border: isDarkMode ? '1px solid #334155' : '1px solid #c8d2e3',
+                  background: isDarkMode ? '#0f172a' : '#ffffff',
+                  color: isDarkMode ? '#e2e8f0' : '#1e293b',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <div style={{ display: 'flex', gap: '8px', marginTop: 10 }}>
+                <button
+                  onClick={() => {
+                    saveMemo(mySelection?.name, pathDate, memoText, pathTarget?.code);
+                    alert('메모가 저장되었습니다.');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 8px rgba(59, 130, 246, 0.2)'
+                  }}
+                >
+                  💾 저장
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm('메모를 삭제하시겠습니까?')) {
+                      deleteMemo(mySelection?.name, pathDate, pathTarget?.code);
+                      setMemoText('');
+                      alert('메모가 삭제되었습니다.');
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    background: isDarkMode ? '#ef4444' : '#fca5a5',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 8px rgba(239, 68, 68, 0.2)'
+                  }}
+                >
+                  🗑️ 삭제
+                </button>
+              </div>
+              {/* 🆕 메모 초기화 버튼 - 해당 날짜의 모든 메모 삭제 */}
+              <button
+                onClick={() => {
+                  if (window.confirm(`${pathDate}의 모든 메모를 초기화하시겠습니까?\n(이 작업은 되돌릴 수 없습니다)`)) {
+                    clearAllMemosForDate(mySelection?.name, pathDate);
+                    setMemoText('');
+                    alert('모든 메모가 초기화되었습니다.');
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  marginTop: 10,
+                  background: isDarkMode ? '#64748b' : '#cbd5e1',
+                  color: isDarkMode ? 'white' : '#1e293b',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 8px rgba(100, 116, 139, 0.2)'
+                }}
+              >
+                🔄 메모 초기화 (모두 삭제)
+              </button>
+            </div>
+            ) : (
+              <div style={{ marginTop: 16, padding: '12px', borderRadius: '12px', background: isDarkMode ? '#1e293b' : '#f0f9ff', color: isDarkMode ? '#cbd5e1' : '#0c4a6e', fontSize: '14px', textAlign: 'center', fontWeight: 600 }}>
+                ⚠️ 메모를 사용하려면 설정에서 내 정보를 먼저 입력해주세요.
+              </div>
+            )}
           </div>
         </div>
       )}
