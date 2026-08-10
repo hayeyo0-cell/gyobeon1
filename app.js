@@ -27,6 +27,14 @@ const ADMIN_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw8NMVjH3J_Mt7
 const ADMIN_NAME = ["권재림", "조영빈"];
 const ADMIN_PASSWORD = "ks5826";
 
+let SHARED_REMOTE_BASE_DATE = "";
+let CURRENT_REMOTE_ROSTER_DATE = "";
+
+function setGlobalBaseDate(value) { SHARED_REMOTE_BASE_DATE = String(value || "").trim(); }
+function getGlobalBaseDate() { return String(SHARED_REMOTE_BASE_DATE || "").trim(); }
+function setGlobalRemoteRosterDate(value) { CURRENT_REMOTE_ROSTER_DATE = String(value || "").trim(); }
+function getGlobalRemoteRosterDate() { return String(CURRENT_REMOTE_ROSTER_DATE || "").trim(); }
+
 const COLOR_OPTIONS = [
   { value: "", label: "기본" }, { value: "#dbeafe", label: "하늘" }, { value: "#bbf7d0", label: "연두" },
   { value: "#fde68a", label: "노랑" }, { value: "#fecaca", label: "분홍" }, { value: "#e9d5ff", label: "보라" }, { value: "#e5e7eb", label: "회색" }
