@@ -722,7 +722,17 @@ function App() {
   useEffect(() => { setProfileAnchorDate(mySelection?.anchorDate || todayStr); }, [mySelection?.anchorDate, todayStr]);
   useEffect(() => { if (!data) return; const migrated = migrateLegacyOverrides(loadOverrides(), data); setOverrides(migrated); }, [data]);
   useEffect(() => { const years = [getYearFromDateStr(homeDate), getYearFromDateStr(browseDate), getYearFromDateStr(monthDate), getYearFromDateStr(groupBaseDate)].filter(Boolean); [...new Set(years)].forEach((year) => { ensureHolidayYear(year, () => setHolidayVersion((v) => v + 1)); }); }, [homeDate, browseDate, monthDate, groupBaseDate]);
-  useEffect(() => { if (!allowProfileEdit) return; setDraftTeam(selectedTeam || mySelection?.teamKey || "ks"); setDraftName(String(mySelection?.name || "").trim()); setDraftCode(String(mySelection?.code || "").trim()); }, [allowProfileEdit, selectedTeam, mySelection]);
+  useEffect(() => {
+    if (!allowProfileEdit) return;
+    const nextTeam = selectedTeam || mySelection?.teamKey || "ks";
+    setDraftTeam(nextTeam);
+    setDraftName(String(mySelection?.name || "").trim());
+    // 기준 날짜를 오늘로 맞추는 화면이니, 오늘 교번도 원래 저장된 기준교번이 아니라
+    // 오늘 날짜 기준으로 실제 계산한 값으로 채워요 (startReconfigureProfile과 동일한 방식).
+    const team = effectiveData?.[nextTeam];
+    const todayCode = team && mySelection?.code ? getMyCodeForDate(team, getKoreaToday(), mySelection) : "";
+    setDraftCode(todayCode || String(mySelection?.code || "").trim());
+  }, [allowProfileEdit, selectedTeam, mySelection]);
   useEffect(() => { if (!allowProfileEdit) return; const teamKey = draftTeam || "ks"; const currentName = String(draftName || "").trim(); if (!currentName) return; const team = setupSourceData?.[draftTeam] || data?.[draftTeam]; if (!team) return; if (String(draftCode || "").trim()) return; let nextCode = ""; const remoteRow = findRemoteRowByName(teamKey, currentName, remoteRoster); if (remoteRow?.code) { nextCode = normalizeToFixedCode(team, remoteRow.code); } else { const zipPerson = findZipPersonByName(team, currentName); if (zipPerson?.baseCode) { nextCode = normalizeToFixedCode(team, zipPerson.baseCode); } } if (!nextCode) return; setDraftCode(nextCode); }, [ allowProfileEdit, draftTeam, draftName, draftCode, remoteRoster, setupSourceData, data, ]);
   useEffect(() => { const nextMonth = getDisplayMonthValue(groupBaseDate); if (groupMonth !== nextMonth) { setGroupMonth(nextMonth); } }, [groupBaseDate, groupMonth]);
   useEffect(() => { showSearchRef.current = showSearch; }, [showSearch]);
