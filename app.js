@@ -1255,7 +1255,21 @@ function App() {
     setPostSetupRemoteCheckNeeded(true);
   }
 
-  function startReconfigureProfile() { setAllowProfileEdit(true); const nextTeam = mySelection?.teamKey || selectedTeam || "ks"; setSelectedTeam(nextTeam); setDraftTeam(nextTeam); setDraftName(String(mySelection?.name || "").trim()); setDraftCode(String(mySelection?.code || "").trim()); setProfileAnchorDate(getKoreaToday()); }
+  function startReconfigureProfile() {
+    setAllowProfileEdit(true);
+    const nextTeam = mySelection?.teamKey || selectedTeam || "ks";
+    setSelectedTeam(nextTeam);
+    setDraftTeam(nextTeam);
+    setDraftName(String(mySelection?.name || "").trim());
+    const today = getKoreaToday();
+    // "기준 날짜"를 오늘로 미리 채우는 거니까, "오늘 교번"도 원래 저장된 기준교번(예전 값)이 아니라
+    // 오늘 날짜 기준으로 실제 계산한 교번으로 미리 채워둬요 - 두 값이 서로 안 맞는 조합으로
+    // 보이지 않게(예: 기준날짜는 오늘인데 교번은 반년 전 값인 것처럼 보이는 것 방지).
+    const team = effectiveData?.[nextTeam];
+    const todayCode = team ? getMyCodeForDate(team, today, mySelection) : "";
+    setDraftCode(todayCode || String(mySelection?.code || "").trim());
+    setProfileAnchorDate(today);
+  }
   function cancelReconfigureProfile() { if (mySelection?.teamKey) { setSelectedTeam(mySelection.teamKey); setViewTeam(mySelection.teamKey); } setProfileAnchorDate(mySelection?.anchorDate || todayStr); setAllowProfileEdit(false); }
   function resetMyProfile() { const today = getKoreaToday(); clearMySelection(); setMySelection({ teamKey: "ks", name: "", code: "", anchorDate: today }); setDraftTeam("ks"); setDraftName(""); setDraftCode(""); setProfileAnchorDate(today); setAllowProfileEdit(true); setSelectedTeam("ks"); setViewTeam("ks"); setInitialRemoteChecked(false); setHomeDate(today); setBrowseDate(today); setMonthDate(today); setGroupBaseDate(today); setGroupMonth(getDisplayMonthValue(today)); setSelectedGroupDate(""); }
 
