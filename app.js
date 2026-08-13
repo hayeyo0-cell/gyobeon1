@@ -1210,6 +1210,14 @@ function App() {
       } 
       localStorage.removeItem(LS_LAST_SEEN_PUBLISHED_AT); 
       localStorage.removeItem(LS_LAST_ACK_ROSTER_SIG); 
+      // 🆕 배포 직후, 앱을 재시작하거나 "업데이트 알림" 팝업을 누르지 않아도 이 기기가 바로
+      // 최신 상태가 되도록, 방금 배포한 로스터를 즉시 다시 받아와서 그 자리에서 반영해요.
+      try {
+        const freshRoster = await fetchRemoteRosterJsonp(6000);
+        acceptRemoteRoster(freshRoster, { nextDataOverride: data, syncMine: true });
+      } catch (syncErr) {
+        console.error("배포 직후 자동 동기화 실패:", syncErr);
+      }
       alert(`배포 완료 (${json?.publishedCount || 0}건)`); 
     } catch (e) { 
       alert(`배포 실패: ${e.message || e}`); 
