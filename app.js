@@ -1957,8 +1957,11 @@ function App() {
                 <div className="notice-box" style={{ marginTop: 8 }}>
                   내 소속: {TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"}<br />
                   내 이름: {mySelection?.name || "-"}<br />
-                  내 기준교번: {mySelection?.code || "-"}<br />
-                  기준날짜: {mySelection?.anchorDate || "-"}
+                  오늘({todayStr}) 내 교번: {(() => {
+                    const teamKey = mySelection?.teamKey || selectedTeam;
+                    const team = effectiveData?.[teamKey];
+                    return (team ? getMyCodeForDate(team, todayStr, mySelection) : "") || "-";
+                  })()}
                 </div>
                 <div className="modal-actions"><button className="modal-btn" onClick={startReconfigureProfile}>내 정보 다시 설정</button></div>
               </>
