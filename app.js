@@ -287,6 +287,18 @@ function saveCachedRemoteRoster(value) { try { localStorage.setItem(LS_REMOTE_RO
 function hasAnyRemoteRoster(remoteRoster) { return TEAM_ORDER.some((teamKey) => (remoteRoster?.[teamKey] || []).length > 0); }
 function getRemoteRosterSignature(remoteRoster) { return JSON.stringify(normalizeRemoteRosterShape(remoteRoster || getEmptyRemoteRoster())); }
 function getOverrideKey(teamKey, personName) { return `${teamKey}::${normalizeNameKey(personName)}`; }
+
+// 🆕 "표시 이름"을 저장할 때 어느 자리(교번코드)에서 설정한 건지도 같이 저장해둬요.
+// 표시할 때는 "지금 그 이름이 실제로 그 자리에 있을 때만" 별명을 보여줘요 - 나중에 관리자가
+// 스프레드시트를 바꿔서 그 사람이 다른 자리로 옮겨가면, 조건이 안 맞으니까 자동으로
+// 원래 이름으로 돌아가요 (표시 이름을 다시 지울 필요 없이, 저절로 정리돼요).
+function resolveDisplayName(overrides, teamKey, code, realName) {
+  const override = overrides?.[getOverrideKey(teamKey, realName)];
+  if (!override?.alias) return realName;
+  if (override.aliasBaseCode && override.aliasBaseCode !== normalizeCodeKey(code)) return realName;
+  return override.alias;
+}
+
 function hasRemoteRosterForTeam(teamKey, remoteRoster) { return Array.isArray(remoteRoster?.[teamKey]) && remoteRoster[teamKey].length > 0; }
 function getZipBaseDate(team) { return String(team?.info?.baseDate || "").trim() || getKoreaToday(); }
 function getResolvedBaseDate(teamKey, team, remoteRoster) { return getGlobalBaseDate() || getZipBaseDate(team); }
@@ -304,8 +316,8 @@ function migrateLegacyOverrides(currentOverrides, data) {
 function buildAssignedGrid(team, anchorName, anchorCode, dayOffset, overrides) {
   if (!team || !team.people?.length) return [];
   const people = team.people; const fixedCodes = getGyobunOrder(team); const anchorPersonIndex = people.findIndex((p) => samePersonName(p.name, anchorName)); const anchorCodeIndex = fixedCodes.findIndex((code) => normalizeCodeKey(code) === normalizeCodeKey(anchorCode));
-  if (anchorPersonIndex < 0 || anchorCodeIndex < 0) { return fixedCodes.map((slotCode, slotIndex) => { const person = people[slotIndex] || { idx: slotIndex, name: "" }; const override = overrides[getOverrideKey(team.key, person.name)] || {}; return { idx: person.idx, name: person.name, displayName: override.alias || person.name, code: slotCode, customColor: override.color || "", teamKey: team.key }; }).filter((item) => item.name); }
-  return fixedCodes.map((slotCode, slotIndex) => { const personIndex = positiveMod(anchorPersonIndex + (slotIndex - anchorCodeIndex - dayOffset), people.length); const person = people[personIndex]; if (!person) return null; const override = overrides[getOverrideKey(team.key, person.name)] || {}; return { idx: person.idx, name: person.name, displayName: override.alias || person.name, code: slotCode, customColor: override.color || "", teamKey: team.key }; }).filter((item) => item && item.name);
+  if (anchorPersonIndex < 0 || anchorCodeIndex < 0) { return fixedCodes.map((slotCode, slotIndex) => { const person = people[slotIndex] || { idx: slotIndex, name: "" }; const override = overrides[getOverrideKey(team.key, person.name)] || {}; return { idx: person.idx, name: person.name, displayName: resolveDisplayName(overrides, team.key, person.baseCode, person.name), code: slotCode, baseCode: person.baseCode, customColor: override.color || "", teamKey: team.key }; }).filter((item) => item.name); }
+  return fixedCodes.map((slotCode, slotIndex) => { const personIndex = positiveMod(anchorPersonIndex + (slotIndex - anchorCodeIndex - dayOffset), people.length); const person = people[personIndex]; if (!person) return null; const override = overrides[getOverrideKey(team.key, person.name)] || {}; return { idx: person.idx, name: person.name, displayName: resolveDisplayName(overrides, team.key, person.baseCode, person.name), code: slotCode, baseCode: person.baseCode, customColor: override.color || "", teamKey: team.key }; }).filter((item) => item && item.name);
 }
 
 function getRemoteAnchorBaseDate(team) { return getGlobalBaseDate() || getZipBaseDate(team); }
@@ -326,8 +338,9 @@ function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrid
       return {
         idx,
         name: found.name,
-        displayName: override.alias || found.name,
+        displayName: resolveDisplayName(overrides, teamKey, found.code, found.name),
         code: slotCode,
+        baseCode: found.code,
         customColor: override.color || "",
         employeeId: found.employeeId || ""
       };
@@ -346,8 +359,9 @@ function buildRemoteShiftedGrid(teamKey, team, remoteRoster, targetDate, overrid
       return {
         idx: fallback.idx ?? idx,
         name: fallback.name,
-        displayName: override.alias || fallback.name,
+        displayName: resolveDisplayName(overrides, teamKey, fallback.baseCode, fallback.name),
         code: slotCode,
+        baseCode: fallback.baseCode,
         customColor: override.color || "",
         employeeId: fallback.employeeId || ""
       };
@@ -907,10 +921,10 @@ function App() {
   const myInfo = useMemo(() => {
     const myTeamKey = mySelection?.teamKey || selectedTeam; const myName = String(mySelection?.name || "").trim(); const team = effectiveData?.[myTeamKey]; if (!team || !myName) return null;
     const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
-    if (mySelection?.teamKey === myTeamKey && mySelection?.code) { const code = getMyCodeForDate(team, homeDate, mySelection); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; }
-    const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster); if (remoteRow?.code) { const anchorDate = getRemoteAnchorBaseDate(team); const dayOffset = diffDays(anchorDate, homeDate); const code = shiftCodeByDays(team, remoteRow.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color }; }
+    if (mySelection?.teamKey === myTeamKey && mySelection?.code) { const code = getMyCodeForDate(team, homeDate, mySelection); return { code, time: pickWorktime(team, code, homeDate), displayName: resolveDisplayName(overrides, myTeamKey, mySelection.code, myName), customColor: override.color }; }
+    const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster); if (remoteRow?.code) { const anchorDate = getRemoteAnchorBaseDate(team); const dayOffset = diffDays(anchorDate, homeDate); const code = shiftCodeByDays(team, remoteRow.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: resolveDisplayName(overrides, myTeamKey, remoteRow.code, myName), customColor: override.color }; }
     const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, myName, mySelection); if (!anchor?.code) return null;
-    const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: override.alias || myName, customColor: override.color };
+    const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: resolveDisplayName(overrides, myTeamKey, anchor.code, myName), customColor: override.color };
   }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, wordtimeVersion, overrides]);
 
   const homePathImage = useMemo(() => {
@@ -1255,7 +1269,12 @@ function App() {
 
   function openEditDialog(item) {
     setEditingCell(item); const currentTeam = item.teamKey || viewTeam; const key = getOverrideKey(currentTeam, item.name); const current = overrides[key] || {}; 
-    setEditColor(current.color || ""); setEditAlias(current.alias || ""); setEditPhone(current.phone || "");
+    setEditColor(current.color || ""); setEditPhone(current.phone || "");
+    // 이 자리(baseCode)에서 설정했던 표시 이름이고, 지금도 그 자리 그대로일 때만 불러와요.
+    // (다른 자리에서 걸어둔 게 이 사람 이름에 남아있어도, 여긴 안 보여줘요 - 이미 무효화된 거라서)
+    const normalizedCode = item.baseCode ? normalizeCodeKey(item.baseCode) : null;
+    const aliasValid = current.alias && (!current.aliasBaseCode || current.aliasBaseCode === normalizedCode);
+    setEditAlias(aliasValid ? current.alias : "");
     const team = effectiveData?.[currentTeam]; const currentTime = team ? pickWorktime(team, item.code, browseDate) : "----"; const parts = parseTimeValueToParts(currentTime);
     setEditStartHour(parts.sh); setEditStartMin(parts.sm); setEditEndHour(parts.eh); setEditEndMin(parts.em); setIsWorktimeEditOpen(false); setEditOpen(true);
   }
@@ -1277,6 +1296,10 @@ function App() {
         currentEntry.monthShifts[editingCell.date] = cleanAlias; 
     } else {
         currentEntry.alias = cleanAlias;
+        // 표시 이름을 "지금 이 자리에서" 설정했다는 걸 같이 기록해둬요 - 나중에 이 사람이
+        // 진짜로 다른 자리로 옮겨가면(관리자가 명단을 바꾸면), 자리가 안 맞으니까 표시 이름이
+        // 자동으로 무효화돼서 원래 이름으로 돌아가요.
+        currentEntry.aliasBaseCode = editingCell.baseCode ? normalizeCodeKey(editingCell.baseCode) : null;
         currentEntry.color = cleanColor;
         currentEntry.phone = cleanPhone;
     }
@@ -1684,7 +1707,7 @@ function App() {
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
                               <div className="all-code">{item.code || "-"}</div>
                               <div className="all-name">
-                                  {overrides[currentCellKey]?.alias || item.displayName || item.name || "-"}
+                                  {item.displayName || item.name || "-"}
                                   {searchQuery && (
                                     <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
                                       [{TEAM_LABELS[item.teamKey]}]
@@ -1848,8 +1871,10 @@ function App() {
                         <tr><td colSpan={8} className="empty-msg">그룹 인원을 추가해주세요.</td></tr>
                       ) : (
                         groupMembers.map((member, idx) => {
-                          const override = overrides[getOverrideKey(member.team, member.name)] || {};
-                          const displayMemberName = override.alias || member.name;
+                          const memberAnchor = buildAnchorForIdentity(member.team, effectiveData?.[member.team], remoteRoster, member.name, mySelection);
+                          const displayMemberName = memberAnchor?.code
+                            ? resolveDisplayName(overrides, member.team, memberAnchor.code, member.name)
+                            : (overrides[getOverrideKey(member.team, member.name)]?.alias || member.name);
                           return (
                             <tr key={`${idx}`}>
                               <td className="group-name-cell sticky-col">
@@ -2016,7 +2041,7 @@ function App() {
             </div>
             <label className="label" style={{ marginTop: 12 }}>{editingCell?.isMonthEdit ? "수정할 교번" : "표시 이름"}</label>
             <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '8px' }}>
-              {editingCell?.isMonthEdit && `현재: ${editingCell.code}`}
+              {editingCell?.isMonthEdit ? `현재: ${editingCell.code}` : "이 자리의 진짜 이름이 나중에 바뀌면 자동으로 원래 이름으로 돌아가요"}
             </div>
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder={editingCell?.isMonthEdit ? "예: 15d, 대1, 휴1" : "비워두면 원래 이름 사용"} />
             {!editingCell?.isMonthEdit && (
@@ -2256,12 +2281,13 @@ function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, over
   const team = data[teamKey]; if (!team) return null;
   const override = overrides[getOverrideKey(teamKey, name)] || {};
   if (override.monthShifts && override.monthShifts[dateStr]) {
+    // 특정 날짜만 수동으로 고쳐둔 값이라 "자리" 개념이 없어요 - 일반 별명만 반영해요.
     return { code: override.monthShifts[dateStr], name, displayName: override.alias || name, teamKey: teamKey };
   }
   const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
   const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
   const code = shiftCodeByDays(team, anchor.code, dayOffset);
-  return { code, name, displayName: override.alias || name, teamKey: teamKey };
+  return { code, name, displayName: resolveDisplayName(overrides, teamKey, anchor.code, name), baseCode: anchor.code, teamKey: teamKey };
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
