@@ -737,10 +737,18 @@ function App() {
     const nextAnchorDate = getResolvedBaseDate(currentTeamKey, teamSource, nextRemoteRoster); 
     const nextCode = normalizeToFixedCode(teamSource, remoteRow.code);
     
-    if (mySelection?.code) return; 
+    if (mySelection?.code && normalizeToFixedCode(teamSource, mySelection.code) === nextCode) return; // 이미 최신이면 그냥 둠 (동일 값 재설정으로 인한 불필요한 리렌더 방지)
 
     setMySelection((prev) => ({ ...prev, teamKey: currentTeamKey, name: currentName, code: nextCode, anchorDate: nextAnchorDate || prev.anchorDate || getKoreaToday(), }));
   }
+
+  // 🆕 안전장치 - "업데이트 알림" 팝업을 안 거치는 경우(이미 예전에 수락해서 시그니처가 같은 경우 등)에도,
+  // remoteRoster가 바뀔 때마다 조용히 내 기준교번이 최신인지 다시 확인해요. (팝업 없이도 항상 최신 유지)
+  useEffect(() => {
+    if (!hasAnyRemoteRoster(remoteRoster)) return;
+    syncMySelectionFromRemote(remoteRoster);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remoteRoster, effectiveData]);
 
   function acceptRemoteRoster(json, options = {}) {
     const { alertMessage = "", nextDataOverride = null, syncMine = true } = options; const next = normalizeRemoteRosterShape(json); const serverPublishedAt = String(json?.publishedAt || "").trim(); const nextSig = getRemoteRosterSignature(next);
