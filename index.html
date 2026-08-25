@@ -7,7 +7,21 @@
 
   <link rel="manifest" href="manifest.json?v=20260617" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260617" />
-  <meta name="theme-color" content="#0f172a" /> 
+  <script>
+    // React가 뜨기 전, 저장된 다크모드 값을 먼저 읽어서 배경색을 바로 맞춰둬요.
+    // 이렇게 하면 검정/다크 화면이 잠깐 보이는 깜빡임이 사라져요.
+    (function () {
+      try {
+        var isDark = localStorage.getItem('gyobeon_dark_mode') === 'true';
+        var bg = isDark ? '#0f172a' : '#eef1f6';
+        document.documentElement.style.backgroundColor = bg;
+        document.write('<meta name="theme-color" content="' + (isDark ? '#0f172a' : '#4b7dff') + '">');
+        document.write('<style>html,body{background-color:' + bg + ' !important;}</style>');
+      } catch (e) {
+        document.write('<meta name="theme-color" content="#4b7dff">');
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
   <link rel="stylesheet" href="style.css?v=3" />
 
@@ -16,7 +30,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
 </head>
-<body style="margin: 0; padding: 0; background-color: #0f172a;">
+<body style="margin: 0; padding: 0;">
   <div id="root"></div>
 
   <script type="text/babel" data-presets="react" src="app.js?v=20260816NEW"></script>
