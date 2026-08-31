@@ -761,9 +761,17 @@ function App() {
   }, [remoteRoster, effectiveData]);
 
   function acceptRemoteRoster(json, options = {}) {
-    const { alertMessage = "", nextDataOverride = null, syncMine = true } = options; const next = normalizeRemoteRosterShape(json); const serverPublishedAt = String(json?.publishedAt || "").trim(); const nextSig = getRemoteRosterSignature(next);
+    const { alertMessage = "", nextDataOverride = null, syncMine = true, forceAliasReset = false } = options; const next = normalizeRemoteRosterShape(json); const serverPublishedAt = String(json?.publishedAt || "").trim(); const nextSig = getRemoteRosterSignature(next);
+    const prevPublishedAt = localStorage.getItem(LS_LAST_SEEN_PUBLISHED_AT) || "";
     let effectiveDate = String(json?.effectiveDate || json?.date || json?.rosterDate || json?.snapshotDate || json?.currentDate || "").trim(); if (!effectiveDate) effectiveDate = getKoreaToday();
     setRemoteRoster(next); setRemoteRosterDate(effectiveDate); setGlobalRemoteRosterDate(effectiveDate); saveCachedRemoteRoster(next); localStorage.setItem(LS_REMOTE_ROSTER_DATE, effectiveDate); localStorage.setItem(LS_LAST_ACK_ROSTER_SIG, nextSig);
+    // 🆕 새 배포가 감지되면(직전에 본 배포 시각과 다르면) 이 기기에 저장된 개인 별명(표시 이름)을 초기화해요.
+    // 배포된 실명이 항상 우선이 되도록 하는 안전장치 — 색상·전화번호는 사람을 따라가야 하므로 그대로 둡니다.
+    if (forceAliasReset || (serverPublishedAt && prevPublishedAt && serverPublishedAt !== prevPublishedAt)) {
+      const currentOverrides = loadOverrides(); let aliasChanged = false;
+      Object.keys(currentOverrides).forEach((key) => { const item = currentOverrides[key]; if (item && (item.alias || item.aliasBaseCode)) { delete item.alias; delete item.aliasBaseCode; aliasChanged = true; } });
+      if (aliasChanged) { saveOverrides(currentOverrides); setOverrides(currentOverrides); }
+    }
     if (serverPublishedAt) { localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, serverPublishedAt); setLastSeenPublishedAt(serverPublishedAt); } else { const fallbackSeen = String(Date.now()); localStorage.setItem(LS_LAST_SEEN_PUBLISHED_AT, fallbackSeen); setLastSeenPublishedAt(fallbackSeen); }
     if (syncMine) syncMySelectionFromRemote(next, nextDataOverride);
     setPendingRosterJson(null); setShowUpdatePopup(false); setInitialRemoteChecked(true); if (alertMessage) alert(alertMessage);
@@ -1224,7 +1232,7 @@ function App() {
       // 최신 상태가 되도록, 방금 배포한 로스터를 즉시 다시 받아와서 그 자리에서 반영해요.
       try {
         const freshRoster = await fetchRemoteRosterJsonp(6000);
-        acceptRemoteRoster(freshRoster, { nextDataOverride: data, syncMine: true });
+        acceptRemoteRoster(freshRoster, { nextDataOverride: data, syncMine: true, forceAliasReset: true });
       } catch (syncErr) {
         console.error("배포 직후 자동 동기화 실패:", syncErr);
       }
