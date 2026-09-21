@@ -2079,7 +2079,7 @@ function App() {
                   const codeBeforeB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, dayBefore, overrides, mySelection)?.code || "-";
                   const codeAfterA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, dayAfter, overrides, mySelection)?.code || "-";
                   const codeAfterB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, dayAfter, overrides, mySelection)?.code || "-";
-                  const COL_W = "40px";
+                  const COL_W = "36px";
                   const contextTh = (date, label) => (
                     <th key={label} style={{ padding: 0, minWidth: COL_W, width: COL_W, background: "#fff7ed" }}>
                       <div style={{ padding: "5px 1px", textAlign: "center" }}>
@@ -2100,7 +2100,7 @@ function App() {
                         <table className="group-table" style={{ tableLayout: "fixed" }}>
                           <thead>
                             <tr>
-                              <th className="sticky-col" style={{ minWidth: "56px", width: "56px" }}>이름</th>
+                              <th className="sticky-col" style={{ minWidth: "48px", width: "48px" }}>이름</th>
                               {contextTh(dayBefore, "전날")}
                               {swapDateRange.map((date) => (
                                 <th key={date} style={{ padding: 0, minWidth: COL_W, width: COL_W }}>
@@ -2114,7 +2114,7 @@ function App() {
                           </thead>
                           <tbody>
                             <tr>
-                              <td className="group-name-cell sticky-col" style={{ minWidth: "56px", width: "56px" }}>
+                              <td className="group-name-cell sticky-col" style={{ minWidth: "48px", width: "48px" }}>
                                 <div className="group-name-cell-inner"><div className="name-txt" style={{ fontWeight: "800", fontSize: "13px" }}>{displayA}</div></div>
                               </td>
                               {contextTd(codeBeforeA)}
@@ -2126,7 +2126,7 @@ function App() {
                               {contextTd(codeAfterA)}
                             </tr>
                             <tr>
-                              <td className="group-name-cell sticky-col" style={{ minWidth: "56px", width: "56px" }}>
+                              <td className="group-name-cell sticky-col" style={{ minWidth: "48px", width: "48px" }}>
                                 <div className="group-name-cell-inner"><div className="name-txt" style={{ fontWeight: "800", fontSize: "13px" }}>{displayB}</div></div>
                               </td>
                               {contextTd(codeBeforeB)}
