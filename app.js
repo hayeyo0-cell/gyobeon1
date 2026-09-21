@@ -479,6 +479,46 @@ function getMonthStartDate(monthValue) { const [y, m] = String(monthValue || "")
 function formatMonthDay(dateStr) { const d = parseLocalDate(dateStr); return `${d.getMonth() + 1}/${d.getDate()}`; }
 function splitWorktime(worktime) { const raw = String(worktime || "").trim(); if (!raw || raw === "----") return { startTime: "-", endTime: "-" }; const normalized = raw.replace(/\s+/g, ""); if (normalized.includes("-")) { const [start, end] = normalized.split("-"); return { startTime: start || "-", endTime: "" }; } return { startTime: raw, endTime: "" }; }
 
+// 교번변경 휴양시간 계산용 - "HH:MM-HH:MM" 형태의 근무시간 문자열을 자정 기준 분 단위로 변환해요.
+function parseHM_(str) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(str || "").trim());
+  if (!m) return null;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+function parseWorktimeRange_(worktime) {
+  const raw = String(worktime || "").trim();
+  if (!raw || raw === "----") return null;
+  const normalized = raw.replace(/\s+/g, "");
+  if (!normalized.includes("-")) return null;
+  const [startStr, endStr] = normalized.split("-");
+  const start = parseHM_(startStr);
+  const end = parseHM_(endStr);
+  if (start == null || end == null) return null;
+  return { start, end };
+}
+// 퇴근(prevRange)부터 다음날 출근(curRange)까지 휴양시간(시간 단위) - 야간 근무처럼 자정을 넘겨
+// 끝나는 근무는 실제 퇴근이 다음날이라, 그 경우엔 자정을 넘기지 않은 것처럼 그냥 차이만 계산해요.
+function restHoursBetween_(prevRange, curRange) {
+  if (!prevRange || !curRange) return null;
+  const crossesMidnight = prevRange.end < prevRange.start;
+  const gapMinutes = crossesMidnight
+    ? curRange.start - prevRange.end
+    : (24 * 60 - prevRange.end) + curRange.start;
+  return gapMinutes / 60;
+}
+// dates/codes: 같은 길이의 배열 (연속된 날짜와 그날의 교번코드) - 각 인덱스가 "그 전날에서 이어질 때
+// 휴양시간이 12시간 미만이면" true인 배열을 돌려줘요 (index 0은 비교 대상이 없어서 항상 false).
+function computeRestViolations_(team, dates, codes) {
+  const violations = new Array(dates.length).fill(false);
+  for (let i = 1; i < dates.length; i++) {
+    const prevRange = parseWorktimeRange_(pickWorktime(team, codes[i - 1], dates[i - 1]));
+    const curRange = parseWorktimeRange_(pickWorktime(team, codes[i], dates[i]));
+    const rest = restHoursBetween_(prevRange, curRange);
+    if (rest != null && rest < 12) violations[i] = true;
+  }
+  return violations;
+}
+
 const captureAndSave = async (elementId, filenamePrefix, isDarkMode) => {
   if (!window.html2canvas) {
     await new Promise(r => setTimeout(r, 500));
@@ -2067,19 +2107,41 @@ function App() {
                 ) : swapDateRange.length === 0 ? (
                   <div className="empty-msg" style={{ padding: "20px 0" }}>기간을 올바르게 선택해주세요 (최대 31일).</div>
                 ) : (() => {
+                  const team = effectiveData?.[swapTeam];
                   const displayA = swapCandidatesA.find((p) => p.name === swapNameA)?.displayName || swapNameA;
                   const displayB = swapCandidatesB.find((p) => p.name === swapNameB)?.displayName || swapNameB;
                   const codesA = swapDateRange.map((date) => getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, date, overrides, mySelection)?.code || "-");
                   const codesB = swapDateRange.map((date) => getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, date, overrides, mySelection)?.code || "-");
                   // 교환 기간 바로 전날/다음날 - 실제로는 교환 대상이 아니라 각자 원래 근무 그대로예요.
-                  // 교환한 날짜 앞뒤로 무리 없이 이어지는지 참고하려고 같이 보여줘요.
+                  // 교환한 날짜 앞뒤로 무리 없이 이어지는지, 특히 휴양시간이 충분한지 참고하려고 같이 보여줘요.
                   const dayBefore = addDays(swapDateRange[0], -1);
                   const dayAfter = addDays(swapDateRange[swapDateRange.length - 1], 1);
                   const codeBeforeA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, dayBefore, overrides, mySelection)?.code || "-";
                   const codeBeforeB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, dayBefore, overrides, mySelection)?.code || "-";
                   const codeAfterA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, dayAfter, overrides, mySelection)?.code || "-";
                   const codeAfterB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, dayAfter, overrides, mySelection)?.code || "-";
+
+                  // 전날~다음날까지 전체 날짜 목록과, 사람별/변경전후별 전체 교번 목록을 만들어서
+                  // 연속된 두 날짜 사이 휴양시간이 12시간 미만인 지점을 찾아요.
+                  const allDates = [dayBefore, ...swapDateRange, dayAfter];
+                  const beforeCodesA = [codeBeforeA, ...codesA, codeAfterA];
+                  const beforeCodesB = [codeBeforeB, ...codesB, codeAfterB];
+                  const afterCodesA = [codeBeforeA, ...codesB, codeAfterA]; // 교환 구간만 B의 교번으로
+                  const afterCodesB = [codeBeforeB, ...codesA, codeAfterB]; // 교환 구간만 A의 교번으로
+                  const violBeforeA = computeRestViolations_(team, allDates, beforeCodesA);
+                  const violBeforeB = computeRestViolations_(team, allDates, beforeCodesB);
+                  const violAfterA = computeRestViolations_(team, allDates, afterCodesA);
+                  const violAfterB = computeRestViolations_(team, allDates, afterCodesB);
+                  const anyViolation = [violBeforeA, violBeforeB, violAfterA, violAfterB].some((v) => v.some(Boolean));
+
                   const COL_W = "36px";
+                  // idx: allDates 기준 인덱스 (0=전날, 마지막=다음날) - 그 인덱스로 들어올 때 휴양시간이
+                  // 부족하면 셀에 빨간 테두리 + 경고 아이콘을 붙여요. (border는 active-col의 !important
+                  // 배경색 규칙과 안 부딪혀서, 교환 구간 칸에서도 확실하게 보여요.)
+                  const cellStyle = (base, violated) => (
+                    violated ? { ...base, border: "2px solid #ef4444" } : base
+                  );
+                  const codeLabel = (code, violated) => (violated ? `⚠️${code}` : code);
                   const contextTh = (date, label) => (
                     <th key={label} style={{ padding: 0, minWidth: COL_W, width: COL_W, background: "#fff7ed" }}>
                       <div style={{ padding: "5px 1px", textAlign: "center" }}>
@@ -2088,12 +2150,17 @@ function App() {
                       </div>
                     </th>
                   );
-                  const contextTd = (code) => (
-                    <td style={{ padding: 0, minWidth: COL_W, width: COL_W, background: "#fffaf0" }}>
-                      <div style={{ padding: "5px 1px", textAlign: "center", fontWeight: "700", fontSize: "11px", whiteSpace: "nowrap", color: "#9a5b13" }}>{code}</div>
+                  const contextTd = (code, violated) => (
+                    <td style={cellStyle({ padding: 0, minWidth: COL_W, width: COL_W, background: violated ? "#fee2e2" : "#fffaf0" }, violated)}>
+                      <div style={{ padding: "5px 1px", textAlign: "center", fontWeight: "700", fontSize: "11px", whiteSpace: "nowrap", color: violated ? "#b91c1c" : "#9a5b13" }}>{codeLabel(code, violated)}</div>
                     </td>
                   );
-                  const renderSnapshotTable = (title, rowACode, rowBCode) => (
+                  const rangeTd = (code, violated) => (
+                    <td className="active-col" style={cellStyle({ padding: 0, minWidth: COL_W, width: COL_W }, violated)}>
+                      <div style={{ padding: "5px 1px", textAlign: "center", fontWeight: "900", fontSize: "11px", whiteSpace: "nowrap", color: violated ? "#b91c1c" : undefined }}>{codeLabel(code, violated)}</div>
+                    </td>
+                  );
+                  const renderSnapshotTable = (title, rowACode, rowBCode, violA, violB) => (
                     <div style={{ marginBottom: "18px" }}>
                       <div style={{ fontWeight: "800", fontSize: "14px", marginBottom: "6px" }}>{title}</div>
                       <div className="group-table-wrap" style={{ overflowX: "auto", overflowY: "hidden" }}>
@@ -2117,25 +2184,17 @@ function App() {
                               <td className="group-name-cell sticky-col" style={{ minWidth: "48px", width: "48px" }}>
                                 <div className="group-name-cell-inner"><div className="name-txt" style={{ fontWeight: "800", fontSize: "13px" }}>{displayA}</div></div>
                               </td>
-                              {contextTd(codeBeforeA)}
-                              {swapDateRange.map((date, i) => (
-                                <td key={date} className="active-col" style={{ padding: 0, minWidth: COL_W, width: COL_W }}>
-                                  <div style={{ padding: "5px 1px", textAlign: "center", fontWeight: "900", fontSize: "11px", whiteSpace: "nowrap" }}>{rowACode(i)}</div>
-                                </td>
-                              ))}
-                              {contextTd(codeAfterA)}
+                              {contextTd(rowACode(0), violA[0])}
+                              {swapDateRange.map((date, i) => rangeTd(rowACode(i + 1), violA[i + 1]))}
+                              {contextTd(rowACode(allDates.length - 1), violA[allDates.length - 1])}
                             </tr>
                             <tr>
                               <td className="group-name-cell sticky-col" style={{ minWidth: "48px", width: "48px" }}>
                                 <div className="group-name-cell-inner"><div className="name-txt" style={{ fontWeight: "800", fontSize: "13px" }}>{displayB}</div></div>
                               </td>
-                              {contextTd(codeBeforeB)}
-                              {swapDateRange.map((date, i) => (
-                                <td key={date} className="active-col" style={{ padding: 0, minWidth: COL_W, width: COL_W }}>
-                                  <div style={{ padding: "5px 1px", textAlign: "center", fontWeight: "900", fontSize: "11px", whiteSpace: "nowrap" }}>{rowBCode(i)}</div>
-                                </td>
-                              ))}
-                              {contextTd(codeAfterB)}
+                              {contextTd(rowBCode(0), violB[0])}
+                              {swapDateRange.map((date, i) => rangeTd(rowBCode(i + 1), violB[i + 1]))}
+                              {contextTd(rowBCode(allDates.length - 1), violB[allDates.length - 1])}
                             </tr>
                           </tbody>
                         </table>
@@ -2144,8 +2203,13 @@ function App() {
                   );
                   return (
                     <>
-                      {renderSnapshotTable("변경 전", (i) => codesA[i], (i) => codesB[i])}
-                      {renderSnapshotTable("변경 후 (교환 시뮬레이션)", (i) => codesB[i], (i) => codesA[i])}
+                      {anyViolation && (
+                        <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: "10px", padding: "8px 10px", marginBottom: "12px", fontSize: "12px", color: "#b91c1c", fontWeight: "700" }}>
+                          🔴 표시된 날짜는 앞날 퇴근부터 그날 출근까지 휴양시간이 12시간 미만이에요.
+                        </div>
+                      )}
+                      {renderSnapshotTable("변경 전", (i) => beforeCodesA[i], (i) => beforeCodesB[i], violBeforeA, violBeforeB)}
+                      {renderSnapshotTable("변경 후 (교환 시뮬레이션)", (i) => afterCodesA[i], (i) => afterCodesB[i], violAfterA, violAfterB)}
                     </>
                   );
                 })()}
@@ -2156,7 +2220,7 @@ function App() {
       </div>
 
       {canEnterApp && (
-        <div className={`bottom-tabs tabs-6 ${activeTab === "home" ? "home-theme" : activeTab === "all" || activeTab === "dia" ? "all-theme" : activeTab === "month" ? "month-theme" : "group-theme"}`}>
+        <div className={`bottom-tabs tabs-6 ${activeTab === "home" ? "home-theme" : activeTab === "all" || activeTab === "dia" ? "all-theme" : activeTab === "month" ? "month-theme" : activeTab === "swap" ? "swap-theme" : "group-theme"}`}>
           <button className={`bottom-tab ${activeTab === "home" ? "active" : ""}`} onClick={() => switchTab("home")}>홈</button>
           <button className={`bottom-tab ${activeTab === "all" ? "active" : ""}`} onClick={() => switchTab("all")}>전체</button>
           <button className={`bottom-tab ${activeTab === "dia" ? "active" : ""}`} onClick={() => switchTab("dia")}>DIA순서</button>
