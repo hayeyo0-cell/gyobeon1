@@ -104,6 +104,8 @@ button:active { transform: scale(0.97); }
 .bottom-tabs { position: fixed; left: 0; right: 0; bottom: 0; height: calc(60px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); background: rgba(39, 82, 191, 0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid rgba(255, 255, 255, 0.16); box-shadow: 0 -6px 22px rgba(15, 23, 42, 0.12); z-index: 50; overflow: hidden; }
 .bottom-tabs.tabs-5 { display: flex !important; width: 100%; }
 .bottom-tabs.tabs-5 .bottom-tab { flex: 1 1 20% !important; width: 20% !important; min-width: 0; }
+.bottom-tabs.tabs-6 { display: flex !important; width: 100%; }
+.bottom-tabs.tabs-6 .bottom-tab { flex: 1 1 16.666% !important; width: 16.666% !important; min-width: 0; padding: 0 1px; font-size: 13px; }
 
 .bottom-tabs.home-theme { background: rgba(39, 82, 191, 0.92); }
 .bottom-tabs.all-theme { background: rgba(59, 130, 246, 0.92); }
@@ -933,4 +935,4 @@ body.dark-mode .all-cell-real:not([style*="background-color"]) .all-name {
   color: #ffffff !important;
   font-weight: 800 !important;
 }
-  }
+}
