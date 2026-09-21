@@ -607,18 +607,20 @@ function App() {
   // 교번변경 시뮬레이션 - 1:1 방식이라 딱 두 사람(A/B)만 지정해요. 실제로 아무것도
   // 저장/변경하지 않고, 지정 기간 동안 서로 교번을 바꾸면 각자 어떤 근무가 되는지 미리 보기만 해요.
   // 실제 변경은 드림스에서 결재해요. 입력값은 앱을 껐다 켜도 유지돼요.
+  // 소속은 항상 내 소속(mySelection) 그대로 써요 - 교번변경은 같은 소속 안에서만 이루어지니
+  // 따로 고를 필요가 없어요.
+  const swapTeam = mySelection?.teamKey || "ks";
   const swapSaved = loadSwapState();
-  const [swapTeam, setSwapTeam] = useState(swapSaved?.team || mySelection?.teamKey || "ks");
   const [swapNameA, setSwapNameA] = useState(swapSaved?.nameA || "");
   const [swapNameB, setSwapNameB] = useState(swapSaved?.nameB || "");
   const [swapStartDate, setSwapStartDate] = useState(swapSaved?.startDate || todayStr);
   const [swapEndDate, setSwapEndDate] = useState(swapSaved?.endDate || todayStr);
   useEffect(() => {
     saveSwapState({
-      team: swapTeam, nameA: swapNameA, nameB: swapNameB,
+      nameA: swapNameA, nameB: swapNameB,
       startDate: swapStartDate, endDate: swapEndDate,
     });
-  }, [swapTeam, swapNameA, swapNameB, swapStartDate, swapEndDate]);
+  }, [swapNameA, swapNameB, swapStartDate, swapEndDate]);
 
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
@@ -2022,11 +2024,6 @@ function App() {
                   ⚠️ 여기서는 아무것도 실제로 바뀌지 않아요 - 실제 교번변경은 드림스에서 결재해주세요.
                 </div>
 
-                <label className="label">소속</label>
-                <select className="select" style={{ marginBottom: "16px" }} value={swapTeam} onChange={(e) => { setSwapTeam(e.target.value); setSwapNameA(""); setSwapNameB(""); }}>
-                  {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
-                </select>
-
                 <label className="label">사람 A</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px", marginBottom: "16px", alignItems: "center" }}>
                   <select className="select" style={{ margin: 0 }} value={swapNameA} onChange={(e) => setSwapNameA(e.target.value)}>
@@ -2082,18 +2079,18 @@ function App() {
                   const codeBeforeB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, dayBefore, overrides, mySelection)?.code || "-";
                   const codeAfterA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, dayAfter, overrides, mySelection)?.code || "-";
                   const codeAfterB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, dayAfter, overrides, mySelection)?.code || "-";
-                  const COL_W = "62px";
+                  const COL_W = "40px";
                   const contextTh = (date, label) => (
                     <th key={label} style={{ padding: 0, minWidth: COL_W, width: COL_W, background: "#fff7ed" }}>
-                      <div style={{ padding: "8px 2px", textAlign: "center" }}>
+                      <div style={{ padding: "5px 1px", textAlign: "center" }}>
                         <div style={{ fontSize: "10px", color: "#c2751b", fontWeight: "800" }}>{label}</div>
-                        <div style={{ fontSize: "13px", fontWeight: "700", color: "#c2751b" }}>{formatMonthDay(date)}</div>
+                        <div style={{ fontSize: "11px", fontWeight: "700", color: "#c2751b" }}>{formatMonthDay(date)}</div>
                       </div>
                     </th>
                   );
                   const contextTd = (code) => (
                     <td style={{ padding: 0, minWidth: COL_W, width: COL_W, background: "#fffaf0" }}>
-                      <div style={{ padding: "8px 2px", textAlign: "center", fontWeight: "700", fontSize: "13px", whiteSpace: "nowrap", color: "#9a5b13" }}>{code}</div>
+                      <div style={{ padding: "5px 1px", textAlign: "center", fontWeight: "700", fontSize: "11px", whiteSpace: "nowrap", color: "#9a5b13" }}>{code}</div>
                     </td>
                   );
                   const renderSnapshotTable = (title, rowACode, rowBCode) => (
@@ -2103,12 +2100,12 @@ function App() {
                         <table className="group-table" style={{ tableLayout: "fixed" }}>
                           <thead>
                             <tr>
-                              <th className="sticky-col" style={{ minWidth: "72px", width: "72px" }}>이름</th>
+                              <th className="sticky-col" style={{ minWidth: "56px", width: "56px" }}>이름</th>
                               {contextTh(dayBefore, "전날")}
                               {swapDateRange.map((date) => (
                                 <th key={date} style={{ padding: 0, minWidth: COL_W, width: COL_W }}>
-                                  <div style={{ padding: "8px 2px", textAlign: "center" }}>
-                                    <div style={{ fontSize: "13px", fontWeight: "700" }}>{formatMonthDay(date)}</div>
+                                  <div style={{ padding: "5px 1px", textAlign: "center" }}>
+                                    <div style={{ fontSize: "11px", fontWeight: "700" }}>{formatMonthDay(date)}</div>
                                   </div>
                                 </th>
                               ))}
@@ -2117,25 +2114,25 @@ function App() {
                           </thead>
                           <tbody>
                             <tr>
-                              <td className="group-name-cell sticky-col" style={{ minWidth: "72px", width: "72px" }}>
+                              <td className="group-name-cell sticky-col" style={{ minWidth: "56px", width: "56px" }}>
                                 <div className="group-name-cell-inner"><div className="name-txt" style={{ fontWeight: "800", fontSize: "13px" }}>{displayA}</div></div>
                               </td>
                               {contextTd(codeBeforeA)}
                               {swapDateRange.map((date, i) => (
                                 <td key={date} className="active-col" style={{ padding: 0, minWidth: COL_W, width: COL_W }}>
-                                  <div style={{ padding: "8px 2px", textAlign: "center", fontWeight: "900", fontSize: "13px", whiteSpace: "nowrap" }}>{rowACode(i)}</div>
+                                  <div style={{ padding: "5px 1px", textAlign: "center", fontWeight: "900", fontSize: "11px", whiteSpace: "nowrap" }}>{rowACode(i)}</div>
                                 </td>
                               ))}
                               {contextTd(codeAfterA)}
                             </tr>
                             <tr>
-                              <td className="group-name-cell sticky-col" style={{ minWidth: "72px", width: "72px" }}>
+                              <td className="group-name-cell sticky-col" style={{ minWidth: "56px", width: "56px" }}>
                                 <div className="group-name-cell-inner"><div className="name-txt" style={{ fontWeight: "800", fontSize: "13px" }}>{displayB}</div></div>
                               </td>
                               {contextTd(codeBeforeB)}
                               {swapDateRange.map((date, i) => (
                                 <td key={date} className="active-col" style={{ padding: 0, minWidth: COL_W, width: COL_W }}>
-                                  <div style={{ padding: "8px 2px", textAlign: "center", fontWeight: "900", fontSize: "13px", whiteSpace: "nowrap" }}>{rowBCode(i)}</div>
+                                  <div style={{ padding: "5px 1px", textAlign: "center", fontWeight: "900", fontSize: "11px", whiteSpace: "nowrap" }}>{rowBCode(i)}</div>
                                 </td>
                               ))}
                               {contextTd(codeAfterB)}
