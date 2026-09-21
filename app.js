@@ -600,6 +600,15 @@ function App() {
   const [groupAddTeam, setGroupAddTeam] = useState("ks");
   const [groupAddName, setGroupAddName] = useState("");
 
+  // 교번변경 시뮬레이션 - 실제로 아무것도 저장/변경하지 않고, 두 사람의 교번을 지정 기간동안
+  // 맞바꿔보면 각자 어떤 근무가 되는지 미리 보기만 해요. 실제 변경은 드림스에서 결재해요.
+  const [swapTeamA, setSwapTeamA] = useState("ks");
+  const [swapNameA, setSwapNameA] = useState("");
+  const [swapTeamB, setSwapTeamB] = useState("ks");
+  const [swapNameB, setSwapNameB] = useState("");
+  const [swapStartDate, setSwapStartDate] = useState(todayStr);
+  const [swapEndDate, setSwapEndDate] = useState(todayStr);
+
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
   const [postSetupRemoteCheckNeeded, setPostSetupRemoteCheckNeeded] = useState(false);
@@ -638,6 +647,55 @@ function App() {
         return { name: p.name, displayName: override.alias || p.name };
       });
   }, [effectiveData, remoteRoster, groupAddTeam, overrides]);
+
+  // 교번변경 시뮬레이션용 - A/B 각자 소속 팀 기준 이름 후보 목록 (groupAddCandidates와 같은 방식)
+  const swapCandidatesA = useMemo(() => {
+    const team = effectiveData?.[swapTeamA];
+    if (!team) return [];
+    let baseList = [];
+    if (hasRemoteRosterForTeam(swapTeamA, remoteRoster)) {
+      baseList = remoteRoster[swapTeamA].map(r => ({ name: r.name }));
+    } else {
+      baseList = team.people || [];
+    }
+    return baseList
+      .filter(p => p.name && !shouldHideName(p.name))
+      .map(p => {
+        const override = overrides[getOverrideKey(swapTeamA, p.name)] || {};
+        return { name: p.name, displayName: override.alias || p.name };
+      });
+  }, [effectiveData, remoteRoster, swapTeamA, overrides]);
+  const swapCandidatesB = useMemo(() => {
+    const team = effectiveData?.[swapTeamB];
+    if (!team) return [];
+    let baseList = [];
+    if (hasRemoteRosterForTeam(swapTeamB, remoteRoster)) {
+      baseList = remoteRoster[swapTeamB].map(r => ({ name: r.name }));
+    } else {
+      baseList = team.people || [];
+    }
+    return baseList
+      .filter(p => p.name && !shouldHideName(p.name))
+      .map(p => {
+        const override = overrides[getOverrideKey(swapTeamB, p.name)] || {};
+        return { name: p.name, displayName: override.alias || p.name };
+      });
+  }, [effectiveData, remoteRoster, swapTeamB, overrides]);
+
+  // 시작~종료 사이 날짜 목록 (최대 31일 - 실수로 너무 긴 기간을 잡아도 안전하게 제한)
+  const swapDateRange = useMemo(() => {
+    if (!swapStartDate || !swapEndDate) return [];
+    const start = parseLocalDate(swapStartDate);
+    const end = parseLocalDate(swapEndDate);
+    if (!start || !end || end < start) return [];
+    const dates = [];
+    let cursor = swapStartDate;
+    while (cursor <= swapEndDate && dates.length < 31) {
+      dates.push(cursor);
+      cursor = addDays(cursor, 1);
+    }
+    return dates;
+  }, [swapStartDate, swapEndDate]);
 
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
@@ -1958,17 +2016,90 @@ function App() {
                 </div>
               </div>
             )}
+            {activeTab === "swap" && (
+              <div className="tab-page" style={{ padding: "12px" }}>
+                <div style={{ fontSize: "13px", color: "#666", marginBottom: "14px", lineHeight: "1.5" }}>
+                  두 사람과 기간을 지정하면, 서로 교번을 바꿨을 때 각자 어떤 근무가 되는지 미리 볼 수 있어요.
+                  <br />
+                  ⚠️ 여기서는 아무것도 실제로 바뀌지 않아요 - 실제 교번변경은 드림스에서 결재해주세요.
+                </div>
+
+                <label className="label">사람 A</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "16px" }}>
+                  <select className="select" value={swapTeamA} onChange={(e) => { setSwapTeamA(e.target.value); setSwapNameA(""); }}>
+                    {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
+                  </select>
+                  <select className="select" value={swapNameA} onChange={(e) => setSwapNameA(e.target.value)}>
+                    <option value="">이름 선택</option>
+                    {swapCandidatesA.map((p) => (<option key={`swapA-${p.name}`} value={p.name}>{p.displayName}</option>))}
+                  </select>
+                </div>
+
+                <label className="label">사람 B</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "16px" }}>
+                  <select className="select" value={swapTeamB} onChange={(e) => { setSwapTeamB(e.target.value); setSwapNameB(""); }}>
+                    {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
+                  </select>
+                  <select className="select" value={swapNameB} onChange={(e) => setSwapNameB(e.target.value)}>
+                    <option value="">이름 선택</option>
+                    {swapCandidatesB.map((p) => (<option key={`swapB-${p.name}`} value={p.name}>{p.displayName}</option>))}
+                  </select>
+                </div>
+
+                <label className="label">기간</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "20px", alignItems: "center" }}>
+                  <input className="input" type="date" value={swapStartDate} onChange={(e) => setSwapStartDate(e.target.value)} />
+                  <input className="input" type="date" value={swapEndDate} onChange={(e) => setSwapEndDate(e.target.value)} />
+                </div>
+
+                {!swapNameA || !swapNameB ? (
+                  <div className="empty-msg" style={{ padding: "20px 0" }}>사람 A, B를 모두 선택해주세요.</div>
+                ) : swapDateRange.length === 0 ? (
+                  <div className="empty-msg" style={{ padding: "20px 0" }}>기간을 올바르게 선택해주세요 (최대 31일).</div>
+                ) : (
+                  <table className="group-table">
+                    <thead>
+                      <tr>
+                        <th>날짜</th>
+                        <th>{swapCandidatesA.find((p) => p.name === swapNameA)?.displayName || swapNameA} (원래→교환후)</th>
+                        <th>{swapCandidatesB.find((p) => p.name === swapNameB)?.displayName || swapNameB} (원래→교환후)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {swapDateRange.map((date) => {
+                        const itemA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamA, swapNameA, date, overrides, mySelection);
+                        const itemB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamB, swapNameB, date, overrides, mySelection);
+                        return (
+                          <tr key={date}>
+                            <td style={{ fontWeight: "700" }}>
+                              {formatMonthDay(date)} ({weekdayShort(date)})
+                            </td>
+                            <td style={{ fontWeight: "900" }}>
+                              {itemA?.code || "-"} → {itemB?.code || "-"}
+                            </td>
+                            <td style={{ fontWeight: "900" }}>
+                              {itemB?.code || "-"} → {itemA?.code || "-"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
 
       {canEnterApp && (
-        <div className={`bottom-tabs tabs-5 ${activeTab === "home" ? "home-theme" : activeTab === "all" || activeTab === "dia" ? "all-theme" : activeTab === "month" ? "month-theme" : "group-theme"}`}>
+        <div className={`bottom-tabs tabs-6 ${activeTab === "home" ? "home-theme" : activeTab === "all" || activeTab === "dia" ? "all-theme" : activeTab === "month" ? "month-theme" : "group-theme"}`}>
           <button className={`bottom-tab ${activeTab === "home" ? "active" : ""}`} onClick={() => switchTab("home")}>홈</button>
           <button className={`bottom-tab ${activeTab === "all" ? "active" : ""}`} onClick={() => switchTab("all")}>전체</button>
           <button className={`bottom-tab ${activeTab === "dia" ? "active" : ""}`} onClick={() => switchTab("dia")}>DIA순서</button>
           <button className={`bottom-tab ${activeTab === "month" ? "active" : ""}`} onClick={() => switchTab("month")}>월교번</button>
           <button className={`bottom-tab ${activeTab === "group" ? "active" : ""}`} onClick={() => switchTab("group")}>그룹</button>
+          <button className={`bottom-tab ${activeTab === "swap" ? "active" : ""}`} onClick={() => switchTab("swap")}>교번변경</button>
         </div>
       )}
 
