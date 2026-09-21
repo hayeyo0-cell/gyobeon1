@@ -260,6 +260,10 @@ function cleanupNameOverrides() { try { const raw = localStorage.getItem("gyobeo
 function loadMySelection() { try { const raw = JSON.parse(localStorage.getItem("gyobeon_my_selection") || "null"); if (!raw) return null; return { teamKey: raw.teamKey || "ks", name: raw.name || "", code: raw.code || "", anchorDate: raw.anchorDate || getKoreaToday() }; } catch { return null; } }
 function saveMySelection(value) { const next = { teamKey: value?.teamKey || "ks", name: value?.name || "", code: value?.code || "", anchorDate: value?.anchorDate || getKoreaToday() }; localStorage.setItem("gyobeon_my_selection", JSON.stringify(next)); }
 function clearMySelection() { localStorage.removeItem("gyobeon_my_selection"); }
+
+// 교번변경 탭 입력값(사람 A/B, 기간) - 앱을 종료했다 다시 열어도 유지되도록 저장해요.
+function loadSwapState() { try { return JSON.parse(localStorage.getItem("gyobeon_swap_state") || "null"); } catch { return null; } }
+function saveSwapState(value) { try { localStorage.setItem("gyobeon_swap_state", JSON.stringify(value || {})); } catch (_) {} }
 function loadGroups() { try { return JSON.parse(localStorage.getItem("gyobeon_groups") || "{}"); } catch { return {}; } }
 function saveGroups(groups) { localStorage.setItem("gyobeon_groups", JSON.stringify(groups)); }
 function getEmptyRemoteRoster() { return { ks: [], my: [], wb: [], as: [] }; }
@@ -602,13 +606,19 @@ function App() {
 
   // 교번변경 시뮬레이션 - 1:1 방식이라 딱 두 사람(A/B)만 지정해요. 실제로 아무것도
   // 저장/변경하지 않고, 지정 기간 동안 서로 교번을 바꾸면 각자 어떤 근무가 되는지 미리 보기만 해요.
-  // 실제 변경은 드림스에서 결재해요.
-  const [swapTeamA, setSwapTeamA] = useState("ks");
-  const [swapNameA, setSwapNameA] = useState("");
-  const [swapTeamB, setSwapTeamB] = useState("ks");
-  const [swapNameB, setSwapNameB] = useState("");
-  const [swapStartDate, setSwapStartDate] = useState(todayStr);
-  const [swapEndDate, setSwapEndDate] = useState(todayStr);
+  // 실제 변경은 드림스에서 결재해요. 입력값은 앱을 껐다 켜도 유지돼요.
+  const swapSaved = loadSwapState();
+  const [swapTeam, setSwapTeam] = useState(swapSaved?.team || mySelection?.teamKey || "ks");
+  const [swapNameA, setSwapNameA] = useState(swapSaved?.nameA || "");
+  const [swapNameB, setSwapNameB] = useState(swapSaved?.nameB || "");
+  const [swapStartDate, setSwapStartDate] = useState(swapSaved?.startDate || todayStr);
+  const [swapEndDate, setSwapEndDate] = useState(swapSaved?.endDate || todayStr);
+  useEffect(() => {
+    saveSwapState({
+      team: swapTeam, nameA: swapNameA, nameB: swapNameB,
+      startDate: swapStartDate, endDate: swapEndDate,
+    });
+  }, [swapTeam, swapNameA, swapNameB, swapStartDate, swapEndDate]);
 
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
@@ -649,39 +659,26 @@ function App() {
       });
   }, [effectiveData, remoteRoster, groupAddTeam, overrides]);
 
-  // 교번변경 시뮬레이션용 - A/B 각자 소속 팀 기준 이름 후보 목록 (groupAddCandidates와 같은 방식)
-  const swapCandidatesA = useMemo(() => {
-    const team = effectiveData?.[swapTeamA];
+  // 교번변경 시뮬레이션용 - 교번변경은 내 소속 안에서만 이루어지니, A/B가 같은 소속 후보 목록을 공유해요.
+  const swapCandidatesAll = useMemo(() => {
+    const team = effectiveData?.[swapTeam];
     if (!team) return [];
     let baseList = [];
-    if (hasRemoteRosterForTeam(swapTeamA, remoteRoster)) {
-      baseList = remoteRoster[swapTeamA].map(r => ({ name: r.name }));
+    if (hasRemoteRosterForTeam(swapTeam, remoteRoster)) {
+      baseList = remoteRoster[swapTeam].map(r => ({ name: r.name }));
     } else {
       baseList = team.people || [];
     }
     return baseList
       .filter(p => p.name && !shouldHideName(p.name))
       .map(p => {
-        const override = overrides[getOverrideKey(swapTeamA, p.name)] || {};
+        const override = overrides[getOverrideKey(swapTeam, p.name)] || {};
         return { name: p.name, displayName: override.alias || p.name };
       });
-  }, [effectiveData, remoteRoster, swapTeamA, overrides]);
-  const swapCandidatesB = useMemo(() => {
-    const team = effectiveData?.[swapTeamB];
-    if (!team) return [];
-    let baseList = [];
-    if (hasRemoteRosterForTeam(swapTeamB, remoteRoster)) {
-      baseList = remoteRoster[swapTeamB].map(r => ({ name: r.name }));
-    } else {
-      baseList = team.people || [];
-    }
-    return baseList
-      .filter(p => p.name && !shouldHideName(p.name))
-      .map(p => {
-        const override = overrides[getOverrideKey(swapTeamB, p.name)] || {};
-        return { name: p.name, displayName: override.alias || p.name };
-      });
-  }, [effectiveData, remoteRoster, swapTeamB, overrides]);
+  }, [effectiveData, remoteRoster, swapTeam, overrides]);
+  // 상대가 이미 고른 사람은 목록에서 빼서, 같은 사람을 A/B에 동시에 고르는 걸 막아요.
+  const swapCandidatesA = useMemo(() => swapCandidatesAll.filter(p => p.name !== swapNameB), [swapCandidatesAll, swapNameB]);
+  const swapCandidatesB = useMemo(() => swapCandidatesAll.filter(p => p.name !== swapNameA), [swapCandidatesAll, swapNameA]);
 
   // 시작~종료 사이 날짜 목록 (최대 31일 - 실수로 너무 긴 기간을 잡아도 안전하게 제한)
   const swapDateRange = useMemo(() => {
@@ -2025,11 +2022,13 @@ function App() {
                   ⚠️ 여기서는 아무것도 실제로 바뀌지 않아요 - 실제 교번변경은 드림스에서 결재해주세요.
                 </div>
 
+                <label className="label">소속</label>
+                <select className="select" style={{ marginBottom: "16px" }} value={swapTeam} onChange={(e) => { setSwapTeam(e.target.value); setSwapNameA(""); setSwapNameB(""); }}>
+                  {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
+                </select>
+
                 <label className="label">사람 A</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "8px", marginBottom: "16px", alignItems: "center" }}>
-                  <select className="select" style={{ margin: 0 }} value={swapTeamA} onChange={(e) => { setSwapTeamA(e.target.value); setSwapNameA(""); }}>
-                    {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
-                  </select>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px", marginBottom: "16px", alignItems: "center" }}>
                   <select className="select" style={{ margin: 0 }} value={swapNameA} onChange={(e) => setSwapNameA(e.target.value)}>
                     <option value="">이름 선택</option>
                     {swapCandidatesA.map((p) => (<option key={`swapA-${p.name}`} value={p.name}>{p.displayName}</option>))}
@@ -2045,10 +2044,7 @@ function App() {
                 </div>
 
                 <label className="label">사람 B</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "8px", marginBottom: "16px", alignItems: "center" }}>
-                  <select className="select" style={{ margin: 0 }} value={swapTeamB} onChange={(e) => { setSwapTeamB(e.target.value); setSwapNameB(""); }}>
-                    {TEAM_ORDER.map((key) => (<option key={key} value={key}>{TEAM_LABELS[key]}</option>))}
-                  </select>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px", marginBottom: "16px", alignItems: "center" }}>
                   <select className="select" style={{ margin: 0 }} value={swapNameB} onChange={(e) => setSwapNameB(e.target.value)}>
                     <option value="">이름 선택</option>
                     {swapCandidatesB.map((p) => (<option key={`swapB-${p.name}`} value={p.name}>{p.displayName}</option>))}
@@ -2076,44 +2072,43 @@ function App() {
                 ) : (() => {
                   const displayA = swapCandidatesA.find((p) => p.name === swapNameA)?.displayName || swapNameA;
                   const displayB = swapCandidatesB.find((p) => p.name === swapNameB)?.displayName || swapNameB;
-                  const codesA = swapDateRange.map((date) => getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamA, swapNameA, date, overrides, mySelection)?.code || "-");
-                  const codesB = swapDateRange.map((date) => getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamB, swapNameB, date, overrides, mySelection)?.code || "-");
+                  const codesA = swapDateRange.map((date) => getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, date, overrides, mySelection)?.code || "-");
+                  const codesB = swapDateRange.map((date) => getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, date, overrides, mySelection)?.code || "-");
                   // 교환 기간 바로 전날/다음날 - 실제로는 교환 대상이 아니라 각자 원래 근무 그대로예요.
                   // 교환한 날짜 앞뒤로 무리 없이 이어지는지 참고하려고 같이 보여줘요.
                   const dayBefore = addDays(swapDateRange[0], -1);
                   const dayAfter = addDays(swapDateRange[swapDateRange.length - 1], 1);
-                  const codeBeforeA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamA, swapNameA, dayBefore, overrides, mySelection)?.code || "-";
-                  const codeBeforeB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamB, swapNameB, dayBefore, overrides, mySelection)?.code || "-";
-                  const codeAfterA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamA, swapNameA, dayAfter, overrides, mySelection)?.code || "-";
-                  const codeAfterB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamB, swapNameB, dayAfter, overrides, mySelection)?.code || "-";
+                  const codeBeforeA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, dayBefore, overrides, mySelection)?.code || "-";
+                  const codeBeforeB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, dayBefore, overrides, mySelection)?.code || "-";
+                  const codeAfterA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, dayAfter, overrides, mySelection)?.code || "-";
+                  const codeAfterB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, dayAfter, overrides, mySelection)?.code || "-";
+                  const COL_W = "62px";
                   const contextTh = (date, label) => (
-                    <th key={label} style={{ padding: 0 }}>
-                      <div style={{ padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                        <div style={{ fontSize: "10px", color: "#94a3b8", fontWeight: "700" }}>{label}</div>
-                        <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
-                        <div className="day-date">{formatMonthDay(date)}</div>
+                    <th key={label} style={{ padding: 0, minWidth: COL_W, width: COL_W, background: "#fff7ed" }}>
+                      <div style={{ padding: "8px 2px", textAlign: "center" }}>
+                        <div style={{ fontSize: "10px", color: "#c2751b", fontWeight: "800" }}>{label}</div>
+                        <div style={{ fontSize: "13px", fontWeight: "700", color: "#c2751b" }}>{formatMonthDay(date)}</div>
                       </div>
                     </th>
                   );
                   const contextTd = (code) => (
-                    <td style={{ padding: 0 }}>
-                      <div style={{ padding: "8px 4px", textAlign: "center", fontWeight: "700" }}>{code}</div>
+                    <td style={{ padding: 0, minWidth: COL_W, width: COL_W, background: "#fffaf0" }}>
+                      <div style={{ padding: "8px 2px", textAlign: "center", fontWeight: "700", fontSize: "13px", whiteSpace: "nowrap", color: "#9a5b13" }}>{code}</div>
                     </td>
                   );
                   const renderSnapshotTable = (title, rowACode, rowBCode) => (
                     <div style={{ marginBottom: "18px" }}>
                       <div style={{ fontWeight: "800", fontSize: "14px", marginBottom: "6px" }}>{title}</div>
                       <div className="group-table-wrap" style={{ overflowX: "auto", overflowY: "hidden" }}>
-                        <table className="group-table">
+                        <table className="group-table" style={{ tableLayout: "fixed" }}>
                           <thead>
                             <tr>
-                              <th className="sticky-col">이름</th>
+                              <th className="sticky-col" style={{ minWidth: "72px", width: "72px" }}>이름</th>
                               {contextTh(dayBefore, "전날")}
                               {swapDateRange.map((date) => (
-                                <th key={date} className="active-col" style={{ padding: 0 }}>
-                                  <div style={{ padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                    <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
-                                    <div className="day-date">{formatMonthDay(date)}</div>
+                                <th key={date} style={{ padding: 0, minWidth: COL_W, width: COL_W }}>
+                                  <div style={{ padding: "8px 2px", textAlign: "center" }}>
+                                    <div style={{ fontSize: "13px", fontWeight: "700" }}>{formatMonthDay(date)}</div>
                                   </div>
                                 </th>
                               ))}
@@ -2122,25 +2117,25 @@ function App() {
                           </thead>
                           <tbody>
                             <tr>
-                              <td className="group-name-cell sticky-col">
-                                <div className="group-name-cell-inner"><div className="name-txt" style={{ fontWeight: "800" }}>{displayA}</div></div>
+                              <td className="group-name-cell sticky-col" style={{ minWidth: "72px", width: "72px" }}>
+                                <div className="group-name-cell-inner"><div className="name-txt" style={{ fontWeight: "800", fontSize: "13px" }}>{displayA}</div></div>
                               </td>
                               {contextTd(codeBeforeA)}
                               {swapDateRange.map((date, i) => (
-                                <td key={date} className="active-col" style={{ padding: 0 }}>
-                                  <div style={{ padding: "8px 4px", textAlign: "center", fontWeight: "900" }}>{rowACode(i)}</div>
+                                <td key={date} className="active-col" style={{ padding: 0, minWidth: COL_W, width: COL_W }}>
+                                  <div style={{ padding: "8px 2px", textAlign: "center", fontWeight: "900", fontSize: "13px", whiteSpace: "nowrap" }}>{rowACode(i)}</div>
                                 </td>
                               ))}
                               {contextTd(codeAfterA)}
                             </tr>
                             <tr>
-                              <td className="group-name-cell sticky-col">
-                                <div className="group-name-cell-inner"><div className="name-txt" style={{ fontWeight: "800" }}>{displayB}</div></div>
+                              <td className="group-name-cell sticky-col" style={{ minWidth: "72px", width: "72px" }}>
+                                <div className="group-name-cell-inner"><div className="name-txt" style={{ fontWeight: "800", fontSize: "13px" }}>{displayB}</div></div>
                               </td>
                               {contextTd(codeBeforeB)}
                               {swapDateRange.map((date, i) => (
-                                <td key={date} className="active-col" style={{ padding: 0 }}>
-                                  <div style={{ padding: "8px 4px", textAlign: "center", fontWeight: "900" }}>{rowBCode(i)}</div>
+                                <td key={date} className="active-col" style={{ padding: 0, minWidth: COL_W, width: COL_W }}>
+                                  <div style={{ padding: "8px 2px", textAlign: "center", fontWeight: "900", fontSize: "13px", whiteSpace: "nowrap" }}>{rowBCode(i)}</div>
                                 </td>
                               ))}
                               {contextTd(codeAfterB)}
