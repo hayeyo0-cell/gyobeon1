@@ -2156,7 +2156,7 @@ function App() {
       </div>
 
       {canEnterApp && (
-        <div className={`bottom-tabs tabs-6 ${activeTab === "home" ? "home-theme" : activeTab === "all" || activeTab === "dia" ? "all-theme" : activeTab === "month" ? "month-theme" : activeTab === "swap" ? "swap-theme" : "group-theme"}`}>
+        <div className={`bottom-tabs tabs-6 ${activeTab === "home" ? "home-theme" : activeTab === "all" || activeTab === "dia" ? "all-theme" : activeTab === "month" ? "month-theme" : "group-theme"}`}>
           <button className={`bottom-tab ${activeTab === "home" ? "active" : ""}`} onClick={() => switchTab("home")}>홈</button>
           <button className={`bottom-tab ${activeTab === "all" ? "active" : ""}`} onClick={() => switchTab("all")}>전체</button>
           <button className={`bottom-tab ${activeTab === "dia" ? "active" : ""}`} onClick={() => switchTab("dia")}>DIA순서</button>
