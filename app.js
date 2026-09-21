@@ -2037,7 +2037,7 @@ function App() {
                   <button
                     className="modal-btn"
                     style={{ width: "auto", padding: "0 12px", margin: 0, color: "#ef4444", borderColor: "#fca5a5", background: "#fef2f2" }}
-                    onClick={() => setSwapNameA("")}
+                    onClick={() => { setSwapNameA(""); setSwapStartDate(todayStr); setSwapEndDate(todayStr); }}
                     disabled={!swapNameA}
                   >
                     삭제
@@ -2056,7 +2056,7 @@ function App() {
                   <button
                     className="modal-btn"
                     style={{ width: "auto", padding: "0 12px", margin: 0, color: "#ef4444", borderColor: "#fca5a5", background: "#fef2f2" }}
-                    onClick={() => setSwapNameB("")}
+                    onClick={() => { setSwapNameB(""); setSwapStartDate(todayStr); setSwapEndDate(todayStr); }}
                     disabled={!swapNameB}
                   >
                     삭제
@@ -2078,6 +2078,28 @@ function App() {
                   const displayB = swapCandidatesB.find((p) => p.name === swapNameB)?.displayName || swapNameB;
                   const codesA = swapDateRange.map((date) => getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamA, swapNameA, date, overrides, mySelection)?.code || "-");
                   const codesB = swapDateRange.map((date) => getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamB, swapNameB, date, overrides, mySelection)?.code || "-");
+                  // 교환 기간 바로 전날/다음날 - 실제로는 교환 대상이 아니라 각자 원래 근무 그대로예요.
+                  // 교환한 날짜 앞뒤로 무리 없이 이어지는지 참고하려고 같이 보여줘요.
+                  const dayBefore = addDays(swapDateRange[0], -1);
+                  const dayAfter = addDays(swapDateRange[swapDateRange.length - 1], 1);
+                  const codeBeforeA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamA, swapNameA, dayBefore, overrides, mySelection)?.code || "-";
+                  const codeBeforeB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamB, swapNameB, dayBefore, overrides, mySelection)?.code || "-";
+                  const codeAfterA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamA, swapNameA, dayAfter, overrides, mySelection)?.code || "-";
+                  const codeAfterB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeamB, swapNameB, dayAfter, overrides, mySelection)?.code || "-";
+                  const contextTh = (date, label) => (
+                    <th key={label} style={{ padding: 0 }}>
+                      <div style={{ padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <div style={{ fontSize: "10px", color: "#94a3b8", fontWeight: "700" }}>{label}</div>
+                        <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
+                        <div className="day-date">{formatMonthDay(date)}</div>
+                      </div>
+                    </th>
+                  );
+                  const contextTd = (code) => (
+                    <td style={{ padding: 0 }}>
+                      <div style={{ padding: "8px 4px", textAlign: "center", fontWeight: "700" }}>{code}</div>
+                    </td>
+                  );
                   const renderSnapshotTable = (title, rowACode, rowBCode) => (
                     <div style={{ marginBottom: "18px" }}>
                       <div style={{ fontWeight: "800", fontSize: "14px", marginBottom: "6px" }}>{title}</div>
@@ -2086,14 +2108,16 @@ function App() {
                           <thead>
                             <tr>
                               <th className="sticky-col">이름</th>
+                              {contextTh(dayBefore, "전날")}
                               {swapDateRange.map((date) => (
-                                <th key={date} style={{ padding: 0 }}>
+                                <th key={date} className="active-col" style={{ padding: 0 }}>
                                   <div style={{ padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center" }}>
                                     <div className={`day-name ${isSunday(date) || isHolidayDate(date) ? "sun" : ""} ${isSaturday(date) ? "sat" : ""}`}>{weekdayShort(date)}</div>
                                     <div className="day-date">{formatMonthDay(date)}</div>
                                   </div>
                                 </th>
                               ))}
+                              {contextTh(dayAfter, "다음날")}
                             </tr>
                           </thead>
                           <tbody>
@@ -2101,21 +2125,25 @@ function App() {
                               <td className="group-name-cell sticky-col">
                                 <div className="group-name-cell-inner"><div className="name-txt" style={{ fontWeight: "800" }}>{displayA}</div></div>
                               </td>
+                              {contextTd(codeBeforeA)}
                               {swapDateRange.map((date, i) => (
-                                <td key={date} style={{ padding: 0 }}>
+                                <td key={date} className="active-col" style={{ padding: 0 }}>
                                   <div style={{ padding: "8px 4px", textAlign: "center", fontWeight: "900" }}>{rowACode(i)}</div>
                                 </td>
                               ))}
+                              {contextTd(codeAfterA)}
                             </tr>
                             <tr>
                               <td className="group-name-cell sticky-col">
                                 <div className="group-name-cell-inner"><div className="name-txt" style={{ fontWeight: "800" }}>{displayB}</div></div>
                               </td>
+                              {contextTd(codeBeforeB)}
                               {swapDateRange.map((date, i) => (
-                                <td key={date} style={{ padding: 0 }}>
+                                <td key={date} className="active-col" style={{ padding: 0 }}>
                                   <div style={{ padding: "8px 4px", textAlign: "center", fontWeight: "900" }}>{rowBCode(i)}</div>
                                 </td>
                               ))}
+                              {contextTd(codeAfterB)}
                             </tr>
                           </tbody>
                         </table>
