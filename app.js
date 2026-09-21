@@ -2024,15 +2024,15 @@ function App() {
                   ⚠️ 여기서는 아무것도 실제로 바뀌지 않아요 - 실제 교번변경은 드림스에서 결재해주세요.
                 </div>
 
-                <label className="label">사람 A</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px", marginBottom: "16px", alignItems: "center" }}>
-                  <select className="select" style={{ margin: 0 }} value={swapNameA} onChange={(e) => setSwapNameA(e.target.value)}>
+                <label className="label" style={{ fontSize: "12px", marginBottom: "4px" }}>사람 A</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "6px", marginBottom: "10px", alignItems: "center" }}>
+                  <select className="select" style={{ margin: 0, fontSize: "13px", padding: "7px 8px" }} value={swapNameA} onChange={(e) => setSwapNameA(e.target.value)}>
                     <option value="">이름 선택</option>
                     {swapCandidatesA.map((p) => (<option key={`swapA-${p.name}`} value={p.name}>{p.displayName}</option>))}
                   </select>
                   <button
                     className="modal-btn"
-                    style={{ width: "auto", padding: "0 12px", margin: 0, color: "#ef4444", borderColor: "#fca5a5", background: "#fef2f2" }}
+                    style={{ width: "auto", height: "34px", minWidth: "0", padding: "0 10px", margin: 0, fontSize: "12px", color: "#ef4444", borderColor: "#fca5a5", background: "#fef2f2" }}
                     onClick={() => { setSwapNameA(""); setSwapStartDate(todayStr); setSwapEndDate(todayStr); }}
                     disabled={!swapNameA}
                   >
@@ -2040,15 +2040,15 @@ function App() {
                   </button>
                 </div>
 
-                <label className="label">사람 B</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px", marginBottom: "16px", alignItems: "center" }}>
-                  <select className="select" style={{ margin: 0 }} value={swapNameB} onChange={(e) => setSwapNameB(e.target.value)}>
+                <label className="label" style={{ fontSize: "12px", marginBottom: "4px" }}>사람 B</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "6px", marginBottom: "10px", alignItems: "center" }}>
+                  <select className="select" style={{ margin: 0, fontSize: "13px", padding: "7px 8px" }} value={swapNameB} onChange={(e) => setSwapNameB(e.target.value)}>
                     <option value="">이름 선택</option>
                     {swapCandidatesB.map((p) => (<option key={`swapB-${p.name}`} value={p.name}>{p.displayName}</option>))}
                   </select>
                   <button
                     className="modal-btn"
-                    style={{ width: "auto", padding: "0 12px", margin: 0, color: "#ef4444", borderColor: "#fca5a5", background: "#fef2f2" }}
+                    style={{ width: "auto", height: "34px", minWidth: "0", padding: "0 10px", margin: 0, fontSize: "12px", color: "#ef4444", borderColor: "#fca5a5", background: "#fef2f2" }}
                     onClick={() => { setSwapNameB(""); setSwapStartDate(todayStr); setSwapEndDate(todayStr); }}
                     disabled={!swapNameB}
                   >
@@ -2056,10 +2056,10 @@ function App() {
                   </button>
                 </div>
 
-                <label className="label">기간</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "20px", alignItems: "center" }}>
-                  <input className="input" type="date" value={swapStartDate} onChange={(e) => setSwapStartDate(e.target.value)} />
-                  <input className="input" type="date" value={swapEndDate} onChange={(e) => setSwapEndDate(e.target.value)} />
+                <label className="label" style={{ fontSize: "12px", marginBottom: "4px" }}>기간</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "14px", alignItems: "center" }}>
+                  <input className="input" style={{ fontSize: "13px", padding: "7px 8px" }} type="date" value={swapStartDate} onChange={(e) => setSwapStartDate(e.target.value)} />
+                  <input className="input" style={{ fontSize: "13px", padding: "7px 8px" }} type="date" value={swapEndDate} onChange={(e) => setSwapEndDate(e.target.value)} />
                 </div>
 
                 {!swapNameA || !swapNameB ? (
