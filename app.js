@@ -2570,7 +2570,7 @@ function App() {
           cursor: pointer;
           -webkit-appearance: none;
         }
-        input[type="date"]::-webkit-calendar-picker-indicator {
+        .hidden-date-input::-webkit-calendar-picker-indicator {
           position: absolute;
           left: 0;
           top: 0;
