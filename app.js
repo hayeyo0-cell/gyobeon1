@@ -627,6 +627,7 @@ function App() {
   const [editEndMin, setEditEndMin] = useState("");
   const [pathOpen, setPathOpen] = useState(false);
   const [pathTarget, setPathTarget] = useState(null);
+  const [editFillCode, setEditFillCode] = useState(""); // 전체 화면 편집 - 내 칸 대기·휴무일의 충당 교번
   const [pathImage, setPathImage] = useState("");
   const [pathTeamKey, setPathTeamKey] = useState("");
   const [pathDate, setPathDate] = useState(todayStr);
@@ -1052,7 +1053,7 @@ function App() {
     const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: resolveDisplayName(overrides, myTeamKey, anchor.code, myName), customColor: override.color };
     })();
     if (!info) return info;
-    // 대기인 날 충당 교번을 지정해 뒀으면 그날만 충당 교번 기준으로 (출퇴근 시간·행로표 포함)
+    // 대기·휴무인 날 충당 교번을 지정해 뒀으면 그날만 충당 교번 기준으로 (출퇴근 시간·행로표 포함)
     const myTeamKey2 = mySelection?.teamKey || selectedTeam;
     const fill = applyStandbyFill(overrides, myTeamKey2, String(mySelection?.name || "").trim(), homeDate, info.code);
     if (!fill.from) return info;
@@ -1117,7 +1118,7 @@ function App() {
       });
     }
     
-    // 내 칸만 - 대기인 날 충당 교번을 지정해 뒀으면 그날 충당 교번으로 보여줘요 (다른 사람 칸은 그대로)
+    // 내 칸만 - 대기·휴무인 날 충당 교번을 지정해 뒀으면 그날 충당 교번으로 보여줘요 (다른 사람 칸은 그대로)
     const myNameForFill = String(mySelection?.name || "").trim();
     if (myNameForFill && viewTeam === (mySelection?.teamKey || selectedTeam)) {
       grid = grid.map((cell) => {
@@ -1410,8 +1411,12 @@ function App() {
 
   function handleAllCellTap(item) { 
     if (editMode) {
-      // 충당으로 바뀌어 보이는 내 칸은 원래 대기 교번 기준으로 편집해요
-      openEditDialog(item?.substitutedFrom ? { ...item, code: item.substitutedFrom } : item);
+      // 충당으로 바뀌어 보이는 내 칸은 원래 교번(대기·휴무) 기준으로 편집해요.
+      // 내 칸이 그날 대기·휴무면 편집 창에 "충당 교번" 입력칸도 같이 보여줘요 (월교번 수정과 같은 값)
+      const baseCode = String(item?.substitutedFrom || item?.code || "").trim();
+      const isMineCell = (item?.teamKey || viewTeam) === (mySelection?.teamKey || selectedTeam) && samePersonName(item?.name, mySelection?.name);
+      const canFill = isMineCell && (baseCode.startsWith("대") || baseCode.startsWith("휴"));
+      openEditDialog({ ...item, code: baseCode, fillDate: canFill ? browseDate : null, fillCurrent: item?.substitutedFrom ? item.code : "" });
     } else {
       const currentTeamKey = item.teamKey || viewTeam;
       const team = effectiveData[currentTeamKey];
@@ -1434,7 +1439,7 @@ function App() {
   }
 
   function openEditDialog(item) {
-    setEditingCell(item); const currentTeam = item.teamKey || viewTeam; const key = getOverrideKey(currentTeam, item.name); const current = overrides[key] || {}; 
+    setEditingCell(item); setEditFillCode(item?.fillCurrent || ""); const currentTeam = item.teamKey || viewTeam; const key = getOverrideKey(currentTeam, item.name); const current = overrides[key] || {}; 
     setEditColor(current.color || ""); setEditPhone(current.phone || "");
     // 이 자리(baseCode)에서 설정했던 표시 이름이고, 지금도 그 자리 그대로일 때만 불러와요.
     // (다른 자리에서 걸어둔 게 이 사람 이름에 남아있어도, 여긴 안 보여줘요 - 이미 무효화된 거라서)
@@ -1468,6 +1473,14 @@ function App() {
         currentEntry.aliasBaseCode = editingCell.baseCode ? normalizeCodeKey(editingCell.baseCode) : null;
         currentEntry.color = cleanColor;
         currentEntry.phone = cleanPhone;
+        // 전체 화면에서 내 칸 대기·휴무일의 충당 교번을 같이 저장 (월교번 수정과 같은 자리 - 그날 하루만)
+        if (editingCell.fillDate) {
+          const cleanFill = String(editFillCode || "").trim();
+          const shifts = { ...(currentEntry.monthShifts || {}) };
+          if (cleanFill && cleanFill !== String(editingCell.code || "").trim()) shifts[editingCell.fillDate] = cleanFill;
+          else delete shifts[editingCell.fillDate];
+          currentEntry.monthShifts = shifts;
+        }
     }
     next[key] = currentEntry;
     if (isWorktimeEditOpen) { const built = buildTimeValueFromParts(editStartHour, editStartMin, editEndHour, editEndMin); if (!built) return alert("출퇴근시간 형식을 다시 확인해주세요."); const dayType = guessDayType(browseDate); const allWorktimeOverrides = loadWorktimeOverrides(); const wtKey = getWorktimeOverrideKey(currentTeam, editingCell.code); const wtEntry = { ...(allWorktimeOverrides[wtKey] || {}) }; wtEntry[dayType] = built; allWorktimeOverrides[wtKey] = wtEntry; saveWorktimeOverrides(allWorktimeOverrides); setWorktimeVersion((v) => v + 1); }
@@ -2374,6 +2387,13 @@ function App() {
               {editingCell?.isMonthEdit ? `현재: ${editingCell.code}` : "이 자리의 진짜 이름이 나중에 바뀌면 자동으로 원래 이름으로 돌아가요"}
             </div>
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder={editingCell?.isMonthEdit ? "예: 15d, 대1, 휴1" : "비워두면 원래 이름 사용"} />
+            {!editingCell?.isMonthEdit && editingCell?.fillDate && (
+              <>
+                <label className="label" style={{ marginTop: 12 }}>충당 교번 ({editingCell.fillDate} · {editingCell.code})</label>
+                <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '8px' }}>이 날 충당된 교번을 넣으면 그날만 그 교번으로 보여요. 비워두면 {editingCell.code} 그대로예요.</div>
+                <input className="input" value={editFillCode} onChange={(e) => setEditFillCode(e.target.value)} placeholder="예: 24d" />
+              </>
+            )}
             {!editingCell?.isMonthEdit && (
               <>
                 <label className="label" style={{ marginTop: 12 }}>전화번호</label>
@@ -2607,11 +2627,11 @@ function App() {
   );
 }
 
-// 대기 교번(대1·대2…)인 날, 월교번에서 그날 충당된 교번을 지정해 뒀으면 그 교번으로 바꿔서 보여줘요.
-// 교번틀은 그대로라 그날 하루만 바뀌어요. 반환: { code, from } (from = 원래 대기 교번, 안 바뀌면 null)
+// 대기(대1·대2…)나 휴무(휴1·휴2…, 휴충당)인 날, 월교번에서 그날 충당된 교번을 지정해 뒀으면 그 교번으로 바꿔서 보여줘요.
+// 교번틀은 그대로라 그날 하루만 바뀌어요. 반환: { code, from } (from = 원래 대기·휴무 교번, 안 바뀌면 null)
 function applyStandbyFill(overrides, teamKey, name, dateStr, baseCode) {
   const base = String(baseCode || "").trim();
-  if (!base.startsWith("대") || !name) return { code: baseCode, from: null };
+  if (!(base.startsWith("대") || base.startsWith("휴")) || !name) return { code: baseCode, from: null };
   const override = (overrides || {})[getOverrideKey(teamKey, name)] || {};
   const filled = String((override.monthShifts && override.monthShifts[dateStr]) || "").trim();
   if (!filled || filled === base) return { code: baseCode, from: null };
