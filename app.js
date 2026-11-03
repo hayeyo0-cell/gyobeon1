@@ -143,7 +143,30 @@ function getWorktimeOverrideValue(teamKey, code, dayType) { const data = loadWor
 function parseTimeValueToParts(value) { const raw = String(value || "").trim(); if (!raw || raw === "----") return { sh: "", sm: "", eh: "", em: "" }; const match = raw.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/); return match ? { sh: match[1], sm: match[2], eh: match[3], em: match[4] } : { sh: "", sm: "", eh: "", em: "" }; }
 function clamp2(value) { return String(value || "").replace(/\D/g, "").slice(0, 2); }
 function buildTimeValueFromParts(sh, sm, eh, em) { const a = clamp2(sh); const b = clamp2(sm); const c = clamp2(eh); const d = clamp2(em); if (!a || !b || !c || !d) return null; const shNum = Number(a); const smNum = Number(b); const ehNum = Number(c); const emNum = Number(d); if (Number.isNaN(shNum) || Number.isNaN(smNum) || Number.isNaN(ehNum) || Number.isNaN(emNum) || shNum < 0 || shNum > 23 || ehNum < 0 || ehNum > 23 || smNum < 0 || smNum > 59 || emNum < 0 || emNum > 59) return null; return `${String(shNum).padStart(2, "0")}:${String(smNum).padStart(2, "0")}-${String(ehNum).padStart(2, "0")}:${String(emNum).padStart(2, "0")}`; }
-function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return overrideValue; const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] || "----"; }
+// 출퇴근 시간 표기 오타 보정 (원본 파일 오타 대비) - 표시만 고치고 원본은 건드리지 않아요
+// 예) "18;00"·"18.00"·"18：00" → "18:00", "9:00" → "09:00", "1800" → "18:00", 전각/긴 대시 → "-"
+function normalizeWorktimeText(value) {
+  let t = String(value == null ? "" : value);
+  if (!t.trim() || t.trim() === "----") return t;
+  t = t.replace(/[\uFF1A]/g, ":").replace(/[\u2010-\u2015\u2212\uFF0D]/g, "-");
+  const fix = (h, m) => {
+    const hh = Number(h), mm = Number(m);
+    if (hh > 30 || mm > 59) return null;
+    return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+  };
+  // 시와 분 사이 구분자 오타 (; . , 공백 등)
+  t = t.replace(/(^|[^\d])(\d{1,2})\s*[;:.,\uFF1B]\s*(\d{2})(?!\d)/g, (all, pre, h, m) => {
+    const f = fix(h, m);
+    return f ? pre + f : all;
+  });
+  // 구분자가 아예 빠진 4자리 (1800)
+  t = t.replace(/(^|[^\d:])(\d{2})(\d{2})(?![\d:])/g, (all, pre, h, m) => {
+    const f = fix(h, m);
+    return f ? pre + f : all;
+  });
+  return t;
+}
+function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return normalizeWorktimeText(overrideValue); const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] ? normalizeWorktimeText(source[key]) : "----"; }
 
 function getPathFolder(teamKey, dateStr, code) {
   const s = normalizeCodeKey(code);
