@@ -1291,8 +1291,34 @@ function App() {
     const canUseMyAnchorForTeam = viewTeam === mySelection?.teamKey && String(mySelection?.name || "").trim() && mySelection?.code && hasPersonInTeam(team, mySelection.name);
     if (hasRemoteRosterForTeam(viewTeam, remoteRoster)) { grid = buildRemoteShiftedGrid(viewTeam, team, remoteRoster, browseDate, overrides); } else if (canUseMyAnchorForTeam) { grid = buildAssignedGrid(team, mySelection.name, normalizeToFixedCode(team, mySelection.code), diffDays(mySelection.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); } else { const teamAnchor = buildTeamAnchorFromZip(currentViewTeam); grid = buildAssignedGrid(team, teamAnchor.name, teamAnchor.code, diffDays(teamAnchor.anchorDate || getResolvedBaseDate(viewTeam, team, remoteRoster), browseDate), overrides); }
     if (viewTeam === mySelection?.teamKey && mySelection?.code && String(mySelection?.name || "").trim() && !hasRemoteRosterForTeam(viewTeam, remoteRoster)) { const myCode = normalizeToFixedCode(currentViewTeam, getMyCodeForDate(currentViewTeam, browseDate, mySelection)); grid = grid.map((cell) => { if (normalizeToFixedCode(currentViewTeam, cell.code) === myCode) return { ...cell, name: mySelection.name, displayName: mySelection.name }; return cell; }); }
-    const diaOrder = findDiaOrder(team); return diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-", teamKey: viewTeam }; });
-  }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection]);
+    const diaOrder = findDiaOrder(team);
+    let rows = diaOrder.map((code) => { const found = grid.find((item) => normalizeCodeKey(item.code) === normalizeCodeKey(code)); return { code, idx: found?.idx ?? -1, name: found?.name || "-", displayName: found?.displayName || found?.name || "-", teamKey: viewTeam }; });
+    // 내가 대기·휴무인 날 충당 교번을 지정해 뒀으면:
+    // - 충당 교번 줄(예: 24d)에는 그날 내가 들어가요 (원래 주인은 그날 안 보여요)
+    // - 원래 내 줄(예: 대1)에는 "→ 24d 충당"만 표시해요 (이름이 두 번 나오지 않게)
+    const myNameForFill = String(mySelection?.name || "").trim();
+    if (myNameForFill && viewTeam === (mySelection?.teamKey || selectedTeam)) {
+      const myIdx = rows.findIndex((r) => samePersonName(r.name, myNameForFill));
+      if (myIdx !== -1) {
+        const myRow = rows[myIdx];
+        const fill = applyStandbyFill(overrides, viewTeam, myNameForFill, browseDate, myRow.code);
+        if (fill.from) {
+          const targetIdx = rows.findIndex((r) => normalizeCodeKey(r.code) === normalizeCodeKey(fill.code));
+          if (targetIdx !== -1 && targetIdx !== myIdx) {
+            rows = rows.map((r, i) => {
+              if (i === targetIdx) return { ...r, name: myRow.name, displayName: myRow.displayName, idx: myRow.idx, substitutedFrom: fill.from };
+              if (i === myIdx) return { ...r, name: "", displayName: "", movedTo: fill.code };
+              return r;
+            });
+          } else {
+            // 충당 교번이 DIA순서에 없으면(오타 등) 내 줄에서 교번만 바꿔 보여줘요
+            rows = rows.map((r, i) => i === myIdx ? { ...r, code: fill.code, substitutedFrom: fill.from } : r);
+          }
+        }
+      }
+    }
+    return rows;
+  }, [currentViewTeam, browseDate, overrides, remoteRoster, viewTeam, mySelection, selectedTeam]);
 
   function findDiaOrder(team) { return team?.diaOrder?.length ? team.diaOrder : getGyobunOrder(team); }
 
@@ -1945,8 +1971,11 @@ function App() {
                               openPathDialog(item, browseDate);
                             }
                           }} style={{ flex: 1, display: "flex", alignItems: "center", gap: "16px", fontSize: 18 }}>
-                            <div style={{ fontWeight: 900, width: 60, color: getDateBasedColor(browseDate) }}>{item.code}</div>
-                            <div style={{ fontWeight: 800 }}>{item.displayName || item.name}</div>
+                            <div style={{ fontWeight: 900, width: 60, color: getDateBasedColor(browseDate), lineHeight: 1.15 }}>
+                              {item.code}
+                              {item.substitutedFrom && <div style={{ fontSize: 11, fontWeight: 800, color: "#e08a20", whiteSpace: "nowrap" }}>{item.substitutedFrom} 충당</div>}
+                            </div>
+                            {item.movedTo ? <div style={{ fontWeight: 800, fontSize: 15, color: "#e08a20" }}>→ {item.movedTo} 충당</div> : <div style={{ fontWeight: 800 }}>{item.displayName || item.name}</div>}
                           </div>
                           {hasPhone && (
                             <a href={`tel:${overrides[cellKey].phone}`} style={{ 
