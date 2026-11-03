@@ -1043,12 +1043,21 @@ function App() {
   const currentViewTeam = effectiveData?.[viewTeam] || null;
 
   const myInfo = useMemo(() => {
+    const info = (() => {
     const myTeamKey = mySelection?.teamKey || selectedTeam; const myName = String(mySelection?.name || "").trim(); const team = effectiveData?.[myTeamKey]; if (!team || !myName) return null;
     const override = overrides[getOverrideKey(myTeamKey, myName)] || {};
     if (mySelection?.teamKey === myTeamKey && mySelection?.code) { const code = getMyCodeForDate(team, homeDate, mySelection); return { code, time: pickWorktime(team, code, homeDate), displayName: resolveDisplayName(overrides, myTeamKey, mySelection.code, myName), customColor: override.color }; }
     const remoteRow = findRemoteRowByName(myTeamKey, myName, remoteRoster); if (remoteRow?.code) { const anchorDate = getRemoteAnchorBaseDate(team); const dayOffset = diffDays(anchorDate, homeDate); const code = shiftCodeByDays(team, remoteRow.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: resolveDisplayName(overrides, myTeamKey, remoteRow.code, myName), customColor: override.color }; }
     const anchor = buildAnchorForIdentity(myTeamKey, team, remoteRoster, myName, mySelection); if (!anchor?.code) return null;
     const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: resolveDisplayName(overrides, myTeamKey, anchor.code, myName), customColor: override.color };
+    })();
+    if (!info) return info;
+    // 대기인 날 충당 교번을 지정해 뒀으면 그날만 충당 교번 기준으로 (출퇴근 시간·행로표 포함)
+    const myTeamKey2 = mySelection?.teamKey || selectedTeam;
+    const fill = applyStandbyFill(overrides, myTeamKey2, String(mySelection?.name || "").trim(), homeDate, info.code);
+    if (!fill.from) return info;
+    const team2 = effectiveData?.[myTeamKey2];
+    return { ...info, code: fill.code, substitutedFrom: fill.from, time: team2 ? pickWorktime(team2, fill.code, homeDate) : info.time };
   }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, wordtimeVersion, overrides]);
 
   const homePathImage = useMemo(() => {
@@ -1108,8 +1117,18 @@ function App() {
       });
     }
     
+    // 내 칸만 - 대기인 날 충당 교번을 지정해 뒀으면 그날 충당 교번으로 보여줘요 (다른 사람 칸은 그대로)
+    const myNameForFill = String(mySelection?.name || "").trim();
+    if (myNameForFill && viewTeam === (mySelection?.teamKey || selectedTeam)) {
+      grid = grid.map((cell) => {
+        if (!samePersonName(cell.name, myNameForFill)) return cell;
+        const fill = applyStandbyFill(overrides, viewTeam, myNameForFill, browseDate, cell.code);
+        return fill.from ? { ...cell, code: fill.code, substitutedFrom: fill.from } : cell;
+      });
+    }
+
     return grid.map(item => ({ ...item, teamKey: viewTeam })); 
-  }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection, myInfo]);
+  }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection, myInfo, selectedTeam]);
 
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
@@ -1391,7 +1410,8 @@ function App() {
 
   function handleAllCellTap(item) { 
     if (editMode) {
-      openEditDialog(item);
+      // 충당으로 바뀌어 보이는 내 칸은 원래 대기 교번 기준으로 편집해요
+      openEditDialog(item?.substitutedFrom ? { ...item, code: item.substitutedFrom } : item);
     } else {
       const currentTeamKey = item.teamKey || viewTeam;
       const team = effectiveData[currentTeamKey];
@@ -1733,13 +1753,14 @@ function App() {
                   <div className="center-view">
                     <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
                     <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
+                    {myInfo?.substitutedFrom && <div style={{ fontSize: 13, fontWeight: 800, color: "#e08a20", marginTop: 2 }}>{myInfo.substitutedFrom} → {myInfo.code} 충당</div>}
                     <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
                     {homePathImage && (
                       <div 
                         className="home-path-preview" 
                         onClick={() => {
                           const targetTeamKey = mySelection?.teamKey || selectedTeam;
-                          openPathDialogForTeamAndDate(targetTeamKey, { code: myInfo?.code, name: mySelection?.name || "", displayName: myInfo?.displayName || "", idx: -1 }, homeDate);
+                          openPathDialogForTeamAndDate(targetTeamKey, { code: myInfo?.code, name: mySelection?.name || "", displayName: myInfo?.displayName || "", idx: -1, substitutedFrom: myInfo?.substitutedFrom || null }, homeDate);
                         }}
                       >
                         <img src={homePathImage} alt="행로표 미리보기" />
@@ -2422,6 +2443,7 @@ function App() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, padding: '0 4px' }}>
               <div>
                 <div className="viewer-info-line" style={{ fontSize: 18, fontWeight: 700 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
+                {pathTarget?.substitutedFrom && <div className="viewer-info-line" style={{ fontSize: 13, fontWeight: 800, color: "#e08a20" }}>{pathTarget.substitutedFrom} → {pathTarget.code} 충당</div>}
                 <div className="viewer-info-line" style={{ color: "#6b7280", marginTop: 4 }}>{pathDate} {weekdayName(pathDate)}</div>
               </div>
               {overrides[getOverrideKey(pathTeamKey || viewTeam, pathTarget?.name)]?.phone && (
@@ -2583,6 +2605,17 @@ function App() {
       `}</style>
     </>
   );
+}
+
+// 대기 교번(대1·대2…)인 날, 월교번에서 그날 충당된 교번을 지정해 뒀으면 그 교번으로 바꿔서 보여줘요.
+// 교번틀은 그대로라 그날 하루만 바뀌어요. 반환: { code, from } (from = 원래 대기 교번, 안 바뀌면 null)
+function applyStandbyFill(overrides, teamKey, name, dateStr, baseCode) {
+  const base = String(baseCode || "").trim();
+  if (!base.startsWith("대") || !name) return { code: baseCode, from: null };
+  const override = (overrides || {})[getOverrideKey(teamKey, name)] || {};
+  const filled = String((override.monthShifts && override.monthShifts[dateStr]) || "").trim();
+  if (!filled || filled === base) return { code: baseCode, from: null };
+  return { code: filled, from: base };
 }
 
 function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, overrides = {}, mySelection = null) {
