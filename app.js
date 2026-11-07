@@ -166,7 +166,17 @@ function normalizeWorktimeText(value) {
   });
   return t;
 }
-function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return normalizeWorktimeText(overrideValue); const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] ? normalizeWorktimeText(source[key]) : "----"; }
+// 집파일 원본의 출퇴근 시간 오류 보정표 - "팀|요일구분|교번": [잘못된 값, 올바른 값]
+// (원본 파일을 고치면 이 줄은 지워도 돼요. 원본이 이미 맞으면 아무 영향 없어요)
+const WORKTIME_FIXES = {
+  "my|sat|22d": ["12:13", "12:31"] // 문양 토요일 22d 출근 12:31
+};
+function applyWorktimeFix(teamKey, kind, key, value) {
+  const fix = WORKTIME_FIXES[`${teamKey}|${kind}|${key}`];
+  if (!fix || typeof value !== "string") return value;
+  return value.replace(fix[0], fix[1]);
+}
+function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return normalizeWorktimeText(overrideValue); const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] ? normalizeWorktimeText(applyWorktimeFix(team?.key, kind, key, source[key])) : "----"; }
 
 function getPathFolder(teamKey, dateStr, code) {
   const s = normalizeCodeKey(code);
