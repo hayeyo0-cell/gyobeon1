@@ -666,6 +666,9 @@ function App() {
   const [pathDate, setPathDate] = useState(todayStr);
   const [memoText, setMemoText] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const [showGuide, setShowGuide] = useState(false); // 📖 사용법
+  const [guideOpenIdx, setGuideOpenIdx] = useState(null);
+  const showGuideRef = useRef(false);
   const [allowProfileEdit, setAllowProfileEdit] = useState(!initialSelection?.name || !initialSelection?.code);
 
   const [groups, setGroups] = useState(initialGroups);
@@ -1037,6 +1040,7 @@ function App() {
   useEffect(() => { editOpenRef.current = editOpen; }, [editOpen]);
   useEffect(() => { showGroupAddRef.current = showGroupAdd; }, [showGroupAdd]);
   useEffect(() => { showSettingsRef.current = showSettings; }, [showSettings]);
+  useEffect(() => { showGuideRef.current = showGuide; }, [showGuide]);
   useEffect(() => { function handler(e) { e.preventDefault(); setDeferredPrompt(e); } window.addEventListener("beforeinstallprompt", handler); return () => window.removeEventListener("beforeinstallprompt", handler); }, []);
   
   useEffect(() => {
@@ -1047,6 +1051,7 @@ function App() {
       if (showUpdatePopup) { setShowUpdatePopup(false); return; }
       if (showGroupAddRef.current) { setShowGroupAdd(false); return; } 
       if (showSettingsRef.current) { setShowSettings(false); return; } 
+      if (showGuideRef.current) { setShowGuide(false); return; }
 
       if (showSearchRef.current || searchQuery) {
         setSearchQuery("");
@@ -1066,6 +1071,7 @@ function App() {
   useEffect(() => { if (editOpen && (!window.history.state || window.history.state.layer !== "edit")) window.history.pushState({ __gyobeon: true, layer: "edit" }, ""); }, [editOpen]);
   useEffect(() => { if (showUpdatePopup && (!window.history.state || window.history.state.layer !== "update")) window.history.pushState({ __gyobeon: true, layer: "update" }, ""); }, [showUpdatePopup]);
   useEffect(() => { if (showGroupAdd && (!window.history.state || window.history.state.layer !== "groupAdd")) window.history.pushState({ __gyobeon: true, layer: "groupAdd" }, ""); }, [showGroupAdd]);
+  useEffect(() => { if (showGuide && (!window.history.state || window.history.state.layer !== "guide")) window.history.pushState({ __gyobeon: true, layer: "guide" }, ""); }, [showGuide]);
   useEffect(() => { if (showSettings && (!window.history.state || window.history.state.layer !== "settings")) window.history.pushState({ __gyobeon: true, layer: "settings" }, ""); }, [showSettings]);
 
   useEffect(() => {
@@ -1793,6 +1799,7 @@ function App() {
               <>
                 <div className="settings-row">
                   {deferredPrompt && <button className="install-btn" onClick={handleInstall}>설치</button>}
+                  <button className="settings-btn" style={{ marginRight: 8 }} onClick={() => { setGuideOpenIdx(null); setShowGuide(true); }}>📖 사용법</button>
                   <button className="settings-btn" onClick={() => setShowSettings(true)}>설정</button>
                 </div>
                 <div className="date-grid">
@@ -2326,6 +2333,35 @@ function App() {
         </div>
       )}
 
+      {showGuide && (
+        <div className="modal-backdrop" onClick={() => { if (showGuideRef.current) window.history.back(); else setShowGuide(false); }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxHeight: "85vh", overflowY: "auto" }}>
+            <div className="modal-title">📖 D교번 사용법</div>
+            <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 12 }}>궁금한 질문을 누르면 답이 펼쳐져요.</div>
+            {GUIDE_ITEMS.map((item, idx) => {
+              const open = guideOpenIdx === idx;
+              return (
+                <div key={idx} style={{ border: `1px solid ${open ? "#2563eb" : (isDarkMode ? "#334155" : "#e2e8f0")}`, borderRadius: 12, marginBottom: 8, overflow: "hidden", background: open ? (isDarkMode ? "rgba(37,99,235,0.12)" : "#f4f7fb") : "transparent" }}>
+                  <button type="button" onClick={() => setGuideOpenIdx(open ? null : idx)} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "13px 14px", fontSize: 15, fontWeight: 700, color: "inherit", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, cursor: "pointer", fontFamily: "inherit" }}>
+                    <span>Q. {item.q}</span>
+                    <span style={{ color: "#94a3b8", fontSize: 13, flexShrink: 0 }}>{open ? "▲" : "▼"}</span>
+                  </button>
+                  {open && (
+                    <div style={{ padding: "0 14px 14px", fontSize: 14, lineHeight: 1.65 }}>
+                      {item.a.map((line, li) => (
+                        <div key={li} style={{ marginTop: li === 0 ? 0 : 6, paddingLeft: line.startsWith("• ") ? 10 : 0 }}>{renderGuideText(line)}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div style={{ fontSize: 13, color: "#94a3b8", textAlign: "center", margin: "10px 0" }}>여기 없는 내용은 관리자에게 문의해 주세요.</div>
+            <button className="modal-btn" style={{ width: "100%" }} onClick={() => { if (showGuideRef.current) window.history.back(); else setShowGuide(false); }}>닫기</button>
+          </div>
+        </div>
+      )}
+
       {showSettings && (
         <div className="modal-backdrop" onClick={() => { if (showSettingsRef.current) window.history.back(); else setShowSettings(false); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -2698,6 +2734,27 @@ function applyStandbyFill(overrides, teamKey, name, dateStr, baseCode) {
   const filled = String((override.monthShifts && override.monthShifts[dateStr]) || "").trim();
   if (!filled || filled === base) return { code: baseCode, from: null };
   return { code: filled, from: base };
+}
+
+// 📖 사용법 - 자주 받는 질문 모음. 누르면 답이 펼쳐져요. 내용 수정은 GUIDE_ITEMS만 고치면 돼요.
+// 문장 안의 **글자**는 굵게, "• "로 시작하는 줄은 목록처럼 들여쓰기돼요.
+const GUIDE_ITEMS = [
+  { q: "처음에 내 교번은 어떻게 설정해요?", a: ["처음 실행하면 나오는 **초기 설정**에서 내 소속과 이름을 고르면 돼요.", "나중에 바꾸려면 홈 화면 **설정 → 내 정보 다시 설정**에서 할 수 있어요."] },
+  { q: "다른 날짜 교번은 어떻게 봐요?", a: ["홈 화면의 년·월·일 **+ / -** 버튼으로 날짜를 옮기거나, 날짜 숫자를 눌러 달력에서 바로 고를 수 있어요."] },
+  { q: "행로표는 어디서 봐요?", a: ["홈 화면의 행로표 미리보기를 누르면 크게 볼 수 있어요.", "**전체**나 **DIA순서**에서 사람을 눌러도 그 사람의 행로표가 열려요."] },
+  { q: "다른 사람 교번은 어떻게 찾아요?", a: ["**전체** 탭에서 그날 모든 사람의 교번을 볼 수 있어요.", "위쪽 경산·문양·월배·안심 버튼으로 소속을 바꾸고, 🔍로 이름을 검색할 수 있어요.", "**DIA순서** 탭에서는 교번 순서대로 볼 수 있어요."] },
+  { q: "한 달 근무를 한눈에 보고 싶어요.", a: ["**월교번** 탭에서 내 한 달 교번을 달력으로 볼 수 있어요."] },
+  { q: "대기·휴무일에 충당됐어요.", a: ["**월교번**에서 해당 날짜를 눌러 충당 교번(예: 24d)을 넣거나, **전체 → 수정 → 내 칸**의 \"충당 교번\"에 넣으면 돼요.", "그날만 홈 화면, 전체, DIA순서, 행로표가 충당 교번 기준으로 바뀌어요.", "내 폰에서만 바뀌고 교번 순서는 그대로예요. 입력칸을 비우고 저장하면 원래대로 돌아가요."] },
+  { q: "출퇴근 시간이 실제와 달라요.", a: ["**전체 → 수정**을 누르고 그 교번 칸을 누른 뒤 **출퇴근시간 수정 ▾**을 열어요.", "출근·퇴근 시·분을 입력하고 **저장**하면 돼요.", "• 그날이 평일이면 평일, 토요일이면 토요일, 휴일이면 휴일 시간표의 그 교번 시간이 바뀌어요.", "• 그 교번을 타는 날은 누구 칸이든 바뀐 시간으로 보여요.", "• 내 폰에만 저장돼요. 다른 사람 앱에는 반영되지 않아요."] },
+  { q: "다른 사람과 교번을 바꾸면 어떻게 되는지 미리 볼 수 있어요?", a: ["**교번변경** 탭에서 사람 A·B와 기간을 고르면, 바꾸기 전·후 교번과 휴양시간(12시간 미만 경고)을 미리 볼 수 있어요.", "미리보기일 뿐이라 실제 변경은 **드림스**에서 해주세요."] },
+  { q: "같이 근무하는 사람들 교번을 모아서 보고 싶어요.", a: ["**그룹** 탭에서 그룹을 만들고 인원을 추가하면, 그룹 사람들의 주간 교번을 한 번에 볼 수 있어요."] },
+  { q: "행로표에 메모를 남길 수 있어요?", a: ["행로표 화면 아래 **📝 메모**에 적어두면, 그 날짜·교번 행로표를 열 때마다 다시 보여요."] },
+  { q: "전화번호나 표시 색을 바꾸고 싶어요.", a: ["**전체 → 수정**을 누르고 사람 칸을 누르면 전화번호, 표시 이름, 색상을 바꿀 수 있어요.", "전화번호를 넣어두면 행로표에서 **📞 전화연결**로 바로 걸 수 있어요. 내 폰에만 저장돼요."] },
+  { q: "폰을 바꿔도 내 설정을 유지할 수 있어요?", a: ["**설정 → 데이터 백업 및 복구**에서 백업 파일을 저장해 두고, 새 폰에서 복구하면 돼요."] },
+  { q: "\"최신 인원/교번 정보가 있습니다\"가 떠요.", a: ["교번표가 새로 바뀌었다는 알림이에요. **업데이트**를 누르면 최신 교번으로 반영돼요."] }
+];
+function renderGuideText(text) {
+  return String(text).split(/(\*\*[^*]+\*\*)/).filter(Boolean).map((part, i) => part.startsWith("**") && part.endsWith("**") ? <strong key={i} style={{ color: "#2563eb" }}>{part.slice(2, -2)}</strong> : part);
 }
 
 function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, overrides = {}, mySelection = null) {
