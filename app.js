@@ -1480,7 +1480,7 @@ function App() {
       // 내 칸이 그날 대기·휴무면 편집 창에 "충당 교번" 입력칸도 같이 보여줘요 (월교번 수정과 같은 값)
       const baseCode = String(item?.substitutedFrom || item?.code || "").trim();
       const isMineCell = (item?.teamKey || viewTeam) === (mySelection?.teamKey || selectedTeam) && samePersonName(item?.name, mySelection?.name);
-      const canFill = isMineCell && (baseCode.startsWith("대") || baseCode.startsWith("휴"));
+      const canFill = isMineCell && isFillableCode(item?.teamKey || viewTeam, browseDate, baseCode);
       openEditDialog({ ...item, code: baseCode, fillDate: canFill ? browseDate : null, fillCurrent: item?.substitutedFrom ? item.code : "" });
     } else {
       const currentTeamKey = item.teamKey || viewTeam;
@@ -2725,11 +2725,27 @@ function App() {
   );
 }
 
-// 대기(대1·대2…)나 휴무(휴1·휴2…, 휴충당)인 날, 월교번에서 그날 충당된 교번을 지정해 뒀으면 그 교번으로 바꿔서 보여줘요.
+// 토요일·휴일에 s교번(대기처럼 충당되는 교번) - 소속별로 정해져 있어요. 월배·안심은 아직 없어요.
+const S_CODES = {
+  ks: { sat: ["20d"], hol: ["17d", "18d", "19d", "20d"] },
+  my: { sat: ["9d", "10d"], hol: ["7d", "8d", "9d", "10d"] },
+};
+function isSCode(teamKey, dateStr, code) {
+  const kind = guessDayType(dateStr);
+  const list = (S_CODES[teamKey] || {})[kind] || [];
+  return list.includes(normalizeCodeKey(code));
+}
+// 그날 충당 교번을 넣을 수 있는 교번인지 - 대기·휴무, 또는 토요일·휴일의 s교번
+function isFillableCode(teamKey, dateStr, code) {
+  const c = String(code || "").trim();
+  return c.startsWith("대") || c.startsWith("휴") || isSCode(teamKey, dateStr, c);
+}
+
+// 대기(대1·대2…)나 휴무(휴1·휴2…, 휴충당), 토요일·휴일 s교번인 날, 월교번에서 그날 충당된 교번을 지정해 뒀으면 그 교번으로 바꿔서 보여줘요.
 // 교번틀은 그대로라 그날 하루만 바뀌어요. 반환: { code, from } (from = 원래 대기·휴무 교번, 안 바뀌면 null)
 function applyStandbyFill(overrides, teamKey, name, dateStr, baseCode) {
   const base = String(baseCode || "").trim();
-  if (!(base.startsWith("대") || base.startsWith("휴")) || !name) return { code: baseCode, from: null };
+  if (!isFillableCode(teamKey, dateStr, base) || !name) return { code: baseCode, from: null };
   const override = (overrides || {})[getOverrideKey(teamKey, name)] || {};
   const filled = String((override.monthShifts && override.monthShifts[dateStr]) || "").trim();
   if (!filled || filled === base) return { code: baseCode, from: null };
@@ -2744,7 +2760,7 @@ const GUIDE_ITEMS = [
   { q: "행로표는 어디서 봐요?", a: ["홈 화면의 행로표 미리보기를 누르면 크게 볼 수 있어요.", "**전체**나 **DIA순서**에서 사람을 눌러도 그 사람의 행로표가 열려요."] },
   { q: "다른 사람 교번이나 열번은 어떻게 찾아요?", a: ["**전체** 탭에서 그날 모든 사람의 교번을 볼 수 있어요. 위쪽 경산·문양·월배·안심 버튼으로 소속을 바꿀 수 있어요.", "**DIA순서** 탭에서는 교번 순서대로 볼 수 있어요.", "전체 탭의 **🔍 검색**에서는 네 소속을 한 번에 찾아줘요.", "• **이름**: 예) 권재림", "• **교번**: 예) 24d, 대1", "• **열번**: 예) 2134 → 그날 그 열차를 운전하는 사람을 찾아줘요", "새벽 첫 열차(예: 2001~2090)는 전날 야간 근무자(25~ 같은 비번 교번)로 찾아줘요.", "검색 결과에서 사람을 누르면 아래에 그 사람의 행로표가 바로 보여요."] },
   { q: "한 달 근무를 한눈에 보고 싶어요.", a: ["**월교번** 탭에서 내 한 달 교번을 달력으로 볼 수 있어요."] },
-  { q: "대기·휴무일에 충당됐어요.", a: ["**월교번**에서 해당 날짜를 눌러 충당 교번(예: 24d)을 넣거나, **전체 → 수정 → 내 칸**의 \"충당 교번\"에 넣으면 돼요.", "그날만 홈 화면, 전체, DIA순서, 행로표가 충당 교번 기준으로 바뀌어요.", "내 폰에서만 바뀌고 교번 순서는 그대로예요. 입력칸을 비우고 저장하면 원래대로 돌아가요."] },
+  { q: "대기·휴무일(토·휴일 s교번 포함)에 충당됐어요.", a: ["**월교번**에서 해당 날짜를 눌러 충당 교번(예: 24d)을 넣거나, **전체 → 수정 → 내 칸**의 \"충당 교번\"에 넣으면 돼요.", "그날만 홈 화면, 전체, DIA순서, 행로표가 충당 교번 기준으로 바뀌어요.", "토요일·휴일 s교번도 똑같이 넣으면 돼요. (경산: 토 20d, 휴일 17d~20d / 문양: 토 9d·10d, 휴일 7d~10d)", "내 폰에서만 바뀌고 교번 순서는 그대로예요. 입력칸을 비우고 저장하면 원래대로 돌아가요."] },
   { q: "출퇴근 시간이 실제와 달라요.", a: ["**전체 → 수정**을 누르고 그 교번 칸을 누른 뒤 **출퇴근시간 수정 ▾**을 열어요.", "출근·퇴근 시·분을 입력하고 **저장**하면 돼요.", "• 그날이 평일이면 평일, 토요일이면 토요일, 휴일이면 휴일 시간표의 그 교번 시간이 바뀌어요.", "• 그 교번을 타는 날은 누구 칸이든 바뀐 시간으로 보여요.", "• 내 폰에만 저장돼요. 다른 사람 앱에는 반영되지 않아요."] },
   { q: "다른 사람과 교번을 바꾸면 어떻게 되는지 미리 볼 수 있어요?", a: ["**교번변경** 탭에서 사람 A·B와 기간을 고르면, 바꾸기 전·후 교번과 휴양시간(12시간 미만 경고)을 미리 볼 수 있어요.", "미리보기일 뿐이라 실제 변경은 **드림스**에서 해주세요."] },
   { q: "같이 근무하는 사람들 교번을 모아서 보고 싶어요.", a: ["**그룹** 탭에서 그룹을 만들고 인원을 추가하면, 그룹 사람들의 주간 교번을 한 번에 볼 수 있어요."] },
