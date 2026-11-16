@@ -176,7 +176,7 @@ function applyWorktimeFix(teamKey, kind, key, value) {
   if (!fix || typeof value !== "string") return value;
   return value.replace(fix[0], fix[1]);
 }
-function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return normalizeWorktimeText(overrideValue); const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] ? normalizeWorktimeText(applyWorktimeFix(team?.key, kind, key, source[key])) : "----"; }
+function pickWorktime(team, code, dateStr) { const kind = guessDayType(dateStr); const overrideValue = getWorktimeOverrideValue(team?.key, code, kind); if (overrideValue) return normalizeWorktimeText(overrideValue); if (isSCode(team?.key, dateStr, code)) return "----"; /* 토·휴일 s교번은 출퇴근 시간이 없어요 */ const key = normalizeCodeKey(code); const source = team?.worktimes?.[kind] || {}; return source[key] ? normalizeWorktimeText(applyWorktimeFix(team?.key, kind, key, source[key])) : "----"; }
 
 function getPathFolder(teamKey, dateStr, code) {
   const s = normalizeCodeKey(code);
@@ -201,6 +201,7 @@ function findPathImage(team, dateStr, code) {
   if (!team || !code) return null;
   const s = normalizeCodeKey(code);
   if (s.startsWith("대") || s.startsWith("휴")) return null;
+  if (isSCode(team.key, dateStr, code)) return null; // 토·휴일 s교번은 행로표가 없어요
 
   const folder = getPathFolder(team.key, dateStr, code).toLowerCase(); 
   const raw = s.replace('~', 'd');
@@ -1251,7 +1252,7 @@ function App() {
         const matched = teamGrid.filter(item => {
           const cellKey = getOverrideKey(teamKey, item.name);
           const displayName = overrides[cellKey]?.alias || item.displayName || item.name;
-          return (displayName || "").toLowerCase().includes(q) || (item.code || "").toLowerCase().includes(q);
+          return (displayName || "").toLowerCase().includes(q) || (item.code || "").toLowerCase().includes(q) || String(showCode(teamKey, browseDate, item.code) || "").toLowerCase() === q;
         }).map(item => ({ 
           ...item, 
           teamKey, 
@@ -1830,9 +1831,9 @@ function App() {
                 </div>
                 <div className="card main-panel" style={swipeStyle}>
                   <div className="center-view">
-                    <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.code || "-"} {weekdayName(homeDate)}</div>
+                    <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{showCode(mySelection?.teamKey || selectedTeam, homeDate, myInfo?.code) || "-"} {weekdayName(homeDate)}</div>
                     <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
-                    {myInfo?.substitutedFrom && <div style={{ fontSize: 13, fontWeight: 800, color: "#e08a20", marginTop: 2 }}>{myInfo.substitutedFrom} → {myInfo.code} 충당</div>}
+                    {myInfo?.substitutedFrom && <div style={{ fontSize: 13, fontWeight: 800, color: "#e08a20", marginTop: 2 }}>{showCode(mySelection?.teamKey || selectedTeam, homeDate, myInfo.substitutedFrom)} → {myInfo.code} 충당</div>}
                     <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
                     {homePathImage && (
                       <div 
@@ -1951,7 +1952,7 @@ function App() {
                           
                           return (
                             <div key={`${item.teamKey}-${item.name}-${idx}`} className={`all-cell-real ${isMine ? "cell-my" : ""} ${isMine && isToday ? "cell-my-today" : ""}`} style={customStyle} onClick={() => handleAllCellTap(item)}>
-                              <div className="all-code">{item.code || "-"}</div>
+                              <div className="all-code">{showCode(item.teamKey || viewTeam, browseDate, item.code) || "-"}</div>
                               <div className="all-name">
                                   {item.displayName || item.name || "-"}
                                   {searchQuery && (
@@ -1968,7 +1969,7 @@ function App() {
                     {searchQuery && pathImage && (
                       <div className="card" style={{ marginTop: 10, padding: 10 }}>
                         <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, textAlign: 'center', color: isDarkMode ? '#94a3b8' : '#64748b' }}>
-                          🔍 {pathTarget?.displayName || pathTarget?.name} ({pathTarget?.code}) 행로표
+                          🔍 {pathTarget?.displayName || pathTarget?.name} ({showCode(pathTeamKey || viewTeam, pathDate, pathTarget?.code)}) 행로표
                         </div>
                         <img src={pathImage} style={{ width: '100%', borderRadius: 16, border: isDarkMode ? '1px solid #334155' : '1px solid #c8d2e3' }} />
                       </div>
@@ -1989,8 +1990,8 @@ function App() {
                             }
                           }} style={{ flex: 1, display: "flex", alignItems: "center", gap: "16px", fontSize: 18 }}>
                             <div style={{ fontWeight: 900, width: 60, color: getDateBasedColor(browseDate), lineHeight: 1.15 }}>
-                              {item.code}
-                              {item.substitutedFrom && <div style={{ fontSize: 11, fontWeight: 800, color: "#e08a20", whiteSpace: "nowrap" }}>{item.substitutedFrom} 충당</div>}
+                              {showCode(item.teamKey || viewTeam, browseDate, item.code)}
+                              {item.substitutedFrom && <div style={{ fontSize: 11, fontWeight: 800, color: "#e08a20", whiteSpace: "nowrap" }}>{showCode(item.teamKey || viewTeam, browseDate, item.substitutedFrom)} 충당</div>}
                             </div>
                             {item.movedTo ? <div style={{ fontWeight: 800, fontSize: 15, color: "#e08a20" }}>→ {item.movedTo} 충당</div> : <div style={{ fontWeight: 800 }}>{item.displayName || item.name}</div>}
                           </div>
@@ -2059,7 +2060,7 @@ function App() {
                           }} onContextMenu={(e) => { e.preventDefault(); openMonthShiftEdit(date, item); }}>
                             <div className={`month-cell-inner ${toneClass}`}>
                               <div className={`month-day ${toneClass}`}>{parseLocalDate(date).getDate()}</div>
-                              <div className={`month-code-line ${toneClass}`} style={{ cursor: "pointer", borderBottom: "1px dashed #ccc", fontWeight: "900" }} onClick={(e) => { e.stopPropagation(); openMonthShiftEdit(date, item); }}>{item?.code || "-"}</div>
+                              <div className={`month-code-line ${toneClass}`} style={{ cursor: "pointer", borderBottom: "1px dashed #ccc", fontWeight: "900" }} onClick={(e) => { e.stopPropagation(); openMonthShiftEdit(date, item); }}>{showCode(targetTeamKey, date, item?.code) || "-"}</div>
                               <div className="month-time-wrap">
                                 <div className={`month-time-line ${toneClass}`}>{startTime || "-"}</div>
                                 <div className={`month-time-line ${toneClass}`}>{endTime || ""}</div>
@@ -2145,7 +2146,7 @@ function App() {
                                     } 
                                   }} className={`${isSelectedCol ? "active-col" : ""}`} style={{ cursor: "pointer", padding: 0, overflow: 'hidden' }}>
                                     <div style={{ ...swipeStyle, padding: '8px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontWeight: "900" }}>
-                                      {item?.code || "-"}
+                                      {showCode(member.team, date, item?.code) || "-"}
                                     </div>
                                   </td>
                                 );
@@ -2487,8 +2488,8 @@ function App() {
             <input className="input" value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder={editingCell?.isMonthEdit ? "예: 15d, 대1, 휴1" : "비워두면 원래 이름 사용"} />
             {!editingCell?.isMonthEdit && editingCell?.fillDate && (
               <>
-                <label className="label" style={{ marginTop: 12 }}>충당 교번 ({editingCell.fillDate} · {editingCell.code})</label>
-                <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '8px' }}>이 날 충당된 교번을 넣으면 그날만 그 교번으로 보여요. 비워두면 {editingCell.code} 그대로예요.</div>
+                <label className="label" style={{ marginTop: 12 }}>충당 교번 ({editingCell.fillDate} · {showCode(editingCell.teamKey || viewTeam, editingCell.fillDate, editingCell.code)})</label>
+                <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '8px' }}>이 날 충당된 교번을 넣으면 그날만 그 교번으로 보여요. 비워두면 {showCode(editingCell.teamKey || viewTeam, editingCell.fillDate, editingCell.code)} 그대로예요.</div>
                 <input className="input" value={editFillCode} onChange={(e) => setEditFillCode(e.target.value)} placeholder="예: 24d" />
               </>
             )}
@@ -2560,8 +2561,8 @@ function App() {
           <div className="viewer-body">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, padding: '0 4px' }}>
               <div>
-                <div className="viewer-info-line" style={{ fontSize: 18, fontWeight: 700 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {pathTarget?.code}</div>
-                {pathTarget?.substitutedFrom && <div className="viewer-info-line" style={{ fontSize: 13, fontWeight: 800, color: "#e08a20" }}>{pathTarget.substitutedFrom} → {pathTarget.code} 충당</div>}
+                <div className="viewer-info-line" style={{ fontSize: 18, fontWeight: 700 }}>{TEAM_LABELS[pathTeamKey || viewTeam]} / {pathTarget?.displayName || pathTarget?.name} / {showCode(pathTeamKey || viewTeam, pathDate, pathTarget?.code)}</div>
+                {pathTarget?.substitutedFrom && <div className="viewer-info-line" style={{ fontSize: 13, fontWeight: 800, color: "#e08a20" }}>{showCode(pathTeamKey || viewTeam, pathDate, pathTarget.substitutedFrom)} → {pathTarget.code} 충당</div>}
                 <div className="viewer-info-line" style={{ color: "#6b7280", marginTop: 4 }}>{pathDate} {weekdayName(pathDate)}</div>
               </div>
               {overrides[getOverrideKey(pathTeamKey || viewTeam, pathTarget?.name)]?.phone && (
@@ -2735,6 +2736,16 @@ function isSCode(teamKey, dateStr, code) {
   const list = (S_CODES[teamKey] || {})[kind] || [];
   return list.includes(normalizeCodeKey(code));
 }
+// 화면에 보여줄 교번 - 토요일·휴일 s교번은 원래 교번 대신 "S1"처럼만 보여줘요 (휴가앱과 같은 번호).
+// 행로표·출퇴근 시간·검색·저장은 전부 원래 교번 그대로 쓰고, 글자만 바꿔 보여줘요.
+function showCode(teamKey, dateStr, code) {
+  const c = String(code || "").trim();
+  if (!c || !teamKey || !dateStr) return code;
+  const kind = guessDayType(dateStr);
+  const list = (S_CODES[teamKey] || {})[kind] || [];
+  const idx = list.indexOf(normalizeCodeKey(c));
+  return idx === -1 ? code : `S${idx + 1}`;
+}
 // 그날 충당 교번을 넣을 수 있는 교번인지 - 대기·휴무, 또는 토요일·휴일의 s교번
 function isFillableCode(teamKey, dateStr, code) {
   const c = String(code || "").trim();
@@ -2758,9 +2769,10 @@ const GUIDE_ITEMS = [
   { q: "처음에 내 교번은 어떻게 설정해요?", a: ["처음 실행하면 나오는 **초기 설정**에서 내 소속과 이름을 고르면 돼요.", "나중에 바꾸려면 홈 화면 **설정 → 내 정보 다시 설정**에서 할 수 있어요."] },
   { q: "다른 날짜 교번은 어떻게 봐요?", a: ["홈 화면의 년·월·일 **+ / -** 버튼으로 날짜를 옮기거나, 날짜 숫자를 눌러 달력에서 바로 고를 수 있어요."] },
   { q: "행로표는 어디서 봐요?", a: ["홈 화면의 행로표 미리보기를 누르면 크게 볼 수 있어요.", "**전체**나 **DIA순서**에서 사람을 눌러도 그 사람의 행로표가 열려요."] },
-  { q: "다른 사람 교번이나 열번은 어떻게 찾아요?", a: ["**전체** 탭에서 그날 모든 사람의 교번을 볼 수 있어요. 위쪽 경산·문양·월배·안심 버튼으로 소속을 바꿀 수 있어요.", "**DIA순서** 탭에서는 교번 순서대로 볼 수 있어요.", "전체 탭의 **🔍 검색**에서는 네 소속을 한 번에 찾아줘요.", "• **이름**: 예) 권재림", "• **교번**: 예) 24d, 대1", "• **열번**: 예) 2134 → 그날 그 열차를 운전하는 사람을 찾아줘요", "새벽 첫 열차(예: 2001~2090)는 전날 야간 근무자(25~ 같은 비번 교번)로 찾아줘요.", "검색 결과에서 사람을 누르면 아래에 그 사람의 행로표가 바로 보여요."] },
+  { q: "다른 사람 교번이나 열번은 어떻게 찾아요?", a: ["**전체** 탭에서 그날 모든 사람의 교번을 볼 수 있어요. 위쪽 경산·문양·월배·안심 버튼으로 소속을 바꿀 수 있어요.", "**DIA순서** 탭에서는 교번 순서대로 볼 수 있어요.", "전체 탭의 **🔍 검색**에서는 네 소속을 한 번에 찾아줘요.", "• **이름**: 예) 권재림", "• **교번**: 예) 24d, 대1, S1 (토·휴일)", "• **열번**: 예) 2134 → 그날 그 열차를 운전하는 사람을 찾아줘요", "새벽 첫 열차(예: 2001~2090)는 전날 야간 근무자(25~ 같은 비번 교번)로 찾아줘요.", "검색 결과에서 사람을 누르면 아래에 그 사람의 행로표가 바로 보여요."] },
   { q: "한 달 근무를 한눈에 보고 싶어요.", a: ["**월교번** 탭에서 내 한 달 교번을 달력으로 볼 수 있어요."] },
-  { q: "대기·휴무일(토·휴일 s교번 포함)에 충당됐어요.", a: ["**월교번**에서 해당 날짜를 눌러 충당 교번(예: 24d)을 넣거나, **전체 → 수정 → 내 칸**의 \"충당 교번\"에 넣으면 돼요.", "그날만 홈 화면, 전체, DIA순서, 행로표가 충당 교번 기준으로 바뀌어요.", "토요일·휴일 s교번도 똑같이 넣으면 돼요. (경산: 토 20d, 휴일 17d~20d / 문양: 토 9d·10d, 휴일 7d~10d)", "내 폰에서만 바뀌고 교번 순서는 그대로예요. 입력칸을 비우고 저장하면 원래대로 돌아가요."] },
+  { q: "토요일·휴일에 교번이 S1처럼 보여요.", a: ["토요일·휴일에 s교번으로 근무하는 교번은 원래 교번 대신 **S1, S2…**로 보여줘요. (휴가앱과 같은 번호)", "• **경산**: 토요일 20d = S1 / 휴일 17d = S1, 18d = S2, 19d = S3, 20d = S4", "• **문양**: 토요일 9d = S1, 10d = S2 / 휴일 7d = S1, 8d = S2, 9d = S3, 10d = S4", "s교번은 **행로표와 출퇴근 시간이 없어요.** 충당 교번을 넣으면 그 교번의 행로표·시간이 보여요.", "교번 순서는 그대로예요."] },
+  { q: "대기·휴무일(토·휴일 s교번 포함)에 충당됐어요.", a: ["**월교번**에서 해당 날짜를 눌러 충당 교번(예: 24d)을 넣거나, **전체 → 수정 → 내 칸**의 \"충당 교번\"에 넣으면 돼요.", "그날만 홈 화면, 전체, DIA순서, 행로표가 충당 교번 기준으로 바뀌어요.", "토요일·휴일 s교번(화면에 **S1·S2…**로 보이는 교번)도 똑같이 넣으면 돼요.", "내 폰에서만 바뀌고 교번 순서는 그대로예요. 입력칸을 비우고 저장하면 원래대로 돌아가요."] },
   { q: "출퇴근 시간이 실제와 달라요.", a: ["**전체 → 수정**을 누르고 그 교번 칸을 누른 뒤 **출퇴근시간 수정 ▾**을 열어요.", "출근·퇴근 시·분을 입력하고 **저장**하면 돼요.", "• 그날이 평일이면 평일, 토요일이면 토요일, 휴일이면 휴일 시간표의 그 교번 시간이 바뀌어요.", "• 그 교번을 타는 날은 누구 칸이든 바뀐 시간으로 보여요.", "• 내 폰에만 저장돼요. 다른 사람 앱에는 반영되지 않아요."] },
   { q: "다른 사람과 교번을 바꾸면 어떻게 되는지 미리 볼 수 있어요?", a: ["**교번변경** 탭에서 사람 A·B와 기간을 고르면, 바꾸기 전·후 교번과 휴양시간(12시간 미만 경고)을 미리 볼 수 있어요.", "미리보기일 뿐이라 실제 변경은 **드림스**에서 해주세요."] },
   { q: "같이 근무하는 사람들 교번을 모아서 보고 싶어요.", a: ["**그룹** 탭에서 그룹을 만들고 인원을 추가하면, 그룹 사람들의 주간 교번을 한 번에 볼 수 있어요."] },
