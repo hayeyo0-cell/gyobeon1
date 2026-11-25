@@ -298,6 +298,45 @@ function clearMySelection() { localStorage.removeItem("gyobeon_my_selection"); }
 // 교번변경 탭 입력값(사람 A/B, 기간) - 앱을 종료했다 다시 열어도 유지되도록 저장해요.
 function loadSwapState() { try { return JSON.parse(localStorage.getItem("gyobeon_swap_state") || "null"); } catch { return null; } }
 function saveSwapState(value) { try { localStorage.setItem("gyobeon_swap_state", JSON.stringify(value || {})); } catch (_) {} }
+
+// ── 확정된 교번변경 (일정 기간만 두 사람이 서로 교번을 바꾼 것) ──
+// 이 폰에만 저장돼요. 시트는 자리가 완전히 바뀔 때만 고치니, 기간 교번변경은 여기서만 반영해요.
+// 확정할 때 그날 두 사람의 원래 교번을 같이 기억해 둬요 → 혹시 그 사이 시트가 바뀌어
+// 원래 교번이 달라진 날은 자동으로 건너뛰어서, 두 번 바뀌어 보이는 일을 막아요.
+// 형식: [{ id, team, nameA, nameB, start, end, codes: { "2026-11-25": ["24d", "17d"] } }]
+const LS_CONFIRMED_SWAPS = "gyobeon_confirmed_swaps";
+function loadConfirmedSwaps() { try { const v = JSON.parse(localStorage.getItem(LS_CONFIRMED_SWAPS) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } }
+function saveConfirmedSwaps(list) { try { localStorage.setItem(LS_CONFIRMED_SWAPS, JSON.stringify(list || [])); } catch (_) {} }
+let CONFIRMED_SWAPS_ = loadConfirmedSwaps();
+function findActiveSwap(teamKey, name, dateStr) {
+  const n = String(name || "").trim();
+  if (!n || !dateStr) return null;
+  for (const sw of CONFIRMED_SWAPS_) {
+    if (sw.team !== teamKey) continue;
+    const pair = sw.codes && sw.codes[dateStr];
+    if (!pair) continue;
+    if (samePersonName(sw.nameA, n)) return { partner: sw.nameB, myOrig: pair[0], partnerOrig: pair[1] };
+    if (samePersonName(sw.nameB, n)) return { partner: sw.nameA, myOrig: pair[1], partnerOrig: pair[0] };
+  }
+  return null;
+}
+// 그 사람의 그날 원래 교번에 교번변경을 적용 - 원래 교번이 확정 때와 다르면(시트가 바뀜) 그대로 둬요
+function applyConfirmedSwap(teamKey, name, dateStr, code) {
+  const hit = findActiveSwap(teamKey, name, dateStr);
+  if (!hit || normalizeCodeKey(code) !== normalizeCodeKey(hit.myOrig)) return { code, from: null, partner: null };
+  return { code: hit.partnerOrig, from: code, partner: hit.partner };
+}
+// 전체·DIA순서용 - 교번 칸은 그대로 두고, 그 칸에 들어가는 사람 이름만 서로 바꿔요
+function applySwapsToGrid(grid, teamKey, dateStr, overrides) {
+  if (!CONFIRMED_SWAPS_.length) return grid;
+  return grid.map((cell) => {
+    if (!cell || !cell.name) return cell;
+    const hit = findActiveSwap(teamKey, cell.name, dateStr);
+    if (!hit || normalizeCodeKey(cell.code) !== normalizeCodeKey(hit.myOrig)) return cell;
+    const ov = (overrides || {})[getOverrideKey(teamKey, hit.partner)] || {};
+    return { ...cell, name: hit.partner, displayName: ov.alias || hit.partner, customColor: ov.color || undefined, swappedFrom: cell.displayName || cell.name };
+  });
+}
 function loadGroups() { try { return JSON.parse(localStorage.getItem("gyobeon_groups") || "{}"); } catch { return {}; } }
 function saveGroups(groups) { localStorage.setItem("gyobeon_groups", JSON.stringify(groups)); }
 function getEmptyRemoteRoster() { return { ks: [], my: [], wb: [], as: [] }; }
@@ -700,6 +739,15 @@ function App() {
     });
   }, [swapNameA, swapNameB, swapStartDate, swapEndDate]);
 
+  // 확정된 교번변경 목록 - 끝난 지 7일 지난 건 자동으로 정리해요
+  const [confirmedSwaps, setConfirmedSwapsState] = useState(() => {
+    const limit = addDays(getKoreaToday(), -7);
+    const kept = CONFIRMED_SWAPS_.filter((sw) => String(sw.end || "") >= limit);
+    if (kept.length !== CONFIRMED_SWAPS_.length) { CONFIRMED_SWAPS_ = kept; saveConfirmedSwaps(kept); }
+    return kept;
+  });
+  const setConfirmedSwaps = (list) => { CONFIRMED_SWAPS_ = list; saveConfirmedSwaps(list); setConfirmedSwapsState(list); };
+
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [initialRemoteChecked, setInitialRemoteChecked] = useState(false);
   const [postSetupRemoteCheckNeeded, setPostSetupRemoteCheckNeeded] = useState(false);
@@ -1093,13 +1141,17 @@ function App() {
     const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(myTeamKey, team, remoteRoster), homeDate); const code = shiftCodeByDays(team, anchor.code, dayOffset); return { code, time: pickWorktime(team, code, homeDate), displayName: resolveDisplayName(overrides, myTeamKey, anchor.code, myName), customColor: override.color };
     })();
     if (!info) return info;
-    // 대기·휴무인 날 충당 교번을 지정해 뒀으면 그날만 충당 교번 기준으로 (출퇴근 시간·행로표 포함)
     const myTeamKey2 = mySelection?.teamKey || selectedTeam;
-    const fill = applyStandbyFill(overrides, myTeamKey2, String(mySelection?.name || "").trim(), homeDate, info.code);
-    if (!fill.from) return info;
     const team2 = effectiveData?.[myTeamKey2];
-    return { ...info, code: fill.code, substitutedFrom: fill.from, time: team2 ? pickWorktime(team2, fill.code, homeDate) : info.time };
-  }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, wordtimeVersion, overrides]);
+    // 확정한 교번변경 기간이면 그날은 바꾼 교번으로 (출퇴근 시간·행로표 포함)
+    let base = info;
+    const sw = applyConfirmedSwap(myTeamKey2, String(mySelection?.name || "").trim(), homeDate, info.code);
+    if (sw.from) base = { ...info, code: sw.code, swappedFrom: sw.from, swapPartner: sw.partner, time: team2 ? pickWorktime(team2, sw.code, homeDate) : info.time };
+    // 대기·휴무인 날 충당 교번을 지정해 뒀으면 그날만 충당 교번 기준으로 (출퇴근 시간·행로표 포함)
+    const fill = applyStandbyFill(overrides, myTeamKey2, String(mySelection?.name || "").trim(), homeDate, base.code);
+    if (!fill.from) return base;
+    return { ...base, code: fill.code, substitutedFrom: fill.from, time: team2 ? pickWorktime(team2, fill.code, homeDate) : base.time };
+  }, [effectiveData, remoteRoster, homeDate, selectedTeam, mySelection, holidayVersion, wordtimeVersion, overrides, confirmedSwaps]);
 
   const homePathImage = useMemo(() => {
     if (!effectiveData || !myInfo?.code) return null;
@@ -1158,6 +1210,9 @@ function App() {
       });
     }
     
+    // 확정한 교번변경 - 그날 바꾼 두 사람의 이름을 서로 바꿔 넣어요
+    grid = applySwapsToGrid(grid, viewTeam, browseDate, overrides);
+
     // 내 칸만 - 대기·휴무인 날 충당 교번을 지정해 뒀으면 그날 충당 교번으로 보여줘요 (다른 사람 칸은 그대로)
     const myNameForFill = String(mySelection?.name || "").trim();
     if (myNameForFill && viewTeam === (mySelection?.teamKey || selectedTeam)) {
@@ -1169,7 +1224,7 @@ function App() {
     }
 
     return grid.map(item => ({ ...item, teamKey: viewTeam })); 
-  }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection, myInfo, selectedTeam]);
+  }, [currentViewTeam, viewTeam, remoteRoster, overrides, browseDate, mySelection, myInfo, selectedTeam, confirmedSwaps]);
 
   const filteredGrid = useMemo(() => {
     if (!effectiveData) return [];
@@ -1248,8 +1303,9 @@ function App() {
         const teamGrid = hasRemoteRosterForTeam(teamKey, remoteRoster)
           ? buildRemoteShiftedGrid(teamKey, team, remoteRoster, browseDate, overrides)
           : buildAssignedGrid(team, teamAnchors[teamKey]?.name, teamAnchors[teamKey]?.code, diffDays(teamAnchors[teamKey]?.anchorDate, browseDate), overrides);
+        const teamGridSw = applySwapsToGrid(teamGrid, teamKey, browseDate, overrides);
 
-        const matched = teamGrid.filter(item => {
+        const matched = teamGridSw.filter(item => {
           const cellKey = getOverrideKey(teamKey, item.name);
           const displayName = overrides[cellKey]?.alias || item.displayName || item.name;
           return (displayName || "").toLowerCase().includes(q) || (item.code || "").toLowerCase().includes(q) || String(showCode(teamKey, browseDate, item.code) || "").toLowerCase() === q;
@@ -1262,7 +1318,7 @@ function App() {
       });
       return crossTeamNameResults;
     }
-  }, [allGrid, searchQuery, browseDate, effectiveData, remoteRoster, overrides, teamAnchors]);
+  }, [allGrid, searchQuery, browseDate, effectiveData, remoteRoster, overrides, teamAnchors, confirmedSwaps]);
 
   const visibleAllGrid = useMemo(() => { return filteredGrid.filter((item) => item && item.name && !shouldHideName(item.name)); }, [filteredGrid]);
 
@@ -1834,6 +1890,7 @@ function App() {
                     <div className="main-code" style={{ color: getDateBasedColor(homeDate) }}>{showCode(mySelection?.teamKey || selectedTeam, homeDate, myInfo?.code) || "-"} {weekdayName(homeDate)}</div>
                     <div className="main-time" style={{ color: getDateBasedColor(homeDate) }}>{myInfo?.time || "----"}</div>
                     {myInfo?.substitutedFrom && <div style={{ fontSize: 13, fontWeight: 800, color: "#e08a20", marginTop: 2 }}>{showCode(mySelection?.teamKey || selectedTeam, homeDate, myInfo.substitutedFrom)} → {myInfo.code} 충당</div>}
+                    {myInfo?.swappedFrom && <div style={{ fontSize: 13, fontWeight: 800, color: "#7c3aed", marginTop: 2 }}>🔁 교번변경 · 원래 {showCode(mySelection?.teamKey || selectedTeam, homeDate, myInfo.swappedFrom)} ({overrides[getOverrideKey(mySelection?.teamKey || selectedTeam, myInfo.swapPartner)]?.alias || myInfo.swapPartner}님과 교환)</div>}
                     <div className="main-subinfo">{TEAM_LABELS[mySelection?.teamKey || selectedTeam] || "-"} / {myInfo?.displayName || mySelection?.name || "-"}</div>
                     {homePathImage && (
                       <div 
@@ -1955,6 +2012,7 @@ function App() {
                               <div className="all-code">{showCode(item.teamKey || viewTeam, browseDate, item.code) || "-"}</div>
                               <div className="all-name">
                                   {item.displayName || item.name || "-"}
+                                  {item.swappedFrom && <div style={{ fontSize: '9px', fontWeight: 800, color: "#7c3aed" }}>🔁교번변경</div>}
                                   {searchQuery && (
                                     <div style={{fontSize: '9px', opacity: 0.8, fontWeight: "600"}}>
                                       [{TEAM_LABELS[item.teamKey]}]
@@ -1993,7 +2051,7 @@ function App() {
                               {showCode(item.teamKey || viewTeam, browseDate, item.code)}
                               {item.substitutedFrom && <div style={{ fontSize: 11, fontWeight: 800, color: "#e08a20", whiteSpace: "nowrap" }}>{showCode(item.teamKey || viewTeam, browseDate, item.substitutedFrom)} 충당</div>}
                             </div>
-                            {item.movedTo ? <div style={{ fontWeight: 800, fontSize: 15, color: "#e08a20" }}>→ {item.movedTo} 충당</div> : <div style={{ fontWeight: 800 }}>{item.displayName || item.name}</div>}
+                            {item.movedTo ? <div style={{ fontWeight: 800, fontSize: 15, color: "#e08a20" }}>→ {item.movedTo} 충당</div> : <div style={{ fontWeight: 800 }}>{item.displayName || item.name}{item.swappedFrom && <div style={{ fontSize: 11, fontWeight: 800, color: "#7c3aed" }}>🔁 {item.swappedFrom}님과 교번변경</div>}</div>}
                           </div>
                           {hasPhone && (
                             <a href={`tel:${overrides[cellKey].phone}`} style={{ 
@@ -2060,7 +2118,7 @@ function App() {
                           }} onContextMenu={(e) => { e.preventDefault(); openMonthShiftEdit(date, item); }}>
                             <div className={`month-cell-inner ${toneClass}`}>
                               <div className={`month-day ${toneClass}`}>{parseLocalDate(date).getDate()}</div>
-                              <div className={`month-code-line ${toneClass}`} style={{ cursor: "pointer", borderBottom: "1px dashed #ccc", fontWeight: "900" }} onClick={(e) => { e.stopPropagation(); openMonthShiftEdit(date, item); }}>{showCode(targetTeamKey, date, item?.code) || "-"}</div>
+                              <div className={`month-code-line ${toneClass}`} style={{ cursor: "pointer", borderBottom: "1px dashed #ccc", fontWeight: "900" }} onClick={(e) => { e.stopPropagation(); openMonthShiftEdit(date, item); }}>{item?.swappedFrom ? "🔁" : ""}{showCode(targetTeamKey, date, item?.code) || "-"}</div>
                               <div className="month-time-wrap">
                                 <div className={`month-time-line ${toneClass}`}>{startTime || "-"}</div>
                                 <div className={`month-time-line ${toneClass}`}>{endTime || ""}</div>
@@ -2162,10 +2220,37 @@ function App() {
             )}
             {activeTab === "swap" && (
               <div className="tab-page" style={{ padding: "12px" }}>
+                {confirmedSwaps.length > 0 && (
+                  <div style={{ background: "#f5f3ff", border: "1px solid #c4b5fd", borderRadius: "10px", padding: "10px 12px", marginBottom: "14px" }}>
+                    <div style={{ fontWeight: 800, fontSize: "13px", color: "#5b21b6", marginBottom: "6px" }}>🔁 확정된 교번변경</div>
+                    {confirmedSwaps.map((sw) => {
+                      const nm = (n) => overrides[getOverrideKey(sw.team, n)]?.alias || n;
+                      const ended = sw.end < todayStr;
+                      return (
+                        <div key={sw.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "5px 0", borderTop: "1px dashed #ddd6fe", fontSize: "13px", opacity: ended ? 0.55 : 1 }}>
+                          <div style={{ flex: 1, fontWeight: 700 }}>
+                            {nm(sw.nameA)} ↔ {nm(sw.nameB)}
+                            <div style={{ fontSize: "12px", fontWeight: 600, color: "#6b7280" }}>{formatMonthDay(sw.start)} ~ {formatMonthDay(sw.end)}{ended ? " (끝남)" : ""}</div>
+                          </div>
+                          <button
+                            className="modal-btn"
+                            style={{ width: "auto", height: "30px", minWidth: "0", padding: "0 10px", margin: 0, fontSize: "12px", color: "#ef4444", borderColor: "#fca5a5", background: "#fef2f2" }}
+                            onClick={() => { if (window.confirm(`${nm(sw.nameA)} ↔ ${nm(sw.nameB)} 교번변경을 취소할까요?\n원래 교번으로 돌아가요.`)) setConfirmedSwaps(confirmedSwaps.filter((x) => x.id !== sw.id)); }}
+                          >
+                            취소
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <div style={{ fontSize: "13px", color: "#666", marginBottom: "14px", lineHeight: "1.5" }}>
                   두 사람과 기간을 지정하면, 서로 교번을 바꿨을 때 각자 어떤 근무가 되는지 미리 볼 수 있어요.
                   <br />
-                  ⚠️ 여기서는 아무것도 실제로 바뀌지 않아요 - 실제 교번변경은 드림스에서 결재해주세요.
+                  결과 아래 <b>교번변경 확정</b>을 누르면 그 기간 동안 홈·전체·DIA순서·월교번이 바뀐 교번으로 보여요. (이 폰에만 반영돼요)
+                  <br />
+                  ⚠️ 실제 교번변경은 드림스에서 결재해주세요.
                 </div>
 
                 <label className="label" style={{ fontSize: "12px", marginBottom: "4px" }}>사람 A</label>
@@ -2214,16 +2299,16 @@ function App() {
                   const team = effectiveData?.[swapTeam];
                   const displayA = swapCandidatesA.find((p) => p.name === swapNameA)?.displayName || swapNameA;
                   const displayB = swapCandidatesB.find((p) => p.name === swapNameB)?.displayName || swapNameB;
-                  const codesA = swapDateRange.map((date) => getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, date, overrides, mySelection)?.code || "-");
-                  const codesB = swapDateRange.map((date) => getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, date, overrides, mySelection)?.code || "-");
+                  const codesA = swapDateRange.map((date) => getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, date, overrides, mySelection, { noSwap: true })?.code || "-");
+                  const codesB = swapDateRange.map((date) => getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, date, overrides, mySelection, { noSwap: true })?.code || "-");
                   // 교환 기간 바로 전날/다음날 - 실제로는 교환 대상이 아니라 각자 원래 근무 그대로예요.
                   // 교환한 날짜 앞뒤로 무리 없이 이어지는지, 특히 휴양시간이 충분한지 참고하려고 같이 보여줘요.
                   const dayBefore = addDays(swapDateRange[0], -1);
                   const dayAfter = addDays(swapDateRange[swapDateRange.length - 1], 1);
-                  const codeBeforeA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, dayBefore, overrides, mySelection)?.code || "-";
-                  const codeBeforeB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, dayBefore, overrides, mySelection)?.code || "-";
-                  const codeAfterA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, dayAfter, overrides, mySelection)?.code || "-";
-                  const codeAfterB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, dayAfter, overrides, mySelection)?.code || "-";
+                  const codeBeforeA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, dayBefore, overrides, mySelection, { noSwap: true })?.code || "-";
+                  const codeBeforeB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, dayBefore, overrides, mySelection, { noSwap: true })?.code || "-";
+                  const codeAfterA = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameA, dayAfter, overrides, mySelection, { noSwap: true })?.code || "-";
+                  const codeAfterB = getPersonGyobunForDate(effectiveData, remoteRoster, swapTeam, swapNameB, dayAfter, overrides, mySelection, { noSwap: true })?.code || "-";
 
                   // 전날~다음날까지 전체 날짜 목록과, 사람별/변경전후별 전체 교번 목록을 만들어서
                   // 연속된 두 날짜 사이 휴양시간이 12시간 미만인 지점을 찾아요.
@@ -2314,6 +2399,24 @@ function App() {
                       )}
                       {renderSnapshotTable("변경 전", (i) => beforeCodesA[i], (i) => beforeCodesB[i], violBeforeA, violBeforeB)}
                       {renderSnapshotTable("변경 후 (교환 시뮬레이션)", (i) => afterCodesA[i], (i) => afterCodesB[i], violAfterA, violAfterB)}
+                      <button
+                        className="modal-btn"
+                        style={{ width: "100%", height: "44px", margin: "0 0 8px", fontSize: "15px", fontWeight: 800, color: "#fff", background: "#7c3aed", borderColor: "#7c3aed" }}
+                        onClick={() => {
+                          const start = swapDateRange[0];
+                          const end = swapDateRange[swapDateRange.length - 1];
+                          const clash = confirmedSwaps.find((sw) => sw.team === swapTeam && !(sw.end < start || sw.start > end) && [sw.nameA, sw.nameB].some((n) => samePersonName(n, swapNameA) || samePersonName(n, swapNameB)));
+                          if (clash) { alert("이 기간에 이미 확정된 교번변경이 있는 사람이 있어요.\n위 목록에서 먼저 취소한 뒤 다시 확정해주세요."); return; }
+                          const violMsg = violAfterA.some(Boolean) || violAfterB.some(Boolean) ? "\n\n⚠️ 휴양시간 12시간 미만인 날이 있어요." : "";
+                          if (!window.confirm(`${displayA} ↔ ${displayB}\n${formatMonthDay(start)} ~ ${formatMonthDay(end)} 교번변경을 확정할까요?\n\n이 폰의 홈·전체·DIA순서·월교번에 바뀐 교번으로 보여요.${violMsg}`)) return;
+                          const codes = {};
+                          swapDateRange.forEach((date, i) => { codes[date] = [codesA[i], codesB[i]]; });
+                          setConfirmedSwaps([...confirmedSwaps, { id: String(Date.now()), team: swapTeam, nameA: swapNameA, nameB: swapNameB, start, end, codes }]);
+                          alert("교번변경을 확정했어요.");
+                        }}
+                      >
+                        ✅ 교번변경 확정
+                      </button>
                     </>
                   );
                 })()}
@@ -2774,7 +2877,8 @@ const GUIDE_ITEMS = [
   { q: "토요일·휴일에 교번이 S1처럼 보여요.", a: ["토요일·휴일에 s교번으로 근무하는 교번은 원래 교번 대신 **S1, S2…**로 보여줘요. (휴가앱과 같은 번호)", "• **경산**: 토요일 20d = S1 / 휴일 17d = S1, 18d = S2, 19d = S3, 20d = S4", "• **문양**: 토요일 9d = S1, 10d = S2 / 휴일 7d = S1, 8d = S2, 9d = S3, 10d = S4", "s교번은 **행로표와 출퇴근 시간이 없어요.** 충당 교번을 넣으면 그 교번의 행로표·시간이 보여요.", "교번 순서는 그대로예요."] },
   { q: "대기·휴무일(토·휴일 s교번 포함)에 충당됐어요.", a: ["**월교번**에서 해당 날짜를 눌러 충당 교번(예: 24d)을 넣거나, **전체 → 수정 → 내 칸**의 \"충당 교번\"에 넣으면 돼요.", "그날만 홈 화면, 전체, DIA순서, 행로표가 충당 교번 기준으로 바뀌어요.", "토요일·휴일 s교번(화면에 **S1·S2…**로 보이는 교번)도 똑같이 넣으면 돼요.", "내 폰에서만 바뀌고 교번 순서는 그대로예요. 입력칸을 비우고 저장하면 원래대로 돌아가요."] },
   { q: "출퇴근 시간이 실제와 달라요.", a: ["**전체 → 수정**을 누르고 그 교번 칸을 누른 뒤 **출퇴근시간 수정 ▾**을 열어요.", "출근·퇴근 시·분을 입력하고 **저장**하면 돼요.", "• 그날이 평일이면 평일, 토요일이면 토요일, 휴일이면 휴일 시간표의 그 교번 시간이 바뀌어요.", "• 그 교번을 타는 날은 누구 칸이든 바뀐 시간으로 보여요.", "• 내 폰에만 저장돼요. 다른 사람 앱에는 반영되지 않아요."] },
-  { q: "다른 사람과 교번을 바꾸면 어떻게 되는지 미리 볼 수 있어요?", a: ["**교번변경** 탭에서 사람 A·B와 기간을 고르면, 바꾸기 전·후 교번과 휴양시간(12시간 미만 경고)을 미리 볼 수 있어요.", "미리보기일 뿐이라 실제 변경은 **드림스**에서 해주세요."] },
+  { q: "다른 사람과 교번을 바꾸면 어떻게 되는지 미리 볼 수 있어요?", a: ["**교번변경** 탭에서 사람 A·B와 기간을 고르면, 바꾸기 전·후 교번과 휴양시간(12시간 미만 경고)을 미리 볼 수 있어요.", "미리 본 뒤 **✅ 교번변경 확정**을 누르면 앱 화면에도 반영돼요. (아래 항목 참고)", "실제 교번변경 결재는 **드림스**에서 해주세요."] },
+  { q: "교번변경을 앱에 반영하고 싶어요.", a: ["아래 **교번변경** 탭에서 두 사람과 기간을 고르고, 결과 아래 **✅ 교번변경 확정**을 누르세요.", "그 기간 동안 **홈·전체·DIA순서·월교번**이 바뀐 교번으로 보여요. 바뀐 날에는 🔁 표시가 붙어요.", "**이 폰에만** 반영돼요. 상대방도 보려면 각자 폰에서 확정해야 해요.", "취소는 교번변경 탭 맨 위 **확정된 교번변경** 목록에서 할 수 있어요. 끝난 지 7일 지나면 목록에서 자동으로 사라져요.", "실제 교번변경 결재는 드림스에서 해주세요."] },
   { q: "같이 근무하는 사람들 교번을 모아서 보고 싶어요.", a: ["**그룹** 탭에서 그룹을 만들고 인원을 추가하면, 그룹 사람들의 주간 교번을 한 번에 볼 수 있어요."] },
   { q: "행로표에 메모를 남길 수 있어요?", a: ["행로표 화면 아래 **📝 메모**에 적어두면, 그 날짜·교번 행로표를 열 때마다 다시 보여요."] },
   { q: "전화번호나 표시 색을 바꾸고 싶어요.", a: ["**전체 → 수정**을 누르고 사람 칸을 누르면 전화번호, 표시 이름, 색상을 바꿀 수 있어요.", "전화번호를 넣어두면 행로표에서 **📞 전화연결**로 바로 걸 수 있어요. 내 폰에만 저장돼요."] },
@@ -2785,7 +2889,7 @@ function renderGuideText(text) {
   return String(text).split(/(\*\*[^*]+\*\*)/).filter(Boolean).map((part, i) => part.startsWith("**") && part.endsWith("**") ? <strong key={i} style={{ color: "#2563eb" }}>{part.slice(2, -2)}</strong> : part);
 }
 
-function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, overrides = {}, mySelection = null) {
+function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, overrides = {}, mySelection = null, opts = {}) {
   if (!data) return null;
   const team = data[teamKey]; if (!team) return null;
   const override = overrides[getOverrideKey(teamKey, name)] || {};
@@ -2796,6 +2900,10 @@ function getPersonGyobunForDate(data, remoteRoster, teamKey, name, dateStr, over
   const anchor = buildAnchorForIdentity(teamKey, team, remoteRoster, name, mySelection); if (!anchor?.code) return null;
   const dayOffset = diffDays(anchor.anchorDate || getResolvedBaseDate(teamKey, team, remoteRoster), dateStr);
   const code = shiftCodeByDays(team, anchor.code, dayOffset);
+  if (!opts.noSwap) {
+    const sw = applyConfirmedSwap(teamKey, name, dateStr, code);
+    if (sw.from) return { code: sw.code, name, displayName: resolveDisplayName(overrides, teamKey, anchor.code, name), baseCode: anchor.code, teamKey: teamKey, swappedFrom: sw.from, swapPartner: sw.partner };
+  }
   return { code, name, displayName: resolveDisplayName(overrides, teamKey, anchor.code, name), baseCode: anchor.code, teamKey: teamKey };
 }
 
