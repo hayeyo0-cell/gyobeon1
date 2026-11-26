@@ -28,12 +28,12 @@ const ADMIN_NAME = ["권재림", "조영빈"];
 
 // ── 공용 기본자료(ZIP) ──
 // 관리자가 깃허브 data 폴더에 올린 ZIP 조각들을 모두가 자동으로 받아 써요.
-// 깃허브 웹 업로드는 파일당 25MB까지라, 관리자 메뉴의 "공용 ZIP 만들기"로 20MB씩 나눠서 올려요.
+// 깃허브 웹 업로드는 큰 파일을 거절해서, 관리자 메뉴의 "공용 ZIP 만들기"로 10MB씩 나눠서 올려요.
 // data/gyobeon-data.json = { version, name, size, parts: ["gyobeon-data-1.bin", ...] }
 const SHARED_ZIP_DIR = "data/";
 const SHARED_ZIP_MANIFEST = "data/gyobeon-data.json";
 const LS_SHARED_ZIP_VERSION = "gyobeon_shared_zip_version";
-const SHARED_ZIP_CHUNK = 20 * 1024 * 1024;
+const SHARED_ZIP_CHUNK = 10 * 1024 * 1024; // 깃허브 웹 업로드가 큰 파일을 거절하는 경우가 있어 10MB씩
 function formatMB(bytes) { return `${Math.round((Number(bytes) || 0) / 1024 / 1024)}MB`; }
 async function fetchSharedZipManifest(timeoutMs = 6000) {
   try {
@@ -1505,7 +1505,7 @@ function App() {
       setSharedZipBusy("");
     }
   }
-  // 관리자 - 52MB 같은 큰 ZIP을 20MB 조각 + 목록(json)으로 나눠서, 깃허브 data 폴더에 올릴 수 있게 해줘요
+  // 관리자 - 52MB 같은 큰 ZIP을 10MB 조각 + 목록(json)으로 나눠서, 깃허브 data 폴더에 올릴 수 있게 해줘요
   function handleMakeSharedZip(event) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -2650,7 +2650,7 @@ function App() {
                 </div>
                 <label className="label" style={{ marginTop: 16 }}>공용 ZIP 만들기 (모두에게 배포)</label>
                 <input type="file" accept=".zip" className="input" onChange={handleMakeSharedZip} />
-                <div className="help-text">ZIP을 고르면 20MB 조각과 목록 파일로 나눠줘요. 아래 파일을 모두 내려받아, 깃허브 교번앱 저장소의 <b>data</b> 폴더에 올려주세요. <b>gyobeon-data.json은 맨 마지막에</b> 올려주세요.</div>
+                <div className="help-text">ZIP을 고르면 10MB 조각과 목록 파일로 나눠줘요. 아래 파일을 모두 내려받아, 깃허브 교번앱 저장소의 <b>data</b> 폴더에 올려주세요. <b>gyobeon-data.json은 맨 마지막에</b> 올려주세요.</div>
                 {splitFiles.length > 0 && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
                     <button className="modal-btn primary" style={{ margin: 0 }} onClick={() => {
