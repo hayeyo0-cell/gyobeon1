@@ -25,6 +25,41 @@ const NIGHT_RANGE_BY_TEAM = { ks: { start: 21, end: 29 }, my: { start: 24, end: 
 
 const ADMIN_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw8NMVjH3J_Mt7SBymWOg44zvD4gd4GXkQB3r95QTl63M3aWqtf-OglLrG2rQPH7J6UjA/exec";
 const ADMIN_NAME = ["권재림", "조영빈"];
+
+// ── 공용 기본자료(ZIP) ──
+// 관리자가 깃허브 data 폴더에 올린 ZIP 조각들을 모두가 자동으로 받아 써요.
+// 깃허브 웹 업로드는 파일당 25MB까지라, 관리자 메뉴의 "공용 ZIP 만들기"로 20MB씩 나눠서 올려요.
+// data/gyobeon-data.json = { version, name, size, parts: ["gyobeon-data-1.bin", ...] }
+const SHARED_ZIP_DIR = "data/";
+const SHARED_ZIP_MANIFEST = "data/gyobeon-data.json";
+const LS_SHARED_ZIP_VERSION = "gyobeon_shared_zip_version";
+const SHARED_ZIP_CHUNK = 20 * 1024 * 1024;
+function formatMB(bytes) { return `${Math.round((Number(bytes) || 0) / 1024 / 1024)}MB`; }
+async function fetchSharedZipManifest(timeoutMs = 6000) {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    const res = await fetch(`${SHARED_ZIP_MANIFEST}?t=${Date.now()}`, { cache: "no-store", signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json || !json.version || !Array.isArray(json.parts) || !json.parts.length) return null;
+    return json;
+  } catch (e) { return null; }
+}
+async function downloadSharedZip(manifest, onProgress) {
+  const buffers = [];
+  for (let i = 0; i < manifest.parts.length; i++) {
+    if (onProgress) onProgress(i, manifest.parts.length);
+    const res = await fetch(`${SHARED_ZIP_DIR}${manifest.parts[i]}?v=${encodeURIComponent(manifest.version)}`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`${manifest.parts[i]} 받기 실패 (${res.status})`);
+    buffers.push(await res.arrayBuffer());
+  }
+  const blob = new Blob(buffers, { type: "application/zip" });
+  if (manifest.size && blob.size !== manifest.size) throw new Error("받은 파일 크기가 맞지 않아요. 잠시 뒤 다시 시도해주세요.");
+  try { blob.name = manifest.name || "gyobeon-data.zip"; } catch (e) {}
+  return blob;
+}
 const ADMIN_PASSWORD = "ks5826";
 
 let SHARED_REMOTE_BASE_DATE = "";
@@ -665,6 +700,12 @@ function App() {
   const [remoteLoading, setRemoteLoading] = useState(false);
   const [pendingRosterJson, setPendingRosterJson] = useState(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
+  // 공용 기본자료 - sharedZip: 새로 받을 게 있는 목록(manifest), sharedZipChecked: 확인 끝났는지
+  const [sharedZip, setSharedZip] = useState(null);
+  const [sharedZipChecked, setSharedZipChecked] = useState(false);
+  const [sharedZipBusy, setSharedZipBusy] = useState("");
+  const [sharedZipVersion, setSharedZipVersion] = useState(() => { try { return localStorage.getItem(LS_SHARED_ZIP_VERSION) || ""; } catch (e) { return ""; } });
+  const [splitFiles, setSplitFiles] = useState([]);
   const [lastSeenPublishedAt, setLastSeenPublishedAt] = useState(localStorage.getItem(LS_LAST_SEEN_PUBLISHED_AT) || "");
   const [holidayVersion, setHolidayVersion] = useState(0);
   const [wordtimeVersion, setWorktimeVersion] = useState(0);
@@ -1004,9 +1045,11 @@ function App() {
         const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData || fullData, rosterForApply || getEmptyRemoteRoster(), defaultTeam, defaultName, mySelection);
         setTeamAnchors(autoAnchors); setDraftTeam(defaultTeam); setDraftName(""); setDraftCode(""); setSelectedTeam(defaultTeam);
       }
+      return true;
     } catch (e) {
       setError("ZIP 파일을 읽는 중 오류가 발생했습니다.");
       if (showBusy) setLoading(false);
+      return false;
     }
   }
 
@@ -1119,6 +1162,8 @@ function App() {
   useEffect(() => { if (pathOpen && pathDate && pathTarget?.code && mySelection?.name) { setMemoText(loadMemo(mySelection.name, pathDate, pathTarget.code)); } }, [pathOpen, pathDate, pathTarget?.code, mySelection?.name]);
   useEffect(() => { if (editOpen && (!window.history.state || window.history.state.layer !== "edit")) window.history.pushState({ __gyobeon: true, layer: "edit" }, ""); }, [editOpen]);
   useEffect(() => { if (showUpdatePopup && (!window.history.state || window.history.state.layer !== "update")) window.history.pushState({ __gyobeon: true, layer: "update" }, ""); }, [showUpdatePopup]);
+  // 앱 켤 때 공용 기본자료가 새로 올라왔는지 확인해요
+  useEffect(() => { checkSharedZip(false); }, []);
   useEffect(() => { if (showGroupAdd && (!window.history.state || window.history.state.layer !== "groupAdd")) window.history.pushState({ __gyobeon: true, layer: "groupAdd" }, ""); }, [showGroupAdd]);
   useEffect(() => { if (showGuide && (!window.history.state || window.history.state.layer !== "guide")) window.history.pushState({ __gyobeon: true, layer: "guide" }, ""); }, [showGuide]);
   useEffect(() => { if (showSettings && (!window.history.state || window.history.state.layer !== "settings")) window.history.pushState({ __gyobeon: true, layer: "settings" }, ""); }, [showSettings]);
@@ -1429,6 +1474,55 @@ function App() {
     setSearchQuery(""); setShowSearch(false);
   }
 
+  // 공용 기본자료 확인 - 앱 켤 때 한 번, 설정의 "다시 받기"에서도 써요
+  async function checkSharedZip(force = false) {
+    const m = await fetchSharedZipManifest();
+    setSharedZipChecked(true);
+    if (!m) { if (force) alert("올라와 있는 공용 기본자료가 없어요."); return null; }
+    if (!force && m.version === sharedZipVersion) { setSharedZip(null); return null; }
+    setSharedZip(m);
+    return m;
+  }
+  async function applySharedZip(manifest) {
+    const m = manifest || sharedZip;
+    if (!m || sharedZipBusy) return;
+    const first = !data;
+    try {
+      setSharedZipBusy("받는 중...");
+      const blob = await downloadSharedZip(m, (i, n) => setSharedZipBusy(`받는 중... (${i + 1}/${n})`));
+      setSharedZipBusy("등록 중...");
+      setZipName(m.name || "공용 기본자료");
+      if (first) setInitialRemoteChecked(false);
+      const ok = await parseAndSetZip(blob, true, !first, remoteRoster, first);
+      if (!ok) throw new Error("ZIP 파일을 읽지 못했어요.");
+      try { localStorage.setItem(LS_SHARED_ZIP_VERSION, m.version); } catch (e) {}
+      setSharedZipVersion(m.version);
+      setSharedZip(null);
+      if (!first) alert("기본자료를 새로 받았어요.");
+    } catch (e) {
+      alert(`기본자료 받기 실패: ${e.message || e}`);
+    } finally {
+      setSharedZipBusy("");
+    }
+  }
+  // 관리자 - 52MB 같은 큰 ZIP을 20MB 조각 + 목록(json)으로 나눠서, 깃허브 data 폴더에 올릴 수 있게 해줘요
+  function handleMakeSharedZip(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    splitFiles.forEach((f) => { try { URL.revokeObjectURL(f.url); } catch (e) {} });
+    const kst = new Date(Date.now() + 9 * 3600 * 1000).toISOString();
+    const version = `${kst.slice(0, 10)} ${kst.slice(11, 16)}`;
+    const parts = []; const out = [];
+    for (let start = 0, n = 1; start < file.size; start += SHARED_ZIP_CHUNK, n++) {
+      const name = `gyobeon-data-${n}.bin`;
+      parts.push(name);
+      out.push({ name, size: Math.min(SHARED_ZIP_CHUNK, file.size - start), url: URL.createObjectURL(file.slice(start, start + SHARED_ZIP_CHUNK)) });
+    }
+    const manifest = { version, name: file.name, size: file.size, parts };
+    out.push({ name: "gyobeon-data.json", size: 0, url: URL.createObjectURL(new Blob([JSON.stringify(manifest, null, 2)], { type: "application/json" })) });
+    setSplitFiles(out);
+    event.target.value = "";
+  }
   async function handleZipUpload(event) { const file = event.target.files?.[0]; if (!file) return; setZipName(file.name); setInitialRemoteChecked(false); await parseAndSetZip(file, true, false, remoteRoster, true); }
   
   async function saveSharedConfig() {
@@ -1818,9 +1912,23 @@ function App() {
       >
         {!effectiveData ? (
           <div className="card">
-            <div className="card-title">기본자료 ZIP 등록</div>
-            <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
-            <div className="help-text">처음 한 번만 ZIP 파일을 등록하면 이후에는 자동으로 저장되어 계속 사용할 수 있습니다.</div>
+            <div className="card-title">기본자료 받기</div>
+            {!sharedZipChecked ? (
+              <div className="help-text">기본자료를 확인하고 있어요...</div>
+            ) : sharedZip ? (
+              <>
+                <button className="modal-btn primary" style={{ width: "100%", height: 50, fontSize: 16, fontWeight: 800 }} onClick={() => applySharedZip()} disabled={!!sharedZipBusy || loading}>
+                  {sharedZipBusy || `📥 기본자료 받기 (약 ${formatMB(sharedZip.size)})`}
+                </button>
+                <div className="help-text">처음 한 번만 받으면 이후에는 폰에 저장되어 계속 사용할 수 있어요. 데이터가 많이 들어서 <b>와이파이에서 받는 걸 추천해요.</b></div>
+              </>
+            ) : (
+              <div className="help-text">공용 기본자료를 불러오지 못했어요. 인터넷 연결을 확인하고 앱을 다시 켜주세요.</div>
+            )}
+            <details style={{ marginTop: 14 }}>
+              <summary className="help-text" style={{ cursor: "pointer" }}>ZIP 파일을 직접 등록하기</summary>
+              <input type="file" accept=".zip" className="input" style={{ marginTop: 8 }} onChange={handleZipUpload} />
+            </details>
             {zipName && <div className="help-text">현재 파일: {zipName}</div>}
             {error && <div className="help-text" style={{ color: "#dc2626" }}>{error}</div>}
           </div>
@@ -2475,8 +2583,19 @@ function App() {
               <span>{isDarkMode ? "🌙 다크 모드 켜짐" : "☀️ 라이트 모드 켜짐"}</span>
               <span style={{ fontSize: '18px' }}>{isDarkMode ? "✅" : "☑️"}</span>
             </button>
-            <label className="label">기본자료 ZIP 등록 / 변경</label>
-            <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
+            <label className="label">기본자료</label>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
+              <div className="help-text" style={{ flex: 1, margin: 0 }}>{sharedZipVersion ? `공용 기본자료 · ${sharedZipVersion}` : (zipName || "직접 등록한 ZIP")}</div>
+              <button className="modal-btn" style={{ width: "auto", height: 36, padding: "0 12px", margin: 0, fontSize: 13 }} disabled={!!sharedZipBusy} onClick={async () => { const m = await checkSharedZip(true); if (m && window.confirm(`기본자료를 다시 받을까요? (약 ${formatMB(m.size)})`)) applySharedZip(m); }}>
+                {sharedZipBusy || "🔄 다시 받기"}
+              </button>
+            </div>
+            {isAdminUser && (
+              <>
+                <label className="label" style={{ marginTop: 8 }}>ZIP 직접 등록 (관리자 · 이 폰에만)</label>
+                <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
+              </>
+            )}
             {!allowProfileEdit ? (
               <>
                 <label className="label" style={{ marginTop: 14 }}>내 정보</label>
@@ -2529,6 +2648,27 @@ function App() {
                   <button className="modal-btn" onClick={publishRoster} disabled={savingSharedConfig}>{savingSharedConfig ? "처리중..." : "현재배정 배포"}</button>
                   <button className="modal-btn primary" onClick={saveSharedConfig} disabled={savingSharedConfig}>{savingSharedConfig ? "저장중..." : "공용 기준일 저장"}</button>
                 </div>
+                <label className="label" style={{ marginTop: 16 }}>공용 ZIP 만들기 (모두에게 배포)</label>
+                <input type="file" accept=".zip" className="input" onChange={handleMakeSharedZip} />
+                <div className="help-text">ZIP을 고르면 20MB 조각과 목록 파일로 나눠줘요. 아래 파일을 모두 내려받아, 깃허브 교번앱 저장소의 <b>data</b> 폴더에 올려주세요. <b>gyobeon-data.json은 맨 마지막에</b> 올려주세요.</div>
+                {splitFiles.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                    <button className="modal-btn primary" style={{ margin: 0 }} onClick={() => {
+                      // 하나씩 차례로 내려받아요 (목록 json은 맨 마지막). 처음엔 "여러 파일 다운로드 허용"을 물어볼 수 있어요.
+                      splitFiles.forEach((f, i) => setTimeout(() => {
+                        const a = document.createElement("a");
+                        a.href = f.url; a.download = f.name; a.style.display = "none";
+                        document.body.appendChild(a); a.click(); a.remove();
+                      }, i * 1200));
+                    }}>⬇️ 한 번에 모두 내려받기 ({splitFiles.length}개)</button>
+                    <div className="help-text" style={{ margin: 0 }}>"여러 파일 다운로드"를 허용할지 물어보면 <b>허용</b>을 눌러주세요. 빠진 파일은 아래에서 하나씩 받을 수 있어요.</div>
+                    {splitFiles.map((f) => (
+                      <a key={f.name} href={f.url} download={f.name} className="modal-btn" style={{ margin: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px", textDecoration: "none" }}>
+                        <span>⬇️ {f.name}</span><span style={{ fontSize: 12, opacity: 0.7 }}>{f.size ? formatMB(f.size) : "목록"}</span>
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <div className="modal-actions">
@@ -2782,6 +2922,23 @@ function App() {
                 ⚠️ 메모를 사용하려면 설정에서 내 정보를 먼저 입력해주세요.
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {data && sharedZip && !showUpdatePopup && (
+        <div className="modal-backdrop">
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">📦 기본자료 업데이트</div>
+            <div className="notice-box" style={{ lineHeight: 1.6 }}>
+              새 기본자료가 올라왔어요. ({sharedZip.version})<br />
+              약 <b>{formatMB(sharedZip.size)}</b>이라 <b>와이파이에서 받는 걸 추천해요.</b><br />
+              내 이름·교번·수정 내용은 그대로 유지돼요.
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn" disabled={!!sharedZipBusy} onClick={() => setSharedZip(null)}>나중에</button>
+              <button className="modal-btn primary" disabled={!!sharedZipBusy} onClick={() => applySharedZip()}>{sharedZipBusy || "지금 받기"}</button>
+            </div>
           </div>
         </div>
       )}
