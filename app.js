@@ -709,6 +709,7 @@ function App() {
   const sharedZipBusyRef = useRef(false);
   const [localRestoreDone, setLocalRestoreDone] = useState(false); // 폰에 저장된 자료 불러오기가 끝났는지
   const [sharedZipFailed, setSharedZipFailed] = useState(false);
+  const [frameChanged, setFrameChanged] = useState(false); // 새 기본자료에서 내 소속 교번틀이 바뀜 → 내 교번 다시 확인
   const [lastSeenPublishedAt, setLastSeenPublishedAt] = useState(localStorage.getItem(LS_LAST_SEEN_PUBLISHED_AT) || "");
   const [holidayVersion, setHolidayVersion] = useState(0);
   const [wordtimeVersion, setWorktimeVersion] = useState(0);
@@ -1048,7 +1049,7 @@ function App() {
         const autoAnchors = buildAllTeamsAutoAnchorsFromIdentity(effectiveData || fullData, rosterForApply || getEmptyRemoteRoster(), defaultTeam, defaultName, mySelection);
         setTeamAnchors(autoAnchors); setDraftTeam(defaultTeam); setDraftName(""); setDraftCode(""); setSelectedTeam(defaultTeam);
       }
-      return true;
+      return fullData;
     } catch (e) {
       setError("ZIP 파일을 읽는 중 오류가 발생했습니다.");
       if (showBusy) setLoading(false);
@@ -1506,8 +1507,15 @@ function App() {
       setZipName(m.name || "공용 기본자료");
       if (first) setInitialRemoteChecked(false);
       // 원본 ZIP은 저장하지 않고 풀어둔 자료만 저장해요 (폰 용량 절약 - 원본은 언제든 다시 받을 수 있어요)
-      const ok = await parseAndSetZip(blob, false, !first, remoteRoster, first);
-      if (!ok) throw new Error("ZIP 파일을 읽지 못했어요.");
+      // 내 소속의 교번틀(교번 순서)이 바뀌었는지 보려고, 받기 전 틀을 기억해둬요
+      const myTeamKey = mySelection?.teamKey || selectedTeam;
+      const oldFrame = !first && data?.[myTeamKey] ? JSON.stringify(getGyobunOrder(data[myTeamKey])) : "";
+      const newData = await parseAndSetZip(blob, false, !first, remoteRoster, first);
+      if (!newData) throw new Error("ZIP 파일을 읽지 못했어요.");
+      // 교번틀이 바뀐 경우에만 - 내 교번을 다시 확인하도록 안내해요 (자료 내용만 바뀐 경우엔 그대로)
+      if (oldFrame && newData?.[myTeamKey] && JSON.stringify(getGyobunOrder(newData[myTeamKey])) !== oldFrame && String(mySelection?.name || "").trim()) {
+        setFrameChanged(true);
+      }
       try { localStorage.setItem(LS_SHARED_ZIP_VERSION, m.version); } catch (e) {}
       setSharedZipVersion(m.version);
       setSharedZip(null);
@@ -2935,6 +2943,23 @@ function App() {
         </div>
       )}
 
+      {frameChanged && !allowProfileEdit && (
+        <div className="modal-backdrop">
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">🔄 교번틀이 바뀌었어요</div>
+            <div className="notice-box" style={{ lineHeight: 1.6 }}>
+              새 기본자료에서 <b>교번 순서(교번틀)</b>가 바뀌었어요.<br />
+              예전 교번 기준으로 계산되면 내 교번이 틀릴 수 있어서,<br />
+              <b>오늘 내 교번</b>을 한 번만 다시 골라주세요.<br />
+              (이름·그룹·메모 등 다른 설정은 그대로예요)
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn primary" onClick={() => { setFrameChanged(false); startReconfigureProfile(); setDraftCode(""); }}>내 교번 다시 설정하기</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {data && sharedZipBusy && (
         <div style={{ position: "fixed", left: "50%", bottom: 18, transform: "translateX(-50%)", zIndex: 9999, background: "rgba(17,24,39,0.88)", color: "#fff", padding: "8px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", pointerEvents: "none" }}>
           {sharedZipBusy.startsWith("기본자료를") ? sharedZipBusy : `📦 기본자료 업데이트 ${sharedZipBusy}`}
@@ -3025,7 +3050,7 @@ function applyStandbyFill(overrides, teamKey, name, dateStr, baseCode) {
 // 문장 안의 **글자**는 굵게, "• "로 시작하는 줄은 목록처럼 들여쓰기돼요.
 const GUIDE_ITEMS = [
   { q: "처음에 내 교번은 어떻게 설정해요?", a: ["처음 실행하면 기본자료를 자동으로 받은 뒤 **초기 설정**이 나와요. 여기서 내 소속과 이름을 고르면 돼요.", "나중에 바꾸려면 홈 화면 **설정 → 내 정보 다시 설정**에서 할 수 있어요."] },
-  { q: "기본자료(ZIP)는 따로 등록해야 해요?", a: ["아니요. 앱을 열면 기본자료(교번표·행로표 등)를 **자동으로** 받아요.", "새 자료가 올라오면 앱을 쓰는 동안 뒤에서 알아서 받아요. 화면 아래에 **\"📦 기본자료 업데이트 받는 중...\"**이 잠깐 보여요.", "내 이름·교번·출퇴근 시간 수정·충당 교번 같은 내 설정은 그대로 유지돼요.", "처음 받을 때는 약 50MB라 **와이파이**를 추천해요. 한 번 받으면 폰에 저장되어 인터넷이 안 돼도 볼 수 있어요.", "자료가 이상하면 **설정 → 기본자료 → 🔄 다시 받기**를 눌러주세요."] },
+  { q: "기본자료(ZIP)는 따로 등록해야 해요?", a: ["아니요. 앱을 열면 기본자료(교번표·행로표 등)를 **자동으로** 받아요.", "새 자료가 올라오면 앱을 쓰는 동안 뒤에서 알아서 받아요. 화면 아래에 **\"📦 기본자료 업데이트 받는 중...\"**이 잠깐 보여요.", "내 이름·교번·출퇴근 시간 수정·충당 교번 같은 내 설정은 그대로 유지돼요.", "단, **교번틀(교번 순서)이 바뀐 경우에만** \"교번틀이 바뀌었어요\" 안내가 떠요. 오늘 내 교번만 다시 골라주면 돼요.", "처음 받을 때는 약 50MB라 **와이파이**를 추천해요. 한 번 받으면 폰에 저장되어 인터넷이 안 돼도 볼 수 있어요.", "자료가 이상하면 **설정 → 기본자료 → 🔄 다시 받기**를 눌러주세요."] },
   { q: "다른 날짜 교번은 어떻게 봐요?", a: ["홈 화면의 년·월·일 **+ / -** 버튼으로 날짜를 옮기거나, 날짜 숫자를 눌러 달력에서 바로 고를 수 있어요."] },
   { q: "행로표는 어디서 봐요?", a: ["홈 화면의 행로표 미리보기를 누르면 크게 볼 수 있어요.", "**전체**나 **DIA순서**에서 사람을 눌러도 그 사람의 행로표가 열려요."] },
   { q: "다른 사람 교번이나 열번은 어떻게 찾아요?", a: ["**전체** 탭에서 그날 모든 사람의 교번을 볼 수 있어요. 위쪽 경산·문양·월배·안심 버튼으로 소속을 바꿀 수 있어요.", "**DIA순서** 탭에서는 교번 순서대로 볼 수 있어요.", "전체 탭의 **🔍 검색**에서는 네 소속을 한 번에 찾아줘요.", "• **이름**: 예) 권재림", "• **교번**: 예) 24d, 대1, S1 (토·휴일)", "• **열번**: 예) 2134 → 그날 그 열차를 운전하는 사람을 찾아줘요", "새벽 첫 열차(예: 2001~2090)는 전날 야간 근무자(25~ 같은 비번 교번)로 찾아줘요.", "검색 결과에서 사람을 누르면 아래에 그 사람의 행로표가 바로 보여요."] },
