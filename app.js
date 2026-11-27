@@ -1942,10 +1942,7 @@ function App() {
             ) : (
               <div className="help-text">공용 기본자료를 불러오지 못했어요. 인터넷 연결을 확인하고 앱을 다시 켜주세요.</div>
             )}
-            <details style={{ marginTop: 14 }}>
-              <summary className="help-text" style={{ cursor: "pointer" }}>ZIP 파일을 직접 등록하기</summary>
-              <input type="file" accept=".zip" className="input" style={{ marginTop: 8 }} onChange={handleZipUpload} />
-            </details>
+
             {zipName && <div className="help-text">현재 파일: {zipName}</div>}
             {error && <div className="help-text" style={{ color: "#dc2626" }}>{error}</div>}
           </div>
@@ -2607,12 +2604,7 @@ function App() {
                 {sharedZipBusy || "🔄 다시 받기"}
               </button>
             </div>
-            {isAdminUser && (
-              <>
-                <label className="label" style={{ marginTop: 8 }}>ZIP 직접 등록 (관리자 · 이 폰에만)</label>
-                <input type="file" accept=".zip" className="input" onChange={handleZipUpload} />
-              </>
-            )}
+
             {!allowProfileEdit ? (
               <>
                 <label className="label" style={{ marginTop: 14 }}>내 정보</label>
