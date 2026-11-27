@@ -706,6 +706,9 @@ function App() {
   const [sharedZipBusy, setSharedZipBusy] = useState("");
   const [sharedZipVersion, setSharedZipVersion] = useState(() => { try { return localStorage.getItem(LS_SHARED_ZIP_VERSION) || ""; } catch (e) { return ""; } });
   const [splitFiles, setSplitFiles] = useState([]);
+  const sharedZipBusyRef = useRef(false);
+  const [localRestoreDone, setLocalRestoreDone] = useState(false); // 폰에 저장된 자료 불러오기가 끝났는지
+  const [sharedZipFailed, setSharedZipFailed] = useState(false);
   const [lastSeenPublishedAt, setLastSeenPublishedAt] = useState(localStorage.getItem(LS_LAST_SEEN_PUBLISHED_AT) || "");
   const [holidayVersion, setHolidayVersion] = useState(0);
   const [wordtimeVersion, setWorktimeVersion] = useState(0);
@@ -1026,8 +1029,8 @@ function App() {
       });
 
       await Promise.all(textTasks);
-      const textOnlyData = parseZipToData({ ...parsedFiles });
-      setData(textOnlyData); 
+      // 화면에 진행 표시가 있을 때만 글자 자료를 먼저 보여줘요 (뒤에서 몰래 바꿀 때는 사진이 잠깐 빠지지 않게 한 번에)
+      if (showBusy) { const textOnlyData = parseZipToData({ ...parsedFiles }); setData(textOnlyData); }
       if (showBusy) setLoading(false); 
 
       await Promise.all(imageTasks);
@@ -1078,6 +1081,7 @@ function App() {
             }
           }
         } catch (e) { console.log("로컬 복원 실패", e); }
+        if (!cancelled) setLocalRestoreDone(true);
       } catch (e) {}
 
       const thisYear = getYearFromDateStr(getKoreaToday());
@@ -1164,6 +1168,13 @@ function App() {
   useEffect(() => { if (showUpdatePopup && (!window.history.state || window.history.state.layer !== "update")) window.history.pushState({ __gyobeon: true, layer: "update" }, ""); }, [showUpdatePopup]);
   // 앱 켤 때 공용 기본자료가 새로 올라왔는지 확인해요
   useEffect(() => { checkSharedZip(false); }, []);
+  // 새 기본자료가 있으면 묻지 않고 바로 받아요.
+  // - 처음 사용자: 바로 받기 시작해서 끝나면 초기 설정으로
+  // - 기존 사용자: 저장된 자료로 앱은 바로 쓰고, 뒤에서 받아서 조용히 바꿔요 (내 설정은 그대로)
+  useEffect(() => {
+    if (!localRestoreDone || !sharedZip || sharedZipBusy || sharedZipFailed) return;
+    applySharedZip(sharedZip);
+  }, [localRestoreDone, sharedZip, sharedZipFailed]);
   useEffect(() => { if (showGroupAdd && (!window.history.state || window.history.state.layer !== "groupAdd")) window.history.pushState({ __gyobeon: true, layer: "groupAdd" }, ""); }, [showGroupAdd]);
   useEffect(() => { if (showGuide && (!window.history.state || window.history.state.layer !== "guide")) window.history.pushState({ __gyobeon: true, layer: "guide" }, ""); }, [showGuide]);
   useEffect(() => { if (showSettings && (!window.history.state || window.history.state.layer !== "settings")) window.history.pushState({ __gyobeon: true, layer: "settings" }, ""); }, [showSettings]);
@@ -1485,7 +1496,8 @@ function App() {
   }
   async function applySharedZip(manifest) {
     const m = manifest || sharedZip;
-    if (!m || sharedZipBusy) return;
+    if (!m || sharedZipBusyRef.current) return;
+    sharedZipBusyRef.current = true;
     const first = !data;
     try {
       setSharedZipBusy("받는 중...");
@@ -1493,16 +1505,21 @@ function App() {
       setSharedZipBusy("등록 중...");
       setZipName(m.name || "공용 기본자료");
       if (first) setInitialRemoteChecked(false);
-      const ok = await parseAndSetZip(blob, true, !first, remoteRoster, first);
+      // 원본 ZIP은 저장하지 않고 풀어둔 자료만 저장해요 (폰 용량 절약 - 원본은 언제든 다시 받을 수 있어요)
+      const ok = await parseAndSetZip(blob, false, !first, remoteRoster, first);
       if (!ok) throw new Error("ZIP 파일을 읽지 못했어요.");
       try { localStorage.setItem(LS_SHARED_ZIP_VERSION, m.version); } catch (e) {}
       setSharedZipVersion(m.version);
       setSharedZip(null);
-      if (!first) alert("기본자료를 새로 받았어요.");
+      setSharedZipFailed(false);
+      if (!first) { setSharedZipBusy("기본자료를 새로 받았어요 ✅"); await new Promise((r) => setTimeout(r, 2500)); }
     } catch (e) {
-      alert(`기본자료 받기 실패: ${e.message || e}`);
+      setSharedZipFailed(true);
+      if (first) alert(`기본자료 받기 실패: ${e.message || e}`);
+      else console.warn("기본자료 자동 업데이트 실패", e);
     } finally {
       setSharedZipBusy("");
+      sharedZipBusyRef.current = false;
     }
   }
   // 관리자 - 52MB 같은 큰 ZIP을 10MB 조각 + 목록(json)으로 나눠서, 깃허브 data 폴더에 올릴 수 있게 해줘요
@@ -1917,10 +1934,10 @@ function App() {
               <div className="help-text">기본자료를 확인하고 있어요...</div>
             ) : sharedZip ? (
               <>
-                <button className="modal-btn primary" style={{ width: "100%", height: 50, fontSize: 16, fontWeight: 800 }} onClick={() => applySharedZip()} disabled={!!sharedZipBusy || loading}>
-                  {sharedZipBusy || `📥 기본자료 받기 (약 ${formatMB(sharedZip.size)})`}
+                <button className="modal-btn primary" style={{ width: "100%", height: 50, fontSize: 16, fontWeight: 800 }} onClick={() => { setSharedZipFailed(false); applySharedZip(); }} disabled={!!sharedZipBusy || loading}>
+                  {sharedZipBusy || (sharedZipFailed ? "🔄 다시 받기" : "기본자료 준비 중...")}
                 </button>
-                <div className="help-text">처음 한 번만 받으면 이후에는 폰에 저장되어 계속 사용할 수 있어요. 데이터가 많이 들어서 <b>와이파이에서 받는 걸 추천해요.</b></div>
+                <div className="help-text">기본자료(약 {formatMB(sharedZip.size)})를 받고 있어요. 처음 한 번만 받으면 이후에는 폰에 저장되어 바로 열려요.</div>
               </>
             ) : (
               <div className="help-text">공용 기본자료를 불러오지 못했어요. 인터넷 연결을 확인하고 앱을 다시 켜주세요.</div>
@@ -2586,7 +2603,7 @@ function App() {
             <label className="label">기본자료</label>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
               <div className="help-text" style={{ flex: 1, margin: 0 }}>{sharedZipVersion ? `공용 기본자료 · ${sharedZipVersion}` : (zipName || "직접 등록한 ZIP")}</div>
-              <button className="modal-btn" style={{ width: "auto", height: 36, padding: "0 12px", margin: 0, fontSize: 13 }} disabled={!!sharedZipBusy} onClick={async () => { const m = await checkSharedZip(true); if (m && window.confirm(`기본자료를 다시 받을까요? (약 ${formatMB(m.size)})`)) applySharedZip(m); }}>
+              <button className="modal-btn" style={{ width: "auto", height: 36, padding: "0 12px", margin: 0, fontSize: 13 }} disabled={!!sharedZipBusy} onClick={async () => { const m = await fetchSharedZipManifest(); if (!m) return alert("올라와 있는 공용 기본자료가 없어요."); if (window.confirm(`기본자료를 다시 받을까요? (약 ${formatMB(m.size)})`)) applySharedZip(m); }}>
                 {sharedZipBusy || "🔄 다시 받기"}
               </button>
             </div>
@@ -2926,20 +2943,9 @@ function App() {
         </div>
       )}
 
-      {data && sharedZip && !showUpdatePopup && (
-        <div className="modal-backdrop">
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">📦 기본자료 업데이트</div>
-            <div className="notice-box" style={{ lineHeight: 1.6 }}>
-              새 기본자료가 올라왔어요. ({sharedZip.version})<br />
-              약 <b>{formatMB(sharedZip.size)}</b>이라 <b>와이파이에서 받는 걸 추천해요.</b><br />
-              내 이름·교번·수정 내용은 그대로 유지돼요.
-            </div>
-            <div className="modal-actions">
-              <button className="modal-btn" disabled={!!sharedZipBusy} onClick={() => setSharedZip(null)}>나중에</button>
-              <button className="modal-btn primary" disabled={!!sharedZipBusy} onClick={() => applySharedZip()}>{sharedZipBusy || "지금 받기"}</button>
-            </div>
-          </div>
+      {data && sharedZipBusy && (
+        <div style={{ position: "fixed", left: "50%", bottom: 18, transform: "translateX(-50%)", zIndex: 9999, background: "rgba(17,24,39,0.88)", color: "#fff", padding: "8px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", pointerEvents: "none" }}>
+          {sharedZipBusy.startsWith("기본자료를") ? sharedZipBusy : `📦 기본자료 업데이트 ${sharedZipBusy}`}
         </div>
       )}
 
